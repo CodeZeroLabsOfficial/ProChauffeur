@@ -52,9 +52,6 @@ export default function LicenseManagementView() {
         <h2 className="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
           {tier}
         </h2>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Limits are read from Firestore `app_settings/limits`.
-        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

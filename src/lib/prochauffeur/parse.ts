@@ -239,6 +239,12 @@ function coerceFirestoreInteger(value: unknown): number | null {
     return Math.trunc(value);
   }
   if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
   return null;
 }
 
