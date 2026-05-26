@@ -145,7 +145,6 @@ export type CompanyProfile = {
   website: string;
   abn: string;
   acn: string;
-  bio: string;
   logoURL: string;
 };
 
@@ -258,7 +257,6 @@ export const EMPTY_COMPANY_PROFILE: CompanyProfile = {
   website: "",
   abn: "",
   acn: "",
-  bio: "",
   logoURL: "",
 };
 

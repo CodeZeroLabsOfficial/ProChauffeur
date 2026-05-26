@@ -230,7 +230,7 @@ export const stubs = {
     breadcrumb: "Overview",
     title: "Company overview",
     description:
-      "Fleet name, dispatch contact, logo URL, address, and public bio — edited via modals on the overview page.",
+      "Fleet name, dispatch contact, logo URL, address, website, ABN, and ACN — edited via modals on the overview page.",
     phase: "Phase 3",
     priority: "P1",
     iosEquivalent: "AdminCompanyDetailsEditView",
@@ -330,7 +330,7 @@ export const stubs = {
   companyAbout: {
     breadcrumb: "About your fleet",
     title: "About your fleet",
-    description: "Public-facing fleet bio shown to travelers.",
+    description: "Public-facing fleet information shown to travelers.",
     phase: "Phase 4",
     priority: "P3",
     iosEquivalent: "AdminCompanyView (about placeholder)",

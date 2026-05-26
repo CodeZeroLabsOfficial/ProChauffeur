@@ -201,7 +201,6 @@ export function AdminOperationsProvider({
         website: "",
         abn: "",
         acn: "",
-        bio: "",
         logoURL: "",
       },
       pricingConfig: pricingConfig ?? DEFAULT_PRICING_CONFIG,

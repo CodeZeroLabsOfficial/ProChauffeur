@@ -169,7 +169,6 @@ function encodeCompanyProfile(profile: CompanyProfile): Record<string, unknown> 
     website: profile.website,
     abn: profile.abn,
     acn: profile.acn,
-    bio: profile.bio,
     logoURL: profile.logoURL,
   };
 }

@@ -14,7 +14,6 @@ export function trimmedCompanyProfile(profile: CompanyProfile): CompanyProfile {
     website: profile.website.trim(),
     abn: profile.abn.trim(),
     acn: profile.acn.trim(),
-    bio: profile.bio.trim(),
     logoURL: profile.logoURL.trim(),
   };
 }

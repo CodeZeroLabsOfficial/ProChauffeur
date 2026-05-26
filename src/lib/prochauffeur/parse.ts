@@ -357,7 +357,6 @@ export function parseCompanyProfile(data: DocumentData): CompanyProfile {
     website: String(data.website ?? ""),
     abn: String(data.abn ?? ""),
     acn: String(data.acn ?? ""),
-    bio: String(data.bio ?? ""),
     logoURL: String(data.logoURL ?? ""),
   };
 }
