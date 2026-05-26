@@ -16,7 +16,6 @@ import {
   type LocaleNumberFormat,
   type LocaleTimeFormat,
 } from "@/lib/prochauffeur/localeOptions";
-import type { AppFleetLocaleSettings } from "@/lib/prochauffeur/types";
 import React, { useEffect, useState } from "react";
 
 const selectClassName =
@@ -43,23 +42,9 @@ function LocaleField({ id, title, description, children }: LocaleFieldProps) {
   );
 }
 
-function effectiveLocale(
-  fleetLocale: AppFleetLocaleSettings,
-  operatingTimeZone: string | null
-): AppFleetLocaleSettings {
-  return {
-    ...fleetLocale,
-    timeZoneIdentifier:
-      fleetLocale.timeZoneIdentifier?.trim() ||
-      operatingTimeZone?.trim() ||
-      null,
-  };
-}
-
 export default function LocaleSettingsView() {
   const {
     fleetLocale,
-    operatingHours,
     saveFleetLocale,
     isSaving,
     actionError,
@@ -74,23 +59,21 @@ export default function LocaleSettingsView() {
   const [numberFormat, setNumberFormat] = useState<LocaleNumberFormat | "">("");
 
   useEffect(() => {
-    const merged = effectiveLocale(fleetLocale, operatingHours.timeZoneIdentifier);
-    setLanguage(merged.language ?? "");
-    setCountry(merged.country ?? "");
-    setDateFormat(merged.dateFormat ?? "");
-    setTimeFormat(merged.timeFormat ?? "");
-    setTimeZoneIdentifier(merged.timeZoneIdentifier ?? "");
-    setNumberFormat(merged.numberFormat ?? "");
-  }, [fleetLocale, operatingHours.timeZoneIdentifier]);
+    setLanguage(fleetLocale.language ?? "");
+    setCountry(fleetLocale.country ?? "");
+    setDateFormat(fleetLocale.dateFormat ?? "");
+    setTimeFormat(fleetLocale.timeFormat ?? "");
+    setTimeZoneIdentifier(fleetLocale.timeZoneIdentifier ?? "");
+    setNumberFormat(fleetLocale.numberFormat ?? "");
+  }, [fleetLocale]);
 
   function handleCancel() {
-    const merged = effectiveLocale(fleetLocale, operatingHours.timeZoneIdentifier);
-    setLanguage(merged.language ?? "");
-    setCountry(merged.country ?? "");
-    setDateFormat(merged.dateFormat ?? "");
-    setTimeFormat(merged.timeFormat ?? "");
-    setTimeZoneIdentifier(merged.timeZoneIdentifier ?? "");
-    setNumberFormat(merged.numberFormat ?? "");
+    setLanguage(fleetLocale.language ?? "");
+    setCountry(fleetLocale.country ?? "");
+    setDateFormat(fleetLocale.dateFormat ?? "");
+    setTimeFormat(fleetLocale.timeFormat ?? "");
+    setTimeZoneIdentifier(fleetLocale.timeZoneIdentifier ?? "");
+    setNumberFormat(fleetLocale.numberFormat ?? "");
     clearActionError();
   }
 

@@ -6,3 +6,4 @@ export const OPERATOR_COLLECTION = "operator";
 
 export const OPERATOR_LOCALE_DOC = "locale";
 export const OPERATOR_COMPANY_DOC = "company";
+export const OPERATOR_OPERATING_HOURS_DOC = "operating_hours";

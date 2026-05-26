@@ -244,7 +244,7 @@ export const stubs = {
     phase: "Phase 3",
     priority: "P1",
     iosEquivalent: "AdminCompanyOperatingHoursView",
-    firestore: "app_settings/operating_hours",
+    firestore: "operator/operating_hours",
     tailAdminBase: "Calendar + form elements",
   },
   companyLocations: {

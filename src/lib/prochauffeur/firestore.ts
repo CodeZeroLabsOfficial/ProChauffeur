@@ -58,6 +58,7 @@ import {
   OPERATOR_COLLECTION,
   OPERATOR_COMPANY_DOC,
   OPERATOR_LOCALE_DOC,
+  OPERATOR_OPERATING_HOURS_DOC,
 } from "@/lib/prochauffeur/firestorePaths";
 
 const TRIPS = "trips";
@@ -293,16 +294,13 @@ export function listenGlobalLimits(
 export function listenOperatingHours(
   onUpdate: (hours: AppFleetOperatingHours) => void
 ): () => void {
-  return onSnapshot(
-    appSettingsDoc("operating_hours"),
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        onUpdate(EMPTY_OPERATING_HOURS);
-        return;
-      }
-      onUpdate(parseFleetOperatingHours(snapshot.data()));
+  return onSnapshot(operatorDoc(OPERATOR_OPERATING_HOURS_DOC), (snapshot) => {
+    if (!snapshot.exists()) {
+      onUpdate(EMPTY_OPERATING_HOURS);
+      return;
     }
-  );
+    onUpdate(parseFleetOperatingHours(snapshot.data()));
+  });
 }
 
 export function listenFleetLocale(
@@ -520,7 +518,10 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 export async function saveFleetOperatingHours(
   hours: AppFleetOperatingHours
 ): Promise<void> {
-  await setDoc(appSettingsDoc("operating_hours"), encodeOperatingHours(hours));
+  await setDoc(
+    operatorDoc(OPERATOR_OPERATING_HOURS_DOC),
+    encodeOperatingHours(hours)
+  );
 }
 
 export async function saveFleetLocale(
@@ -531,7 +532,7 @@ export async function saveFleetLocale(
 
   if (locale.timeZoneIdentifier !== operatingHours.timeZoneIdentifier) {
     await setDoc(
-      appSettingsDoc("operating_hours"),
+      operatorDoc(OPERATOR_OPERATING_HOURS_DOC),
       encodeOperatingHours({
         ...operatingHours,
         timeZoneIdentifier: locale.timeZoneIdentifier,
