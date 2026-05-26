@@ -14,8 +14,10 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { getFirebaseAuth } from "@/lib/firebase/client";
-import { getFirebaseSetupError, isFirebaseConfigured } from "@/lib/firebase/config";
+import {
+  ensureFirebaseInitialized,
+  getFirebaseAuth,
+} from "@/lib/firebase/client";
 import { fetchUserProfile } from "@/lib/prochauffeur/firestore";
 import type { AppUser } from "@/lib/prochauffeur/types";
 
@@ -42,60 +44,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const setupError = getFirebaseSetupError();
-    if (!isFirebaseConfigured()) {
-      setError(setupError);
-      setLoading(false);
-      return;
-    }
+    let unsub: (() => void) | undefined;
+    let cancelled = false;
 
-    let auth;
-    try {
-      auth = getFirebaseAuth();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not initialize Firebase.");
-      setLoading(false);
-      return;
-    }
-
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (!user) {
-        setAppUser(null);
-        setLoading(false);
-        return;
-      }
+    void (async () => {
       try {
-        const profile = await fetchUserProfile(user.uid);
-        if (!profile || profile.role !== "admin") {
-          await firebaseSignOut(auth);
-          setAppUser(null);
-          setError("Only fleet administrator accounts can access this console.");
-          setLoading(false);
-          return;
-        }
-        setAppUser(profile);
-        setError(null);
+        await ensureFirebaseInitialized();
+        if (cancelled) return;
+
+        const auth = getFirebaseAuth();
+        unsub = onAuthStateChanged(auth, async (user) => {
+          setFirebaseUser(user);
+          if (!user) {
+            setAppUser(null);
+            setLoading(false);
+            return;
+          }
+          try {
+            const profile = await fetchUserProfile(user.uid);
+            if (!profile || profile.role !== "admin") {
+              await firebaseSignOut(auth);
+              setAppUser(null);
+              setError(
+                "Only fleet administrator accounts can access this console."
+              );
+              setLoading(false);
+              return;
+            }
+            setAppUser(profile);
+            setError(null);
+          } catch (e) {
+            setAppUser(null);
+            setError(
+              e instanceof Error ? e.message : "Could not load your profile."
+            );
+          } finally {
+            setLoading(false);
+          }
+        });
       } catch (e) {
-        setAppUser(null);
-        setError(e instanceof Error ? e.message : "Could not load your profile.");
-      } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setError(
+            e instanceof Error ? e.message : "Could not initialize Firebase."
+          );
+          setLoading(false);
+        }
       }
-    });
-    return unsub;
+    })();
+
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const setupError = getFirebaseSetupError();
-    if (setupError) {
-      setError(setupError);
-      throw new Error(setupError);
-    }
-
     setError(null);
     setLoading(true);
     try {
+      await ensureFirebaseInitialized();
       const credential = await signInWithEmailAndPassword(
         getFirebaseAuth(),
         email.trim(),
@@ -119,7 +126,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut(getFirebaseAuth());
+    try {
+      await ensureFirebaseInitialized();
+      await firebaseSignOut(getFirebaseAuth());
+    } catch {
+      // Ignore sign-out failures when Firebase was never initialized.
+    }
     setAppUser(null);
     setFirebaseUser(null);
     setError(null);

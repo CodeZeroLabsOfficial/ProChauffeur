@@ -1,10 +1,12 @@
 import type { FirebaseOptions } from "firebase/app";
 
-const REQUIRED_FIREBASE_ENV_VARS = [
+export const REQUIRED_FIREBASE_ENV_VARS = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
   "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
 ] as const;
+
+type EnvSource = Record<string, string | undefined>;
 
 function required(name: string, value: string | undefined): string {
   if (!value) {
@@ -13,41 +15,46 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
-export function getMissingFirebaseEnvVars(): string[] {
-  return REQUIRED_FIREBASE_ENV_VARS.filter((name) => !process.env[name]);
+export function getMissingFirebaseEnvVars(
+  env: EnvSource = process.env
+): string[] {
+  return REQUIRED_FIREBASE_ENV_VARS.filter((name) => !env[name]);
 }
 
-export function isFirebaseConfigured(): boolean {
-  return getMissingFirebaseEnvVars().length === 0;
+export function isFirebaseConfigured(env: EnvSource = process.env): boolean {
+  return getMissingFirebaseEnvVars(env).length === 0;
 }
 
-export function getFirebaseSetupError(): string | null {
-  const missing = getMissingFirebaseEnvVars();
+export function getFirebaseSetupError(env: EnvSource = process.env): string | null {
+  const missing = getMissingFirebaseEnvVars(env);
   if (missing.length === 0) {
     return null;
   }
 
-  return `Firebase is not configured. Add these environment variables: ${missing.join(", ")}.`;
+  return `Firebase is not configured. Add these environment variables in Vercel (Production), then redeploy if the error persists: ${missing.join(", ")}.`;
+}
+
+export function readFirebaseConfig(env: EnvSource = process.env): FirebaseOptions | null {
+  if (!isFirebaseConfigured(env)) {
+    return null;
+  }
+
+  return {
+    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
 }
 
 export function getFirebaseConfig(): FirebaseOptions {
-  return {
-    apiKey: required(
-      "NEXT_PUBLIC_FIREBASE_API_KEY",
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY
-    ),
-    authDomain: required(
-      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    ),
-    projectId: required(
-      "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    ),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  };
+  const config = readFirebaseConfig();
+  if (!config) {
+    throw new Error(getFirebaseSetupError() ?? "Firebase is not configured.");
+  }
+  return config;
 }
 
 export function getMapboxToken(): string {
