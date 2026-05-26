@@ -8,6 +8,7 @@ interface ModalProps {
   children: React.ReactNode;
   showCloseButton?: boolean; // New prop to control close button visibility
   isFullscreen?: boolean; // Default to false for backwards compatibility
+  containScroll?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,6 +18,7 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   showCloseButton = true, // Default to true for backwards compatibility
   isFullscreen = false,
+  containScroll = false,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -52,10 +54,18 @@ export const Modal: React.FC<ModalProps> = ({
 
   const contentClasses = isFullscreen
     ? "w-full h-full"
-    : "relative w-full rounded-3xl bg-white  dark:bg-gray-900";
+    : containScroll
+      ? "relative flex h-full max-h-[inherit] w-full flex-col overflow-hidden rounded-3xl bg-white dark:bg-gray-900"
+      : "relative w-full rounded-3xl bg-white dark:bg-gray-900";
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto modal z-99999">
+    <div
+      className={`fixed inset-0 modal z-99999 ${
+        containScroll
+          ? "flex items-center justify-center overflow-hidden p-4"
+          : "flex items-center justify-center overflow-y-auto"
+      }`}
+    >
       {!isFullscreen && (
         <div
           className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"
@@ -88,7 +98,13 @@ export const Modal: React.FC<ModalProps> = ({
             </svg>
           </button>
         )}
-        <div>{children}</div>
+        <div
+          className={
+            containScroll ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined
+          }
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

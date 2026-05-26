@@ -14,7 +14,6 @@ import AdminTableRowMenu from "@/components/prochauffeur/admin-table/AdminTableR
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import FleetVehicleForm from "@/components/prochauffeur/FleetVehicleForm";
-import FormModal from "@/components/prochauffeur/FormModal";
 import { useAdminDashboard } from "@/context/AdminDashboardContext";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
@@ -231,19 +230,14 @@ export default function FleetManagementView() {
         />
       </AdminListTableCard>
 
-      <FormModal
+      <FleetVehicleForm
+        key={addVehicleKey}
+        variant="modal"
         isOpen={isOpen}
         onClose={closeModal}
-        title="Add vehicle"
-        className="max-w-2xl p-5 lg:p-10"
-      >
-        <FleetVehicleForm
-          key={addVehicleKey}
-          variant="modal"
-          onSuccess={closeModal}
-          onCancel={closeModal}
-        />
-      </FormModal>
+        onSuccess={closeModal}
+        onCancel={closeModal}
+      />
     </div>
   );
 }
