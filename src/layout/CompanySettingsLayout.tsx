@@ -15,7 +15,7 @@ export default function CompanySettingsLayout({
 
   return (
     <CompanySettingsScrollProvider scrollContainerRef={scrollContainerRef}>
-      <div className="flex h-full w-full flex-col bg-gray-50 dark:bg-gray-900 lg:flex-row">
+      <div className="flex h-full min-h-0 w-full flex-col bg-gray-50 dark:bg-gray-900 lg:flex-row">
         <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 lg:hidden">
           <button
             type="button"

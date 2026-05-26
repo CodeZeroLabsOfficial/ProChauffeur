@@ -6,7 +6,7 @@ import {
   isCompanyNavActive,
 } from "@/lib/prochauffeur/companyNav";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type CompanySettingsSidebarProps = {
@@ -19,6 +19,7 @@ export default function CompanySettingsSidebar({
   className = "",
 }: CompanySettingsSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { activeSection, scrollToSection } = useCompanySettingsScroll();
   const [hash, setHash] = useState("");
 
@@ -36,14 +37,18 @@ export default function CompanySettingsSidebar({
     event: React.MouseEvent<HTMLAnchorElement>,
     sectionId: string
   ) {
-    if (pathname !== "/company") return;
-
     event.preventDefault();
-    scrollToSection(sectionId);
-    const nextUrl = `${window.location.pathname}${window.location.search}#${sectionId}`;
-    window.history.pushState(null, "", nextUrl);
-    setHash(`#${sectionId}`);
     onNavigate?.();
+
+    if (pathname === "/company") {
+      scrollToSection(sectionId);
+      const nextUrl = `${window.location.pathname}${window.location.search}#${sectionId}`;
+      window.history.pushState(null, "", nextUrl);
+      setHash(`#${sectionId}`);
+      return;
+    }
+
+    router.push(`/company#${sectionId}`);
   }
 
   return (
