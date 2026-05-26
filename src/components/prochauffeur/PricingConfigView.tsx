@@ -1,7 +1,7 @@
 "use client";
 
+import CompanySettingsPage from "@/components/company-profile/CompanySettingsPage";
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -94,9 +94,10 @@ export default function PricingConfigView() {
   }
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="Pricing" />
-
+    <CompanySettingsPage
+      title="Pricing"
+      description="Configure fares, vehicle tiers, and add-ons for quotes and bookings."
+    >
       {!hasReceivedOperationsSnapshot ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Loading pricing…
@@ -121,10 +122,10 @@ export default function PricingConfigView() {
           )}
 
           <div className="space-y-6">
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-              <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">
+            <section className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+              <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
                 Base rates
-              </h2>
+              </h4>
               <div className="grid gap-4 md:grid-cols-2">
                 <NumberField
                   label="Minimum fare"
@@ -169,10 +170,10 @@ export default function PricingConfigView() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-              <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">
+            <section className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+              <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
                 Vehicle tiers
-              </h2>
+              </h4>
               <div className="space-y-4">
                 {config.vehicles.map((tier) => (
                   <div
@@ -217,11 +218,11 @@ export default function PricingConfigView() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+            <section className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
                   Add-ons
-                </h2>
+                </h4>
                 <Button size="sm" variant="outline" onClick={addAddon}>
                   Add add-on
                 </Button>
@@ -292,7 +293,7 @@ export default function PricingConfigView() {
           </div>
         </>
       )}
-    </div>
+    </CompanySettingsPage>
   );
 }
 

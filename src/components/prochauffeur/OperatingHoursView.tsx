@@ -1,7 +1,7 @@
 "use client";
 
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import CompanySettingsPage from "@/components/company-profile/CompanySettingsPage";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -87,15 +87,29 @@ export default function OperatingHoursView() {
   }
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="Operating hours" />
-
-      {actionError ? (
-        <AdminActionBanner message={actionError} onDismiss={clearActionError} />
-      ) : null}
-
-      <div className="max-w-3xl space-y-6">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+    <CompanySettingsPage
+      title="Operating hours"
+      description="Define when your fleet dispatches trips and which time zone applies."
+      actions={
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setSchedules((current) => [...current, makeSchedule()])}
+        >
+          Add pattern
+        </Button>
+      }
+      banner={
+        actionError ? (
+          <AdminActionBanner
+            message={actionError}
+            onDismiss={clearActionError}
+          />
+        ) : null
+      }
+      className="max-w-3xl space-y-6"
+    >
+        <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
           <Label>Fleet time zone (IANA)</Label>
           <Input
             value={timeZoneIdentifier}
@@ -107,18 +121,10 @@ export default function OperatingHoursView() {
           </p>
         </div>
 
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+        <div>
+          <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
             Weekly patterns
-          </h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setSchedules((current) => [...current, makeSchedule()])}
-          >
-            Add pattern
-          </Button>
-        </div>
+          </h4>
 
         {schedules.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -129,7 +135,7 @@ export default function OperatingHoursView() {
             {schedules.map((schedule) => (
               <div
                 key={schedule.id}
-                className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]"
+                className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -213,6 +219,8 @@ export default function OperatingHoursView() {
           </div>
         )}
 
+        </div>
+
         <div className="flex gap-3">
           <Button disabled={isSaving} onClick={handleSave}>
             {isSaving ? "Saving…" : "Save operating hours"}
@@ -221,7 +229,6 @@ export default function OperatingHoursView() {
             Cancel
           </Button>
         </div>
-      </div>
-    </div>
+    </CompanySettingsPage>
   );
 }

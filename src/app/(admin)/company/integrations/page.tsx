@@ -7,7 +7,8 @@ export const metadata = {
 export default function CompanyIntegrationsPage() {
   return (
     <CompanyPlaceholderView
-      title="Integrations"
+      title="Connections"
+      description="Connect calendars, payments, telematics, and partner APIs."
       message="Connect calendars, payments, telematics, and partner APIs. Chauffeur operations rarely run on a single system — this hub will host those links when ready."
     />
   );

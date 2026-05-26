@@ -1,7 +1,7 @@
 "use client";
 
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import CompanySettingsPage from "@/components/company-profile/CompanySettingsPage";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -151,9 +151,7 @@ export default function LocationFormView({
 
       <div
         className={
-          isModal
-            ? "space-y-5"
-            : "max-w-2xl space-y-5 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]"
+          isModal ? "space-y-5" : "max-w-2xl space-y-5"
         }
       >
         <div>
@@ -243,9 +241,15 @@ export default function LocationFormView({
   }
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle={isNew ? "Add location" : "Edit location"} />
+    <CompanySettingsPage
+      title={isNew ? "Add location" : "Edit location"}
+      description={
+        isNew
+          ? "Add yards, offices, or satellite bases used by dispatch."
+          : "Update location details and coordinates."
+      }
+    >
       {formBody}
-    </div>
+    </CompanySettingsPage>
   );
 }
