@@ -22,10 +22,19 @@ const vehicleTypes = Object.entries(VEHICLE_TYPE_LABELS) as [
 
 type FleetVehicleFormProps = {
   vehicleId?: string;
+  variant?: "page" | "modal";
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
-export default function FleetVehicleForm({ vehicleId }: FleetVehicleFormProps) {
+export default function FleetVehicleForm({
+  vehicleId,
+  variant = "page",
+  onSuccess,
+  onCancel,
+}: FleetVehicleFormProps) {
   const router = useRouter();
+  const isModal = variant === "modal";
   const { vehicles, saveVehicle, isSaving, actionError, clearActionError } =
     useAdminOperations();
   const isNew = !vehicleId;
@@ -75,13 +84,24 @@ export default function FleetVehicleForm({ vehicleId }: FleetVehicleFormProps) {
     });
 
     const ok = await saveVehicle(payload);
-    if (ok) router.push("/fleet");
+    if (!ok) return;
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
+    router.push("/fleet");
   }
 
-  return (
-    <div>
-      <PageBreadcrumb pageTitle={isNew ? "Add vehicle" : "Edit vehicle"} />
+  function handleCancel() {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    router.push("/fleet");
+  }
 
+  const formBody = (
+    <>
       {(actionError || localError) && (
         <AdminActionBanner
           message={localError ?? actionError ?? ""}
@@ -92,7 +112,13 @@ export default function FleetVehicleForm({ vehicleId }: FleetVehicleFormProps) {
         />
       )}
 
-      <div className="max-w-2xl space-y-5 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div
+        className={
+          isModal
+            ? "space-y-5"
+            : "max-w-2xl space-y-5 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]"
+        }
+      >
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Make" value={vehicle.make} onChange={(v) => updateField("make", v)} />
           <Field label="Model" value={vehicle.model} onChange={(v) => updateField("model", v)} />
@@ -165,15 +191,31 @@ export default function FleetVehicleForm({ vehicleId }: FleetVehicleFormProps) {
           onChange={(v) => updateField("gearTypeDescription", v)}
         />
 
-        <div className="flex gap-3 pt-2">
-          <Button disabled={isSaving} onClick={handleSave}>
-            {isSaving ? "Saving…" : "Save vehicle"}
-          </Button>
-          <Button variant="outline" disabled={isSaving} onClick={() => router.push("/fleet")}>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isSaving}
+            onClick={handleCancel}
+          >
             Cancel
+          </Button>
+          <Button size="sm" disabled={isSaving} onClick={handleSave}>
+            {isSaving ? "Saving…" : "Save vehicle"}
           </Button>
         </div>
       </div>
+    </>
+  );
+
+  if (isModal) {
+    return formBody;
+  }
+
+  return (
+    <div>
+      <PageBreadcrumb pageTitle={isNew ? "Add vehicle" : "Edit vehicle"} />
+      {formBody}
     </div>
   );
 }

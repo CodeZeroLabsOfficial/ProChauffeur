@@ -3,10 +3,13 @@
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Button from "@/components/ui/button/Button";
+import FormModal from "@/components/prochauffeur/FormModal";
+import LocationFormView from "@/components/prochauffeur/LocationFormView";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
+import { useModal } from "@/hooks/useModal";
 import { capLabel } from "@/lib/prochauffeur/display";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
 export default function LocationsView() {
   const {
@@ -16,14 +19,21 @@ export default function LocationsView() {
     actionError,
     clearActionError,
   } = useAdminOperations();
+  const { isOpen, openModal, closeModal } = useModal();
+  const [addLocationKey, setAddLocationKey] = useState(0);
+
+  function openAddLocationModal() {
+    setAddLocationKey((key) => key + 1);
+    openModal();
+  }
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <PageBreadcrumb pageTitle="Locations" />
-        <Link href="/company/locations/new">
-          <Button size="sm">Add location</Button>
-        </Link>
+        <Button size="sm" onClick={openAddLocationModal}>
+          Add location
+        </Button>
       </div>
 
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
@@ -68,6 +78,20 @@ export default function LocationsView() {
           ))}
         </div>
       )}
+
+      <FormModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title="Add location"
+        className="max-w-2xl p-5 lg:p-10"
+      >
+        <LocationFormView
+          key={addLocationKey}
+          variant="modal"
+          onSuccess={closeModal}
+          onCancel={closeModal}
+        />
+      </FormModal>
     </div>
   );
 }

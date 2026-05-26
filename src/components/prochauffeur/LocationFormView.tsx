@@ -13,10 +13,19 @@ import React, { useEffect, useState } from "react";
 
 type LocationFormViewProps = {
   locationId?: string;
+  variant?: "page" | "modal";
+  onSuccess?: () => void;
+  onCancel?: () => void;
 };
 
-export default function LocationFormView({ locationId }: LocationFormViewProps) {
+export default function LocationFormView({
+  locationId,
+  variant = "page",
+  onSuccess,
+  onCancel,
+}: LocationFormViewProps) {
   const router = useRouter();
+  const isModal = variant === "modal";
   const {
     locations,
     createLocation,
@@ -82,7 +91,12 @@ export default function LocationFormView({ locationId }: LocationFormViewProps) 
         latitude,
         longitude,
       });
-      if (id) router.push("/company/locations");
+      if (!id) return;
+      if (onSuccess) {
+        onSuccess();
+        return;
+      }
+      router.push("/company/locations");
       return;
     }
 
@@ -96,19 +110,35 @@ export default function LocationFormView({ locationId }: LocationFormViewProps) 
         locations.find((l) => l.id === locationId)?.createdAt ?? new Date(),
     };
     const ok = await saveLocation(payload);
-    if (ok) router.push("/company/locations");
+    if (!ok) return;
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
+    router.push("/company/locations");
   }
 
   async function handleDelete() {
     if (!locationId) return;
     const ok = await removeLocation(locationId);
-    if (ok) router.push("/company/locations");
+    if (!ok) return;
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
+    router.push("/company/locations");
   }
 
-  return (
-    <div>
-      <PageBreadcrumb pageTitle={isNew ? "Add location" : "Edit location"} />
+  function handleCancel() {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    router.push("/company/locations");
+  }
 
+  const formBody = (
+    <>
       {(actionError || localError) && (
         <AdminActionBanner
           message={localError ?? actionError ?? ""}
@@ -119,7 +149,13 @@ export default function LocationFormView({ locationId }: LocationFormViewProps) 
         />
       )}
 
-      <div className="max-w-2xl space-y-5 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div
+        className={
+          isModal
+            ? "space-y-5"
+            : "max-w-2xl space-y-5 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]"
+        }
+      >
         <div>
           <Label>Location name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -152,20 +188,21 @@ export default function LocationFormView({ locationId }: LocationFormViewProps) 
           )}
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button disabled={isSaving} onClick={handleSave}>
-            {isSaving ? "Saving…" : "Save location"}
-          </Button>
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Button
+            size="sm"
             variant="outline"
             disabled={isSaving}
-            onClick={() => router.push("/company/locations")}
+            onClick={handleCancel}
           >
             Cancel
           </Button>
+          <Button size="sm" disabled={isSaving} onClick={handleSave}>
+            {isSaving ? "Saving…" : "Save location"}
+          </Button>
         </div>
 
-        {!isNew ? (
+        {!isNew && !isModal ? (
           <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
             {!confirmDelete ? (
               <Button
@@ -198,6 +235,17 @@ export default function LocationFormView({ locationId }: LocationFormViewProps) 
           </div>
         ) : null}
       </div>
+    </>
+  );
+
+  if (isModal) {
+    return formBody;
+  }
+
+  return (
+    <div>
+      <PageBreadcrumb pageTitle={isNew ? "Add location" : "Edit location"} />
+      {formBody}
     </div>
   );
 }

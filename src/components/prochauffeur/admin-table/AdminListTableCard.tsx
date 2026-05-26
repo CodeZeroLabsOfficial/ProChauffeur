@@ -123,10 +123,10 @@ export default function AdminListTableCard({
         </div>
       </div>
 
-      {/* Optional status tabs */}
-      {showTabs ? (
-        <div className="border-b border-gray-100 px-5 py-3 dark:border-white/[0.05] sm:px-6">
-          <div className="inline-flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-800 dark:bg-white/[0.03]">
+      {/* Filter segments, search, and filter button — single row */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/[0.05] lg:flex-row lg:items-center lg:gap-4 sm:px-6">
+        {showTabs ? (
+          <div className="inline-flex shrink-0 flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-800 dark:bg-white/[0.03]">
             {tabs.map((tab) => {
               const active = tab.id === activeTabId;
               const count = tabCounts?.[tab.id];
@@ -151,34 +151,33 @@ export default function AdminListTableCard({
               );
             })}
           </div>
-        </div>
-      ) : null}
-
-      {/* Toolbar: search + filter */}
-      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/[0.05] sm:flex-row sm:items-center sm:px-6">
-        <div className="relative min-w-0 flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-            <SearchIcon />
-          </span>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-800"
-          />
-        </div>
-        {onFilter ? (
-          <Button
-            size="sm"
-            variant="outline"
-            startIcon={<SlidersIcon />}
-            onClick={onFilter}
-            className="shrink-0 sm:ml-auto"
-          >
-            Filter
-          </Button>
         ) : null}
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+              <SearchIcon />
+            </span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-800"
+            />
+          </div>
+          {onFilter ? (
+            <Button
+              size="sm"
+              variant="outline"
+              startIcon={<SlidersIcon />}
+              onClick={onFilter}
+              className="shrink-0"
+            >
+              Filter
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {children}

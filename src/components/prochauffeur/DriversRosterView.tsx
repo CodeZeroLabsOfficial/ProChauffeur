@@ -13,9 +13,12 @@ import {
 import AdminTableRowMenu from "@/components/prochauffeur/admin-table/AdminTableRowMenu";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
+import AddDriverNoticeContent from "@/components/prochauffeur/AddDriverNoticeContent";
+import FormModal from "@/components/prochauffeur/FormModal";
 import { useAdminDashboard } from "@/context/AdminDashboardContext";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
+import { useModal } from "@/hooks/useModal";
 import { downloadCsv, matchesSearch } from "@/lib/prochauffeur/adminTable";
 import {
   capLabel,
@@ -28,7 +31,6 @@ import {
   type ChauffeurCategory,
 } from "@/lib/prochauffeur/types";
 import { vehicleDisplayName } from "@/lib/prochauffeur/vehicleHelpers";
-import Link from "next/link";
 import React, { useMemo } from "react";
 
 const DRIVER_TABS = [
@@ -39,6 +41,7 @@ const DRIVER_TABS = [
 
 export default function DriversRosterView() {
   const { users } = useAdminDashboard();
+  const { isOpen, openModal, closeModal } = useModal();
   const {
     limits,
     hasReceivedOperationsSnapshot,
@@ -215,11 +218,13 @@ export default function DriversRosterView() {
         onFilter={table.resetFilters}
         onExport={handleExport}
         primaryAction={
-          <Link href="/drivers/new">
-            <Button size="sm" startIcon={<span aria-hidden>+</span>}>
-              Add driver
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            startIcon={<span aria-hidden>+</span>}
+            onClick={openModal}
+          >
+            Add driver
+          </Button>
         }
       >
         <AdminDataTable
@@ -261,6 +266,14 @@ export default function DriversRosterView() {
           )}
         />
       </AdminListTableCard>
+
+      <FormModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title="Add driver"
+      >
+        <AddDriverNoticeContent onClose={closeModal} />
+      </FormModal>
     </div>
   );
 }

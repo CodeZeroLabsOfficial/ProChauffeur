@@ -13,8 +13,12 @@ import AdminTableRowMenu, {
   type AdminTableRowMenuItem,
 } from "@/components/prochauffeur/admin-table/AdminTableRowMenu";
 import TripStatusBadge from "@/components/prochauffeur/TripStatusBadge";
+import AddBookingNoticeContent from "@/components/prochauffeur/AddBookingNoticeContent";
+import FormModal from "@/components/prochauffeur/FormModal";
+import Button from "@/components/ui/button/Button";
 import { useAdminDashboard } from "@/context/AdminDashboardContext";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
+import { useModal } from "@/hooks/useModal";
 import { downloadCsv, matchesSearch } from "@/lib/prochauffeur/adminTable";
 import {
   bookingCardDatePipeTime,
@@ -58,6 +62,7 @@ function shortTripId(id: string): string {
 
 export default function BookingsList() {
   const vm = useAdminDashboard();
+  const { isOpen, openModal, closeModal } = useModal();
 
   const sortedTrips = useMemo(
     () =>
@@ -260,6 +265,15 @@ export default function BookingsList() {
         searchPlaceholder="Search…"
         onFilter={table.resetFilters}
         onExport={handleExport}
+        primaryAction={
+          <Button
+            size="sm"
+            startIcon={<span aria-hidden>+</span>}
+            onClick={openModal}
+          >
+            Add booking
+          </Button>
+        }
       >
         <AdminDataTable
           columns={columns}
@@ -285,6 +299,14 @@ export default function BookingsList() {
           )}
         />
       </AdminListTableCard>
+
+      <FormModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title="Add booking"
+      >
+        <AddBookingNoticeContent onClose={closeModal} />
+      </FormModal>
     </div>
   );
 }

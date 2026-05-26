@@ -13,9 +13,12 @@ import {
 import AdminTableRowMenu from "@/components/prochauffeur/admin-table/AdminTableRowMenu";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
+import FleetVehicleForm from "@/components/prochauffeur/FleetVehicleForm";
+import FormModal from "@/components/prochauffeur/FormModal";
 import { useAdminDashboard } from "@/context/AdminDashboardContext";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
+import { useModal } from "@/hooks/useModal";
 import { downloadCsv, matchesSearch } from "@/lib/prochauffeur/adminTable";
 import { displayNameForUser } from "@/lib/prochauffeur/display";
 import { VEHICLE_TYPE_LABELS, type Vehicle } from "@/lib/prochauffeur/types";
@@ -24,7 +27,7 @@ import {
   vehicleDisplayName,
 } from "@/lib/prochauffeur/vehicleHelpers";
 import Link from "next/link";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 const FLEET_TABS = [
   { id: "all", label: "All vehicles" },
@@ -44,6 +47,13 @@ export default function FleetManagementView() {
     clearActionError,
   } = useAdminOperations();
   const { userById } = useAdminDashboard();
+  const { isOpen, openModal, closeModal } = useModal();
+  const [addVehicleKey, setAddVehicleKey] = useState(0);
+
+  function openAddVehicleModal() {
+    setAddVehicleKey((key) => key + 1);
+    openModal();
+  }
 
   function chauffeurLabel(vehicle: Vehicle): string {
     const assigned = effectiveChauffeurUserId(vehicle);
@@ -180,11 +190,13 @@ export default function FleetManagementView() {
         onFilter={table.resetFilters}
         onExport={handleExport}
         primaryAction={
-          <Link href="/fleet/new">
-            <Button size="sm" startIcon={<span aria-hidden>+</span>}>
-              Add vehicle
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            startIcon={<span aria-hidden>+</span>}
+            onClick={openAddVehicleModal}
+          >
+            Add vehicle
+          </Button>
         }
       >
         <AdminDataTable
@@ -218,6 +230,20 @@ export default function FleetManagementView() {
           )}
         />
       </AdminListTableCard>
+
+      <FormModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title="Add vehicle"
+        className="max-w-2xl p-5 lg:p-10"
+      >
+        <FleetVehicleForm
+          key={addVehicleKey}
+          variant="modal"
+          onSuccess={closeModal}
+          onCancel={closeModal}
+        />
+      </FormModal>
     </div>
   );
 }
