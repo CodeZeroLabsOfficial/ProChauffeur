@@ -23,6 +23,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  matchPrefix?: boolean;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
@@ -55,18 +56,8 @@ const navItems: NavItem[] = [
   {
     icon: <BoxIcon />,
     name: "Company",
-    subItems: [
-      { name: "Hub", path: "/company", pro: false },
-      { name: "Details", path: "/company/details", pro: false },
-      { name: "Operating hours", path: "/company/hours", pro: false },
-      { name: "Locations", path: "/company/locations", pro: false },
-      { name: "Pricing", path: "/company/pricing", pro: false },
-      { name: "Administrators", path: "/company/admins", pro: false },
-      { name: "License", path: "/company/license", pro: false },
-      { name: "Integrations", path: "/company/integrations", pro: false },
-      { name: "Dispatch guides", path: "/company/guides", pro: false },
-      { name: "About", path: "/company/about", pro: false },
-    ],
+    path: "/company",
+    matchPrefix: true,
   },
   {
     icon: <PieChartIcon />,
@@ -148,12 +139,14 @@ const AppSidebar: React.FC = () => {
               <Link
                 href={nav.path}
                 className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  isActive(nav.path, nav.matchPrefix)
+                    ? "menu-item-active"
+                    : "menu-item-inactive"
                 }`}
               >
                 <span
                   className={`${
-                    isActive(nav.path)
+                    isActive(nav.path, nav.matchPrefix)
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                   }`}
@@ -236,7 +229,13 @@ const AppSidebar: React.FC = () => {
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback(
+    (path: string, matchPrefix?: boolean) =>
+      matchPrefix
+        ? pathname === path || pathname.startsWith(`${path}/`)
+        : path === pathname,
+    [pathname]
+  );
 
   useEffect(() => {
     // Check if the current path matches any submenu item
