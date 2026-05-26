@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalCloseButton } from "@/components/ui/modal";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 export type SectionNavItem = {
@@ -95,12 +95,14 @@ export default function SectionedFormModal({
       isOpen={isOpen}
       onClose={onClose}
       containScroll
+      showCloseButton={false}
       className="flex max-h-[min(720px,calc(100vh-2rem))] w-full max-w-4xl flex-col overflow-hidden p-0"
     >
-      <div className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:px-6">
-        <h4 className="pr-10 text-lg font-medium text-gray-800 dark:text-white/90">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:px-6">
+        <h4 className="text-lg font-medium text-gray-800 dark:text-white/90">
           {title}
         </h4>
+        <ModalCloseButton onClose={onClose} />
       </div>
 
       {headerExtra ? (
