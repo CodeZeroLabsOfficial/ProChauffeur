@@ -9,13 +9,6 @@ import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
 import React, { useEffect, useState } from "react";
 
-const defaultSocialLinks = {
-  facebook: "https://www.facebook.com/PimjoHQ",
-  x: "https://x.com/PimjoHQ",
-  linkedin: "https://www.linkedin.com/company/pimjo",
-  instagram: "https://instagram.com/PimjoHQ",
-};
-
 type EditPersonalInformationModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -40,10 +33,6 @@ export default function EditPersonalInformationModal({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("Fleet Administrator");
-  const [facebook, setFacebook] = useState(defaultSocialLinks.facebook);
-  const [xProfile, setXProfile] = useState(defaultSocialLinks.x);
-  const [linkedin, setLinkedin] = useState(defaultSocialLinks.linkedin);
-  const [instagram, setInstagram] = useState(defaultSocialLinks.instagram);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,10 +42,6 @@ export default function EditPersonalInformationModal({
     setEmail(appUser?.email ?? "");
     setPhone(appUser?.profile.phoneNumber?.trim() ?? "");
     setBio("Fleet Administrator");
-    setFacebook(defaultSocialLinks.facebook);
-    setXProfile(defaultSocialLinks.x);
-    setLinkedin(defaultSocialLinks.linkedin);
-    setInstagram(defaultSocialLinks.instagram);
   }, [isOpen, appUser, initialFirst, initialLast]);
 
   function handleSave() {
@@ -137,50 +122,6 @@ export default function EditPersonalInformationModal({
                     type="text"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-7">
-              <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                Social Links
-              </h5>
-
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                <div>
-                  <Label>Facebook</Label>
-                  <Input
-                    type="text"
-                    value={facebook}
-                    onChange={(e) => setFacebook(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>X.com</Label>
-                  <Input
-                    type="text"
-                    value={xProfile}
-                    onChange={(e) => setXProfile(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Linkedin</Label>
-                  <Input
-                    type="text"
-                    value={linkedin}
-                    onChange={(e) => setLinkedin(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Instagram</Label>
-                  <Input
-                    type="text"
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
                   />
                 </div>
               </div>
