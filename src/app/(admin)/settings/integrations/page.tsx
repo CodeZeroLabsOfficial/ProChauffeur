@@ -1,5 +1,5 @@
 import SettingsSectionRedirect from "@/components/prochauffeur/SettingsSectionRedirect";
 
-export default function CompanyIntegrationsPage() {
+export default function SettingsIntegrationsPage() {
   return <SettingsSectionRedirect sectionId="integrations" />;
 }

@@ -3,7 +3,7 @@
 import CompanySettingsSection from "@/components/company-profile/CompanySettingsSection";
 import AdminAccountDetails from "@/components/prochauffeur/AdminAccountDetails";
 import FormModal from "@/components/prochauffeur/FormModal";
-import { useCompanySettingsScroll } from "@/context/CompanySettingsScrollContext";
+import { useSettingsScroll } from "@/context/SettingsScrollContext";
 import { useAdminDashboard } from "@/context/AdminDashboardContext";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
 import { useModal } from "@/hooks/useModal";
@@ -14,7 +14,7 @@ import React, { useEffect, useRef, useState } from "react";
 export default function AdminRosterView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { scrollToSection } = useCompanySettingsScroll();
+  const { scrollToSection } = useSettingsScroll();
   const { users } = useAdminDashboard();
   const { limits, hasReceivedOperationsSnapshot } = useAdminOperations();
   const { isOpen, openModal, closeModal } = useModal();
@@ -40,7 +40,7 @@ export default function AdminRosterView() {
     closeModal();
     setSelectedAdminId(undefined);
     if (searchParams.get("admin")) {
-      router.replace("/company#administrators", { scroll: false });
+      router.replace("/settings#administrators", { scroll: false });
     }
   }
 

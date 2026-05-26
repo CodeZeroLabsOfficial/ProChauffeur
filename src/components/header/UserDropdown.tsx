@@ -19,8 +19,8 @@ export default function UserDropdown() {
 
   const editProfileHref = "/profile";
   const accountSettingsHref = appUser?.id
-    ? `/company?admin=${encodeURIComponent(appUser.id)}#administrators`
-    : "/company#administrators";
+    ? `/settings?admin=${encodeURIComponent(appUser.id)}#administrators`
+    : "/settings#administrators";
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();

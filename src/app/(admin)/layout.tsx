@@ -5,6 +5,7 @@ import AdminAuthGuard from "@/components/prochauffeur/AdminAuthGuard";
 import { AdminDashboardProvider } from "@/context/AdminDashboardContext";
 import { AdminOperationsProvider } from "@/context/AdminOperationsContext";
 import { isCompanySectionPath } from "@/lib/prochauffeur/companyNav";
+import { isSettingsSectionPath } from "@/lib/prochauffeur/settingsNav";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -18,7 +19,8 @@ export default function AdminLayout({
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const pathname = usePathname();
-  const isCompanySection = isCompanySectionPath(pathname);
+  const isFullHeightSection =
+    isCompanySectionPath(pathname) || isSettingsSectionPath(pathname);
 
   const mainContentMargin = isMobileOpen
     ? "ml-0"
@@ -37,7 +39,7 @@ export default function AdminLayout({
               className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ease-in-out ${mainContentMargin}`}
             >
               <AppHeader />
-              {isCompanySection ? (
+              {isFullHeightSection ? (
                 <div className="flex h-[calc(100dvh-4.5rem)] min-h-0 flex-col overflow-hidden lg:h-[calc(100dvh-5rem)]">
                   {children}
                 </div>

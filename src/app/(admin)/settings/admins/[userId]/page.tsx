@@ -1,6 +1,6 @@
 import SettingsSectionRedirect from "@/components/prochauffeur/SettingsSectionRedirect";
 
-export default function AdminAccountPage({
+export default function SettingsAdminAccountPage({
   params,
 }: {
   params: { userId: string };

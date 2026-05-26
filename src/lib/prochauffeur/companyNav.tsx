@@ -4,11 +4,8 @@ import {
   CalenderIcon,
   DocsIcon,
   DollarLineIcon,
-  GroupIcon,
-  LockIcon,
   PageIcon,
   PieChartIcon,
-  PlugInIcon,
 } from "@/icons/index";
 
 export type CompanyNavItem = {
@@ -67,36 +64,13 @@ export const companyNavSections: CompanyNavSection[] = [
     ],
   },
   {
-    title: "Billing & access",
+    title: "Billing",
     items: [
       {
         name: "Pricing",
         sectionId: "pricing",
         href: "/company#pricing",
         icon: <DollarLineIcon />,
-      },
-      {
-        name: "License",
-        sectionId: "license",
-        href: "/company#license",
-        icon: <LockIcon />,
-      },
-      {
-        name: "Administrators",
-        sectionId: "administrators",
-        href: "/company#administrators",
-        icon: <GroupIcon />,
-      },
-    ],
-  },
-  {
-    title: "Integrations",
-    items: [
-      {
-        name: "Connections",
-        sectionId: "connections",
-        href: "/company#connections",
-        icon: <PlugInIcon />,
       },
     ],
   },

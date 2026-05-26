@@ -14,6 +14,7 @@ import {
   HorizontaLDots,
   PaperPlaneIcon,
   PieChartIcon,
+  TaskIcon,
   TimeIcon,
 } from "../icons/index";
 type NavItem = {
@@ -65,6 +66,12 @@ const navItems: NavItem[] = [
     icon: <TimeIcon />,
     name: "Activity",
     path: "/activity",
+  },
+  {
+    icon: <TaskIcon />,
+    name: "Settings",
+    path: "/settings",
+    matchPrefix: true,
   },
 ];
 
