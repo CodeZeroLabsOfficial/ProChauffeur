@@ -178,52 +178,58 @@ export default function OperatingHoursPatternModal({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
-        <Button size="sm" disabled={isSaving} onClick={() => void handleSave()}>
-          {isSaving ? "Saving…" : "Save pattern"}
-        </Button>
-      </div>
-
-      {!isNew && onDelete ? (
-        <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
-          {!confirmDelete ? (
-            <Button
-              className="!bg-error-500 hover:!bg-error-600"
-              size="sm"
-              onClick={() => setConfirmDelete(true)}
-            >
-              Delete pattern
-            </Button>
-          ) : (
-            <div className="flex gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap gap-3">
+          {!isNew && onDelete ? (
+            !confirmDelete ? (
               <Button
                 className="!bg-error-500 hover:!bg-error-600"
                 size="sm"
                 disabled={isSaving}
-                onClick={() => void handleDelete()}
+                onClick={() => setConfirmDelete(true)}
               >
-                Confirm delete
+                Delete pattern
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isSaving}
-                onClick={() => setConfirmDelete(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
+            ) : (
+              <>
+                <Button
+                  className="!bg-error-500 hover:!bg-error-600"
+                  size="sm"
+                  disabled={isSaving}
+                  onClick={() => void handleDelete()}
+                >
+                  Confirm delete
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaving}
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Cancel delete
+                </Button>
+              </>
+            )
+          ) : null}
         </div>
-      ) : null}
+        <div className="flex flex-wrap gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isSaving}
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={isSaving || confirmDelete}
+            onClick={() => void handleSave()}
+          >
+            {isSaving ? "Saving…" : "Save pattern"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
