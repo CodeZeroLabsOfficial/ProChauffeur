@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState,useCallback } from "react";
+import BrandingLogo from "@/components/branding/BrandingLogo";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
@@ -278,28 +278,21 @@ const AppSidebar: React.FC = () => {
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <Image
+              <BrandingLogo
+                asset="logo"
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
                 width={150}
                 height={40}
               />
-              <Image
+              <BrandingLogo
+                asset="logoDark"
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
                 width={150}
                 height={40}
               />
             </>
           ) : (
-            <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            <BrandingLogo asset="logoIcon" width={32} height={32} />
           )}
         </Link>
       </div>

@@ -1,5 +1,6 @@
 import type { DocumentData, Timestamp } from "firebase/firestore";
 import type {
+  AppFleetBrandingSettings,
   AppFleetLocaleSettings,
   AppFleetOperatingHours,
   AppGlobalLimits,
@@ -346,6 +347,23 @@ export function parseGlobalLimits(data: DocumentData): AppGlobalLimits {
     maxDrivers: intOrUnlimited("maxDrivers"),
     maxLocations: intOrUnlimited("maxLocations"),
     subscriptionTier,
+  };
+}
+
+export function parseFleetBrandingSettings(
+  data: DocumentData
+): Partial<AppFleetBrandingSettings> {
+  const read = (key: keyof AppFleetBrandingSettings) => {
+    const value = data[key];
+    return typeof value === "string" ? value.trim() : "";
+  };
+
+  return {
+    favicon: read("favicon"),
+    logo: read("logo"),
+    logoDark: read("logoDark"),
+    logoIcon: read("logoIcon"),
+    authLogo: read("authLogo"),
   };
 }
 

@@ -5,5 +5,6 @@ export const APP_SETTINGS_COLLECTION = "app_settings";
 export const OPERATOR_COLLECTION = "operator";
 
 export const OPERATOR_LOCALE_DOC = "locale";
+export const OPERATOR_BRANDING_DOC = "branding";
 export const OPERATOR_COMPANY_DOC = "company";
 export const OPERATOR_OPERATING_HOURS_DOC = "operating_hours";

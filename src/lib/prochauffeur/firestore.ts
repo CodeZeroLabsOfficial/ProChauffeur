@@ -19,6 +19,7 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp, getFirestoreDb } from "@/lib/firebase/client";
 import {
   parseCompanyProfile,
+  parseFleetBrandingSettings,
   parseFleetLocation,
   parseFleetLocaleSettings,
   parseFleetOperatingHours,
@@ -33,6 +34,7 @@ import {
   parsePricingConfig,
 } from "@/lib/prochauffeur/pricingHelpers";
 import type {
+  AppFleetBrandingSettings,
   AppFleetLocaleSettings,
   AppFleetOperatingHours,
   AppGlobalLimits,
@@ -53,9 +55,11 @@ import {
   EMPTY_OPERATING_HOURS,
 } from "@/lib/prochauffeur/types";
 
+import { mergeFleetBrandingSettings } from "@/lib/prochauffeur/brandingAssets";
 import {
   APP_SETTINGS_COLLECTION,
   OPERATOR_COLLECTION,
+  OPERATOR_BRANDING_DOC,
   OPERATOR_COMPANY_DOC,
   OPERATOR_LOCALE_DOC,
   OPERATOR_OPERATING_HOURS_DOC,
@@ -201,6 +205,18 @@ function encodeFleetLocale(
   };
 }
 
+function encodeFleetBranding(
+  branding: AppFleetBrandingSettings
+): Record<string, unknown> {
+  return {
+    favicon: branding.favicon,
+    logo: branding.logo,
+    logoDark: branding.logoDark,
+    logoIcon: branding.logoIcon,
+    authLogo: branding.authLogo,
+  };
+}
+
 function encodeCompanyProfile(profile: CompanyProfile): Record<string, unknown> {
   return {
     displayName: profile.displayName,
@@ -328,6 +344,18 @@ export function listenFleetLocale(
       return;
     }
     onUpdate(parseFleetLocaleSettings(snapshot.data()));
+  });
+}
+
+export function listenFleetBranding(
+  onUpdate: (branding: AppFleetBrandingSettings) => void
+): () => void {
+  return onSnapshot(operatorDoc(OPERATOR_BRANDING_DOC), (snapshot) => {
+    if (!snapshot.exists()) {
+      onUpdate(mergeFleetBrandingSettings(null));
+      return;
+    }
+    onUpdate(mergeFleetBrandingSettings(parseFleetBrandingSettings(snapshot.data())));
   });
 }
 
@@ -547,6 +575,12 @@ export async function saveFleetOperatingHours(
     operatorDoc(OPERATOR_OPERATING_HOURS_DOC),
     encodeOperatingHours(hours)
   );
+}
+
+export async function saveFleetBranding(
+  branding: AppFleetBrandingSettings
+): Promise<void> {
+  await setDoc(operatorDoc(OPERATOR_BRANDING_DOC), encodeFleetBranding(branding));
 }
 
 export async function saveFleetLocale(

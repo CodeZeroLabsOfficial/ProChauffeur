@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/context/AuthContext';
+import { FleetBrandingProvider } from '@/context/FleetBrandingContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import type { Metadata } from 'next';
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body className={`${outfit.className} dark:bg-gray-900`}>
         <ThemeProvider>
           <AuthProvider>
-            <SidebarProvider>{children}</SidebarProvider>
+            <FleetBrandingProvider>
+              <SidebarProvider>{children}</SidebarProvider>
+            </FleetBrandingProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

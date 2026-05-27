@@ -128,12 +128,21 @@ export function CompanySettingsScrollProvider({
 
       intersectionObserver?.disconnect();
       intersectionObserver = new IntersectionObserver(
-        (entries) => {
-          const visible = entries
-            .filter((entry) => entry.isIntersecting)
-            .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        () => {
+          const rootTop = container.getBoundingClientRect().top;
+          const activationOffset = 16;
+          let nextActive = sectionElements[0]?.id;
 
-          const nextActive = visible[0]?.target.id;
+          for (const element of sectionElements) {
+            const relativeTop =
+              element.getBoundingClientRect().top - rootTop + container.scrollTop;
+            if (relativeTop <= container.scrollTop + activationOffset) {
+              nextActive = element.id;
+            } else {
+              break;
+            }
+          }
+
           if (!nextActive || !isValidSectionId(nextActive)) return;
 
           setActiveSection(nextActive);

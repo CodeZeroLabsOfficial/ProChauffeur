@@ -163,6 +163,14 @@ export type AppFleetLocaleSettings = {
   numberFormat: LocaleNumberFormat | null;
 };
 
+export type AppFleetBrandingSettings = {
+  favicon: string;
+  logo: string;
+  logoDark: string;
+  logoIcon: string;
+  authLogo: string;
+};
+
 export type CompanyProfile = {
   displayName: string;
   address: {
@@ -289,6 +297,14 @@ export const EMPTY_FLEET_LOCALE: AppFleetLocaleSettings = {
   timeFormat: null,
   timeZoneIdentifier: null,
   numberFormat: null,
+};
+
+export const EMPTY_FLEET_BRANDING: AppFleetBrandingSettings = {
+  favicon: "",
+  logo: "",
+  logoDark: "",
+  logoIcon: "",
+  authLogo: "",
 };
 
 export const EMPTY_COMPANY_PROFILE: CompanyProfile = {

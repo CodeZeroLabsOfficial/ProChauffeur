@@ -21,6 +21,7 @@ import {
   listenOperatingHours,
   listenPricingConfig,
   saveCompanyProfile,
+  saveFleetBranding,
   saveFleetLocale,
   saveFleetOperatingHours,
   savePricingConfig,
@@ -31,6 +32,7 @@ import {
   upsertVehicle,
 } from "@/lib/prochauffeur/firestore";
 import type {
+  AppFleetBrandingSettings,
   AppFleetLocaleSettings,
   AppFleetOperatingHours,
   AppGlobalLimits,
@@ -41,6 +43,7 @@ import type {
   UserProfile,
   Vehicle,
 } from "@/lib/prochauffeur/types";
+import { useFleetBranding } from "@/context/FleetBrandingContext";
 import {
   DEFAULT_PRICING_CONFIG,
   EMPTY_FLEET_LOCALE,
@@ -52,6 +55,7 @@ type AdminOperationsContextValue = {
   limits: AppGlobalLimits;
   operatingHours: AppFleetOperatingHours;
   fleetLocale: AppFleetLocaleSettings;
+  fleetBranding: AppFleetBrandingSettings;
   companyProfile: CompanyProfile;
   pricingConfig: PricingConfig;
   hasPricingDocument: boolean;
@@ -73,6 +77,7 @@ type AdminOperationsContextValue = {
   removeLocation: (id: string) => Promise<boolean>;
   saveOperatingHours: (hours: AppFleetOperatingHours) => Promise<boolean>;
   saveFleetLocale: (locale: AppFleetLocaleSettings) => Promise<boolean>;
+  saveFleetBranding: (branding: AppFleetBrandingSettings) => Promise<boolean>;
   saveCompany: (profile: CompanyProfile) => Promise<boolean>;
   savePricing: (config: PricingConfig) => Promise<boolean>;
   saveDriverProfiles: (
@@ -100,6 +105,7 @@ export function AdminOperationsProvider({
   const [fleetLocale, setFleetLocale] = useState<AppFleetLocaleSettings | null>(
     null
   );
+  const { branding: fleetBranding } = useFleetBranding();
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(
     null
   );
@@ -209,6 +215,7 @@ export function AdminOperationsProvider({
         schedules: [],
       },
       fleetLocale: fleetLocale ?? EMPTY_FLEET_LOCALE,
+      fleetBranding,
       companyProfile: companyProfile ?? {
         displayName: "",
         address: {
@@ -271,6 +278,8 @@ export function AdminOperationsProvider({
             }
           )
         ),
+      saveFleetBranding: (branding) =>
+        runMutation(() => saveFleetBranding(branding)),
       saveCompany: (profile) => runMutation(() => saveCompanyProfile(profile)),
       savePricing: (config) => runMutation(() => savePricingConfig(config)),
       saveDriverProfiles: (uid, profile, driverProfile) =>
@@ -287,6 +296,7 @@ export function AdminOperationsProvider({
       hasPricingDocument,
       hasReceivedOperationsSnapshot,
       isSaving,
+      fleetBranding,
       fleetLocale,
       limits,
       locations,
