@@ -1,7 +1,7 @@
 "use client";
 
 import CompanyLogoPicker from "@/components/company-profile/CompanyLogoPicker";
-import CompanyProfileEditButton from "@/components/company-profile/CompanyProfileEditButton";
+import SettingsEditableCard from "@/components/company-profile/SettingsEditableCard";
 import {
   displayValue,
   trimmedCompanyProfile,
@@ -78,8 +78,11 @@ export default function CompanyDetailsCard() {
 
   return (
     <>
-      <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+      <SettingsEditableCard
+        onEdit={openModal}
+        editAriaLabel="Edit company information"
+      >
+        <div className="flex flex-col gap-5 pe-10 xl:flex-row xl:items-center">
           <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800">
               {companyProfile.logoURL.trim() ? (
@@ -106,9 +109,6 @@ export default function CompanyDetailsCard() {
               </p>
             </div>
           </div>
-          <div className="self-end xl:self-auto">
-            <CompanyProfileEditButton onClick={openModal} />
-          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:grid-cols-3 2xl:gap-x-32">
@@ -123,7 +123,7 @@ export default function CompanyDetailsCard() {
             </div>
           ))}
         </div>
-      </div>
+      </SettingsEditableCard>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">

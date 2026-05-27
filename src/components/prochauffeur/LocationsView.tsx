@@ -1,6 +1,7 @@
 "use client";
 
 import CompanySettingsSection from "@/components/company-profile/CompanySettingsSection";
+import SettingsEditableCard from "@/components/company-profile/SettingsEditableCard";
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
 import Button from "@/components/ui/button/Button";
 import FormModal from "@/components/prochauffeur/FormModal";
@@ -96,13 +97,13 @@ export default function LocationsView() {
         ) : (
           <div className="space-y-3">
             {locations.map((location) => (
-              <button
+              <SettingsEditableCard
                 key={location.id}
-                type="button"
-                onClick={() => openEditLocationModal(location.id)}
-                className="block w-full rounded-2xl border border-gray-200 p-5 text-left transition hover:border-brand-300 dark:border-gray-800 dark:hover:border-brand-800"
+                onEdit={() => openEditLocationModal(location.id)}
+                editAriaLabel={`Edit ${location.name}`}
+                className="lg:p-5"
               >
-                <h4 className="font-semibold text-gray-800 dark:text-white/90">
+                <h4 className="pe-10 font-semibold text-gray-800 dark:text-white/90">
                   {location.name}
                 </h4>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -111,7 +112,7 @@ export default function LocationsView() {
                 <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
                   {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
                 </p>
-              </button>
+              </SettingsEditableCard>
             ))}
           </div>
         )}

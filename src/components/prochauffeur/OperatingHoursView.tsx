@@ -1,6 +1,7 @@
 "use client";
 
 import CompanySettingsSection from "@/components/company-profile/CompanySettingsSection";
+import SettingsEditableCard from "@/components/company-profile/SettingsEditableCard";
 import AdminActionBanner from "@/components/prochauffeur/AdminActionBanner";
 import OperatingHoursPatternModal from "@/components/prochauffeur/OperatingHoursPatternModal";
 import FormModal from "@/components/prochauffeur/FormModal";
@@ -51,12 +52,12 @@ function OperatingHoursPatternCard({
     : "—";
 
   return (
-    <button
-      type="button"
-      onClick={onEdit}
-      className="block w-full rounded-2xl border border-gray-200 p-5 text-left transition hover:border-brand-300 dark:border-gray-800 dark:hover:border-brand-800"
+    <SettingsEditableCard
+      onEdit={onEdit}
+      editAriaLabel="Edit operating pattern"
+      className="lg:p-5"
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 pe-10 sm:grid-cols-2 sm:gap-6">
         <SummaryField label="Business days" value={businessDays} />
         <SummaryField label="Business hours" value={businessHours} />
         <SummaryField label="Timezone" value={timeZoneLabel} />
@@ -65,7 +66,7 @@ function OperatingHoursPatternCard({
           value={formatWeekStartsOn(weekStartsOn)}
         />
       </div>
-    </button>
+    </SettingsEditableCard>
   );
 }
 
