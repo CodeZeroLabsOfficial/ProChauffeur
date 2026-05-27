@@ -79,6 +79,15 @@ function encodeUserProfile(profile: UserProfile): Record<string, unknown> {
     displayName: profile.displayName,
     phoneNumber: profile.phoneNumber ?? null,
     photoURL: profile.photoURL ?? null,
+    address: profile.address
+      ? {
+          street: profile.address.street,
+          city: profile.address.city,
+          state: profile.address.state,
+          postcode: profile.address.postcode,
+          country: profile.address.country,
+        }
+      : null,
   };
   if (profile.dateOfBirth) {
     payload.dateOfBirth = Timestamp.fromDate(profile.dateOfBirth);
@@ -195,7 +204,13 @@ function encodeFleetLocale(
 function encodeCompanyProfile(profile: CompanyProfile): Record<string, unknown> {
   return {
     displayName: profile.displayName,
-    address: profile.address,
+    address: {
+      street: profile.address.street,
+      city: profile.address.city,
+      state: profile.address.state,
+      postcode: profile.address.postcode,
+      country: profile.address.country,
+    },
     phone: profile.phone,
     email: profile.email,
     website: profile.website,

@@ -9,15 +9,63 @@ import {
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
+import { useAuth } from "@/context/AuthContext";
 import { useModal } from "@/hooks/useModal";
-import React from "react";
+import { updateUserProfile } from "@/lib/prochauffeur/firestore";
+import React, { useEffect, useState } from "react";
 
 export default function UserAddressCard() {
+  const { appUser, refreshAppUser } = useAuth();
   const { isOpen, openModal, closeModal } = useModal();
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [country, setCountry] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  function handleSave() {
-    closeModal();
+  useEffect(() => {
+    if (!isOpen) return;
+    setStreet(appUser?.profile.address?.street ?? "");
+    setCity(appUser?.profile.address?.city ?? "");
+    setState(appUser?.profile.address?.state ?? "");
+    setPostcode(appUser?.profile.address?.postcode ?? "");
+    setCountry(appUser?.profile.address?.country ?? "");
+    setSaveError(null);
+  }, [isOpen, appUser]);
+
+  async function handleSave() {
+    if (!appUser) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateUserProfile(appUser.id, {
+        ...appUser.profile,
+        address: {
+          street: street.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          postcode: postcode.trim(),
+          country: country.trim(),
+        },
+      });
+      await refreshAppUser();
+      closeModal();
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Could not update address."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
+
+  const displayStreet = appUser?.profile.address?.street?.trim() || "—";
+  const displayCity = appUser?.profile.address?.city?.trim() || "—";
+  const displayState = appUser?.profile.address?.state?.trim() || "—";
+  const displayPostcode = appUser?.profile.address?.postcode?.trim() || "—";
+  const displayCountry = appUser?.profile.address?.country?.trim() || "—";
 
   return (
     <>
@@ -34,7 +82,7 @@ export default function UserAddressCard() {
                   Street
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  123 Fleet Street
+                  {displayStreet}
                 </p>
               </div>
 
@@ -43,7 +91,7 @@ export default function UserAddressCard() {
                   City
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Phoenix
+                  {displayCity}
                 </p>
               </div>
 
@@ -52,7 +100,7 @@ export default function UserAddressCard() {
                   State
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Arizona
+                  {displayState}
                 </p>
               </div>
 
@@ -61,7 +109,7 @@ export default function UserAddressCard() {
                   Postcode
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  85001
+                  {displayPostcode}
                 </p>
               </div>
 
@@ -70,7 +118,7 @@ export default function UserAddressCard() {
                   Country
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  United States
+                  {displayCountry}
                 </p>
               </div>
             </div>
@@ -91,8 +139,8 @@ export default function UserAddressCard() {
             <Button size="sm" variant="outline" onClick={closeModal}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave}>
-              Save changes
+            <Button size="sm" onClick={() => void handleSave()} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save changes"}
             </Button>
           </ModalFormFooterActions>
         }
@@ -100,30 +148,49 @@ export default function UserAddressCard() {
         <ModalFormDescription>
           Update your details to keep your profile up-to-date.
         </ModalFormDescription>
+        {saveError ? (
+          <p className="mb-4 text-sm text-error-500">{saveError}</p>
+        ) : null}
         <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
           <div>
             <Label>Street</Label>
-            <Input type="text" defaultValue="123 Fleet Street" />
+            <Input
+              type="text"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+            />
           </div>
 
           <div>
             <Label>City</Label>
-            <Input type="text" defaultValue="Phoenix" />
+            <Input type="text" value={city} onChange={(e) => setCity(e.target.value)} />
           </div>
 
           <div>
             <Label>State</Label>
-            <Input type="text" defaultValue="Arizona" />
+            <Input
+              type="text"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+            />
           </div>
 
           <div>
             <Label>Postcode</Label>
-            <Input type="text" defaultValue="85001" />
+            <Input
+              type="text"
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value)}
+            />
           </div>
 
           <div>
             <Label>Country</Label>
-            <Input type="text" defaultValue="United States" />
+            <Input
+              type="text"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            />
           </div>
         </div>
       </FormModal>

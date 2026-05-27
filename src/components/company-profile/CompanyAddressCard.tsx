@@ -17,45 +17,9 @@ import { useAdminOperations } from "@/context/AdminOperationsContext";
 import { useModal } from "@/hooks/useModal";
 import React, { useEffect, useState } from "react";
 
-type AddressFields = {
-  street: string;
-  city: string;
-  state: string;
-  postcode: string;
-  country: string;
-};
-
-function parseAddress(address: string): AddressFields {
-  const parts = address
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  return {
-    street: parts[0] ?? "",
-    city: parts[1] ?? "",
-    state: parts[2] ?? "",
-    postcode: parts[3] ?? "",
-    country: parts[4] ?? "",
-  };
-}
-
-function formatAddress(fields: AddressFields): string {
-  return [
-    fields.street.trim(),
-    fields.city.trim(),
-    fields.state.trim(),
-    fields.postcode.trim(),
-    fields.country.trim(),
-  ]
-    .filter(Boolean)
-    .join(", ");
-}
-
 export default function CompanyAddressCard() {
   const { companyProfile, saveCompany, isSaving } = useAdminOperations();
   const { isOpen, openModal, closeModal } = useModal();
-  const parsedAddress = parseAddress(companyProfile.address);
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -64,26 +28,24 @@ export default function CompanyAddressCard() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const parsed = parseAddress(companyProfile.address);
-    setStreet(parsed.street);
-    setCity(parsed.city);
-    setState(parsed.state);
-    setPostcode(parsed.postcode);
-    setCountry(parsed.country);
+    setStreet(companyProfile.address.street);
+    setCity(companyProfile.address.city);
+    setState(companyProfile.address.state);
+    setPostcode(companyProfile.address.postcode);
+    setCountry(companyProfile.address.country);
   }, [isOpen, companyProfile.address]);
 
   async function handleSave() {
-    const address = formatAddress({
-      street,
-      city,
-      state,
-      postcode,
-      country,
-    });
     const ok = await saveCompany(
       trimmedCompanyProfile({
         ...companyProfile,
-        address,
+        address: {
+          street,
+          city,
+          state,
+          postcode,
+          country,
+        },
       })
     );
     if (ok) closeModal();
@@ -102,7 +64,7 @@ export default function CompanyAddressCard() {
               Street
             </p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-              {displayValue(parsedAddress.street)}
+              {displayValue(companyProfile.address.street)}
             </p>
           </div>
           <div>
@@ -110,7 +72,7 @@ export default function CompanyAddressCard() {
               City
             </p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-              {displayValue(parsedAddress.city)}
+              {displayValue(companyProfile.address.city)}
             </p>
           </div>
           <div>
@@ -118,7 +80,7 @@ export default function CompanyAddressCard() {
               State
             </p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-              {displayValue(parsedAddress.state)}
+              {displayValue(companyProfile.address.state)}
             </p>
           </div>
           <div>
@@ -126,7 +88,7 @@ export default function CompanyAddressCard() {
               Postcode
             </p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-              {displayValue(parsedAddress.postcode)}
+              {displayValue(companyProfile.address.postcode)}
             </p>
           </div>
           <div>
@@ -134,7 +96,7 @@ export default function CompanyAddressCard() {
               Country
             </p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-              {displayValue(parsedAddress.country)}
+              {displayValue(companyProfile.address.country)}
             </p>
           </div>
         </div>

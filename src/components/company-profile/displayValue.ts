@@ -8,7 +8,13 @@ export function displayValue(value: string, fallback = "—"): string {
 export function trimmedCompanyProfile(profile: CompanyProfile): CompanyProfile {
   return {
     displayName: profile.displayName.trim(),
-    address: profile.address.trim(),
+    address: {
+      street: profile.address.street.trim(),
+      city: profile.address.city.trim(),
+      state: profile.address.state.trim(),
+      postcode: profile.address.postcode.trim(),
+      country: profile.address.country.trim(),
+    },
     phone: profile.phone.trim(),
     email: profile.email.trim(),
     website: profile.website.trim(),

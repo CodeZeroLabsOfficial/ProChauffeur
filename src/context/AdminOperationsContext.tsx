@@ -211,7 +211,13 @@ export function AdminOperationsProvider({
       fleetLocale: fleetLocale ?? EMPTY_FLEET_LOCALE,
       companyProfile: companyProfile ?? {
         displayName: "",
-        address: "",
+        address: {
+          street: "",
+          city: "",
+          state: "",
+          postcode: "",
+          country: "",
+        },
         phone: "",
         email: "",
         website: "",

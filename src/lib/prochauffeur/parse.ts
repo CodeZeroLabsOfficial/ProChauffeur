@@ -69,11 +69,24 @@ function parseUserProfile(value: unknown): UserProfile {
     return { displayName: "" };
   }
   const v = value as Record<string, unknown>;
+  const addressValue =
+    v.address && typeof v.address === "object"
+      ? (v.address as Record<string, unknown>)
+      : null;
   return {
     displayName: String(v.displayName ?? ""),
     phoneNumber: v.phoneNumber != null ? String(v.phoneNumber) : null,
     photoURL: v.photoURL != null ? String(v.photoURL) : null,
     dateOfBirth: v.dateOfBirth ? parseTimestamp(v.dateOfBirth) : null,
+    address: addressValue
+      ? {
+          street: String(addressValue.street ?? ""),
+          city: String(addressValue.city ?? ""),
+          state: String(addressValue.state ?? ""),
+          postcode: String(addressValue.postcode ?? ""),
+          country: String(addressValue.country ?? ""),
+        }
+      : null,
   };
 }
 
@@ -387,9 +400,39 @@ export function parseFleetOperatingHours(
 }
 
 export function parseCompanyProfile(data: DocumentData): CompanyProfile {
+  const address =
+    data.address && typeof data.address === "object" ? data.address : null;
+  const legacyAddress =
+    typeof data.address === "string" ? String(data.address) : "";
+  const legacyParts = legacyAddress
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
   return {
     displayName: String(data.displayName ?? ""),
-    address: String(data.address ?? ""),
+    address: {
+      street:
+        address && "street" in address
+          ? String(address.street ?? "")
+          : (legacyParts[0] ?? ""),
+      city:
+        address && "city" in address
+          ? String(address.city ?? "")
+          : (legacyParts[1] ?? ""),
+      state:
+        address && "state" in address
+          ? String(address.state ?? "")
+          : (legacyParts[2] ?? ""),
+      postcode:
+        address && "postcode" in address
+          ? String(address.postcode ?? "")
+          : (legacyParts[3] ?? ""),
+      country:
+        address && "country" in address
+          ? String(address.country ?? "")
+          : (legacyParts[4] ?? ""),
+    },
     phone: String(data.phone ?? ""),
     email: String(data.email ?? ""),
     website: String(data.website ?? ""),

@@ -24,11 +24,20 @@ export type GeoPointLike = {
   longitude: number;
 };
 
+export type UserAddress = {
+  street: string;
+  city: string;
+  state: string;
+  postcode: string;
+  country: string;
+};
+
 export type UserProfile = {
   displayName: string;
   phoneNumber?: string | null;
   photoURL?: string | null;
   dateOfBirth?: Date | null;
+  address?: UserAddress | null;
 };
 
 export type ChauffeurCategory =
@@ -156,7 +165,13 @@ export type AppFleetLocaleSettings = {
 
 export type CompanyProfile = {
   displayName: string;
-  address: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postcode: string;
+    country: string;
+  };
   phone: string;
   email: string;
   website: string;
@@ -278,7 +293,13 @@ export const EMPTY_FLEET_LOCALE: AppFleetLocaleSettings = {
 
 export const EMPTY_COMPANY_PROFILE: CompanyProfile = {
   displayName: "",
-  address: "",
+  address: {
+    street: "",
+    city: "",
+    state: "",
+    postcode: "",
+    country: "",
+  },
   phone: "",
   email: "",
   website: "",
