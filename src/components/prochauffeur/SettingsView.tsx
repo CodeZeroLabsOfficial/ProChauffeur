@@ -9,9 +9,9 @@ import React from "react";
 export default function SettingsView() {
   return (
     <div className="space-y-6">
+      <LocaleSettingsView />
       <LicenseManagementView />
       <AdminRosterView />
-      <LocaleSettingsView />
       <CompanyPlaceholderView
         id="integrations"
         title="Integrations"

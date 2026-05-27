@@ -108,9 +108,6 @@ export default function LocationsView() {
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {location.addressLine}
                 </p>
-                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                  {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-                </p>
               </SettingsEditableCard>
             ))}
           </div>

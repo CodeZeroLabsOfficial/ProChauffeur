@@ -20,12 +20,6 @@ export default function ActivityFeedView() {
 
   return (
     <div>
-
-      <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        Trip lifecycle events from your fleet — bookings, assignments,
-        completions, and cancellations — newest first.
-      </p>
-
       <div className="mb-6 flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-white/[0.03]">
         {ACTIVITY_TIME_RANGES.map((tab) => (
           <button

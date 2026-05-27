@@ -68,8 +68,6 @@ type AdminOperationsContextValue = {
   createLocation: (input: {
     name: string;
     addressLine: string;
-    latitude: number;
-    longitude: number;
   }) => Promise<string | null>;
   saveLocation: (location: FleetLocation) => Promise<boolean>;
   removeLocation: (id: string) => Promise<boolean>;

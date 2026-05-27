@@ -10,7 +10,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { useAdminOperations } from "@/context/AdminOperationsContext";
-import { forwardGeocodeFirstCoordinate } from "@/lib/prochauffeur/mapboxGeocode";
 import type { FleetLocation } from "@/lib/prochauffeur/types";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -45,10 +44,7 @@ export default function LocationFormView({
 
   const [name, setName] = useState("");
   const [addressLine, setAddressLine] = useState("");
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -57,45 +53,24 @@ export default function LocationFormView({
     if (!existing) return;
     setName(existing.name);
     setAddressLine(existing.addressLine);
-    setLatitude(existing.latitude);
-    setLongitude(existing.longitude);
   }, [locationId, locations]);
-
-  async function geocodeAddress() {
-    setLocalError(null);
-    setIsGeocoding(true);
-    try {
-      const query = [name.trim(), addressLine.trim()].filter(Boolean).join(", ");
-      const result = await forwardGeocodeFirstCoordinate(query);
-      setLatitude(result.latitude);
-      setLongitude(result.longitude);
-    } catch (e) {
-      setLocalError(
-        e instanceof Error ? e.message : "Could not geocode that address."
-      );
-    } finally {
-      setIsGeocoding(false);
-    }
-  }
 
   async function handleSave() {
     if (!name.trim() || !addressLine.trim()) {
       setLocalError("Name and address are required.");
       return;
     }
-    if (latitude == null || longitude == null) {
-      setLocalError("Geocode the address before saving.");
-      return;
-    }
 
     setLocalError(null);
+
+    const existing = locationId
+      ? locations.find((l) => l.id === locationId)
+      : undefined;
 
     if (isNew) {
       const id = await createLocation({
         name: name.trim(),
         addressLine: addressLine.trim(),
-        latitude,
-        longitude,
       });
       if (!id) return;
       if (onSuccess) {
@@ -110,10 +85,9 @@ export default function LocationFormView({
       id: locationId!,
       name: name.trim(),
       addressLine: addressLine.trim(),
-      latitude,
-      longitude,
-      createdAt:
-        locations.find((l) => l.id === locationId)?.createdAt ?? new Date(),
+      latitude: existing?.latitude ?? 0,
+      longitude: existing?.longitude ?? 0,
+      createdAt: existing?.createdAt ?? new Date(),
     };
     const ok = await saveLocation(payload);
     if (!ok) return;
@@ -155,26 +129,6 @@ export default function LocationFormView({
           value={addressLine}
           onChange={(e) => setAddressLine(e.target.value)}
         />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isGeocoding || !addressLine.trim()}
-          onClick={geocodeAddress}
-        >
-          {isGeocoding ? "Geocoding…" : "Look up on map"}
-        </Button>
-        {latitude != null && longitude != null ? (
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {latitude.toFixed(5)}, {longitude.toFixed(5)}
-          </span>
-        ) : (
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Coordinates required before save
-          </span>
-        )}
       </div>
     </div>
   );

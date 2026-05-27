@@ -18,12 +18,18 @@ export type SettingsNavSection = {
   items: SettingsNavItem[];
 };
 
-export const defaultSettingsSectionId = "license";
+export const defaultSettingsSectionId = "locale";
 
 export const settingsNavSections: SettingsNavSection[] = [
   {
     title: "Settings",
     items: [
+      {
+        name: "Locale",
+        sectionId: "locale",
+        href: "/settings#locale",
+        icon: <PageIcon />,
+      },
       {
         name: "License",
         sectionId: "license",
@@ -41,12 +47,6 @@ export const settingsNavSections: SettingsNavSection[] = [
         sectionId: "integrations",
         href: "/settings#integrations",
         icon: <PlugInIcon />,
-      },
-      {
-        name: "Locale",
-        sectionId: "locale",
-        href: "/settings#locale",
-        icon: <PageIcon />,
       },
     ],
   },

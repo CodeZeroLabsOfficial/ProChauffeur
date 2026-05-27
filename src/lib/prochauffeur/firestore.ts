@@ -466,8 +466,6 @@ export async function countFleetLocations(): Promise<number> {
 export async function createFleetLocation(input: {
   name: string;
   addressLine: string;
-  latitude: number;
-  longitude: number;
 }): Promise<string> {
   const limits = await fetchGlobalLimits();
   const current = await countFleetLocations();
@@ -488,8 +486,8 @@ export async function createFleetLocation(input: {
     id,
     name,
     addressLine,
-    latitude: input.latitude,
-    longitude: input.longitude,
+    latitude: 0,
+    longitude: 0,
     createdAt: new Date(),
   };
 
