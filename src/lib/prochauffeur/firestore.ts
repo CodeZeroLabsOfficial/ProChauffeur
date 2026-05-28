@@ -57,9 +57,10 @@ import {
 
 import { mergeFleetBrandingSettings } from "@/lib/prochauffeur/brandingAssets";
 import {
+  APP_SETTINGS_BRANDING_DOC,
   APP_SETTINGS_COLLECTION,
-  OPERATOR_COLLECTION,
   OPERATOR_BRANDING_DOC,
+  OPERATOR_COLLECTION,
   OPERATOR_COMPANY_DOC,
   OPERATOR_LOCALE_DOC,
   OPERATOR_OPERATING_HOURS_DOC,
@@ -350,12 +351,27 @@ export function listenFleetLocale(
 export function listenFleetBranding(
   onUpdate: (branding: AppFleetBrandingSettings) => void
 ): () => void {
-  return onSnapshot(operatorDoc(OPERATOR_BRANDING_DOC), (snapshot) => {
-    if (!snapshot.exists()) {
-      onUpdate(mergeFleetBrandingSettings(null));
+  const brandingRef = appSettingsDoc(APP_SETTINGS_BRANDING_DOC);
+
+  const publish = (
+    data: Partial<AppFleetBrandingSettings> | null | undefined
+  ) => {
+    onUpdate(mergeFleetBrandingSettings(data));
+  };
+
+  return onSnapshot(brandingRef, (snapshot) => {
+    if (snapshot.exists()) {
+      publish(parseFleetBrandingSettings(snapshot.data()));
       return;
     }
-    onUpdate(mergeFleetBrandingSettings(parseFleetBrandingSettings(snapshot.data())));
+
+    void getDoc(operatorDoc(OPERATOR_BRANDING_DOC)).then((legacy) => {
+      if (legacy.exists()) {
+        publish(parseFleetBrandingSettings(legacy.data()));
+        return;
+      }
+      publish(null);
+    });
   });
 }
 
@@ -582,7 +598,7 @@ export async function saveFleetBranding(
 ): Promise<void> {
   const sanitized = mergeFleetBrandingSettings(branding);
   await setDoc(
-    operatorDoc(OPERATOR_BRANDING_DOC),
+    appSettingsDoc(APP_SETTINGS_BRANDING_DOC),
     encodeFleetBranding(sanitized)
   );
 }
