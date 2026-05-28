@@ -1,9 +1,8 @@
-import {
-  DynamicStubPage,
-  dynamicStubMetadata,
-} from "@/lib/prochauffeur/dynamicStubPage";
+import DriverAccreditationView from "@/components/prochauffeur/DriverAccreditationView";
 
-export const metadata = dynamicStubMetadata("driverAccreditation");
+export const metadata = {
+  title: "Driver accreditation | ProChauffeur Dispatch",
+};
 
 type Props = {
   params: Promise<{ userId: string }>;
@@ -11,7 +10,5 @@ type Props = {
 
 export default async function DriverAccreditationPage({ params }: Props) {
   const { userId } = await params;
-  return (
-    <DynamicStubPage stubKey="driverAccreditation" routeParams={{ userId }} />
-  );
+  return <DriverAccreditationView userId={userId} />;
 }

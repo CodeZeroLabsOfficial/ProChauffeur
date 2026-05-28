@@ -1,14 +1,14 @@
-import DriverHubView from "@/components/prochauffeur/DriverHubView";
+import DriverProfileEditView from "@/components/prochauffeur/DriverProfileEditView";
 
 export const metadata = {
-  title: "Driver | ProChauffeur Dispatch",
+  title: "Driver overview | ProChauffeur Dispatch",
 };
 
 type Props = {
   params: Promise<{ userId: string }>;
 };
 
-export default async function DriverHubPage({ params }: Props) {
+export default async function DriverOverviewPage({ params }: Props) {
   const { userId } = await params;
-  return <DriverHubView userId={userId} />;
+  return <DriverProfileEditView userId={userId} />;
 }

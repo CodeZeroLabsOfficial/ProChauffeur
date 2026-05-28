@@ -1,17 +1,9 @@
-import {
-  DynamicStubPage,
-  dynamicStubMetadata,
-} from "@/lib/prochauffeur/dynamicStubPage";
+import DriverServiceFocusView from "@/components/prochauffeur/DriverServiceFocusView";
 
-export const metadata = dynamicStubMetadata("driverServiceFocus");
-
-type Props = {
-  params: Promise<{ userId: string }>;
+export const metadata = {
+  title: "Driver service focus | ProChauffeur Dispatch",
 };
 
-export default async function DriverServiceFocusPage({ params }: Props) {
-  const { userId } = await params;
-  return (
-    <DynamicStubPage stubKey="driverServiceFocus" routeParams={{ userId }} />
-  );
+export default function DriverServiceFocusPage() {
+  return <DriverServiceFocusView />;
 }

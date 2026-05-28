@@ -249,12 +249,8 @@ export default function DriversRosterView() {
             <AdminTableRowMenu
               items={[
                 {
-                  label: "Open profile",
+                  label: "Open driver",
                   href: `/drivers/${driver.id}`,
-                },
-                {
-                  label: "Edit profile",
-                  href: `/drivers/${driver.id}/profile`,
                 },
                 {
                   label: "Vehicle assignment",

@@ -1,9 +1,8 @@
-import {
-  DynamicStubPage,
-  dynamicStubMetadata,
-} from "@/lib/prochauffeur/dynamicStubPage";
+import DriverAvailabilityView from "@/components/prochauffeur/DriverAvailabilityView";
 
-export const metadata = dynamicStubMetadata("driverAvailability");
+export const metadata = {
+  title: "Driver availability | ProChauffeur Dispatch",
+};
 
 type Props = {
   params: Promise<{ userId: string }>;
@@ -11,7 +10,5 @@ type Props = {
 
 export default async function DriverAvailabilityPage({ params }: Props) {
   const { userId } = await params;
-  return (
-    <DynamicStubPage stubKey="driverAvailability" routeParams={{ userId }} />
-  );
+  return <DriverAvailabilityView userId={userId} />;
 }
