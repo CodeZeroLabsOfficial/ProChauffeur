@@ -1,6 +1,5 @@
 "use client";
 
-import Button from "@/components/ui/button/Button";
 import {
   isLegacyStaticBrandingPath,
   type BrandingAssetPreview,
@@ -40,6 +39,26 @@ type BrandingAssetFieldProps = {
   onChange: (value: string) => void;
   onUploadError?: (message: string) => void;
 };
+
+function UploadIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+      />
+    </svg>
+  );
+}
 
 function shouldUnoptimizePreview(src: string): boolean {
   return (
@@ -103,9 +122,14 @@ export default function BrandingAssetField({
         </h4>
         <div className="shrink-0">
           <input {...getInputProps()} id={id} />
-          <Button type="button" size="sm" variant="outline" onClick={open}>
-            Upload
-          </Button>
+          <button
+            type="button"
+            onClick={open}
+            aria-label={`Upload ${label}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
+          >
+            <UploadIcon className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
