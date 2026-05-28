@@ -19,23 +19,32 @@ export default function BrandingSettingsView() {
   } = useAdminOperations();
 
   const [draft, setDraft] = useState<AppFleetBrandingSettings>(fleetBranding);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isSaving) return;
     setDraft(fleetBranding);
-  }, [fleetBranding]);
+  }, [fleetBranding, isSaving]);
 
   function updateAsset(key: keyof AppFleetBrandingSettings, value: string) {
+    setUploadError(null);
+    clearActionError();
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
   function handleCancel() {
     setDraft(fleetBranding);
+    setUploadError(null);
     clearActionError();
   }
 
   async function handleSave() {
+    setUploadError(null);
+    clearActionError();
     await saveFleetBranding(draft);
   }
+
+  const bannerMessage = uploadError ?? actionError;
 
   return (
     <CompanySettingsSection
@@ -43,10 +52,13 @@ export default function BrandingSettingsView() {
       title="Branding"
       description="Customize the favicon and logos shown across your web admin and customer-facing experiences."
       banner={
-        actionError ? (
+        bannerMessage ? (
           <AdminActionBanner
-            message={actionError}
-            onDismiss={clearActionError}
+            message={bannerMessage}
+            onDismiss={() => {
+              setUploadError(null);
+              clearActionError();
+            }}
           />
         ) : null
       }
@@ -88,6 +100,7 @@ export default function BrandingSettingsView() {
                         preview={asset.preview}
                         showLabel={false}
                         onChange={(value) => updateAsset(asset.key, value)}
+                        onUploadError={setUploadError}
                       />
                     </div>
                   );
@@ -115,6 +128,7 @@ export default function BrandingSettingsView() {
                       value={draft[asset.key]}
                       preview={asset.preview}
                       onChange={(value) => updateAsset(asset.key, value)}
+                      onUploadError={setUploadError}
                     />
                   ))}
                 </div>

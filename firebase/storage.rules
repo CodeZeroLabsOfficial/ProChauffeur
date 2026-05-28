@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function callerUserDoc() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && firestore.exists(callerUserDoc())
+        && firestore.get(callerUserDoc()).data.role == 'admin';
+    }
+
+    // Favicon and logo uploads from Settings → Branding (e.g. branding/favicon.png).
+    match /branding/{fileName} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

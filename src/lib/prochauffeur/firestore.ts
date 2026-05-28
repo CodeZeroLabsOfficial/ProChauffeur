@@ -56,6 +56,7 @@ import {
 } from "@/lib/prochauffeur/types";
 
 import { mergeFleetBrandingSettings } from "@/lib/prochauffeur/brandingAssets";
+import { prepareBrandingAssetsForSave } from "@/lib/prochauffeur/brandingStorage";
 import {
   APP_SETTINGS_BRANDING_DOC,
   APP_SETTINGS_COLLECTION,
@@ -596,10 +597,10 @@ export async function saveFleetOperatingHours(
 export async function saveFleetBranding(
   branding: AppFleetBrandingSettings
 ): Promise<void> {
-  const sanitized = mergeFleetBrandingSettings(branding);
+  const prepared = await prepareBrandingAssetsForSave(branding);
   await setDoc(
     appSettingsDoc(APP_SETTINGS_BRANDING_DOC),
-    encodeFleetBranding(sanitized)
+    encodeFleetBranding(prepared)
   );
 }
 

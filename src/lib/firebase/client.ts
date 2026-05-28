@@ -1,17 +1,18 @@
-import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { getFirebaseConfig, readFirebaseConfig } from "./config";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { getFirebaseSetupError, readFirebaseConfig } from "./config";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
+let resolvedConfig: FirebaseOptions | null = null;
 let initPromise: Promise<void> | null = null;
 
-function applyFirebaseConfig(config: ReturnType<typeof readFirebaseConfig>) {
-  if (!config) {
-    throw new Error("Firebase is not configured.");
-  }
+function applyFirebaseConfig(config: FirebaseOptions) {
+  resolvedConfig = config;
 
   if (!app) {
     app = getApps()[0] ?? initializeApp(config);
@@ -24,8 +25,22 @@ function applyFirebaseConfig(config: ReturnType<typeof readFirebaseConfig>) {
   }
 }
 
+export function getFirebaseConfig(): FirebaseOptions {
+  if (resolvedConfig) {
+    return resolvedConfig;
+  }
+
+  const fromEnv = readFirebaseConfig();
+  if (fromEnv) {
+    resolvedConfig = fromEnv;
+    return fromEnv;
+  }
+
+  throw new Error(getFirebaseSetupError() ?? "Firebase is not configured.");
+}
+
 export function ensureFirebaseInitialized(): Promise<void> {
-  if (app && auth && db) {
+  if (app && auth && db && resolvedConfig) {
     return Promise.resolve();
   }
 
@@ -42,7 +57,7 @@ export function ensureFirebaseInitialized(): Promise<void> {
 
     const response = await fetch("/api/firebase-config");
     const payload = (await response.json()) as {
-      config?: ReturnType<typeof readFirebaseConfig>;
+      config?: FirebaseOptions;
       error?: string;
     };
 
@@ -61,7 +76,8 @@ export function ensureFirebaseInitialized(): Promise<void> {
 
 export function getFirebaseApp(): FirebaseApp {
   if (!app) {
-    app = getApps()[0] ?? initializeApp(getFirebaseConfig());
+    const config = getFirebaseConfig();
+    app = getApps()[0] ?? initializeApp(config);
   }
   return app;
 }
@@ -78,4 +94,16 @@ export function getFirestoreDb(): Firestore {
     db = getFirestore(getFirebaseApp());
   }
   return db;
+}
+
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!storage) {
+    const config = getFirebaseConfig();
+    const firebaseApp = getFirebaseApp();
+    storage =
+      config.storageBucket != null && config.storageBucket.length > 0
+        ? getStorage(firebaseApp, `gs://${config.storageBucket}`)
+        : getStorage(firebaseApp);
+  }
+  return storage;
 }

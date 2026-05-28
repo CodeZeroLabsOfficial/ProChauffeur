@@ -4,6 +4,7 @@ import {
   isLegacyStaticBrandingPath,
   type BrandingAssetPreview,
 } from "@/lib/prochauffeur/brandingAssets";
+import { MAX_BRANDING_FILE_BYTES } from "@/lib/prochauffeur/brandingValidation";
 import Image from "next/image";
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
@@ -38,7 +39,14 @@ type BrandingAssetFieldProps = {
   preview: BrandingAssetPreview;
   showLabel?: boolean;
   onChange: (value: string) => void;
+  onUploadError?: (message: string) => void;
 };
+
+function shouldUnoptimizePreview(src: string): boolean {
+  return (
+    src.startsWith("data:") || src.includes("firebasestorage.googleapis.com")
+  );
+}
 
 export default function BrandingAssetField({
   id,
@@ -48,20 +56,32 @@ export default function BrandingAssetField({
   preview,
   showLabel = true,
   onChange,
+  onUploadError,
 }: BrandingAssetFieldProps) {
+  const maxFileLabelKb = Math.round(MAX_BRANDING_FILE_BYTES / 1024);
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       if (!file) return;
 
+      if (file.size > MAX_BRANDING_FILE_BYTES) {
+        onUploadError?.(
+          `"${file.name}" is too large. Choose an image under ${maxFileLabelKb} KB.`
+        );
+        return;
+      }
+
       try {
         const dataUrl = await readImageFile(file);
         onChange(dataUrl);
       } catch {
-        // Ignore unreadable files.
+        onUploadError?.(
+          "Could not read that image. Try a different PNG, JPG, WebP, or SVG file."
+        );
       }
     },
-    [onChange]
+    [maxFileLabelKb, onChange, onUploadError]
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -116,7 +136,7 @@ export default function BrandingAssetField({
               ? "h-full w-full object-contain p-2"
               : "max-h-14 w-auto object-contain"
           }
-          unoptimized
+          unoptimized={shouldUnoptimizePreview(value)}
         />
       ) : (
         <span className="text-xs text-gray-400 dark:text-gray-500">No image</span>
