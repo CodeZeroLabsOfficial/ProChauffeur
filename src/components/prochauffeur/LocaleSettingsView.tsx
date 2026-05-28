@@ -105,7 +105,7 @@ export default function LocaleSettingsView() {
   return (
     <CompanySettingsSection
       id="locale"
-      title="Locale Informaton"
+      title="Locale"
       banner={
         actionError ? (
           <AdminActionBanner
@@ -116,11 +116,7 @@ export default function LocaleSettingsView() {
       }
     >
       <div className="overflow-hidden">
-        <div className="pb-3 pt-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-            Preference
-          </p>
-        </div>
+        <div className="pt-1" />
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           <LocaleSettingRow
             title="Country"
@@ -186,11 +182,7 @@ export default function LocaleSettingsView() {
           </LocaleSettingRow>
         </div>
 
-        <div className="border-t border-gray-200 pb-3 pt-4 dark:border-gray-800">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-            Regional formats
-          </p>
-        </div>
+        <div className="border-t border-gray-200 pt-1 dark:border-gray-800" />
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           <LocaleSettingRow
             title="Date format"
