@@ -118,7 +118,7 @@ export default function DriversRosterView() {
           <PrimaryCell>
             <Link
               href={`/drivers/${driver.id}`}
-              className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
+              className="text-gray-800 hover:text-gray-800 dark:text-white/90 dark:hover:text-white/90"
             >
               {displayNameForUser(driver, driver.id)}
             </Link>
@@ -156,7 +156,13 @@ export default function DriversRosterView() {
           const vehicle = vehicleForChauffeur(driver.id);
           return (
             <PrimaryCell>
-              {vehicle ? vehicleDisplayName(vehicle) : "No vehicle"}
+              {vehicle ? (
+                <Link href={`/fleet/${vehicle.driverID}`}>
+                  {vehicleDisplayName(vehicle)}
+                </Link>
+              ) : (
+                "No vehicle"
+              )}
             </PrimaryCell>
           );
         },

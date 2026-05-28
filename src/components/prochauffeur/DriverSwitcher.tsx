@@ -15,12 +15,7 @@ import {
   type AppUser,
   type ChauffeurCategory,
 } from "@/lib/prochauffeur/types";
-import {
-  AngleDownIcon,
-  AngleUpIcon,
-  CheckLineIcon,
-  PlusIcon,
-} from "@/icons/index";
+import { AngleDownIcon, AngleUpIcon, CheckLineIcon } from "@/icons/index";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useMemo, useState } from "react";
@@ -141,7 +136,7 @@ export default function DriverSwitcher({
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="left-0 right-auto mt-2 w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 py-2"
+        className="left-0 right-auto mt-2 w-full overflow-hidden p-0 py-2"
       >
         <div className="max-h-[min(20rem,50vh)] overflow-y-auto px-2">
           {drivers.length === 0 ? (
@@ -185,21 +180,6 @@ export default function DriverSwitcher({
           )}
         </div>
 
-        <div className="mt-1 border-t border-gray-200 px-2 pt-1 dark:border-gray-800">
-          <Link
-            href="/drivers"
-            onClick={() => {
-              closeDropdown();
-              onNavigate?.();
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-gray-300 text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              <PlusIcon className="h-4 w-4" />
-            </span>
-            <span>All drivers</span>
-          </Link>
-        </div>
       </Dropdown>
 
     </div>
