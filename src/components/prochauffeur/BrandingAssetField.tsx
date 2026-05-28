@@ -92,41 +92,42 @@ export default function BrandingAssetField({
   const hasPreview = value.trim() && !isLegacyStaticBrandingPath(value);
   const previewBoxClass =
     preview === "compact"
-      ? "h-12 w-12"
-      : "h-12 min-w-[80px] max-w-[160px] px-2";
+      ? "h-9 w-9"
+      : "h-9 min-w-[64px] max-w-[120px] px-1.5";
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-900/30 sm:p-5">
-      <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">
-        {label}
-      </h4>
+    <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-900/30">
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="min-w-0 flex-1 text-sm font-semibold leading-snug text-gray-800 dark:text-white/90">
+          {label}
+        </h4>
+        <div className="shrink-0">
+          <input {...getInputProps()} id={id} />
+          <Button type="button" size="sm" variant="outline" onClick={open}>
+            Upload
+          </Button>
+        </div>
+      </div>
 
       <div
-        className={`mt-4 flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${previewBoxClass}`}
+        className={`mt-3 flex items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${previewBoxClass}`}
       >
         {hasPreview ? (
           <Image
             src={value}
             alt={label}
-            width={preview === "compact" ? 48 : 160}
-            height={48}
+            width={preview === "compact" ? 36 : 120}
+            height={36}
             className={
               preview === "compact"
-                ? "h-full w-full object-contain p-1.5"
-                : "max-h-10 w-auto object-contain"
+                ? "h-full w-full object-contain p-1"
+                : "max-h-7 w-auto object-contain"
             }
             unoptimized={shouldUnoptimizePreview(value)}
           />
         ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-500">No image</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">No image</span>
         )}
-      </div>
-
-      <div className="mt-auto flex items-center justify-end pt-4">
-        <input {...getInputProps()} id={id} />
-        <Button type="button" size="sm" variant="outline" onClick={open}>
-          Upload
-        </Button>
       </div>
     </div>
   );
