@@ -62,13 +62,8 @@ export default function LicenseManagementView() {
   return (
     <CompanySettingsSection
       id="license"
-      title="License"
-      description="Subscription tier and resource limits for your fleet."
+      title=""
     >
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-        Current plan
-      </p>
-
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/40 dark:border-gray-800 dark:bg-gray-900/30">
         <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
           <div>

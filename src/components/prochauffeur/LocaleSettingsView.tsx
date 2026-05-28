@@ -103,8 +103,7 @@ export default function LocaleSettingsView() {
   return (
     <CompanySettingsSection
       id="locale"
-      title="Locale"
-      description="Regional preferences for dates, times, numbers, and fleet scheduling."
+      title=""
       banner={
         actionError ? (
           <AdminActionBanner
