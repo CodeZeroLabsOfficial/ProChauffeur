@@ -97,8 +97,12 @@ export default function BrandingAssetField({
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-900/30 sm:p-5">
+      <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+        {label}
+      </h4>
+
       <div
-        className={`mb-4 flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${previewBoxClass}`}
+        className={`mt-4 flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${previewBoxClass}`}
       >
         {hasPreview ? (
           <Image
@@ -118,11 +122,7 @@ export default function BrandingAssetField({
         )}
       </div>
 
-      <h4 className="mb-auto text-sm font-semibold text-gray-800 dark:text-white/90">
-        {label}
-      </h4>
-
-      <div className="mt-4 flex items-center justify-end">
+      <div className="mt-auto flex items-center justify-end pt-4">
         <input {...getInputProps()} id={id} />
         <Button type="button" size="sm" variant="outline" onClick={open}>
           Upload
