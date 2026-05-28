@@ -19,7 +19,6 @@ import {
   AngleDownIcon,
   AngleUpIcon,
   CheckLineIcon,
-  ChevronLeftIcon,
   PlusIcon,
 } from "@/icons/index";
 import Link from "next/link";
@@ -203,14 +202,6 @@ export default function DriverSwitcher({
         </div>
       </Dropdown>
 
-      <Link
-        href="/drivers"
-        onClick={onNavigate}
-        className="mt-3 inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
-      >
-        <ChevronLeftIcon />
-        Back to roster
-      </Link>
     </div>
   );
 }

@@ -128,77 +128,96 @@ export default function DriverProfileEditView({ userId }: { userId: string }) {
           ) : null
         }
       >
-        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-          {driver.email}
-          {assignedVehicle
-            ? ` · ${vehicleDisplayName(assignedVehicle)} (${assignedVehicle.licensePlate})`
-            : " · No fleet vehicle assigned"}
-        </p>
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+            <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              Driver profile
+            </h4>
+            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+              {driver.email}
+              {assignedVehicle
+                ? ` · ${vehicleDisplayName(assignedVehicle)} (${assignedVehicle.licensePlate})`
+                : " · No fleet vehicle assigned"}
+            </p>
 
-        <div className="max-w-2xl space-y-5">
-          <div>
-            <Label>Display name</Label>
-            <Input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Display name"
-            />
-          </div>
-          <div>
-            <Label>Phone number</Label>
-            <Input
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="Phone number"
-            />
-          </div>
-          <div>
-            <Label>Date of birth</Label>
-            <Input
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Chauffeur role</Label>
-            <select
-              className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as ChauffeurCategory)}
-            >
-              {categories.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label>Bio for clients</Label>
-            <TextArea
-              rows={4}
-              value={bioStatement}
-              onChange={(v) => setBioStatement(v)}
-              placeholder="Bio for clients"
-            />
-          </div>
-          <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-            <input
-              type="checkbox"
-              checked={visibleOnCustomerApp}
-              onChange={(e) => setVisibleOnCustomerApp(e.target.checked)}
-            />
-            Visible on customer app
-          </label>
-          <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-            <input
-              type="checkbox"
-              checked={acceptsDispatchAssignments}
-              onChange={(e) => setAcceptsDispatchAssignments(e.target.checked)}
-            />
-            Accepts dispatch assignments
-          </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <Label>Display name</Label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Display name"
+                />
+              </div>
+              <div>
+                <Label>Phone number</Label>
+                <Input
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Phone number"
+                />
+              </div>
+              <div>
+                <Label>Date of birth</Label>
+                <Input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Chauffeur role</Label>
+                <select
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(e.target.value as ChauffeurCategory)
+                  }
+                >
+                  {categories.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Bio for clients</Label>
+                <TextArea
+                  rows={4}
+                  value={bioStatement}
+                  onChange={(v) => setBioStatement(v)}
+                  placeholder="Bio for clients"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+            <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              Dispatch preferences
+            </h4>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={visibleOnCustomerApp}
+                  onChange={(e) => setVisibleOnCustomerApp(e.target.checked)}
+                />
+                Visible on customer app
+              </label>
+              <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={acceptsDispatchAssignments}
+                  onChange={(e) =>
+                    setAcceptsDispatchAssignments(e.target.checked)
+                  }
+                />
+                Accepts dispatch assignments
+              </label>
+            </div>
+          </section>
 
           <Button disabled={isSaving} onClick={handleSave}>
             {isSaving ? "Saving…" : "Save"}
