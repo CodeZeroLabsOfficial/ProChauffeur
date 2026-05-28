@@ -105,7 +105,7 @@ export default function LocaleSettingsView() {
   return (
     <CompanySettingsSection
       id="locale"
-      title=""
+      title="Locale Informaton"
       banner={
         actionError ? (
           <AdminActionBanner
