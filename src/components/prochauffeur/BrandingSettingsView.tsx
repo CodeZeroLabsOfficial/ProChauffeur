@@ -71,7 +71,6 @@ export default function BrandingSettingsView() {
             key={asset.key}
             id={`branding-${asset.key}`}
             label={asset.label}
-            usage={asset.usage}
             value={draft[asset.key]}
             preview={asset.preview}
             onChange={(value) => updateAsset(asset.key, value)}

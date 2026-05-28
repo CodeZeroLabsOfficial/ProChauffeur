@@ -35,7 +35,6 @@ function readImageFile(file: File): Promise<string> {
 type BrandingAssetFieldProps = {
   id: string;
   label: string;
-  usage: string;
   value: string;
   preview: BrandingAssetPreview;
   onChange: (value: string) => void;
@@ -51,7 +50,6 @@ function shouldUnoptimizePreview(src: string): boolean {
 export default function BrandingAssetField({
   id,
   label,
-  usage,
   value,
   preview,
   onChange,
@@ -97,7 +95,8 @@ export default function BrandingAssetField({
 
   return (
     <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-col gap-2">
+        <p className="text-sm font-medium text-gray-800 dark:text-white/90">{label}</p>
         <div
           className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900 ${previewSizeClass}`}
         >
@@ -117,10 +116,6 @@ export default function BrandingAssetField({
           ) : (
             <span className="text-[10px] text-gray-400 dark:text-gray-500">—</span>
           )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-800 dark:text-white/90">{label}</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{usage}</p>
         </div>
       </div>
 
