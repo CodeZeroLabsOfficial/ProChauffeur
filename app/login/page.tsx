@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { FirebaseError } from "firebase/app";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +13,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function loginErrorMessage(error: unknown): string {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+        return "Invalid email or password.";
+      case "auth/invalid-email":
+        return "Enter a valid email address.";
+      case "auth/user-disabled":
+        return "This account has been disabled.";
+      case "auth/too-many-requests":
+        return "Too many attempts. Wait a few minutes and try again.";
+      case "auth/unauthorized-domain":
+        return "This domain is not authorised in Firebase. Add pro-chauffeur.vercel.app under Authentication → Settings → Authorised domains.";
+      case "auth/network-request-failed":
+        return "Network error. Check your connection and try again.";
+      case "auth/operation-not-allowed":
+        return "Email/password sign-in is not enabled. Enable it in Firebase Authentication → Sign-in method.";
+      default:
+        return `Sign in failed (${error.code}). Check Firebase Auth settings for this project.`;
+    }
+  }
+  if (error instanceof Error) {
+    if (error.message.includes("environment variables")) {
+      return "App configuration error. Firebase environment variables may be missing on this deployment.";
+    }
+    return error.message;
+  }
+  return "Sign in failed. Please try again.";
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -41,8 +74,9 @@ function LoginForm() {
       }
       router.replace(redirect);
       router.refresh();
-    } catch {
-      toast.error("Invalid email or password.");
+    } catch (error) {
+      console.error("Login failed:", error);
+      toast.error(loginErrorMessage(error));
     } finally {
       setLoading(false);
     }
