@@ -3,11 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/firebase/session-cookie";
 
 /**
- * Network-boundary guard: redirects to /login when the session cookie is
- * absent. Full cryptographic verification + admin-role check happens in the
- * dashboard layout server component (which uses the Admin SDK).
+ * Auth gate for dashboard routes. Uses middleware.ts (not proxy.ts) for broad
+ * Vercel runtime compatibility — Next.js 16 proxy can cause sitewide 404s on Vercel.
  */
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
   const { pathname } = request.nextUrl;
 
