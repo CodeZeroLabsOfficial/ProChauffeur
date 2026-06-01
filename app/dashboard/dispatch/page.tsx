@@ -7,7 +7,7 @@ import { CarFrontIcon, MapPinIcon, RadioIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { getClientEnv } from "@/lib/env";
+import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
 import { useTrips, useUsers } from "@/hooks/use-collections";
 import { tripPickupReferenceDate, upcomingTripStatuses } from "@/lib/models";
@@ -33,7 +33,7 @@ export default function DispatchPage() {
   let token = "";
   let tokenError = false;
   try {
-    token = getClientEnv().NEXT_PUBLIC_MAPBOX_TOKEN;
+    token = getMapboxToken();
   } catch {
     tokenError = true;
   }

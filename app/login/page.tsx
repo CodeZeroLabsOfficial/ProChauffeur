@@ -38,9 +38,6 @@ function loginErrorMessage(error: unknown): string {
     }
   }
   if (error instanceof Error) {
-    if (error.message.includes("environment variables")) {
-      return "App configuration error. Firebase environment variables may be missing on this deployment.";
-    }
     return error.message;
   }
   return "Sign in failed. Please try again.";

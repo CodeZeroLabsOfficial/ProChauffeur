@@ -5,7 +5,7 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getDatabase, type Database } from "firebase/database";
 
-import { getClientEnv } from "@/lib/env";
+import { getFirebaseClientEnv, getDatabaseUrl } from "@/lib/env";
 
 /**
  * Lazily-initialised Firebase client singletons.
@@ -18,7 +18,7 @@ let cachedApp: FirebaseApp | null = null;
 
 export function firebaseApp(): FirebaseApp {
   if (cachedApp) return cachedApp;
-  const env = getClientEnv();
+  const env = getFirebaseClientEnv();
   cachedApp = getApps().length
     ? getApp()
     : initializeApp({
@@ -28,7 +28,9 @@ export function firebaseApp(): FirebaseApp {
         storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
-        databaseURL: env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        ...(env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+          ? { databaseURL: env.NEXT_PUBLIC_FIREBASE_DATABASE_URL }
+          : {})
       });
   return cachedApp;
 }
@@ -47,6 +49,10 @@ export function firestore(): Firestore {
 
 let cachedRtdb: Database | null = null;
 export function realtimeDb(): Database {
-  if (!cachedRtdb) cachedRtdb = getDatabase(firebaseApp());
+  if (!cachedRtdb) {
+    // Ensure databaseURL is configured before opening RTDB (Dispatch page).
+    getDatabaseUrl();
+    cachedRtdb = getDatabase(firebaseApp());
+  }
   return cachedRtdb;
 }
