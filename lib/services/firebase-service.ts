@@ -17,6 +17,7 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type FirestoreError,
   type QuerySnapshot
 } from "firebase/firestore";
 
@@ -62,12 +63,23 @@ function snapToList<T>(snap: QuerySnapshot<DocumentData>, map: (id: string, d: D
   return snap.docs.map((dc) => map(dc.id, dc.data()));
 }
 
+function onSnapshotError<T>(label: string, onUpdate: (rows: T[]) => void) {
+  return (error: FirestoreError) => {
+    console.error(`Firestore ${label} listener failed:`, error.code, error.message);
+    onUpdate([]);
+  };
+}
+
 // ─────────────────────────────── Trips ───────────────────────────────
 
 /** Admin overview listener: recent trips across the fleet, newest first. */
 export function listenTrips(onUpdate: (trips: Trip[]) => void, max = 800): Unsub {
   const q = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
-  return onSnapshot(q, (snap) => onUpdate(snapToList(snap, mapTrip)), () => onUpdate([]));
+  return onSnapshot(
+    q,
+    (snap) => onUpdate(snapToList(snap, mapTrip)),
+    onSnapshotError("trips", onUpdate)
+  );
 }
 
 export async function fetchTrips(max = 800): Promise<Trip[]> {
@@ -111,7 +123,7 @@ export function listenUsers(onUpdate: (users: User[]) => void): Unsub {
   return onSnapshot(
     collection(db(), Collections.users),
     (snap) => onUpdate(snapToList(snap, mapUser)),
-    () => onUpdate([])
+    onSnapshotError("users", onUpdate)
   );
 }
 
@@ -150,7 +162,7 @@ export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
       );
       onUpdate(rows);
     },
-    () => onUpdate([])
+    onSnapshotError("vehicles", onUpdate)
   );
 }
 
@@ -194,7 +206,11 @@ export async function assignFleetVehicle(
 
 export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => void): Unsub {
   const q = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snap) => onUpdate(snapToList(snap, mapFleetLocation)), () => onUpdate([]));
+  return onSnapshot(
+    q,
+    (snap) => onUpdate(snapToList(snap, mapFleetLocation)),
+    onSnapshotError("locations", onUpdate)
+  );
 }
 
 export async function createFleetLocation(input: {
@@ -266,7 +282,11 @@ export async function saveGlobalLimits(limits: AppGlobalLimits): Promise<void> {
 
 export function listenInvoices(onUpdate: (invoices: Invoice[]) => void): Unsub {
   const q = query(collection(db(), Collections.invoices), orderBy("issuedAt", "desc"));
-  return onSnapshot(q, (snap) => onUpdate(snapToList(snap, mapInvoice)), () => onUpdate([]));
+  return onSnapshot(
+    q,
+    (snap) => onUpdate(snapToList(snap, mapInvoice)),
+    onSnapshotError("invoices", onUpdate)
+  );
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice | null> {
