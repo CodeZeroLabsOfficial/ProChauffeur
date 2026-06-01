@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,13 +14,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { getFirebaseClientEnv } from "@/lib/env";
+
 function loginErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case "auth/invalid-credential":
       case "auth/wrong-password":
       case "auth/user-not-found":
-        return "Invalid email or password.";
+        return (
+          "Invalid email or password. If you normally sign in with Apple or Google on the mobile app, " +
+          "that account may not have a password yet — use “Forgot password?” or add Email/Password in " +
+          "Firebase Console → Authentication → Users."
+        );
       case "auth/invalid-email":
         return "Enter a valid email address.";
       case "auth/user-disabled":
@@ -29,6 +35,8 @@ function loginErrorMessage(error: unknown): string {
         return "Too many attempts. Wait a few minutes and try again.";
       case "auth/unauthorized-domain":
         return "This domain is not authorised in Firebase. Add pro-chauffeur.vercel.app under Authentication → Settings → Authorised domains.";
+      case "auth/requests-from-referer-are-blocked":
+        return "Firebase API key is blocking this site. In Google Cloud → Credentials, allow referrers: https://pro-chauffeur.vercel.app/*";
       case "auth/network-request-failed":
         return "Network error. Check your connection and try again.";
       case "auth/operation-not-allowed":
@@ -43,6 +51,15 @@ function loginErrorMessage(error: unknown): string {
   return "Sign in failed. Please try again.";
 }
 
+/** Shown in dev/support to confirm which Firebase project the build is using. */
+function firebaseProjectLabel(): string {
+  try {
+    return getFirebaseClientEnv().NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  } catch {
+    return "not configured";
+  }
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,6 +68,25 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  async function onForgotPassword() {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      toast.error("Enter your email address first.");
+      return;
+    }
+    setResetting(true);
+    try {
+      await sendPasswordResetEmail(firebaseAuth(), trimmed);
+      toast.success("Password reset email sent. Complete the link, then sign in here.");
+    } catch (error) {
+      console.error("Password reset failed:", error);
+      toast.error(loginErrorMessage(error));
+    } finally {
+      setResetting(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -113,10 +149,21 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading || resetting}>
             {loading && <LoaderCircleIcon className="animate-spin" />}
             Sign in
           </Button>
+          <Button
+            type="button"
+            variant="link"
+            className="text-muted-foreground h-auto w-full p-0 text-sm"
+            disabled={loading || resetting}
+            onClick={onForgotPassword}>
+            {resetting ? "Sending reset email…" : "Forgot password?"}
+          </Button>
+          <p className="text-muted-foreground text-center text-xs">
+            Firebase project: {firebaseProjectLabel()}
+          </p>
         </form>
       </CardContent>
     </Card>
