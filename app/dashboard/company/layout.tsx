@@ -1,0 +1,19 @@
+import { SectionLayout } from "@/components/layout/sub-nav";
+
+const items = [
+  { title: "Overview", href: "/dashboard/company" },
+  { title: "Operating Hours", href: "/dashboard/company/operating-hours" },
+  { title: "Locations", href: "/dashboard/company/locations" },
+  { title: "Pricing", href: "/dashboard/company/pricing" }
+];
+
+export default function CompanyLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SectionLayout
+      title="Company"
+      description="Configure your chauffeur business: hours, service locations and fare pricing."
+      items={items}>
+      {children}
+    </SectionLayout>
+  );
+}

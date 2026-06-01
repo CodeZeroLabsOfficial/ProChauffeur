@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "liveLocations": {
+      ".read": "auth != null",
+      "$driverId": {
+        ".write": "auth != null && auth.uid === $driverId",
+        ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt'])"
+      }
+    }
+  }
+}

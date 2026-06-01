@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// ProChauffeur Firestore security rules.
+// The web portal is admin-only; the iOS app serves customers and drivers.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function roleOf(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && roleOf(request.auth.uid) == 'admin';
+    }
+
+    // Users: a user may read/update their own doc; admins manage everyone.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Trips: customer (owner) and assigned driver can access theirs; admins all.
+    match /trips/{tripId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.customerID == request.auth.uid ||
+        resource.data.driverID == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.customerID == request.auth.uid ||
+        resource.data.driverID == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Vehicles: readable by signed-in users; only owning driver or admin writes.
+    match /vehicles/{driverId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == driverId || isAdmin());
+    }
+
+    // Fleet locations: readable by signed-in users; admin-managed.
+    match /locations/{locationId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Invoices: admin-only (web billing surface).
+    match /invoices/{invoiceId} {
+      allow read, write: if isAdmin();
+    }
+
+    // App settings (pricing, operating_hours, limits, branding, etc).
+    match /app_settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

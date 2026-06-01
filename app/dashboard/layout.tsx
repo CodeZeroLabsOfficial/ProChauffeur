@@ -1,0 +1,39 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { getAdminSessionUser } from "@/lib/firebase/session";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SiteHeader } from "@/components/layout/site-header";
+import { SessionProvider } from "@/components/providers/session-provider";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+
+export default async function DashboardLayout({
+  children
+}: Readonly<{ children: React.ReactNode }>) {
+  const user = await getAdminSessionUser();
+  if (!user) redirect("/login");
+
+  const cookieStore = await cookies();
+  const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
+
+  return (
+    <SessionProvider user={user}>
+      <SidebarProvider
+        defaultOpen={defaultOpen}
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 64)",
+            "--header-height": "calc(var(--spacing) * 14)"
+          } as React.CSSProperties
+        }>
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="bg-muted/40 flex flex-1 flex-col">
+            <div className="@container/main p-4 md:p-6">{children}</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </SessionProvider>
+  );
+}
