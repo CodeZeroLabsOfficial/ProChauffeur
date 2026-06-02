@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTrip } from "@/hooks/use-collections";
+import { useTrip, useUsers } from "@/hooks/use-collections";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { BookingJourneyMap } from "@/app/dashboard/bookings/[id]/booking-journey-map";
 
 const ACTIVE_STATUSES = TRIP_STATUSES.filter((s) => s !== "cancelled");
 
@@ -110,6 +111,7 @@ function SectionCard({
 
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
+  const { users } = useUsers();
 
   const currentStepIndex = trip ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number]) : -1;
   const progressValue =
@@ -126,6 +128,40 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     if (!trip || !completedAt) return "—";
     return formatDuration(tripPickupReferenceDate(trip), completedAt);
   }, [trip, completedAt]);
+
+  const customer = useMemo(
+    () => (trip ? users.find((u) => u.id === trip.customerID) : undefined),
+    [trip, users]
+  );
+
+  const customerDetails = useMemo(() => {
+    if (!trip) return [];
+
+    const rows = [
+      {
+        label: "Customer name",
+        value: trip.customerDisplayName || customer?.profile.displayName || null
+      },
+      {
+        label: "Customer address",
+        value: trip.customerAddressLine ?? customer?.profile.address ?? null
+      },
+      {
+        label: "Customer phone",
+        value: trip.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null
+      },
+      {
+        label: "Customer email",
+        value: trip.customerEmail ?? customer?.email ?? null
+      },
+      {
+        label: "Company",
+        value: trip.customerCompany ?? null
+      }
+    ];
+
+    return rows.filter((row) => row.value?.trim());
+  }, [trip, customer]);
 
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
@@ -159,9 +195,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   }
 
   const pickupAt = tripPickupReferenceDate(trip);
-  const customerAddress = [trip.pickupAddressLine, trip.dropoffAddressLine]
-    .filter(Boolean)
-    .join(" → ");
 
   return (
     <div className="mx-auto max-w-screen-lg space-y-4 lg:mt-10">
@@ -239,7 +272,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           <SectionCard title="Booking summary">
             <DetailRow label="Booking ID" value={shortBookingId(trip.id)} />
             <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
@@ -248,6 +281,15 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               value={trip.bookingPassengerCount != null ? trip.bookingPassengerCount : "—"}
             />
             <DetailRow label="Luggage requirements" value={luggageLabel(trip)} />
+          </SectionCard>
+
+          <SectionCard title="Journey">
+            <BookingJourneyMap
+              pickup={trip.pickup}
+              dropoff={trip.dropoff}
+              pickupLabel={trip.pickupAddressLine}
+              dropoffLabel={trip.dropoffAddressLine}
+            />
           </SectionCard>
         </div>
 
@@ -266,21 +308,13 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </SectionCard>
 
           <SectionCard title="Customer information">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{trip.customerDisplayName || "Customer"}</p>
-              {customerAddress && (
-                <p className="text-muted-foreground text-sm">{customerAddress}</p>
-              )}
-              {trip.customerPhoneNumber && (
-                <p className="text-muted-foreground text-sm">{trip.customerPhoneNumber}</p>
-              )}
-              {trip.customerEmail && (
-                <p className="text-muted-foreground text-sm">{trip.customerEmail}</p>
-              )}
-              {!customerAddress && !trip.customerPhoneNumber && !trip.customerEmail && (
-                <p className="text-muted-foreground text-sm">No contact details on file.</p>
-              )}
-            </div>
+            {customerDetails.length > 0 ? (
+              customerDetails.map((row) => (
+                <DetailRow key={row.label} label={row.label} value={row.value} />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-sm">No customer details on file.</p>
+            )}
           </SectionCard>
 
           <SectionCard title="Vehicle details">

@@ -114,6 +114,8 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     customerDisplayName: d.customerDisplayName ?? null,
     customerPhoneNumber: d.customerPhoneNumber ?? null,
     customerEmail: d.customerEmail ?? null,
+    customerAddressLine: d.customerAddressLine ?? null,
+    customerCompany: d.customerCompany ?? null,
     driverID: d.driverID ?? null,
     pickup: toCoordinate(d.pickup) ?? { latitude: 0, longitude: 0 },
     dropoff: toCoordinate(d.dropoff) ?? { latitude: 0, longitude: 0 },
