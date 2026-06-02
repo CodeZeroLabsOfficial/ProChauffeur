@@ -31,7 +31,7 @@ import { generateAvatarFallback } from "@/lib/utils";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -112,10 +112,16 @@ function SectionCard({
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {headerAction ? <CardAction>{headerAction}</CardAction> : null}
-      </CardHeader>
+      {headerAction ? (
+        <div className="flex items-center justify-between gap-4 px-6">
+          <CardTitle>{title}</CardTitle>
+          <div className="shrink-0">{headerAction}</div>
+        </div>
+      ) : (
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      )}
       <CardContent className="space-y-4">{children}</CardContent>
     </Card>
   );
