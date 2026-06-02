@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
+import { CircleUserRoundIcon, Trash2Icon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 
 import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
-import { fetchUser, updateUserProfile } from "@/lib/services/firebase-service";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { fetchUser, updateUserProfile, uploadUserProfilePhoto } from "@/lib/services/firebase-service";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +51,16 @@ export default function ProfileSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+
+  const [{ files }, { removeFile, openFileDialog, getInputProps }] = useFileUpload({
+    accept: "image/*",
+    onFilesAdded: () => setPhotoRemoved(false)
+  });
+
+  const previewUrl = files[0]?.preview ?? (photoRemoved ? null : photoURL);
+  const fileName =
+    files[0]?.file instanceof File ? files[0].file.name : previewUrl ? "Profile photo" : null;
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -76,6 +89,7 @@ export default function ProfileSettingsPage() {
             : splitDisplayName(user.profile.displayName);
 
         setPhotoURL(user.profile.photoURL ?? null);
+        setPhotoRemoved(false);
         form.reset({
           username: user.email,
           firstName,
@@ -97,6 +111,12 @@ export default function ProfileSettingsPage() {
   async function onSubmit(data: ProfileFormValues) {
     setSaving(true);
     try {
+      let nextPhotoURL: string | null = photoRemoved ? null : photoURL;
+      const uploadedFile = files[0]?.file;
+      if (uploadedFile instanceof File) {
+        nextPhotoURL = await uploadUserProfilePhoto(authUser.uid, uploadedFile);
+      }
+
       await updateUserProfile(authUser.uid, {
         displayName: `${data.firstName} ${data.lastName}`.trim(),
         firstName: data.firstName,
@@ -104,8 +124,11 @@ export default function ProfileSettingsPage() {
         phoneNumber: data.phoneNumber.trim() || null,
         address: data.address.trim() || null,
         dateOfBirth: data.dateOfBirth,
-        photoURL
+        photoURL: nextPhotoURL
       });
+      setPhotoURL(nextPhotoURL);
+      setPhotoRemoved(false);
+      if (files[0]) removeFile(files[0].id);
       toast.success("Profile saved.");
     } catch {
       toast.error("Could not save profile.");
@@ -118,11 +141,48 @@ export default function ProfileSettingsPage() {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
+  function handleRemovePhoto() {
+    if (files[0]) removeFile(files[0].id);
+    setPhotoURL(null);
+    setPhotoRemoved(true);
+  }
+
   return (
     <Card>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="flex flex-col gap-2">
+              <div className="inline-flex items-center gap-2 align-top">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={previewUrl ?? undefined} />
+                  <AvatarFallback>
+                    <CircleUserRoundIcon className="opacity-45" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="relative flex gap-2">
+                  <Button type="button" onClick={openFileDialog} aria-haspopup="dialog">
+                    {fileName ? "Change image" : "Upload image"}
+                  </Button>
+                  <input
+                    {...getInputProps()}
+                    className="sr-only"
+                    aria-label="Upload image file"
+                    tabIndex={-1}
+                  />
+                  {fileName && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      onClick={handleRemovePhoto}>
+                      <Trash2Icon />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="username"

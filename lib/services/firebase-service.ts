@@ -20,8 +20,9 @@ import {
   type FirestoreError,
   type QuerySnapshot
 } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
-import { firestore } from "@/lib/firebase/client";
+import { firestore, firebaseStorage } from "@/lib/firebase/client";
 import { coordinateToGeoPoint, stripUndefined } from "@/lib/firebase/converters";
 import {
   AppSettingsDocs,
@@ -138,6 +139,13 @@ export async function fetchUser(uid: string): Promise<User | null> {
 
 export async function updateUserProfile(uid: string, profile: UserProfile): Promise<void> {
   await updateDoc(doc(db(), Collections.users, uid), { profile: stripUndefined({ ...profile }) });
+}
+
+export async function uploadUserProfilePhoto(uid: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const storageRef = ref(firebaseStorage(), `users/${uid}/profile-photo.${ext}`);
+  const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
+  return getDownloadURL(snapshot.ref);
 }
 
 export async function updateUserDriverProfile(uid: string, driverProfile: DriverProfile): Promise<void> {

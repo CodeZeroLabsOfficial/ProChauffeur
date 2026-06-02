@@ -4,6 +4,7 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getDatabase, type Database } from "firebase/database";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 import { getFirebaseClientEnv, getDatabaseUrl } from "@/lib/env";
 
@@ -55,4 +56,10 @@ export function realtimeDb(): Database {
     cachedRtdb = getDatabase(firebaseApp());
   }
   return cachedRtdb;
+}
+
+let cachedStorage: FirebaseStorage | null = null;
+export function firebaseStorage(): FirebaseStorage {
+  if (!cachedStorage) cachedStorage = getStorage(firebaseApp());
+  return cachedStorage;
 }

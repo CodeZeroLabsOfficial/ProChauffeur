@@ -19,3 +19,8 @@ export const unlimitedLimits: AppGlobalLimits = {
 export function capLabel(value: number): string {
   return value >= UNLIMITED ? "Unlimited" : String(value);
 }
+
+export function usagePercent(used: number, max: number): number {
+  if (max >= UNLIMITED || max <= 0) return 0;
+  return Math.min(100, Math.round((used / max) * 100));
+}
