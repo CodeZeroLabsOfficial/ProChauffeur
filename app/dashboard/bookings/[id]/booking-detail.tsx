@@ -18,6 +18,7 @@ import { useTrip, useUsers } from "@/hooks/use-collections";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
+  chauffeurCategoryTitle,
   tripPickupReferenceDate,
   tripStatusTitle,
   vehicleTypeTitle,
@@ -26,9 +27,11 @@ import {
   type VehicleType
 } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
+import { generateAvatarFallback } from "@/lib/utils";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +41,13 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle
+} from "@/components/ui/item";
 import { BookingJourneyMap } from "@/app/dashboard/bookings/[id]/booking-journey-map";
 
 const ACTIVE_STATUSES = TRIP_STATUSES.filter((s) => s !== "cancelled");
@@ -94,15 +103,18 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
 
 function SectionCard({
   title,
+  headerAction,
   children
 }: {
   title: string;
+  headerAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
+        {headerAction ? <CardAction>{headerAction}</CardAction> : null}
       </CardHeader>
       <CardContent className="space-y-4">{children}</CardContent>
     </Card>
@@ -133,6 +145,18 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     () => (trip ? users.find((u) => u.id === trip.customerID) : undefined),
     [trip, users]
   );
+
+  const chauffeur = useMemo(
+    () => (trip?.driverID ? users.find((u) => u.id === trip.driverID) : undefined),
+    [trip?.driverID, users]
+  );
+
+  const chauffeurName = chauffeur?.profile.displayName || chauffeur?.email || "Unassigned";
+  const chauffeurDescription = chauffeur
+    ? chauffeur.driverProfile
+      ? chauffeurCategoryTitle[chauffeur.driverProfile.chauffeurCategory]
+      : chauffeur.email
+    : "No chauffeur assigned to this booking";
 
   const customerName =
     trip?.customerDisplayName || customer?.profile.displayName || null;
@@ -260,6 +284,18 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <SectionCard title="Booking summary">
+            <Item variant="outline" className="w-full">
+              <ItemMedia>
+                <Avatar className="size-10">
+                  <AvatarImage src={chauffeur?.profile.photoURL ?? undefined} alt={chauffeurName} />
+                  <AvatarFallback>{generateAvatarFallback(chauffeurName)}</AvatarFallback>
+                </Avatar>
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{chauffeurName}</ItemTitle>
+                <ItemDescription>{chauffeurDescription}</ItemDescription>
+              </ItemContent>
+            </Item>
             <DetailRow label="Booking ID" value={shortBookingId(trip.id)} />
             <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
             <DetailRow
@@ -280,11 +316,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
         </div>
 
         <div className="space-y-4 lg:col-span-1">
-          <SectionCard title="Booking status">
-            <div className="flex justify-start">
-              <TripStatusBadge status={trip.status} />
-            </div>
-            <Separator />
+          <SectionCard
+            title="Booking status"
+            headerAction={<TripStatusBadge status={trip.status} />}>
             <DetailRow label="Requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
               label="Completed:"
