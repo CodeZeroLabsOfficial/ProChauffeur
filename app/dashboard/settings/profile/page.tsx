@@ -1,133 +1,128 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cn } from "@/lib/utils";
-import { useFieldArray, useForm } from "react-hook-form";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { format } from "date-fns";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { CircleUserRoundIcon, Trash2Icon } from "lucide-react";
 
-import { useFileUpload } from "@/hooks/use-file-upload";
-
+import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
+import { fetchUser, updateUserProfile } from "@/lib/services/firebase-service";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const profileFormSchema = z.object({
-  username: z
-    .string()
-    .min(2, {
-      message: "Username must be at least 2 characters."
-    })
-    .max(30, {
-      message: "Username must not be longer than 30 characters."
-    }),
-  email: z
-    .string({
-      required_error: "Please select an email to display."
-    })
-    .email(),
-  bio: z.string().max(160).min(4),
-  urls: z
-    .array(
-      z.object({
-        value: z.string().url({ message: "Please enter a valid URL." })
-      })
-    )
-    .optional()
+  username: z.string().email({ message: "Enter a valid email address." }),
+  firstName: z.string().min(1, { message: "First name is required." }),
+  lastName: z.string().min(1, { message: "Last name is required." }),
+  phoneNumber: z.string(),
+  address: z.string(),
+  dateOfBirth: z.date({ required_error: "Date of birth is required." })
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const defaultValues: Partial<ProfileFormValues> = {
-  bio: "I own a computer.",
-  urls: [{ value: "https://shadcn.com" }, { value: "http://twitter.com/shadcn" }]
-};
+function splitDisplayName(displayName: string): { firstName: string; lastName: string } {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
 
 export default function ProfileSettingsPage() {
-  const [{ files }, { removeFile, openFileDialog, getInputProps }] = useFileUpload({
-    accept: "image/*"
-  });
-
-  const previewUrl = files[0]?.preview || null;
-  const fileName = files[0]?.file.name || null;
+  const { user: authUser } = useFirebaseAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [photoURL, setPhotoURL] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues,
-    mode: "onChange"
+    defaultValues: {
+      username: "",
+      firstName: "",
+      lastName: "",
+      phoneNumber: "",
+      address: ""
+    }
   });
 
-  const { fields, append } = useFieldArray({
-    name: "urls",
-    control: form.control
-  });
+  useEffect(() => {
+    let cancelled = false;
 
-  function onSubmit(data: ProfileFormValues) {
-    toast("You submitted the following values:", {
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      )
-    });
+    fetchUser(authUser.uid)
+      .then((user) => {
+        if (cancelled || !user) return;
+
+        const { firstName, lastName } =
+          user.profile.firstName || user.profile.lastName
+            ? {
+                firstName: user.profile.firstName ?? "",
+                lastName: user.profile.lastName ?? ""
+              }
+            : splitDisplayName(user.profile.displayName);
+
+        setPhotoURL(user.profile.photoURL ?? null);
+        form.reset({
+          username: user.email,
+          firstName,
+          lastName,
+          phoneNumber: user.profile.phoneNumber ?? "",
+          address: user.profile.address ?? "",
+          dateOfBirth: user.profile.dateOfBirth ?? undefined
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser.uid, form]);
+
+  async function onSubmit(data: ProfileFormValues) {
+    setSaving(true);
+    try {
+      await updateUserProfile(authUser.uid, {
+        displayName: `${data.firstName} ${data.lastName}`.trim(),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber.trim() || null,
+        address: data.address.trim() || null,
+        dateOfBirth: data.dateOfBirth,
+        photoURL
+      });
+      toast.success("Profile saved.");
+    } catch {
+      toast.error("Could not save profile.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
   return (
     <Card>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="flex flex-col gap-2">
-              <div className="inline-flex items-center gap-2 align-top">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={`${previewUrl}`} />
-                  <AvatarFallback>
-                    <CircleUserRoundIcon className="opacity-45" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="relative flex gap-2">
-                  <Button type="button" onClick={openFileDialog} aria-haspopup="dialog">
-                    {fileName ? "Change image" : "Upload image"}
-                  </Button>
-                  <input
-                    {...getInputProps()}
-                    className="sr-only"
-                    aria-label="Upload image file"
-                    tabIndex={-1}
-                  />
-                  {fileName && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => removeFile(files[0]?.id)}>
-                      <Trash2Icon />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="username"
@@ -135,91 +130,107 @@ export default function ProfileSettingsPage() {
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input placeholder="shadcn" {...field} />
+                    <Input type="email" readOnly {...field} />
                   </FormControl>
-                  <FormDescription>
-                    This is your public display name. It can be your real name or a pseudonym. You
-                    can only change this once every 30 days.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
-              name="email"
+              name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a verified email to display" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="m@example.com">m@example.com</SelectItem>
-                      <SelectItem value="m@google.com">m@google.com</SelectItem>
-                      <SelectItem value="m@support.com">m@support.com</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    You can manage verified email addresses in your{" "}
-                    <Link href="#">email settings</Link>.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio</FormLabel>
+                  <FormLabel>First name</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Tell us a little bit about yourself"
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Input autoComplete="given-name" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    You can <span>@mention</span> other users and organizations to link to them.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="space-y-2">
-              {fields.map((field, index) => (
-                <FormField
-                  control={form.control}
-                  key={field.id}
-                  name={`urls.${index}.value`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={cn(index !== 0 && "sr-only")}>URLs</FormLabel>
-                      <FormDescription className={cn(index !== 0 && "sr-only")}>
-                        Add links to your website, blog, or social media profiles.
-                      </FormDescription>
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last name</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="family-name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" autoComplete="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="street-address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date of birth</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <Input {...field} />
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}>
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append({ value: "" })}>
-                Add URL
-              </Button>
-            </div>
-            <Button type="submit">Update profile</Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0"
+                      align="start">
+                      <Calendar
+                        mode="single"
+                        captionLayout="dropdown"
+                        fromYear={1900}
+                        toYear={new Date().getFullYear()}
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        defaultMonth={field.value}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Update profile"}
+            </Button>
           </form>
         </Form>
       </CardContent>

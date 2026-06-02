@@ -14,8 +14,11 @@ export interface FleetWeeklyOperatingSchedule {
 /** UserProfile.swift — human-facing identity envelope embedded on the user. */
 export interface UserProfile {
   displayName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   phoneNumber?: string | null;
   photoURL?: string | null;
+  address?: string | null;
   /** Calendar date only (time ignored). */
   dateOfBirth?: Date | null;
 }

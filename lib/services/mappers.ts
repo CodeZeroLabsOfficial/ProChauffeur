@@ -24,8 +24,11 @@ function mapUserProfile(d: DocumentData | undefined): UserProfile {
   const p = d ?? {};
   return {
     displayName: p.displayName ?? "",
+    firstName: p.firstName ?? null,
+    lastName: p.lastName ?? null,
     phoneNumber: p.phoneNumber ?? null,
     photoURL: p.photoURL ?? null,
+    address: p.address ?? null,
     dateOfBirth: toDate(p.dateOfBirth)
   };
 }
