@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { CircleUserRoundIcon, Trash2Icon } from "lucide-react";
@@ -48,6 +49,7 @@ function splitDisplayName(displayName: string): { firstName: string; lastName: s
 
 export default function ProfileSettingsPage() {
   const { user: authUser } = useFirebaseAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -130,6 +132,7 @@ export default function ProfileSettingsPage() {
       setPhotoRemoved(false);
       if (files[0]) removeFile(files[0].id);
       toast.success("Profile saved.");
+      router.refresh();
     } catch (err) {
       console.error("Profile save failed:", err);
       const message = err instanceof Error ? err.message : "Could not save profile.";

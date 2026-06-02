@@ -8,7 +8,7 @@ import { useUsers } from "@/hooks/use-collections";
 import type { User } from "@/lib/models";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { generateAvatarFallback } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,7 @@ export default function AdminsPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
+                          <AvatarImage src={u.profile.photoURL ?? undefined} />
                           <AvatarFallback>
                             {generateAvatarFallback(u.profile.displayName || u.email)}
                           </AvatarFallback>

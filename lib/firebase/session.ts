@@ -13,6 +13,7 @@ export type SessionUser = {
   email: string | null;
   role: UserRole;
   displayName: string | null;
+  photoURL: string | null;
 };
 
 /**
@@ -36,7 +37,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       uid: decoded.uid,
       email: decoded.email ?? (data.email as string) ?? null,
       role: (data.role as UserRole) ?? "customer",
-      displayName: (data.profile?.displayName as string) ?? null
+      displayName: (data.profile?.displayName as string) ?? null,
+      photoURL: (data.profile?.photoURL as string) ?? null
     };
   } catch {
     return null;

@@ -27,7 +27,7 @@ import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -131,6 +131,7 @@ export function DriversDataTable({
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <Avatar className="size-9">
+              <AvatarImage src={row.original.profile.photoURL ?? undefined} />
               <AvatarFallback>
                 {generateAvatarFallback(
                   row.original.profile.displayName || row.original.email
