@@ -9,6 +9,10 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { navGroups } from "@/components/layout/nav-config";
 
 function currentTitle(pathname: string): string {
+  if (pathname.startsWith("/dashboard/pages/settings")) {
+    return "Settings";
+  }
+
   let best = "Dashboard";
   let bestLen = -1;
   for (const group of navGroups) {

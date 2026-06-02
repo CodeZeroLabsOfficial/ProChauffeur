@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, ShieldIcon, UserIcon } from "lucide-react";
 import { signOut } from "firebase/auth";
 
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -49,6 +50,19 @@ export function UserMenu() {
             {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/pages/settings">
+            <UserIcon />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/pages/settings/account">
+            <ShieldIcon />
+            Account
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOutIcon />
