@@ -86,6 +86,23 @@ export async function fetchTrips(max = 800): Promise<Trip[]> {
   return snapToList(await getDocs(q), mapTrip);
 }
 
+export async function fetchTrip(id: string): Promise<Trip | null> {
+  const snap = await getDoc(doc(db(), Collections.trips, id));
+  return snap.exists() ? mapTrip(snap.id, snap.data()) : null;
+}
+
+/** Realtime listener for a single trip document. */
+export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): Unsub {
+  return onSnapshot(
+    doc(db(), Collections.trips, id),
+    (snap) => onUpdate(snap.exists() ? mapTrip(snap.id, snap.data()) : null),
+    (error) => {
+      console.error("Firestore trip listener failed:", error.code, error.message);
+      onUpdate(null);
+    }
+  );
+}
+
 export async function updateTripStatus(id: string, status: TripStatus): Promise<void> {
   await updateDoc(doc(db(), Collections.trips, id), {
     status,

@@ -6,6 +6,7 @@ import {
   listenFleetLocations,
   listenInvoices,
   listenTrips,
+  listenTrip,
   listenUsers,
   listenVehicles
 } from "@/lib/services/firebase-service";
@@ -74,4 +75,17 @@ export function useInvoices() {
     return () => unsub();
   }, []);
   return { invoices, loading };
+}
+
+export function useTrip(id: string) {
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const unsub = listenTrip(id, (row) => {
+      setTrip(row);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [id]);
+  return { trip, loading, notFound: !loading && !trip };
 }

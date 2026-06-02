@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import type { DateRange } from "react-day-picker";
 import {
   ColumnDef,
@@ -162,9 +163,12 @@ export function BookingsDataTable() {
         accessorKey: "bookingIdLabel",
         header: "Booking ID",
         cell: ({ row }) => (
-          <span className="font-mono text-sm" title={row.original.id}>
+          <Link
+            href={`/dashboard/bookings/${row.original.id}`}
+            className="font-mono text-sm hover:underline"
+            title={row.original.id}>
             {row.original.bookingIdLabel}
-          </span>
+          </Link>
         )
       },
       {
