@@ -17,7 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTrips } from "@/hooks/use-collections";
+import { useTrips, useUsers } from "@/hooks/use-collections";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
@@ -54,10 +54,15 @@ import {
 
 type BookingRow = Trip & {
   searchLabel: string;
+  bookingIdLabel: string;
+  chauffeurLabel: string;
   pickupLabel: string;
-  routeLabel: string;
   vehicleLabel: string;
 };
+
+function shortBookingId(id: string) {
+  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
+}
 
 function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown) {
   const values = filterValue as string[] | undefined;
@@ -75,6 +80,7 @@ function tripInDateRange(trip: Trip, range: DateRange | undefined) {
 
 export function BookingsDataTable() {
   const { trips, loading } = useTrips();
+  const { users } = useUsers();
   const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -91,27 +97,40 @@ export function BookingsDataTable() {
     }
   }, []);
 
+  const driverNameById = useMemo(() => {
+    const map = new globalThis.Map<string, string>();
+    for (const u of users) map.set(u.id, u.profile.displayName || u.email);
+    return map;
+  }, [users]);
+
   const data = useMemo<BookingRow[]>(
     () =>
       trips
         .filter((t) => tripInDateRange(t, dateRange))
-        .map((t) => ({
-          ...t,
-          searchLabel: [
-            t.customerDisplayName,
-            t.pickupAddressLine,
-            t.dropoffAddressLine,
-            t.customerPhoneNumber
-          ]
-            .filter(Boolean)
-            .join(" "),
-          pickupLabel: formatDateTime(tripPickupReferenceDate(t)),
-          routeLabel: `${t.pickupAddressLine || "Pickup"} → ${t.dropoffAddressLine || "Drop-off"}`,
-          vehicleLabel: t.vehicleSnapshot
-            ? `${t.vehicleSnapshot.color} ${t.vehicleSnapshot.make} ${t.vehicleSnapshot.model}`.trim()
-            : "—"
-        })),
-    [trips, dateRange]
+        .map((t) => {
+          const chauffeurLabel = t.driverID
+            ? (driverNameById.get(t.driverID) ?? "Unknown")
+            : "Unassigned";
+          return {
+            ...t,
+            bookingIdLabel: shortBookingId(t.id),
+            chauffeurLabel,
+            searchLabel: [
+              t.id,
+              shortBookingId(t.id),
+              t.customerDisplayName,
+              t.customerPhoneNumber,
+              chauffeurLabel
+            ]
+              .filter(Boolean)
+              .join(" "),
+            pickupLabel: formatDateTime(tripPickupReferenceDate(t)),
+            vehicleLabel: t.vehicleSnapshot
+              ? `${t.vehicleSnapshot.color} ${t.vehicleSnapshot.make} ${t.vehicleSnapshot.model}`.trim()
+              : "—"
+          };
+        }),
+    [trips, dateRange, driverNameById]
   );
 
   const columns = useMemo<ColumnDef<BookingRow>[]>(
@@ -139,6 +158,16 @@ export function BookingsDataTable() {
         enableHiding: false
       },
       {
+        id: "bookingId",
+        accessorKey: "bookingIdLabel",
+        header: "Booking ID",
+        cell: ({ row }) => (
+          <span className="font-mono text-sm" title={row.original.id}>
+            {row.original.bookingIdLabel}
+          </span>
+        )
+      },
+      {
         id: "customer",
         accessorFn: (row) => row.customerDisplayName || "Customer",
         header: "Customer",
@@ -161,20 +190,18 @@ export function BookingsDataTable() {
         }
       },
       {
-        id: "pickupTime",
-        accessorKey: "pickupLabel",
-        header: "Pickup time",
-        cell: ({ row }) => row.original.pickupLabel
+        id: "chauffeur",
+        accessorKey: "chauffeurLabel",
+        header: "Chauffeur",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.chauffeurLabel}</span>
+        )
       },
       {
-        id: "route",
-        accessorKey: "routeLabel",
-        header: "Route",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground max-w-xs truncate">
-            {row.original.routeLabel}
-          </span>
-        )
+        id: "pickupTime",
+        accessorKey: "pickupLabel",
+        header: "Pickup date and time",
+        cell: ({ row }) => row.original.pickupLabel
       },
       {
         id: "vehicle",
@@ -248,27 +275,27 @@ export function BookingsDataTable() {
         searchColumnId="customer"
         nowrap
         filters={
-          <>
-            <DateRangePicker
-              value={dateRange}
-              onChange={(range) => {
-                if (range?.from) setDateRange(range);
-              }}
-              className="shrink-0"
-            />
-            <ListFilterPopover
-              label="Status"
-              options={TRIP_STATUSES.map((status) => ({
-                value: status,
-                label: tripStatusTitle[status]
-              }))}
-              selected={statusFilter}
-              onSelectedChange={(values) => {
-                setStatusFilter(values);
-                table.getColumn("status")?.setFilterValue(values.length ? values : undefined);
-              }}
-            />
-          </>
+          <ListFilterPopover
+            label="Status"
+            options={TRIP_STATUSES.map((status) => ({
+              value: status,
+              label: tripStatusTitle[status]
+            }))}
+            selected={statusFilter}
+            onSelectedChange={(values) => {
+              setStatusFilter(values);
+              table.getColumn("status")?.setFilterValue(values.length ? values : undefined);
+            }}
+          />
+        }
+        endActions={
+          <DateRangePicker
+            value={dateRange}
+            onChange={(range) => {
+              if (range?.from) setDateRange(range);
+            }}
+            className="shrink-0"
+          />
         }
       />
       <div className="rounded-md border">
