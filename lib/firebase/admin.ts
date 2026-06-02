@@ -23,12 +23,25 @@ function decodeServiceAccount(): Record<string, unknown> {
   }
 }
 
+function normalizeBucketName(bucket: string | undefined): string | undefined {
+  if (!bucket) return undefined;
+  return bucket.replace(/^gs:\/\//, "").replace(/\/+$/, "").trim();
+}
+
 let cachedApp: App | null = null;
 export function adminApp(): App {
   if (cachedApp) return cachedApp;
+  const serviceAccount = decodeServiceAccount();
+  const storageBucket =
+    normalizeBucketName(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) ||
+    normalizeBucketName((serviceAccount.project_id as string | undefined)?.trim())
+      ?.concat(".appspot.com");
   cachedApp = getApps().length
     ? getApp()
-    : initializeApp({ credential: cert(decodeServiceAccount() as never) });
+    : initializeApp({
+        credential: cert(serviceAccount as never),
+        ...(storageBucket ? { storageBucket } : {})
+      });
   return cachedApp;
 }
 
