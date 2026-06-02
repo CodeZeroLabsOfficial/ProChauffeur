@@ -8,9 +8,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { firebaseAuth } from "@/lib/firebase/client";
-import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -116,63 +114,85 @@ function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="space-y-3">
-        <Logo />
-        <div>
-          <CardTitle className="text-xl">Operations Portal</CardTitle>
-          <CardDescription>Sign in with your administrator account.</CardDescription>
+    <div className="flex w-full items-center justify-center lg:w-1/2">
+      <div className="w-full max-w-md space-y-8 px-4">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-bold">Welcome back</h2>
+          <p className="text-muted-foreground mt-2 text-sm">Please sign in to your account</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@prochauffeur.com"
-            />
+
+        <form onSubmit={onSubmit} className="mt-8 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="email" className="sr-only">
+                Email address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="password" className="sr-only">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className="w-full"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="text-end">
+              <button
+                type="button"
+                className="ml-auto inline-block text-sm underline disabled:opacity-50"
+                disabled={loading || resetting}
+                onClick={onForgotPassword}>
+                {resetting ? "Sending reset email…" : "Forgot your password?"}
+              </button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+
+          <div>
+            <Button type="submit" className="w-full" disabled={loading || resetting}>
+              {loading && <LoaderCircleIcon className="animate-spin" />}
+              Sign in
+            </Button>
           </div>
-          <Button type="submit" className="w-full" disabled={loading || resetting}>
-            {loading && <LoaderCircleIcon className="animate-spin" />}
-            Sign in
-          </Button>
-          <Button
-            type="button"
-            variant="link"
-            className="text-muted-foreground h-auto w-full p-0 text-sm"
-            disabled={loading || resetting}
-            onClick={onForgotPassword}>
-            {resetting ? "Sending reset email…" : "Forgot password?"}
-          </Button>
-          <p className="text-muted-foreground text-center text-xs">
-            Firebase project: {firebaseProjectLabel()}
-          </p>
         </form>
-      </CardContent>
-    </Card>
+
+        <p className="text-muted-foreground text-center text-xs">
+          Firebase project: {firebaseProjectLabel()}
+        </p>
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="bg-muted/40 flex min-h-svh items-center justify-center p-4">
+    <div className="flex min-h-svh pb-8 lg:h-screen lg:pb-0">
+      <div className="hidden w-1/2 bg-gray-100 lg:block">
+        <img
+          width={1000}
+          height={1000}
+          src="/images/extra/image4.jpg"
+          alt="ProChauffeur operations portal"
+          className="h-full w-full object-cover"
+        />
+      </div>
+
       <Suspense>
         <LoginForm />
       </Suspense>

@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MoreHorizontalIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { addDays, format, isSameDay, isToday, subDays } from "date-fns";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  SearchIcon
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useTrips } from "@/hooks/use-collections";
@@ -13,7 +20,6 @@ import {
   type TripStatus
 } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
-import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { NewBookingSheet } from "@/app/dashboard/bookings/new-booking-sheet";
 import { Button } from "@/components/ui/button";
@@ -47,17 +53,19 @@ export default function BookingsPage() {
   const { trips, loading } = useTrips();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TripStatus | "all">("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return trips.filter((t) => {
+      if (!isSameDay(tripPickupReferenceDate(t), selectedDate)) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (!q) return true;
       return [t.customerDisplayName, t.pickupAddressLine, t.dropoffAddressLine, t.customerPhoneNumber]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [trips, search, statusFilter]);
+  }, [trips, search, statusFilter, selectedDate]);
 
   async function changeStatus(id: string, status: TripStatus) {
     try {
@@ -70,11 +78,41 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Bookings"
-        description="Manage chauffeur trips across their lifecycle."
-        actions={<NewBookingSheet trigger={<Button><PlusIcon /> New booking</Button>} />}
-      />
+      <div className="flex items-end justify-between lg:items-center">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <h1 className="me-6 text-xl font-bold tracking-tight lg:text-2xl">Bookings</h1>
+          <div className="flex gap-2">
+            <div className="flex items-center rounded-lg border">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-e-none border-e"
+                onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
+                <ChevronLeftIcon />
+              </Button>
+              <div className="px-3 text-center text-sm lg:min-w-[140px]">
+                {format(selectedDate, "EEE, MMM d")}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-s-none border-s"
+                onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+                <ChevronRightIcon />
+              </Button>
+            </div>
+            {!isToday(selectedDate) && (
+              <Button
+                variant="outline"
+                className="hidden md:flex"
+                onClick={() => setSelectedDate(new Date())}>
+                Today
+              </Button>
+            )}
+          </div>
+        </div>
+        <NewBookingSheet trigger={<Button><PlusIcon /> New booking</Button>} />
+      </div>
 
       <Card>
         <CardContent className="space-y-4">
