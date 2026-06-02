@@ -54,7 +54,8 @@ export default function AdminsPage() {
 
   async function onAddAdmin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
 
@@ -70,9 +71,9 @@ export default function AdminsPage() {
         toast.error(typeof data.error === "string" ? data.error : "Could not create administrator.");
         return;
       }
-      toast.success("Administrator created.");
+      formEl.reset();
       setAddOpen(false);
-      e.currentTarget.reset();
+      toast.success("Administrator created.");
     } catch {
       toast.error("Could not create administrator.");
     } finally {
