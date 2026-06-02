@@ -27,7 +27,6 @@ import {
 } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -233,20 +232,14 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                   value={progressValue}
                   indicatorColor="bg-green-500 dark:bg-green-600"
                 />
-                <div className="text-muted-foreground text-xs">
-                  <Badge variant="info" className="me-1">
-                    {tripStatusTitle[trip.status]}
-                  </Badge>
-                  updated {formatDateTime(trip.updatedAt)}
-                </div>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
           <SectionCard title="Booking summary">
             <DetailRow label="Booking ID" value={shortBookingId(trip.id)} />
             <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
@@ -256,7 +249,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             />
             <DetailRow label="Luggage requirements" value={luggageLabel(trip)} />
           </SectionCard>
+        </div>
 
+        <div className="space-y-4 lg:col-span-1">
           <SectionCard title="Booking status">
             <div className="flex justify-start">
               <TripStatusBadge status={trip.status} />
@@ -269,9 +264,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             />
             <DetailRow label="Journey time" value={journeyTime} />
           </SectionCard>
-        </div>
 
-        <div className="space-y-4">
           <SectionCard title="Customer information">
             <div className="space-y-2">
               <p className="text-sm font-medium">{trip.customerDisplayName || "Customer"}</p>
