@@ -8,25 +8,24 @@ import {
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
-  MapPinIcon,
   PackageIcon,
   PencilIcon,
-  PrinterIcon,
-  UserIcon
+  PrinterIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTrip, useUsers } from "@/hooks/use-collections";
+import { useTrip } from "@/hooks/use-collections";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
   tripStatusTitle,
   vehicleTypeTitle,
+  type Trip,
   type TripStatus,
   type VehicleType
 } from "@/lib/models";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,14 +40,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 
 const ACTIVE_STATUSES = TRIP_STATUSES.filter((s) => s !== "cancelled");
 
@@ -64,7 +55,7 @@ function shortBookingId(id: string) {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
-function vehicleLabel(trip: NonNullable<ReturnType<typeof useTrip>["trip"]>) {
+function vehicleLabel(trip: Trip) {
   const v = trip.vehicleSnapshot;
   if (!v) return "—";
   const type = v.pricingVehicleType
@@ -74,21 +65,68 @@ function vehicleLabel(trip: NonNullable<ReturnType<typeof useTrip>["trip"]>) {
   return type ? `${desc} (${type})` : desc;
 }
 
+function luggageLabel(trip: Trip) {
+  if (trip.bookingSmallLuggageCount == null && trip.bookingLargeLuggageCount == null) {
+    return "—";
+  }
+  return `${trip.bookingSmallLuggageCount ?? 0} small, ${trip.bookingLargeLuggageCount ?? 0} large`;
+}
+
+function formatDuration(from: Date, to: Date) {
+  const minutes = Math.max(0, Math.round((to.getTime() - from.getTime()) / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (hours < 24) return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
+  const days = Math.floor(hours / 24);
+  const dayHours = hours % 24;
+  return dayHours ? `${days} d ${dayHours} hr` : `${days} d`;
+}
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
+      <span className="text-end text-sm">{value}</span>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  children
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold tracking-tight">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">{children}</CardContent>
+    </Card>
+  );
+}
+
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
-  const { users } = useUsers();
-
-  const chauffeurName = useMemo(() => {
-    if (!trip?.driverID) return "Unassigned";
-    const u = users.find((user) => user.id === trip.driverID);
-    return u?.profile.displayName || u?.email || "Unknown";
-  }, [trip?.driverID, users]);
 
   const currentStepIndex = trip ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number]) : -1;
   const progressValue =
     trip && trip.status !== "cancelled" && currentStepIndex >= 0
       ? (currentStepIndex / (ACTIVE_STATUSES.length - 1)) * 100
       : 0;
+
+  const completedAt = useMemo(() => {
+    if (!trip || trip.status !== "completed") return null;
+    return trip.updatedAt;
+  }, [trip]);
+
+  const journeyTime = useMemo(() => {
+    if (!trip || !completedAt) return "—";
+    return formatDuration(tripPickupReferenceDate(trip), completedAt);
+  }, [trip, completedAt]);
 
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
@@ -122,24 +160,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   }
 
   const pickupAt = tripPickupReferenceDate(trip);
-  const detailRows = [
-    { label: "Pickup", value: trip.pickupAddressLine || "—" },
-    { label: "Drop-off", value: trip.dropoffAddressLine || "—" },
-    { label: "Pickup date and time", value: formatDateTime(pickupAt) },
-    { label: "Vehicle", value: vehicleLabel(trip) },
-    {
-      label: "Passengers",
-      value: trip.bookingPassengerCount != null ? String(trip.bookingPassengerCount) : "—"
-    },
-    {
-      label: "Luggage",
-      value:
-        trip.bookingSmallLuggageCount != null || trip.bookingLargeLuggageCount != null
-          ? `${trip.bookingSmallLuggageCount ?? 0} small, ${trip.bookingLargeLuggageCount ?? 0} large`
-          : "—"
-    },
-    { label: "Notes", value: trip.notes?.trim() || "—" }
-  ];
+  const customerAddress = [trip.pickupAddressLine, trip.dropoffAddressLine]
+    .filter(Boolean)
+    .join(" → ");
 
   return (
     <div className="mx-auto max-w-screen-lg space-y-4 lg:mt-10">
@@ -174,81 +197,13 @@ export function BookingDetail({ tripId }: { tripId: string }) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold tracking-tight">
-              Booking {shortBookingId(trip.id)}
-            </CardTitle>
-            <p className="text-muted-foreground text-sm">Placed on {formatDate(trip.createdAt)}</p>
-          </CardHeader>
-          <CardContent>
-            <Separator className="mb-4" />
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Customer information</h3>
-                <p className="text-muted-foreground text-sm">
-                  {trip.customerDisplayName || "Customer"}
-                </p>
-                {trip.customerEmail && (
-                  <p className="text-muted-foreground text-sm">{trip.customerEmail}</p>
-                )}
-                {trip.customerPhoneNumber && (
-                  <p className="text-muted-foreground text-sm">{trip.customerPhoneNumber}</p>
-                )}
-                {trip.pickupAddressLine && (
-                  <p className="text-muted-foreground text-sm">{trip.pickupAddressLine}</p>
-                )}
-              </div>
-              <div className="bg-muted flex items-center justify-between rounded-md border p-4">
-                <div className="space-y-1">
-                  <h4 className="font-medium">Chauffeur</h4>
-                  <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                    <UserIcon className="size-4" />
-                    {chauffeurName}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Booking summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between">
-              <span>Pickup</span>
-              <span className="text-muted-foreground text-end text-sm">{formatDateTime(pickupAt)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Passengers</span>
-              <span>{trip.bookingPassengerCount ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Luggage</span>
-              <span className="text-muted-foreground text-sm">
-                {trip.bookingSmallLuggageCount ?? 0} small / {trip.bookingLargeLuggageCount ?? 0}{" "}
-                large
-              </span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between font-semibold">
-              <span>Status</span>
-              <TripStatusBadge status={trip.status} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Trip status</CardTitle>
         </CardHeader>
         <CardContent>
           {trip.status === "cancelled" ? (
-            <p className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
+            <p className="text-muted-foreground text-sm">
               This booking was cancelled on {formatDateTime(trip.updatedAt)}.
             </p>
           ) : (
@@ -290,36 +245,71 @@ export function BookingDetail({ tripId }: { tripId: string }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Detail</TableHead>
-                <TableHead className="text-end">Value</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {detailRows.map((row) => (
-                <TableRow key={row.label}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {row.label === "Pickup" || row.label === "Drop-off" ? (
-                        <MapPinIcon className="text-muted-foreground size-4 shrink-0" />
-                      ) : null}
-                      <span>{row.label}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-end">{row.value}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
+          <SectionCard title="Booking summary">
+            <DetailRow label="Booking ID" value={shortBookingId(trip.id)} />
+            <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
+            <DetailRow
+              label="Passengers"
+              value={trip.bookingPassengerCount != null ? trip.bookingPassengerCount : "—"}
+            />
+            <DetailRow label="Luggage requirements" value={luggageLabel(trip)} />
+          </SectionCard>
+
+          <SectionCard title="Booking status">
+            <div className="flex justify-start">
+              <TripStatusBadge status={trip.status} />
+            </div>
+            <Separator />
+            <DetailRow label="Date and time requested" value={formatDateTime(trip.createdAt)} />
+            <DetailRow
+              label="Date and time completed"
+              value={completedAt ? formatDateTime(completedAt) : "—"}
+            />
+            <DetailRow label="Journey time" value={journeyTime} />
+          </SectionCard>
+        </div>
+
+        <div className="space-y-4">
+          <SectionCard title="Customer information">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{trip.customerDisplayName || "Customer"}</p>
+              {customerAddress && (
+                <p className="text-muted-foreground text-sm">{customerAddress}</p>
+              )}
+              {trip.customerPhoneNumber && (
+                <p className="text-muted-foreground text-sm">{trip.customerPhoneNumber}</p>
+              )}
+              {trip.customerEmail && (
+                <p className="text-muted-foreground text-sm">{trip.customerEmail}</p>
+              )}
+              {!customerAddress && !trip.customerPhoneNumber && !trip.customerEmail && (
+                <p className="text-muted-foreground text-sm">No contact details on file.</p>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Vehicle details">
+            <p className="text-muted-foreground text-sm">
+              {trip.vehicleSnapshot ? vehicleLabel(trip) : "No vehicle assigned for this trip."}
+            </p>
+            {trip.vehicleSnapshot?.licensePlate && (
+              <p className="text-muted-foreground text-sm">
+                Plate: {trip.vehicleSnapshot.licensePlate}
+              </p>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Extras / Add-ons">
+            {trip.notes?.trim() ? (
+              <p className="text-muted-foreground text-sm">{trip.notes.trim()}</p>
+            ) : (
+              <p className="text-muted-foreground text-sm">No add-ons or extras recorded.</p>
+            )}
+          </SectionCard>
+        </div>
+      </div>
     </div>
   );
 }
