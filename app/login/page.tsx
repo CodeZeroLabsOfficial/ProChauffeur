@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { getFirebaseClientEnv } from "@/lib/env";
-
 function loginErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {
     switch (error.code) {
@@ -47,15 +45,6 @@ function loginErrorMessage(error: unknown): string {
     return error.message;
   }
   return "Sign in failed. Please try again.";
-}
-
-/** Shown in dev/support to confirm which Firebase project the build is using. */
-function firebaseProjectLabel(): string {
-  try {
-    return getFirebaseClientEnv().NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  } catch {
-    return "not configured";
-  }
 }
 
 function LoginForm() {
@@ -171,10 +160,6 @@ function LoginForm() {
             </Button>
           </div>
         </form>
-
-        <p className="text-muted-foreground text-center text-xs">
-          Firebase project: {firebaseProjectLabel()}
-        </p>
       </div>
     </div>
   );
@@ -187,7 +172,7 @@ export default function LoginPage() {
         <img
           width={1000}
           height={1000}
-          src="/images/extra/image4.jpg"
+          src="/images/extra/login-hero.png"
           alt="ProChauffeur operations portal"
           className="h-full w-full object-cover"
         />
