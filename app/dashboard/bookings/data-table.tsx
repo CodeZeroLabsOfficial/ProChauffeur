@@ -172,14 +172,7 @@ export function BookingsDataTable() {
         accessorFn: (row) => row.customerDisplayName || "Customer",
         header: "Customer",
         cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.customerDisplayName || "Customer"}</div>
-            {row.original.customerPhoneNumber && (
-              <div className="text-muted-foreground text-xs">
-                {row.original.customerPhoneNumber}
-              </div>
-            )}
-          </div>
+          <div className="font-medium">{row.original.customerDisplayName || "Customer"}</div>
         ),
         filterFn: (row, _columnId, filterValue) => {
           const q = String(filterValue ?? "")

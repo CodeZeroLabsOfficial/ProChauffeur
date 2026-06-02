@@ -20,9 +20,7 @@ import {
   type FirestoreError,
   type QuerySnapshot
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-
-import { firestore, firebaseStorage } from "@/lib/firebase/client";
+import { firestore } from "@/lib/firebase/client";
 import { coordinateToGeoPoint, stripUndefined } from "@/lib/firebase/converters";
 import {
   AppSettingsDocs,
@@ -141,11 +139,18 @@ export async function updateUserProfile(uid: string, profile: UserProfile): Prom
   await updateDoc(doc(db(), Collections.users, uid), { profile: stripUndefined({ ...profile }) });
 }
 
-export async function uploadUserProfilePhoto(uid: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const storageRef = ref(firebaseStorage(), `users/${uid}/profile-photo.${ext}`);
-  const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
-  return getDownloadURL(snapshot.ref);
+export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/profile/photo", { method: "POST", body: formData });
+  const body = (await res.json().catch(() => ({}))) as { photoURL?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload profile photo.");
+  }
+  if (!body.photoURL) {
+    throw new Error("Could not upload profile photo.");
+  }
+  return body.photoURL;
 }
 
 export async function updateUserDriverProfile(uid: string, driverProfile: DriverProfile): Promise<void> {

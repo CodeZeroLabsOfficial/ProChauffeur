@@ -130,8 +130,10 @@ export default function ProfileSettingsPage() {
       setPhotoRemoved(false);
       if (files[0]) removeFile(files[0].id);
       toast.success("Profile saved.");
-    } catch {
-      toast.error("Could not save profile.");
+    } catch (err) {
+      console.error("Profile save failed:", err);
+      const message = err instanceof Error ? err.message : "Could not save profile.";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

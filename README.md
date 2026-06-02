@@ -73,11 +73,12 @@ must NOT be prefixed with `NEXT_PUBLIC_`.
 ## Firebase rules & indexes
 
 - `firestore.rules` — admin-gated Firestore access
+- `storage.rules` — profile photo uploads under `users/{uid}/`
 - `database.rules.json` — RTDB live-location rules
 - `firestore.indexes.json` — composite indexes
 
 Deploy with the Firebase CLI:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes,database
+firebase deploy --only firestore:rules,firestore:indexes,storage,database
 ```
