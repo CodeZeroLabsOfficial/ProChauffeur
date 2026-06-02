@@ -249,7 +249,13 @@ export function BookingsDataTable() {
         nowrap
         filters={
           <>
-            <DateRangePicker value={dateRange} onChange={setDateRange} className="shrink-0" />
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range) => {
+                if (range?.from) setDateRange(range);
+              }}
+              className="shrink-0"
+            />
             <ListFilterPopover
               label="Status"
               options={TRIP_STATUSES.map((status) => ({
