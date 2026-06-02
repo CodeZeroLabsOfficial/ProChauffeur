@@ -134,34 +134,20 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     [trip, users]
   );
 
-  const customerDetails = useMemo(() => {
-    if (!trip) return [];
+  const customerName =
+    trip?.customerDisplayName || customer?.profile.displayName || null;
+  const customerAddress = trip?.customerAddressLine ?? customer?.profile.address ?? null;
+  const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
+  const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
+  const customerCompany = trip?.customerCompany ?? null;
 
-    const rows = [
-      {
-        label: "Customer name",
-        value: trip.customerDisplayName || customer?.profile.displayName || null
-      },
-      {
-        label: "Customer address",
-        value: trip.customerAddressLine ?? customer?.profile.address ?? null
-      },
-      {
-        label: "Customer phone",
-        value: trip.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null
-      },
-      {
-        label: "Customer email",
-        value: trip.customerEmail ?? customer?.email ?? null
-      },
-      {
-        label: "Company",
-        value: trip.customerCompany ?? null
-      }
-    ];
-
-    return rows.filter((row) => row.value?.trim());
-  }, [trip, customer]);
+  const hasCustomerDetails = Boolean(
+    customerName?.trim() ||
+      customerAddress?.trim() ||
+      customerPhone?.trim() ||
+      customerEmail?.trim() ||
+      customerCompany?.trim()
+  );
 
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
@@ -299,19 +285,33 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               <TripStatusBadge status={trip.status} />
             </div>
             <Separator />
-            <DetailRow label="Booking requested:" value={formatDateTime(trip.createdAt)} />
+            <DetailRow label="Requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
-              label="Booking completed:"
+              label="Completed:"
               value={completedAt ? formatDateTime(completedAt) : "—"}
             />
-            <DetailRow label="Journey time" value={journeyTime} />
+            <DetailRow label="Journey time:" value={journeyTime} />
           </SectionCard>
 
           <SectionCard title="Customer information">
-            {customerDetails.length > 0 ? (
-              customerDetails.map((row) => (
-                <DetailRow key={row.label} label={row.label} value={row.value} />
-              ))
+            {hasCustomerDetails ? (
+              <div className="space-y-4">
+                {customerName?.trim() && (
+                  <p className="text-sm font-medium">{customerName}</p>
+                )}
+                {customerAddress?.trim() && (
+                  <DetailRow label="Customer address" value={customerAddress} />
+                )}
+                {customerPhone?.trim() && (
+                  <p className="text-muted-foreground text-sm">{customerPhone}</p>
+                )}
+                {customerEmail?.trim() && (
+                  <p className="text-muted-foreground text-sm">{customerEmail}</p>
+                )}
+                {customerCompany?.trim() && (
+                  <DetailRow label="Company" value={customerCompany} />
+                )}
+              </div>
             ) : (
               <p className="text-muted-foreground text-sm">No customer details on file.</p>
             )}
