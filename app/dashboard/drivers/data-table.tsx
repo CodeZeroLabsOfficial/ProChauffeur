@@ -247,6 +247,7 @@ export function DriversDataTable({
           table={table}
           searchPlaceholder="Search drivers..."
           searchColumnId="chauffeur"
+          nowrap
           filters={
             <>
               <ListFilterPopover

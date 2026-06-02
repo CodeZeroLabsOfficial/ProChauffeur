@@ -236,9 +236,10 @@ export function BookingsDataTable() {
         table={table}
         searchPlaceholder="Search bookings..."
         searchColumnId="customer"
+        nowrap
         filters={
           <>
-            <div className="flex items-center rounded-md border">
+            <div className="flex shrink-0 items-center rounded-md border">
               <Button
                 variant="ghost"
                 size="icon"
@@ -258,7 +259,10 @@ export function BookingsDataTable() {
               </Button>
             </div>
             {!isToday(selectedDate) && (
-              <Button variant="outline" onClick={() => setSelectedDate(new Date())}>
+              <Button
+                variant="outline"
+                className="shrink-0 whitespace-nowrap"
+                onClick={() => setSelectedDate(new Date())}>
                 Today
               </Button>
             )}

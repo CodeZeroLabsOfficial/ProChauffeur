@@ -41,7 +41,7 @@ export function ListFilterPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="shrink-0 whitespace-nowrap">
           <PlusCircle />
           {label}
         </Button>

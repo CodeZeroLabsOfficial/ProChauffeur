@@ -249,6 +249,7 @@ export function FleetDataTable({
           table={table}
           searchPlaceholder="Search vehicles..."
           searchColumnId="vehicle"
+          nowrap
           filters={
             <>
               <ListFilterPopover
