@@ -101,7 +101,7 @@ function SectionCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl font-bold tracking-tight">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">{children}</CardContent>
     </Card>
@@ -257,9 +257,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               <TripStatusBadge status={trip.status} />
             </div>
             <Separator />
-            <DetailRow label="Date and time requested" value={formatDateTime(trip.createdAt)} />
+            <DetailRow label="Booking requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
-              label="Date and time completed"
+              label="Booking completed:"
               value={completedAt ? formatDateTime(completedAt) : "—"}
             />
             <DetailRow label="Journey time" value={journeyTime} />
