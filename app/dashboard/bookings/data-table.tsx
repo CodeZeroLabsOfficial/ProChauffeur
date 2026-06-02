@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { addDays, format, isSameDay, isToday, subDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
+import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTrips } from "@/hooks/use-collections";
@@ -27,7 +27,9 @@ import {
   type TripStatus
 } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
+import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { DateRangePicker, last7DaysRange } from "@/components/custom-date-range-picker";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -63,9 +65,17 @@ function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId:
   return values.includes(String(row.getValue(columnId) ?? ""));
 }
 
+function tripInDateRange(trip: Trip, range: DateRange | undefined) {
+  if (!range?.from) return true;
+  const ref = tripPickupReferenceDate(trip);
+  const start = startOfDay(range.from);
+  const end = endOfDay(range.to ?? range.from);
+  return ref >= start && ref <= end;
+}
+
 export function BookingsDataTable() {
   const { trips, loading } = useTrips();
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -84,7 +94,7 @@ export function BookingsDataTable() {
   const data = useMemo<BookingRow[]>(
     () =>
       trips
-        .filter((t) => isSameDay(tripPickupReferenceDate(t), selectedDate))
+        .filter((t) => tripInDateRange(t, dateRange))
         .map((t) => ({
           ...t,
           searchLabel: [
@@ -101,7 +111,7 @@ export function BookingsDataTable() {
             ? `${t.vehicleSnapshot.color} ${t.vehicleSnapshot.make} ${t.vehicleSnapshot.model}`.trim()
             : "—"
         })),
-    [trips, selectedDate]
+    [trips, dateRange]
   );
 
   const columns = useMemo<ColumnDef<BookingRow>[]>(
@@ -239,33 +249,7 @@ export function BookingsDataTable() {
         nowrap
         filters={
           <>
-            <div className="flex shrink-0 items-center rounded-md border">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-e-none border-e"
-                onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
-                <ChevronLeftIcon />
-              </Button>
-              <div className="px-3 text-center text-sm lg:min-w-[140px]">
-                {format(selectedDate, "EEE, MMM d")}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-s-none border-s"
-                onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-                <ChevronRightIcon />
-              </Button>
-            </div>
-            {!isToday(selectedDate) && (
-              <Button
-                variant="outline"
-                className="shrink-0 whitespace-nowrap"
-                onClick={() => setSelectedDate(new Date())}>
-                Today
-              </Button>
-            )}
+            <DateRangePicker value={dateRange} onChange={setDateRange} className="shrink-0" />
             <ListFilterPopover
               label="Status"
               options={TRIP_STATUSES.map((status) => ({
