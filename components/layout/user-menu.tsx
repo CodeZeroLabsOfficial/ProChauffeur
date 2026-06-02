@@ -22,6 +22,8 @@ export function UserMenu() {
   const user = useSessionUser();
   const router = useRouter();
   const name = user.displayName || user.email || "Admin";
+  const email = user.email ?? "";
+  const initials = generateAvatarFallback(name);
 
   async function handleSignOut() {
     try {
@@ -37,28 +39,35 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full outline-none">
+        <button className="rounded-full outline-none">
           <Avatar className="size-8">
-            <AvatarFallback>{generateAvatarFallback(name)}</AvatarFallback>
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{name}</span>
-            {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
+      <DropdownMenuContent align="end" className="min-w-60">
+        <DropdownMenuLabel className="p-0 font-normal">
+          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+            <Avatar className="size-8">
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">{name}</span>
+              {email ? (
+                <span className="text-muted-foreground truncate text-xs">{email}</span>
+              ) : null}
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/pages/settings">
+          <Link href="/dashboard/settings/profile">
             <UserIcon />
             Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/pages/settings/account">
+          <Link href="/dashboard/settings/account">
             <ShieldIcon />
             Account
           </Link>

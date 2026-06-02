@@ -61,6 +61,8 @@ export const navGroups: NavGroup[] = [
         href: "/dashboard/settings",
         icon: SettingsIcon,
         items: [
+          { title: "Profile", href: "/dashboard/settings/profile" },
+          { title: "Account", href: "/dashboard/settings/account" },
           { title: "Branding", href: "/dashboard/settings" },
           { title: "Locale", href: "/dashboard/settings/locale" },
           { title: "License", href: "/dashboard/settings/license" },
