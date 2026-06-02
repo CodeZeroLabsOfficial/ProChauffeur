@@ -5,7 +5,6 @@ import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUsers } from "@/hooks/use-collections";
-import { updateUserRole } from "@/lib/services/firebase-service";
 import type { User } from "@/lib/models";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { generateAvatarFallback } from "@/lib/utils";
@@ -40,13 +39,18 @@ export default function AdminsPage() {
 
   const admins = useMemo(() => users.filter((u) => u.role === "admin"), [users]);
 
-  async function setRole(u: User, role: "admin" | "customer") {
+  async function revokeAdmin(u: User) {
     setBusy(true);
     try {
-      await updateUserRole(u.id, role);
-      toast.success(role === "admin" ? "Administrator added." : "Administrator removed.");
+      const res = await fetch(`/api/admins/${u.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Could not revoke administrator.");
+        return;
+      }
+      toast.success("Administrator revoked.");
     } catch {
-      toast.error("Could not update the role.");
+      toast.error("Could not revoke administrator.");
     } finally {
       setBusy(false);
     }
@@ -127,7 +131,7 @@ export default function AdminsPage() {
                         variant="ghost"
                         size="sm"
                         disabled={u.id === me.uid || busy}
-                        onClick={() => setRole(u, "customer")}>
+                        onClick={() => revokeAdmin(u)}>
                         {u.id === me.uid ? "You" : "Revoke"}
                       </Button>
                     </TableCell>
