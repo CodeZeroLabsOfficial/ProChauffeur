@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
-import { MapPinIcon, RadioIcon } from "lucide-react";
+import { CalendarIcon, CarFrontIcon, MapPinIcon, RadioIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -12,7 +12,7 @@ import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
 import { useTrips, useUsers } from "@/hooks/use-collections";
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
-import { tripPickupReferenceDate, upcomingTripStatuses } from "@/lib/models";
+import { tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -71,6 +71,11 @@ export default function DispatchPage() {
     setSelectedTripId((current) => (current === tripId ? null : tripId));
   }
 
+  function chauffeurLabel(trip: Trip) {
+    if (!trip.driverID) return "Unassigned";
+    return driverNameById.get(trip.driverID) ?? "Assigned";
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -101,23 +106,27 @@ export default function DispatchPage() {
                       key={t.id}
                       onClick={() => toggleTripSelection(t.id)}
                       className={cn(
-                        "hover:bg-muted/60 flex w-full flex-col gap-1.5 p-4 text-left transition-colors",
+                        "hover:bg-muted/60 flex w-full flex-col gap-2 p-4 text-left transition-colors",
                         selectedTripId === t.id && "bg-muted"
                       )}>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium">
                           {t.customerDisplayName || "Customer"}
                         </span>
                         <TripStatusBadge status={t.status} />
                       </div>
-                      <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                        <MapPinIcon className="size-3" />
-                        {t.pickupAddressLine || "Pickup"} → {t.dropoffAddressLine || "Drop-off"}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
+                      <TripDetailLine icon={<CarFrontIcon className="size-3.5" />}>
+                        {chauffeurLabel(t)}
+                      </TripDetailLine>
+                      <TripDetailLine icon={<CalendarIcon className="size-3.5" />}>
                         {formatDateTime(tripPickupReferenceDate(t))}
-                        {t.driverID && ` · ${driverNameById.get(t.driverID) ?? "Assigned"}`}
-                      </span>
+                      </TripDetailLine>
+                      <TripDetailLine icon={<MapPinIcon className="size-3.5 text-green-600" />}>
+                        {t.pickupAddressLine || "Pickup location not set"}
+                      </TripDetailLine>
+                      <TripDetailLine icon={<MapPinIcon className="size-3.5 text-red-500" />}>
+                        {t.dropoffAddressLine || "Destination not set"}
+                      </TripDetailLine>
                     </button>
                   ))
                 )}
@@ -161,5 +170,14 @@ export default function DispatchPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function TripDetailLine({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <span className="text-muted-foreground flex items-start gap-2 text-xs">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <span className="min-w-0 break-words">{children}</span>
+    </span>
   );
 }
