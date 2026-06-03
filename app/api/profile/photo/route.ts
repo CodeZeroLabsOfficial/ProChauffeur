@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { uploadProfilePhotoAdmin } from "@/lib/firebase/admin-storage";
+import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
+import { profilePhotoNotification } from "@/lib/notifications/messages";
 
 /** POST: upload the signed-in admin's profile photo to Firebase Storage. */
 export async function POST(request: Request) {
@@ -33,6 +35,10 @@ export async function POST(request: Request) {
       buffer,
       file.type,
       file.name
+    );
+    await createActivityNotificationAdmin(
+      profilePhotoNotification(session.displayName ?? session.email ?? "Profile", session.uid),
+      session
     );
     return NextResponse.json({ photoURL });
   } catch (err) {

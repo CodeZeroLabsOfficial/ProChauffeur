@@ -201,6 +201,29 @@ service cloud.firestore {
       allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours'];
     }
 
+    function validNotificationCategories() {
+      return [
+        'driver', 'vehicle', 'profile', 'company', 'location',
+        'operating_hours', 'locale', 'pricing', 'invoice', 'admin'
+      ];
+    }
+
+    function validNotificationActions() {
+      return ['created', 'updated', 'deleted'];
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.category in validNotificationCategories()
+        && request.resource.data.action in validNotificationActions()
+        && request.resource.data.title is string
+        && request.resource.data.message is string
+        && request.resource.data.createdAt is timestamp;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

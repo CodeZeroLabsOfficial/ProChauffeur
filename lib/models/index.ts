@@ -9,6 +9,7 @@ export * from "@/lib/models/limits";
 export * from "@/lib/models/invoice";
 export * from "@/lib/models/company";
 export * from "@/lib/models/locale";
+export * from "@/lib/models/notification";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */
 export const Collections = {
@@ -18,7 +19,8 @@ export const Collections = {
   locations: "locations",
   invoices: "invoices",
   operator: "operator",
-  appSettings: "app_settings"
+  appSettings: "app_settings",
+  notifications: "notifications"
 } as const;
 
 /** `operator` collection document ids. */

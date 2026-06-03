@@ -20,8 +20,20 @@ import {
   type FirestoreError,
   type QuerySnapshot
 } from "firebase/firestore";
-import { firestore } from "@/lib/firebase/client";
+import { firestore, firebaseAuth } from "@/lib/firebase/client";
 import { coordinateToGeoPoint, stripUndefined } from "@/lib/firebase/converters";
+import {
+  companyNotification,
+  driverNotification,
+  invoiceNotification,
+  localeNotification,
+  locationNotification,
+  operatingHoursNotification,
+  pricingNotification,
+  profileNotification,
+  vehicleDisplayTitle,
+  vehicleNotification
+} from "@/lib/notifications/messages";
 import {
   AppSettingsDocs,
   Collections,
@@ -31,7 +43,9 @@ import {
   emptyOperatingHours,
   emptyOperatorLocale,
   unlimitedLimits,
+  type ActivityNotification,
   type CompanyProfile,
+  type CreateActivityNotificationInput,
   type OperatorLocale,
   type AppFleetOperatingHours,
   type AppGlobalLimits,
@@ -47,6 +61,7 @@ import {
   type Vehicle
 } from "@/lib/models";
 import {
+  mapActivityNotification,
   mapCompanyProfile,
   mapOperatorLocale,
   mapFleetLocation,
@@ -74,6 +89,54 @@ function onSnapshotError<T>(label: string, onUpdate: (rows: T[]) => void) {
     console.error(`Firestore ${label} listener failed:`, error.code, error.message);
     onUpdate([]);
   };
+}
+
+async function resolveActor(): Promise<{ actorId?: string; actorName?: string }> {
+  const authUser = firebaseAuth().currentUser;
+  if (!authUser) return {};
+  const actorId = authUser.uid;
+  let actorName = authUser.displayName?.trim() || undefined;
+  if (!actorName) {
+    const snap = await getDoc(doc(db(), Collections.users, actorId));
+    if (snap.exists()) {
+      const user = mapUser(snap.id, snap.data());
+      actorName = user.profile.displayName?.trim() || user.email || undefined;
+    }
+  }
+  return { actorId, actorName };
+}
+
+/** Best-effort activity notification write; never throws to callers. */
+export async function createActivityNotification(input: CreateActivityNotificationInput): Promise<void> {
+  try {
+    const actor = await resolveActor();
+    await addDoc(collection(db(), Collections.notifications), stripUndefined({
+      ...input,
+      actorId: input.actorId ?? actor.actorId,
+      actorName: input.actorName ?? actor.actorName,
+      readAt: null,
+      createdAt: serverTimestamp()
+    }));
+  } catch (err) {
+    console.error("Failed to write activity notification:", err);
+  }
+}
+
+export function listenNotifications(onUpdate: (rows: ActivityNotification[]) => void, max = 50): Unsub {
+  const q = query(
+    collection(db(), Collections.notifications),
+    orderBy("createdAt", "desc"),
+    fsLimit(max)
+  );
+  return onSnapshot(
+    q,
+    (snap) => onUpdate(snapToList(snap, mapActivityNotification)),
+    onSnapshotError("notifications", onUpdate)
+  );
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await updateDoc(doc(db(), Collections.notifications, id), { readAt: serverTimestamp() });
 }
 
 // ─────────────────────────────── Trips ───────────────────────────────
@@ -161,6 +224,8 @@ export async function fetchUser(uid: string): Promise<User | null> {
 
 export async function updateUserProfile(uid: string, profile: UserProfile): Promise<void> {
   await updateDoc(doc(db(), Collections.users, uid), { profile: stripUndefined({ ...profile }) });
+  const title = profile.displayName?.trim() || "Profile";
+  void createActivityNotification(profileNotification(title, uid));
 }
 
 export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<string> {
@@ -177,10 +242,18 @@ export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<
   return body.photoURL;
 }
 
-export async function updateUserDriverProfile(uid: string, driverProfile: DriverProfile): Promise<void> {
+export async function updateUserDriverProfile(
+  uid: string,
+  driverProfile: DriverProfile,
+  options?: { driverTitle?: string; isNew?: boolean }
+): Promise<void> {
   await updateDoc(doc(db(), Collections.users, uid), {
     driverProfile: stripUndefined({ ...driverProfile })
   });
+  if (options?.driverTitle) {
+    const action = options.isNew ? "created" : "updated";
+    void createActivityNotification(driverNotification(action, options.driverTitle, uid));
+  }
 }
 
 export async function updateUserRole(uid: string, role: UserRole): Promise<void> {
@@ -210,11 +283,21 @@ export async function fetchVehicles(): Promise<Vehicle[]> {
 
 /** Vehicle doc id always equals driverID (chauffeur uid). */
 export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
-  await setDoc(doc(db(), Collections.vehicles, vehicle.driverID), stripUndefined({ ...vehicle }));
+  const ref = doc(db(), Collections.vehicles, vehicle.driverID);
+  const existing = await getDoc(ref);
+  const action = existing.exists() ? "updated" : "created";
+  await setDoc(ref, stripUndefined({ ...vehicle }));
+  void createActivityNotification(
+    vehicleNotification(action, vehicleDisplayTitle(vehicle), vehicle.driverID)
+  );
 }
 
 export async function deleteVehicle(driverID: string): Promise<void> {
-  await deleteDoc(doc(db(), Collections.vehicles, driverID));
+  const ref = doc(db(), Collections.vehicles, driverID);
+  const snap = await getDoc(ref);
+  const title = snap.exists() ? vehicleDisplayTitle(mapVehicle(snap.data())) : "Fleet vehicle";
+  await deleteDoc(ref);
+  void createActivityNotification(vehicleNotification("deleted", title, driverID));
 }
 
 /** Assign a fleet vehicle to a chauffeur, clearing prior links (mirrors iOS). */
@@ -268,6 +351,7 @@ export async function createFleetLocation(input: {
     longitude: input.longitude,
     createdAt: serverTimestamp()
   });
+  void createActivityNotification(locationNotification("created", name, id));
 }
 
 export async function updateFleetLocation(location: FleetLocation): Promise<void> {
@@ -280,10 +364,15 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
     latitude: location.latitude,
     longitude: location.longitude
   });
+  void createActivityNotification(locationNotification("updated", name, location.id));
 }
 
 export async function deleteFleetLocation(id: string): Promise<void> {
-  await deleteDoc(doc(db(), Collections.locations, id));
+  const ref = doc(db(), Collections.locations, id);
+  const snap = await getDoc(ref);
+  const title = snap.exists() ? mapFleetLocation(snap.id, snap.data()).name : "Location";
+  await deleteDoc(ref);
+  void createActivityNotification(locationNotification("deleted", title, id));
 }
 
 // ───────────────────────── App settings (config) ─────────────────────
@@ -295,6 +384,7 @@ export async function fetchPricingConfiguration(): Promise<PricingConfig> {
 
 export async function savePricingConfiguration(config: PricingConfig): Promise<void> {
   await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.pricing), config);
+  void createActivityNotification(pricingNotification());
 }
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
@@ -308,6 +398,7 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
     stripUndefined({ ...hours }),
     { merge: true }
   );
+  void createActivityNotification(operatingHoursNotification());
 }
 
 export async function fetchOperatorLocale(): Promise<OperatorLocale> {
@@ -321,6 +412,7 @@ export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> 
     stripUndefined({ ...locale }),
     { merge: true }
   );
+  void createActivityNotification(localeNotification());
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
@@ -334,6 +426,7 @@ export async function saveCompanyProfile(profile: CompanyProfile): Promise<void>
     stripUndefined({ ...profile }),
     { merge: true }
   );
+  void createActivityNotification(companyNotification(profile.name?.trim() || "Company"));
 }
 
 export async function fetchGlobalLimits(): Promise<AppGlobalLimits> {
@@ -368,6 +461,8 @@ export async function createInvoice(invoice: Omit<Invoice, "id" | "createdAt" | 
     updatedAt: serverTimestamp()
   });
   await updateDoc(ref, { id: ref.id });
+  const title = invoice.invoiceNumber?.trim() || "Invoice";
+  void createActivityNotification(invoiceNotification("created", title, ref.id));
   return ref.id;
 }
 
@@ -376,10 +471,16 @@ export async function updateInvoice(id: string, patch: Partial<Invoice>): Promis
     ...stripUndefined({ ...patch }),
     updatedAt: serverTimestamp()
   });
+  const title = patch.invoiceNumber?.trim() || "Invoice";
+  void createActivityNotification(invoiceNotification("updated", title, id));
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  await deleteDoc(doc(db(), Collections.invoices, id));
+  const ref = doc(db(), Collections.invoices, id);
+  const snap = await getDoc(ref);
+  const title = snap.exists() ? mapInvoice(snap.id, snap.data()).invoiceNumber || "Invoice" : "Invoice";
+  await deleteDoc(ref);
+  void createActivityNotification(invoiceNotification("deleted", title, id));
 }
 
 // ─────────────────── Generic app_settings docs (web) ─────────────────

@@ -90,7 +90,13 @@ export function DriverEditSheet({
     setSaving(true);
     try {
       if (isNew) await updateUserRole(uid, "driver");
-      await updateUserDriverProfile(uid, driverProfile);
+      const driverTitle =
+        activeUser?.profile.displayName?.trim() ||
+        activeUser?.email ||
+        selectedCandidate?.profile.displayName?.trim() ||
+        selectedCandidate?.email ||
+        "Chauffeur";
+      await updateUserDriverProfile(uid, driverProfile, { driverTitle, isNew });
       toast.success(isNew ? "Driver added." : "Driver profile saved.");
       onOpenChange(false);
     } catch {

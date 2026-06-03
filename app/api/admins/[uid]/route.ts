@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
+import { adminNotification } from "@/lib/notifications/messages";
 
 type RouteContext = { params: Promise<{ uid: string }> };
 
@@ -31,6 +33,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "This user is not an administrator." }, { status: 400 });
   }
 
+  const adminEmail = (snap.data()?.email as string | undefined)?.trim() || uid;
+
   try {
     await userRef.delete();
 
@@ -42,6 +46,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
         throw err;
       }
     }
+
+    await createActivityNotificationAdmin(adminNotification("deleted", adminEmail, uid), session);
 
     return NextResponse.json({ ok: true });
   } catch {

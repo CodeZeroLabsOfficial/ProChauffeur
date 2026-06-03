@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import {
   listenFleetLocations,
   listenInvoices,
+  listenNotifications,
   listenTrips,
   listenTrip,
   listenUsers,
   listenVehicles
 } from "@/lib/services/firebase-service";
-import type { FleetLocation, Invoice, Trip, User, Vehicle } from "@/lib/models";
+import type { ActivityNotification, FleetLocation, Invoice, Trip, User, Vehicle } from "@/lib/models";
 
 export function useTrips() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -88,4 +89,17 @@ export function useTrip(id: string) {
     return () => unsub();
   }, [id]);
   return { trip, loading, notFound: !loading && !trip };
+}
+
+export function useNotifications(max = 50) {
+  const [notifications, setNotifications] = useState<ActivityNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const unsub = listenNotifications((rows) => {
+      setNotifications(rows);
+      setLoading(false);
+    }, max);
+    return () => unsub();
+  }, [max]);
+  return { notifications, loading };
 }

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
+import { adminNotification } from "@/lib/notifications/messages";
 
 /**
  * POST: create a Firebase Auth user and `users/{uid}` admin document.
@@ -44,6 +46,11 @@ export async function POST(request: Request) {
         role: "admin",
         createdAt: FieldValue.serverTimestamp()
       });
+
+    await createActivityNotificationAdmin(
+      adminNotification("created", trimmedEmail, authUser.uid),
+      session
+    );
 
     return NextResponse.json({ uid: authUser.uid });
   } catch (err) {

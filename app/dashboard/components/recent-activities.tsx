@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-import { useTrips } from "@/hooks/use-collections";
-import { tripPickupReferenceDate } from "@/lib/models";
+import { useNotifications } from "@/hooks/use-collections";
+import type { ActivityNotification } from "@/lib/models";
+import { notificationCategoryIcon, notificationCategoryLabel } from "@/lib/notifications/display";
+import { markNotificationRead } from "@/lib/services/firebase-service";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,37 +18,37 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { TripStatusBadge } from "@/components/trip-status-badge";
 import { formatDateTime } from "@/lib/format";
 import { timeAgo } from "@/app/dashboard/lib/dashboard-metrics";
-import type { Trip } from "@/lib/models/trip";
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function activityDescription(trip: Trip) {
-  const pickup = trip.pickupAddressLine || "Pickup";
-  const dropoff = trip.dropoffAddressLine || "Drop-off";
-  return `${pickup} → ${dropoff}`;
+function ActivityIcon({ notification }: { notification: ActivityNotification }) {
+  const Icon = notificationCategoryIcon(notification.category);
+  return (
+    <Avatar>
+      <AvatarFallback>
+        <Icon className="size-4" />
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 export function RecentActivities() {
-  const { trips } = useTrips();
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
+  const { notifications } = useNotifications(8);
+  const [selected, setSelected] = useState<ActivityNotification | null>(null);
 
-  const items = useMemo(
-    () =>
-      [...trips]
-        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-        .slice(0, 4),
-    [trips]
-  );
+  const items = useMemo(() => notifications.slice(0, 8), [notifications]);
+  const viewAllHref = items[0]?.href ?? "/dashboard";
+
+  async function openActivity(notification: ActivityNotification) {
+    setSelected(notification);
+    if (!notification.readAt) {
+      try {
+        await markNotificationRead(notification.id);
+      } catch {
+        // Non-blocking for the detail dialog.
+      }
+    }
+  }
 
   return (
     <>
@@ -58,33 +60,26 @@ export function RecentActivities() {
           {items.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-sm">No recent activity.</p>
           ) : (
-            items.map((trip) => {
-              const name = trip.customerDisplayName || "Customer";
-              return (
-                <div
-                  key={trip.id}
-                  className="hover:bg-muted -mx-2 flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors"
-                  onClick={() => setSelectedTrip(trip)}>
-                  <Avatar>
-                    <AvatarFallback>{initials(name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-foreground font-semibold">{name}</p>
-                    <p className="text-muted-foreground truncate text-sm">
-                      {activityDescription(trip)}
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground text-sm whitespace-nowrap">
-                    {timeAgo(trip.updatedAt)}
-                  </span>
+            items.map((notification) => (
+              <div
+                key={notification.id}
+                className="hover:bg-muted -mx-2 flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors"
+                onClick={() => void openActivity(notification)}>
+                <ActivityIcon notification={notification} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-foreground truncate font-semibold">{notification.title}</p>
+                  <p className="text-muted-foreground truncate text-sm">{notification.message}</p>
                 </div>
-              );
-            })
+                <span className="text-muted-foreground text-sm whitespace-nowrap">
+                  {timeAgo(notification.createdAt)}
+                </span>
+              </div>
+            ))
           )}
 
           <div className="mt-4">
             <Button variant="outline" className="w-full" size="sm" asChild>
-              <Link href="/dashboard/bookings">
+              <Link href={viewAllHref}>
                 View all <ChevronRight />
               </Link>
             </Button>
@@ -92,43 +87,38 @@ export function RecentActivities() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedTrip} onOpenChange={() => setSelectedTrip(null)}>
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Activity details</DialogTitle>
-            <DialogDescription>Booking update information</DialogDescription>
+            <DialogDescription>{selected ? notificationCategoryLabel(selected.category) : ""}</DialogDescription>
           </DialogHeader>
-          {selectedTrip && (
+          {selected && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar className="size-16">
-                  <AvatarFallback>
-                    {initials(selectedTrip.customerDisplayName || "Customer")}
-                  </AvatarFallback>
-                </Avatar>
+                <ActivityIcon notification={selected} />
                 <div>
-                  <p className="text-lg font-semibold">
-                    {selectedTrip.customerDisplayName || "Customer"}
-                  </p>
-                  <TripStatusBadge status={selectedTrip.status} />
+                  <p className="text-lg font-semibold">{selected.title}</p>
+                  <p className="text-muted-foreground text-sm">{selected.message}</p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <p>Route</p>
-                <p className="text-muted-foreground text-sm">{activityDescription(selectedTrip)}</p>
-              </div>
-              <div className="space-y-2">
-                <p>Pickup</p>
+              {selected.actorName ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Changed by</p>
+                  <p className="text-muted-foreground text-sm">{selected.actorName}</p>
+                </div>
+              ) : null}
+              <div className="space-y-1">
+                <p className="text-sm font-medium">When</p>
                 <p className="text-muted-foreground text-sm">
-                  {formatDateTime(tripPickupReferenceDate(selectedTrip))}
+                  {formatDateTime(selected.createdAt)} ({timeAgo(selected.createdAt)} ago)
                 </p>
               </div>
-              <div className="space-y-2">
-                <p>Updated</p>
-                <p className="text-muted-foreground text-sm">
-                  {timeAgo(selectedTrip.updatedAt)} ago
-                </p>
-              </div>
+              {selected.href ? (
+                <Button asChild className="w-full">
+                  <Link href={selected.href}>Open {notificationCategoryLabel(selected.category).toLowerCase()}</Link>
+                </Button>
+              ) : null}
             </div>
           )}
         </DialogContent>

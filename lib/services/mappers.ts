@@ -2,6 +2,7 @@ import type { DocumentData } from "firebase/firestore";
 
 import { toCoordinate, toDate, toInt } from "@/lib/firebase/converters";
 import type {
+  ActivityNotification,
   AppFleetOperatingHours,
   AppGlobalLimits,
   CompanyProfile,
@@ -9,6 +10,8 @@ import type {
   DriverProfile,
   FleetLocation,
   Invoice,
+  NotificationAction,
+  NotificationCategory,
   PricingConfig,
   Trip,
   User,
@@ -207,6 +210,22 @@ export function mapCompanyProfile(d: DocumentData): CompanyProfile {
     state: companyString(d, "state", "State"),
     postcode: companyString(d, "postcode", "Postcode"),
     country: companyString(d, "country", "Country")
+  };
+}
+
+export function mapActivityNotification(id: string, d: DocumentData): ActivityNotification {
+  return {
+    id,
+    category: (d.category as NotificationCategory) ?? "profile",
+    action: (d.action as NotificationAction) ?? "updated",
+    title: d.title ?? "",
+    message: d.message ?? "",
+    href: d.href ?? undefined,
+    entityId: d.entityId ?? undefined,
+    actorId: d.actorId ?? undefined,
+    actorName: d.actorName ?? undefined,
+    readAt: toDate(d.readAt),
+    createdAt: toDate(d.createdAt) ?? new Date()
   };
 }
 

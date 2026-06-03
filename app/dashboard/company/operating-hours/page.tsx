@@ -1,26 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  fetchOperatingHours,
-  fetchOperatorLocale,
-  saveOperatingHours
-} from "@/lib/services/firebase-service";
+import { fetchOperatingHours, saveOperatingHours } from "@/lib/services/firebase-service";
 import { emptyOperatingHours, type AppFleetOperatingHours, type FleetWeeklyOperatingSchedule } from "@/lib/models";
-import { appConfig } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduleEditSheet, WEEKDAYS } from "@/app/dashboard/company/operating-hours/schedule-edit-sheet";
-
-function displayValue(value: string | null | undefined): string {
-  const trimmed = value?.trim();
-  return trimmed || "Not set";
-}
 
 function formatTime(value: string | null | undefined): string {
   const trimmed = value?.trim();
@@ -30,16 +19,12 @@ function formatTime(value: string | null | undefined): string {
 
 export default function OperatingHoursPage() {
   const [operatingHours, setOperatingHours] = useState<AppFleetOperatingHours>(emptyOperatingHours);
-  const [timezone, setTimezone] = useState(appConfig.timezone);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(null);
 
   const loadData = useCallback(() => {
-    return Promise.all([fetchOperatingHours(), fetchOperatorLocale()]).then(([hours, locale]) => {
-      setOperatingHours(hours);
-      setTimezone(locale.timezone || hours.timeZoneIdentifier || appConfig.timezone);
-    });
+    return fetchOperatingHours().then(setOperatingHours);
   }, []);
 
   useEffect(() => {
@@ -74,25 +59,6 @@ export default function OperatingHoursPage() {
   return (
     <>
       <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Time zone</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <p className="text-muted-foreground text-sm">IANA time zone</p>
-              <p className="font-medium">{displayValue(timezone)}</p>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Configure in{" "}
-              <Link href="/dashboard/settings/locale" className="underline hover:text-foreground">
-                Settings → Locale
-              </Link>
-              .
-            </p>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Weekly schedules</CardTitle>
