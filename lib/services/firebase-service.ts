@@ -25,6 +25,7 @@ import { coordinateToGeoPoint, stripUndefined } from "@/lib/firebase/converters"
 import {
   AppSettingsDocs,
   Collections,
+  OperatorDocs,
   defaultPricingConfig,
   emptyCompanyProfile,
   emptyOperatingHours,
@@ -303,13 +304,13 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
-  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.company));
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.company));
   return snap.exists() ? mapCompanyProfile(snap.data()) : emptyCompanyProfile;
 }
 
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
   await setDoc(
-    doc(db(), Collections.appSettings, AppSettingsDocs.company),
+    doc(db(), Collections.operator, OperatorDocs.company),
     stripUndefined({ ...profile }),
     { merge: true }
   );

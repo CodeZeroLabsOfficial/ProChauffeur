@@ -4,7 +4,6 @@ import { toCoordinate, toDate, toInt } from "@/lib/firebase/converters";
 import type {
   AppFleetOperatingHours,
   AppGlobalLimits,
-  CompanyAddress,
   CompanyProfile,
   DriverProfile,
   FleetLocation,
@@ -180,26 +179,25 @@ export function mapLimits(d: DocumentData): AppGlobalLimits {
   };
 }
 
-function mapCompanyAddress(d: DocumentData | undefined | null): CompanyAddress | null {
-  if (!d) return null;
-  return {
-    street: d.street ?? null,
-    city: d.city ?? null,
-    state: d.state ?? null,
-    postcode: d.postcode ?? null,
-    country: d.country ?? null
-  };
+function companyString(d: DocumentData, camel: string, pascal: string): string | null {
+  const value = d[camel] ?? d[pascal];
+  return typeof value === "string" ? value : null;
 }
 
+/** Maps `operator/company` — address fields are top-level on the document. */
 export function mapCompanyProfile(d: DocumentData): CompanyProfile {
   return {
-    name: d.name ?? null,
-    phone: d.phone ?? null,
-    email: d.email ?? null,
-    website: d.website ?? null,
-    abn: d.abn ?? null,
-    acn: d.acn ?? null,
-    address: mapCompanyAddress(d.address)
+    name: companyString(d, "name", "Name"),
+    phone: companyString(d, "phone", "Phone"),
+    email: companyString(d, "email", "Email"),
+    website: companyString(d, "website", "Website"),
+    abn: companyString(d, "abn", "ABN"),
+    acn: companyString(d, "acn", "ACN"),
+    street: companyString(d, "street", "Street"),
+    city: companyString(d, "city", "City"),
+    state: companyString(d, "state", "State"),
+    postcode: companyString(d, "postcode", "Postcode"),
+    country: companyString(d, "country", "Country")
   };
 }
 

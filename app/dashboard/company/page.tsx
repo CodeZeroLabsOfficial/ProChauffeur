@@ -56,8 +56,6 @@ export default function CompanyOverviewPage() {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
-  const address = company.address;
-
   return (
     <div className="space-y-6">
       <Card>
@@ -79,11 +77,11 @@ export default function CompanyOverviewPage() {
           <CardTitle>Company address</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <DetailField label="Street" value={address?.street} />
-          <DetailField label="City" value={address?.city} />
-          <DetailField label="State" value={address?.state} />
-          <DetailField label="Postcode" value={address?.postcode} />
-          <DetailField label="Country" value={address?.country} />
+          <DetailField label="Street" value={company.street} />
+          <DetailField label="City" value={company.city} />
+          <DetailField label="State" value={company.state} />
+          <DetailField label="Postcode" value={company.postcode} />
+          <DetailField label="Country" value={company.country} />
         </CardContent>
       </Card>
     </div>

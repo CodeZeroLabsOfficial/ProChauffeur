@@ -58,6 +58,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Operator profile (company legal entity, etc).
+    match /operator/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // App settings (pricing, operating_hours, limits, branding, etc).
     match /app_settings/{docId} {
       allow read: if isSignedIn();

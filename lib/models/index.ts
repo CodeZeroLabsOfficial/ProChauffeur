@@ -16,7 +16,13 @@ export const Collections = {
   vehicles: "vehicles",
   locations: "locations",
   invoices: "invoices",
+  operator: "operator",
   appSettings: "app_settings"
+} as const;
+
+/** `operator` collection document ids. */
+export const OperatorDocs = {
+  company: "company"
 } as const;
 
 /** `app_settings` document ids. */
@@ -25,7 +31,6 @@ export const AppSettingsDocs = {
   operatingHours: "operating_hours",
   limits: "limits",
   branding: "branding",
-  company: "company",
   locale: "locale",
   integrations: "integrations"
 } as const;
