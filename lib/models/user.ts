@@ -3,6 +3,8 @@ import type { ChauffeurCategory, UserRole } from "@/lib/models/enums";
 /** One recurring weekly operating window (FleetWeeklyOperatingSchedule.swift). */
 export interface FleetWeeklyOperatingSchedule {
   id: string;
+  name?: string | null;
+  locationId?: string | null;
   isEnabled: boolean;
   /** Calendar weekday integers, 1 = Sunday … 7 = Saturday. */
   weekdayNumbers: number[];

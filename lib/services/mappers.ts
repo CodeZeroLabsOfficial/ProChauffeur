@@ -48,6 +48,8 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
     vehicleOrServiceFocus: d.vehicleOrServiceFocus ?? [],
     availabilitySchedules: (d.availabilitySchedules ?? []).map((s: DocumentData) => ({
       id: s.id ?? crypto.randomUUID(),
+      name: s.name ?? null,
+      locationId: s.locationId ?? null,
       isEnabled: s.isEnabled ?? true,
       weekdayNumbers: s.weekdayNumbers ?? [],
       startTime: s.startTime ?? null,
@@ -148,6 +150,7 @@ export function mapFleetLocation(id: string, d: DocumentData): FleetLocation {
     addressLine: d.addressLine ?? "",
     latitude: d.latitude ?? 0,
     longitude: d.longitude ?? 0,
+    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     createdAt: toDate(d.createdAt) ?? new Date()
   };
 }
@@ -169,7 +172,15 @@ export function mapPricingConfig(d: DocumentData): PricingConfig {
 export function mapOperatingHours(d: DocumentData): AppFleetOperatingHours {
   return {
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
-    schedules: d.schedules ?? []
+    schedules: (d.schedules ?? []).map((s: DocumentData) => ({
+      id: s.id ?? crypto.randomUUID(),
+      name: s.name ?? null,
+      locationId: s.locationId ?? null,
+      isEnabled: s.isEnabled ?? true,
+      weekdayNumbers: s.weekdayNumbers ?? [],
+      startTime: s.startTime ?? null,
+      endTime: s.endTime ?? null
+    }))
   };
 }
 

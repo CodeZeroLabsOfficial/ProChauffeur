@@ -5,5 +5,6 @@ export interface FleetLocation {
   addressLine: string;
   latitude: number;
   longitude: number;
+  timeZoneIdentifier?: string | null;
   createdAt: Date;
 }

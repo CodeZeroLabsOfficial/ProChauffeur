@@ -3,12 +3,20 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { useFleetLocations } from "@/hooks/use-collections";
 import { saveOperatingHours } from "@/lib/services/firebase-service";
 import type { AppFleetOperatingHours, FleetWeeklyOperatingSchedule } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
@@ -33,6 +41,8 @@ export const WEEKDAYS: { num: number; label: string }[] = [
 export function newSchedule(): FleetWeeklyOperatingSchedule {
   return {
     id: crypto.randomUUID(),
+    name: null,
+    locationId: null,
     isEnabled: true,
     weekdayNumbers: [2, 3, 4, 5, 6],
     startTime: "08:00",
@@ -44,10 +54,13 @@ function scheduleFromForm(
   form: FormData,
   id: string,
   weekdayNumbers: number[],
-  isEnabled: boolean
+  isEnabled: boolean,
+  locationId: string
 ): FleetWeeklyOperatingSchedule {
   return {
     id,
+    name: String(form.get("name") ?? "").trim() || null,
+    locationId,
     isEnabled,
     weekdayNumbers,
     startTime: String(form.get("startTime") ?? "").trim() || null,
@@ -68,11 +81,13 @@ export function ScheduleEditSheet({
   onOpenChange: (open: boolean) => void;
   onSaved: (schedules: FleetWeeklyOperatingSchedule[]) => void;
 }) {
+  const { locations } = useFleetLocations();
   const isNew = schedule === null;
   const [saving, setSaving] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [enabled, setEnabled] = useState(true);
   const [selectedDays, setSelectedDays] = useState<number[]>([2, 3, 4, 5, 6]);
+  const [locationId, setLocationId] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -80,9 +95,11 @@ export function ScheduleEditSheet({
       if (schedule) {
         setEnabled(schedule.isEnabled);
         setSelectedDays(schedule.weekdayNumbers);
+        setLocationId(schedule.locationId ?? "");
       } else {
         setEnabled(true);
         setSelectedDays([2, 3, 4, 5, 6]);
+        setLocationId("");
       }
     }
   }, [open, schedule]);
@@ -95,9 +112,11 @@ export function ScheduleEditSheet({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!locationId) return;
+
     const form = new FormData(e.currentTarget);
     const id = schedule?.id ?? crypto.randomUUID();
-    const updated = scheduleFromForm(form, id, selectedDays, enabled);
+    const updated = scheduleFromForm(form, id, selectedDays, enabled, locationId);
     const schedules = isNew
       ? [...operatingHours.schedules, updated]
       : operatingHours.schedules.map((s) => (s.id === id ? updated : s));
@@ -127,6 +146,36 @@ export function ScheduleEditSheet({
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-6 px-4" key={formKey}>
+          <div className="space-y-2">
+            <Label htmlFor="name">Schedule name</Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="e.g. Weekday hours"
+              defaultValue={schedule?.name ?? ""}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Location</Label>
+            {locations.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Add a location before creating a schedule.</p>
+            ) : (
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
             <Switch id="isEnabled" checked={enabled} onCheckedChange={setEnabled} />
             <Label htmlFor="isEnabled">{enabled ? "Active" : "Disabled"}</Label>
@@ -176,7 +225,9 @@ export function ScheduleEditSheet({
           </div>
 
           <SheetFooter className="px-0">
-            <Button type="submit" disabled={saving || selectedDays.length === 0}>
+            <Button
+              type="submit"
+              disabled={saving || selectedDays.length === 0 || !locationId || locations.length === 0}>
               {saving ? "Saving…" : isNew ? "Add schedule" : "Save changes"}
             </Button>
           </SheetFooter>
