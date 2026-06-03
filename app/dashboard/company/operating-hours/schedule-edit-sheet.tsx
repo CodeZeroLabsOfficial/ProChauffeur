@@ -28,15 +28,50 @@ import {
 } from "@/components/ui/sheet";
 
 // Display order Monday→Sunday using Calendar weekday numbers (1=Sun … 7=Sat).
-export const WEEKDAYS: { num: number; label: string }[] = [
-  { num: 2, label: "Mon" },
-  { num: 3, label: "Tue" },
-  { num: 4, label: "Wed" },
-  { num: 5, label: "Thu" },
-  { num: 6, label: "Fri" },
-  { num: 7, label: "Sat" },
-  { num: 1, label: "Sun" }
+export const WEEKDAYS: { num: number; label: string; fullName: string }[] = [
+  { num: 2, label: "Mon", fullName: "Monday" },
+  { num: 3, label: "Tue", fullName: "Tuesday" },
+  { num: 4, label: "Wed", fullName: "Wednesday" },
+  { num: 5, label: "Thu", fullName: "Thursday" },
+  { num: 6, label: "Fri", fullName: "Friday" },
+  { num: 7, label: "Sat", fullName: "Saturday" },
+  { num: 1, label: "Sun", fullName: "Sunday" }
 ];
+
+function formatDayRun(start: (typeof WEEKDAYS)[number], end: (typeof WEEKDAYS)[number]): string {
+  if (start.num === 2 && end.num === 6) return "Weekdays";
+  if (start.num === 7 && end.num === 1) return "Weekends";
+  if (start.num === end.num) return start.fullName;
+  return `${start.fullName} - ${end.fullName}`;
+}
+
+export function formatScheduleDays(weekdayNumbers: number[]): string {
+  if (weekdayNumbers.length === 0) return "Not set";
+  if (weekdayNumbers.length === 7) return "Everyday";
+
+  const selected = WEEKDAYS.filter((d) => weekdayNumbers.includes(d.num));
+  const parts: string[] = [];
+  let runStart = selected[0];
+  let runEnd = selected[0];
+
+  for (let i = 1; i <= selected.length; i++) {
+    const current = selected[i];
+    const previousIndex = WEEKDAYS.findIndex((d) => d.num === runEnd.num);
+    const currentIndex = current ? WEEKDAYS.findIndex((d) => d.num === current.num) : -1;
+
+    if (current && currentIndex === previousIndex + 1) {
+      runEnd = current;
+    } else {
+      parts.push(formatDayRun(runStart, runEnd));
+      if (current) {
+        runStart = current;
+        runEnd = current;
+      }
+    }
+  }
+
+  return parts.join(", ");
+}
 
 export function newSchedule(): FleetWeeklyOperatingSchedule {
   return {

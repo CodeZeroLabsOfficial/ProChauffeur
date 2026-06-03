@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { ScheduleEditSheet, WEEKDAYS } from "@/app/dashboard/company/operating-hours/schedule-edit-sheet";
+import { ScheduleEditSheet, formatScheduleDays } from "@/app/dashboard/company/operating-hours/schedule-edit-sheet";
 
 function displayValue(value: string | null | undefined): string {
   const trimmed = value?.trim();
@@ -34,11 +34,6 @@ function formatScheduleName(schedule: FleetWeeklyOperatingSchedule): string {
   const name = schedule.name?.trim();
   if (name) return name;
   return schedule.isEnabled ? "Unnamed schedule" : "Unnamed schedule (disabled)";
-}
-
-function formatScheduleDays(weekdayNumbers: number[]): string {
-  const labels = WEEKDAYS.filter((d) => weekdayNumbers.includes(d.num)).map((d) => d.label);
-  return labels.length ? labels.join(", ") : "Not set";
 }
 
 function formatScheduleHours(
