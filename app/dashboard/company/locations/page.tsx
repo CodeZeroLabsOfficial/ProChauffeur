@@ -51,24 +51,21 @@ export default function LocationsPage() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
-    const num = (k: string) => parseFloat(get(k)) || 0;
     setSaving(true);
     try {
       if (editing) {
         await updateFleetLocation({
           ...editing,
           name: get("name"),
-          addressLine: get("addressLine"),
-          latitude: num("latitude"),
-          longitude: num("longitude")
+          addressLine: get("addressLine")
         });
         toast.success("Location updated.");
       } else {
         await createFleetLocation({
           name: get("name"),
           addressLine: get("addressLine"),
-          latitude: num("latitude"),
-          longitude: num("longitude")
+          latitude: 0,
+          longitude: 0
         });
         toast.success("Location added.");
       }
@@ -104,20 +101,19 @@ export default function LocationsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Address</TableHead>
-                <TableHead>Coordinates</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                  <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
                     Loading locations…
                   </TableCell>
                 </TableRow>
               ) : locations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                  <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
                     No locations yet.
                   </TableCell>
                 </TableRow>
@@ -126,9 +122,6 @@ export default function LocationsPage() {
                   <TableRow key={loc.id}>
                     <TableCell className="font-medium">{loc.name}</TableCell>
                     <TableCell className="text-muted-foreground">{loc.addressLine}</TableCell>
-                    <TableCell className="text-muted-foreground tabular-nums">
-                      {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -165,16 +158,6 @@ export default function LocationsPage() {
             <div className="space-y-2">
               <Label htmlFor="addressLine">Address</Label>
               <Input id="addressLine" name="addressLine" required defaultValue={editing?.addressLine} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input id="latitude" name="latitude" inputMode="decimal" defaultValue={editing?.latitude} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input id="longitude" name="longitude" inputMode="decimal" defaultValue={editing?.longitude} />
-              </div>
             </div>
             <SheetFooter className="px-0">
               <Button type="submit" disabled={saving}>
