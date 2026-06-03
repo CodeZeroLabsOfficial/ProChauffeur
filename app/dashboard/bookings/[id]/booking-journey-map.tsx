@@ -4,36 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { useTheme } from "next-themes";
 import { MapPinIcon } from "lucide-react";
-import type { Feature, LineString } from "geojson";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import { getMapboxToken } from "@/lib/env";
+import { useMapboxRoute } from "@/hooks/use-mapbox-route";
+import {
+  boundsFromPoints,
+  centerFromPoints,
+  hasValidCoordinate
+} from "@/lib/mapbox/coordinates";
 import type { CoordinateField } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
-
-type RouteFeature = Feature<LineString>;
-
-function hasValidCoordinate(coordinate: CoordinateField) {
-  return coordinate.latitude !== 0 || coordinate.longitude !== 0;
-}
-
-function boundsFromCoordinates(pickup: CoordinateField, dropoff: CoordinateField) {
-  const lngs = [pickup.longitude, dropoff.longitude];
-  const lats = [pickup.latitude, dropoff.latitude];
-  return [
-    [Math.min(...lngs), Math.min(...lats)],
-    [Math.max(...lngs), Math.max(...lats)]
-  ] as [[number, number], [number, number]];
-}
-
-function centerFromCoordinates(pickup: CoordinateField, dropoff: CoordinateField) {
-  return {
-    longitude: (pickup.longitude + dropoff.longitude) / 2,
-    latitude: (pickup.latitude + dropoff.latitude) / 2,
-    zoom: 11
-  };
-}
 
 export function BookingJourneyMap({
   pickup,
@@ -48,8 +30,6 @@ export function BookingJourneyMap({
 }) {
   const { resolvedTheme } = useTheme();
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
-  const [route, setRoute] = useState<RouteFeature | null>(null);
-  const [routeError, setRouteError] = useState(false);
 
   let token = "";
   let tokenError = false;
@@ -61,7 +41,7 @@ export function BookingJourneyMap({
 
   const coordinatesValid = hasValidCoordinate(pickup) && hasValidCoordinate(dropoff);
   const initialViewState = useMemo(
-    () => centerFromCoordinates(pickup, dropoff),
+    () => centerFromPoints([pickup, dropoff]),
     [pickup, dropoff]
   );
 
@@ -70,50 +50,16 @@ export function BookingJourneyMap({
       ? "mapbox://styles/mapbox/dark-v11"
       : "mapbox://styles/mapbox/light-v11";
 
-  useEffect(() => {
-    if (!token || !coordinatesValid) return;
-
-    let cancelled = false;
-
-    async function loadRoute() {
-      setRouteError(false);
-      const url = new URL(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${pickup.longitude},${pickup.latitude};${dropoff.longitude},${dropoff.latitude}`
-      );
-      url.searchParams.set("geometries", "geojson");
-      url.searchParams.set("overview", "full");
-      url.searchParams.set("access_token", token);
-
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Directions request failed");
-        const data = (await res.json()) as {
-          routes?: Array<{ geometry: LineString }>;
-        };
-        const geometry = data.routes?.[0]?.geometry;
-        if (!geometry || cancelled) return;
-        setRoute({
-          type: "Feature",
-          properties: {},
-          geometry
-        });
-      } catch {
-        if (!cancelled) {
-          setRoute(null);
-          setRouteError(true);
-        }
-      }
-    }
-
-    void loadRoute();
-    return () => {
-      cancelled = true;
-    };
-  }, [pickup.latitude, pickup.longitude, dropoff.latitude, dropoff.longitude, token, coordinatesValid]);
+  const { route, error: routeError } = useMapboxRoute(
+    pickup,
+    dropoff,
+    token,
+    coordinatesValid && Boolean(token)
+  );
 
   useEffect(() => {
     if (!mapRef || !coordinatesValid) return;
-    mapRef.fitBounds(boundsFromCoordinates(pickup, dropoff), {
+    mapRef.fitBounds(boundsFromPoints([pickup, dropoff]), {
       padding: 48,
       duration: 500
     });
