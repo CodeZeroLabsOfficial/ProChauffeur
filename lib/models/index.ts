@@ -7,6 +7,7 @@ export * from "@/lib/models/pricing";
 export * from "@/lib/models/operating-hours";
 export * from "@/lib/models/limits";
 export * from "@/lib/models/invoice";
+export * from "@/lib/models/company";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */
 export const Collections = {
@@ -24,6 +25,7 @@ export const AppSettingsDocs = {
   operatingHours: "operating_hours",
   limits: "limits",
   branding: "branding",
+  company: "company",
   locale: "locale",
   integrations: "integrations"
 } as const;

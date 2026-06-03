@@ -4,6 +4,8 @@ import { toCoordinate, toDate, toInt } from "@/lib/firebase/converters";
 import type {
   AppFleetOperatingHours,
   AppGlobalLimits,
+  CompanyAddress,
+  CompanyProfile,
   DriverProfile,
   FleetLocation,
   Invoice,
@@ -175,6 +177,29 @@ export function mapLimits(d: DocumentData): AppGlobalLimits {
     maxDrivers: intOrUnlimited("maxDrivers"),
     maxLocations: intOrUnlimited("maxLocations"),
     subscriptionTier: typeof d.subscriptionTier === "string" ? d.subscriptionTier.trim() : ""
+  };
+}
+
+function mapCompanyAddress(d: DocumentData | undefined | null): CompanyAddress | null {
+  if (!d) return null;
+  return {
+    street: d.street ?? null,
+    city: d.city ?? null,
+    state: d.state ?? null,
+    postcode: d.postcode ?? null,
+    country: d.country ?? null
+  };
+}
+
+export function mapCompanyProfile(d: DocumentData): CompanyProfile {
+  return {
+    name: d.name ?? null,
+    phone: d.phone ?? null,
+    email: d.email ?? null,
+    website: d.website ?? null,
+    abn: d.abn ?? null,
+    acn: d.acn ?? null,
+    address: mapCompanyAddress(d.address)
   };
 }
 

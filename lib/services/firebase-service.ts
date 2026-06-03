@@ -26,8 +26,10 @@ import {
   AppSettingsDocs,
   Collections,
   defaultPricingConfig,
+  emptyCompanyProfile,
   emptyOperatingHours,
   unlimitedLimits,
+  type CompanyProfile,
   type AppFleetOperatingHours,
   type AppGlobalLimits,
   type DriverProfile,
@@ -42,6 +44,7 @@ import {
   type Vehicle
 } from "@/lib/models";
 import {
+  mapCompanyProfile,
   mapFleetLocation,
   mapInvoice,
   mapLimits,
@@ -297,6 +300,19 @@ export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
 
 export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise<void> {
   await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.operatingHours), stripUndefined({ ...hours }));
+}
+
+export async function fetchCompanyProfile(): Promise<CompanyProfile> {
+  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.company));
+  return snap.exists() ? mapCompanyProfile(snap.data()) : emptyCompanyProfile;
+}
+
+export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
+  await setDoc(
+    doc(db(), Collections.appSettings, AppSettingsDocs.company),
+    stripUndefined({ ...profile }),
+    { merge: true }
+  );
 }
 
 export async function fetchGlobalLimits(): Promise<AppGlobalLimits> {
