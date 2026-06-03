@@ -14,16 +14,9 @@ import {
 } from "@/lib/mapbox/coordinates";
 import { dispatchMapMode } from "@/lib/mapbox/dispatch-map-mode";
 import type { Trip } from "@/lib/models/trip";
-import { TripStatusBadge } from "@/components/trip-status-badge";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_VIEW = { longitude: 151.2093, latitude: -33.8688, zoom: 11 };
-
-const MODE_LABELS = {
-  overview: "Journey overview",
-  to_pickup: "En route to pickup",
-  to_dropoff: "En route to drop-off"
-} as const;
 
 export function DispatchTripMap({
   trip,
@@ -121,14 +114,6 @@ export function DispatchTripMap({
 
   return (
     <div className="relative h-full w-full">
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 border-b bg-background/90 px-4 py-2 backdrop-blur-sm">
-        <TripStatusBadge status={trip.status} />
-        <span className="text-muted-foreground text-xs">{MODE_LABELS[mode]}</span>
-        {driverName && mode !== "overview" && (
-          <span className="text-muted-foreground ml-auto text-xs">{driverName}</span>
-        )}
-      </div>
-
       {waitingForGps && (
         <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center px-4">
           <p className="rounded-md border bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur-sm">

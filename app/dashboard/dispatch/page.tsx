@@ -84,14 +84,14 @@ export default function DispatchPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <Card className="order-2 lg:order-1">
-          <CardContent className="p-0">
+      <div className="grid gap-4 lg:grid-cols-[360px_1fr] lg:items-stretch">
+        <Card className="order-2 flex flex-col gap-0 py-0 lg:order-1">
+          <CardContent className="flex flex-1 flex-col p-0">
             <div className="border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
               <p className="text-muted-foreground text-xs">{activeTrips.length} requiring attention</p>
             </div>
-            <ScrollArea className="h-[420px] lg:h-[600px]">
+            <ScrollArea className="min-h-[420px] flex-1">
               <div className="divide-y">
                 {activeTrips.length === 0 ? (
                   <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
@@ -126,9 +126,9 @@ export default function DispatchPage() {
           </CardContent>
         </Card>
 
-        <Card className="order-1 overflow-hidden lg:order-2">
-          <CardContent className="p-0">
-            <div className="h-[420px] w-full lg:h-[668px]">
+        <Card className="order-1 flex min-h-[420px] flex-col gap-0 overflow-hidden py-0 lg:order-2">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div className="min-h-[420px] flex-1">
               {tokenError ? (
                 <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
                   Set NEXT_PUBLIC_MAPBOX_TOKEN to enable the dispatch map.
