@@ -55,8 +55,8 @@ The portal is **admin-only**. Sign in requires a Firebase Auth account whose
 
 TypeScript types and helpers in `lib/models/` mirror the iOS Swift `Codable` models.
 Firestore collections: `users`, `trips`, `vehicles`, `locations`, `invoices`, and the
-`app_settings` documents (`pricing`, `operating_hours`, `limits`, `branding`, `locale`,
-`integrations`).
+`app_settings` documents (`pricing`, `limits`, `branding`, `integrations`) and `operator`
+documents (`company`, `locale`, `operating_hours`).
 
 ### Live locations
 

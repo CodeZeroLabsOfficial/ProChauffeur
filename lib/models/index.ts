@@ -8,6 +8,7 @@ export * from "@/lib/models/operating-hours";
 export * from "@/lib/models/limits";
 export * from "@/lib/models/invoice";
 export * from "@/lib/models/company";
+export * from "@/lib/models/locale";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */
 export const Collections = {
@@ -22,16 +23,16 @@ export const Collections = {
 
 /** `operator` collection document ids. */
 export const OperatorDocs = {
-  company: "company"
+  company: "company",
+  locale: "locale",
+  operatingHours: "operating_hours"
 } as const;
 
 /** `app_settings` document ids. */
 export const AppSettingsDocs = {
   pricing: "pricing",
-  operatingHours: "operating_hours",
   limits: "limits",
   branding: "branding",
-  locale: "locale",
   integrations: "integrations"
 } as const;
 

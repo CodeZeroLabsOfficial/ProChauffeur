@@ -1,73 +1,208 @@
 rules_version = '2';
 
-// ProChauffeur Firestore security rules.
-// The web portal is admin-only; the iOS app serves customers and drivers.
+// ProChauffeur Firestore security rules (iOS app + web admin portal).
+// Collection paths used in code: lib/models/index.ts (Collections, OperatorDocs, AppSettingsDocs).
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    function roleOf(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function callerRole() {
+      let p = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(p) ? get(p).data.role : '';
     }
 
     function isAdmin() {
-      return isSignedIn() && roleOf(request.auth.uid) == 'admin';
+      return signedIn() && callerRole() == 'admin';
     }
 
-    // Users: a user may read/update their own doc; admins manage everyone.
-    match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    function isDriver() {
+      return signedIn() && callerRole() == 'driver';
+    }
+
+    function driverIdEmpty(data) {
+      return !('driverID' in data)
+        || data.driverID == null
+        || data.driverID == '';
+    }
+
+    function customerDriverSwap() {
+      let before = resource.data.role;
+      let after = request.resource.data.role;
+      return (before == 'customer' && after == 'driver')
+        || (before == 'driver' && after == 'customer');
+    }
+
+    function validUsersCreatePayload(userId) {
+      return request.resource.data.id == userId
+        && request.resource.data.role in ['customer', 'driver']
+        && request.resource.data.email is string
+        && request.resource.data.profile is map
+        && request.resource.data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (isSelf(userId) || isAdmin());
+      allow create: if (isSelf(userId) && validUsersCreatePayload(userId))
+        || (isAdmin()
+          && validUsersCreatePayload(userId)
+          && request.resource.data.role == 'driver');
+      allow update: if isAdmin()
+        || (isSelf(userId) && request.resource.data.role == resource.data.role)
+        || (isSelf(userId) && customerDriverSwap());
       allow delete: if isAdmin();
     }
 
-    // Trips: customer (owner) and assigned driver can access theirs; admins all.
+    match /locations/{locId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /trips/{tripId} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        resource.data.customerID == request.auth.uid ||
-        resource.data.driverID == request.auth.uid
+      function isCustomerOfTrip() {
+        return resource.data.customerID == request.auth.uid;
+      }
+
+      function isDriverOfTrip() {
+        return resource.data.driverID == request.auth.uid;
+      }
+
+      function isOpenRequest() {
+        return resource.data.status == 'requested' && driverIdEmpty(resource.data);
+      }
+
+      function fleetVehicleData(fleetDocId) {
+        return get(/databases/$(database)/documents/vehicles/$(fleetDocId)).data;
+      }
+
+      function directedTripFleetAssignmentValid(fleetDocId, chauffeurUid) {
+        return exists(/databases/$(database)/documents/vehicles/$(fleetDocId))
+          && fleetVehicleData(fleetDocId).driverID == fleetDocId
+          && chauffeurUid is string
+          && chauffeurUid.size() > 0
+          && (
+            (
+              ('assignedChauffeurUserId' in fleetVehicleData(fleetDocId))
+              && fleetVehicleData(fleetDocId).assignedChauffeurUserId is string
+              && fleetVehicleData(fleetDocId).assignedChauffeurUserId.size() > 0
+              && fleetVehicleData(fleetDocId).assignedChauffeurUserId == chauffeurUid
+            )
+            || (
+              (
+                !('assignedChauffeurUserId' in fleetVehicleData(fleetDocId))
+                || fleetVehicleData(fleetDocId).assignedChauffeurUserId == null
+              )
+              && fleetVehicleData(fleetDocId).driverID == chauffeurUid
+            )
+          );
+      }
+
+      function tripCreateOpenPool(data) {
+        return driverIdEmpty(data)
+          && (!('fleetVehicleDocumentId' in data) || data.fleetVehicleDocumentId == null);
+      }
+
+      function tripCreateDirectedToChauffeur(data) {
+        return !driverIdEmpty(data)
+          && data.driverID is string
+          && data.driverID.size() > 0
+          && data.fleetVehicleDocumentId is string
+          && data.fleetVehicleDocumentId.size() > 0
+          && directedTripFleetAssignmentValid(data.fleetVehicleDocumentId, data.driverID);
+      }
+
+      allow read: if signedIn() && (
+        isAdmin()
+        || isCustomerOfTrip()
+        || isDriverOfTrip()
+        || (isDriver() && isOpenRequest())
       );
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() ||
-        resource.data.customerID == request.auth.uid ||
-        resource.data.driverID == request.auth.uid
+
+      allow create: if signedIn()
+        && request.resource.data.customerID == request.auth.uid
+        && request.resource.data.status == 'requested'
+        && request.resource.data.pickup is map
+        && request.resource.data.dropoff is map
+        && (
+          tripCreateOpenPool(request.resource.data)
+          || tripCreateDirectedToChauffeur(request.resource.data)
+        )
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+
+      allow update: if signedIn() && (
+        isAdmin()
+        || (
+          isCustomerOfTrip()
+          && request.resource.data.customerID == resource.data.customerID
+          && request.resource.data.driverID == resource.data.driverID
+        )
+        || (
+          isDriverOfTrip()
+          && request.resource.data.customerID == resource.data.customerID
+          && request.resource.data.driverID == resource.data.driverID
+        )
+        || (
+          isDriver()
+          && isOpenRequest()
+          && request.resource.data.customerID == resource.data.customerID
+          && request.resource.data.driverID == request.auth.uid
+          && request.resource.data.status == 'accepted'
+        )
+        || (
+          isDriver()
+          && resource.data.status == 'requested'
+          && !driverIdEmpty(resource.data)
+          && resource.data.driverID == request.auth.uid
+          && request.resource.data.customerID == resource.data.customerID
+          && request.resource.data.driverID == resource.data.driverID
+          && request.resource.data.status == 'accepted'
+        )
       );
+
       allow delete: if isAdmin();
     }
 
-    // Vehicles: readable by signed-in users; only owning driver or admin writes.
     match /vehicles/{driverId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && (request.auth.uid == driverId || isAdmin());
+      allow read: if signedIn();
+      allow create, update: if (signedIn()
+        && request.auth.uid == driverId
+        && request.resource.data.driverID == driverId)
+        || (isAdmin()
+          && request.resource.data.driverID == driverId);
+      allow delete: if isSelf(driverId) || isAdmin();
     }
 
-    // Fleet locations: readable by signed-in users; admin-managed.
-    match /locations/{locationId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // Invoices: admin-only (web billing surface).
+    // Web billing (admin portal only).
     match /invoices/{invoiceId} {
       allow read, write: if isAdmin();
     }
 
-    // Operator profile (company legal entity, etc).
-    match /operator/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+    // App-wide config: license limits, pricing, web branding (favicon/logos).
+    match /app_settings/{docId} {
+      allow read: if docId in ['limits', 'pricing', 'branding']
+        || (signedIn() && isAdmin() && docId == 'integrations');
+      allow write: if isAdmin() && docId in ['limits', 'pricing', 'branding', 'integrations'];
     }
 
-    // App settings (pricing, operating_hours, limits, branding, etc).
-    match /app_settings/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+    // Fleet operator: company profile, locale, operating hours.
+    // operator/branding is legacy; new branding lives in app_settings/branding.
+    // operator/company — read by Company overview (and iOS); admin write.
+    match /operator/{docId} {
+      allow read: if docId == 'company'
+        || docId == 'branding'
+        || (signedIn() && isAdmin() && docId in ['locale', 'operating_hours']);
+      allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours'];
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

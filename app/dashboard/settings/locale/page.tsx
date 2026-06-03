@@ -3,38 +3,36 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { fetchSettingDoc, saveSettingDoc } from "@/lib/services/firebase-service";
-import { AppSettingsDocs } from "@/lib/models";
+import { fetchOperatorLocale, saveOperatorLocale } from "@/lib/services/firebase-service";
+import type { OperatorLocale } from "@/lib/models";
 import { appConfig } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Locale = { locale?: string; currency?: string; timezone?: string };
-
 export default function LocalePage() {
-  const [value, setValue] = useState<Locale>({});
+  const [value, setValue] = useState<OperatorLocale>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchSettingDoc<Locale>(AppSettingsDocs.locale)
-      .then((l) => l && setValue(l))
+    fetchOperatorLocale()
+      .then(setValue)
       .finally(() => setLoading(false));
   }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const data: Locale = {
-      locale: String(form.get("locale") ?? "").trim(),
-      currency: String(form.get("currency") ?? "").trim(),
-      timezone: String(form.get("timezone") ?? "").trim()
+    const data: OperatorLocale = {
+      locale: String(form.get("locale") ?? "").trim() || null,
+      currency: String(form.get("currency") ?? "").trim() || null,
+      timezone: String(form.get("timezone") ?? "").trim() || null
     };
     setSaving(true);
     try {
-      await saveSettingDoc(AppSettingsDocs.locale, data);
+      await saveOperatorLocale(data);
       setValue(data);
       toast.success("Locale preferences saved.");
     } catch {
@@ -66,8 +64,8 @@ export default function LocalePage() {
             <p className="font-medium">{appConfig.timezone}</p>
           </div>
           <p className="text-muted-foreground sm:col-span-3 text-xs">
-            These are sourced from environment variables at deploy time. Overrides below are stored for
-            future use and reference.
+            These are sourced from environment variables at deploy time. Overrides below are stored in
+            operator/locale.
           </p>
         </CardContent>
       </Card>
@@ -77,18 +75,33 @@ export default function LocalePage() {
           <CardTitle>Overrides</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="max-w-lg space-y-4" key={value.locale}>
+          <form onSubmit={onSubmit} className="max-w-lg space-y-4" key={value.locale ?? ""}>
             <div className="space-y-2">
               <Label htmlFor="locale">Locale</Label>
-              <Input id="locale" name="locale" defaultValue={value.locale} placeholder={appConfig.locale} />
+              <Input
+                id="locale"
+                name="locale"
+                defaultValue={value.locale ?? ""}
+                placeholder={appConfig.locale}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Currency code</Label>
-              <Input id="currency" name="currency" defaultValue={value.currency} placeholder={appConfig.currency} />
+              <Input
+                id="currency"
+                name="currency"
+                defaultValue={value.currency ?? ""}
+                placeholder={appConfig.currency}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="timezone">Time zone</Label>
-              <Input id="timezone" name="timezone" defaultValue={value.timezone} placeholder={appConfig.timezone} />
+              <Input
+                id="timezone"
+                name="timezone"
+                defaultValue={value.timezone ?? ""}
+                placeholder={appConfig.timezone}
+              />
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save overrides"}

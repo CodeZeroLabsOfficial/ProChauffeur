@@ -29,8 +29,10 @@ import {
   defaultPricingConfig,
   emptyCompanyProfile,
   emptyOperatingHours,
+  emptyOperatorLocale,
   unlimitedLimits,
   type CompanyProfile,
+  type OperatorLocale,
   type AppFleetOperatingHours,
   type AppGlobalLimits,
   type DriverProfile,
@@ -46,6 +48,7 @@ import {
 } from "@/lib/models";
 import {
   mapCompanyProfile,
+  mapOperatorLocale,
   mapFleetLocation,
   mapInvoice,
   mapLimits,
@@ -295,12 +298,29 @@ export async function savePricingConfiguration(config: PricingConfig): Promise<v
 }
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
-  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.operatingHours));
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.operatingHours));
   return snap.exists() ? mapOperatingHours(snap.data()) : emptyOperatingHours;
 }
 
 export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise<void> {
-  await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.operatingHours), stripUndefined({ ...hours }));
+  await setDoc(
+    doc(db(), Collections.operator, OperatorDocs.operatingHours),
+    stripUndefined({ ...hours }),
+    { merge: true }
+  );
+}
+
+export async function fetchOperatorLocale(): Promise<OperatorLocale> {
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.locale));
+  return snap.exists() ? mapOperatorLocale(snap.data()) : emptyOperatorLocale;
+}
+
+export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
+  await setDoc(
+    doc(db(), Collections.operator, OperatorDocs.locale),
+    stripUndefined({ ...locale }),
+    { merge: true }
+  );
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
@@ -364,7 +384,7 @@ export async function deleteInvoice(id: string): Promise<void> {
 
 // ─────────────────── Generic app_settings docs (web) ─────────────────
 
-/** Reads an arbitrary `app_settings/{docId}` document (branding, locale, etc). */
+/** Reads an arbitrary `app_settings/{docId}` document (branding, integrations, etc). */
 export async function fetchSettingDoc<T extends DocumentData>(docId: string): Promise<T | null> {
   const snap = await getDoc(doc(db(), Collections.appSettings, docId));
   return snap.exists() ? (snap.data() as T) : null;

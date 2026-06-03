@@ -5,6 +5,7 @@ import type {
   AppFleetOperatingHours,
   AppGlobalLimits,
   CompanyProfile,
+  OperatorLocale,
   DriverProfile,
   FleetLocation,
   Invoice,
@@ -166,6 +167,14 @@ export function mapOperatingHours(d: DocumentData): AppFleetOperatingHours {
   return {
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     schedules: d.schedules ?? []
+  };
+}
+
+export function mapOperatorLocale(d: DocumentData): OperatorLocale {
+  return {
+    locale: typeof d.locale === "string" ? d.locale : null,
+    currency: typeof d.currency === "string" ? d.currency : null,
+    timezone: typeof d.timezone === "string" ? d.timezone : null
   };
 }
 

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PencilIcon } from "lucide-react";
 
 import { fetchCompanyProfile } from "@/lib/services/firebase-service";
-import type { CompanyProfile } from "@/lib/models";
+import { emptyCompanyProfile, type CompanyProfile } from "@/lib/models";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompanyEditSheet } from "@/app/dashboard/company/company-edit-sheet";
 
 function displayValue(value: string | null | undefined): string {
   const trimmed = value?.trim();
@@ -45,45 +48,74 @@ function DetailField({
 
 export default function CompanyOverviewPage() {
   const [company, setCompany] = useState<CompanyProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCompanyProfile()
+  const loadCompany = useCallback(() => {
+    return fetchCompanyProfile()
       .then(setCompany)
-      .catch(() => setCompany(null));
+      .catch(() => setCompany(emptyCompanyProfile));
   }, []);
 
-  if (!company) {
+  useEffect(() => {
+    loadCompany().finally(() => setLoading(false));
+  }, [loadCompany]);
+
+  if (loading || !company) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Company details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <DetailField label="Company name" value={company.name} />
-          <DetailField label="Company phone" value={company.phone} href={company.phone ? `tel:${company.phone}` : undefined} />
-          <DetailField label="Company email" value={company.email} href={company.email ? `mailto:${company.email}` : undefined} />
-          <DetailField label="Company website" value={company.website} href={websiteHref(company.website)} />
-          <DetailField label="Company ABN" value={company.abn} />
-          <DetailField label="Company ACN" value={company.acn} />
-        </CardContent>
-      </Card>
+    <>
+      <div className="mb-6 flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <PencilIcon /> Edit
+        </Button>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Company address</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <DetailField label="Street" value={company.street} />
-          <DetailField label="City" value={company.city} />
-          <DetailField label="State" value={company.state} />
-          <DetailField label="Postcode" value={company.postcode} />
-          <DetailField label="Country" value={company.country} />
-        </CardContent>
-      </Card>
-    </div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Company details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <DetailField label="Company name" value={company.name} />
+            <DetailField
+              label="Company phone"
+              value={company.phone}
+              href={company.phone ? `tel:${company.phone}` : undefined}
+            />
+            <DetailField
+              label="Company email"
+              value={company.email}
+              href={company.email ? `mailto:${company.email}` : undefined}
+            />
+            <DetailField label="Company website" value={company.website} href={websiteHref(company.website)} />
+            <DetailField label="Company ABN" value={company.abn} />
+            <DetailField label="Company ACN" value={company.acn} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Company address</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <DetailField label="Street" value={company.street} />
+            <DetailField label="City" value={company.city} />
+            <DetailField label="State" value={company.state} />
+            <DetailField label="Postcode" value={company.postcode} />
+            <DetailField label="Country" value={company.country} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <CompanyEditSheet
+        company={company}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={setCompany}
+      />
+    </>
   );
 }
