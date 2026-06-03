@@ -75,11 +75,15 @@ export default function OperatingHoursPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{s.isEnabled ? "Active" : "Disabled"}</span>
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => removeSchedule(s.id)}>
+                        <Trash2Icon className="size-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditSheet(s)}>
                         <PencilIcon className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => removeSchedule(s.id)}>
-                        <Trash2Icon className="size-4" />
                       </Button>
                     </div>
                   </div>

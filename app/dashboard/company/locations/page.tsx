@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useFleetLocations } from "@/hooks/use-collections";
@@ -12,7 +12,7 @@ import {
 } from "@/lib/services/firebase-service";
 import type { FleetLocation } from "@/lib/models";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -91,13 +91,13 @@ export default function LocationsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={openNew}>
-          <PlusIcon /> Add location
-        </Button>
-      </div>
-
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Locations</CardTitle>
+          <Button variant="outline" size="sm" onClick={openNew}>
+            <PlusIcon /> Add location
+          </Button>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -105,7 +105,7 @@ export default function LocationsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Address</TableHead>
                 <TableHead>Coordinates</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,22 +123,25 @@ export default function LocationsPage() {
                 </TableRow>
               ) : (
                 locations.map((loc) => (
-                  <TableRow key={loc.id} className="cursor-pointer" onClick={() => openEdit(loc)}>
+                  <TableRow key={loc.id}>
                     <TableCell className="font-medium">{loc.name}</TableCell>
                     <TableCell className="text-muted-foreground">{loc.addressLine}</TableCell>
                     <TableCell className="text-muted-foreground tabular-nums">
                       {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          remove(loc);
-                        }}>
-                        <Trash2Icon className="size-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => remove(loc)}>
+                          <Trash2Icon className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(loc)}>
+                          <PencilIcon className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
