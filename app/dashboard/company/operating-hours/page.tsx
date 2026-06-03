@@ -1,169 +1,160 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { fetchOperatingHours, saveOperatingHours } from "@/lib/services/firebase-service";
-import type { FleetWeeklyOperatingSchedule } from "@/lib/models";
+import {
+  fetchOperatingHours,
+  fetchOperatorLocale,
+  saveOperatingHours
+} from "@/lib/services/firebase-service";
+import { emptyOperatingHours, type AppFleetOperatingHours, type FleetWeeklyOperatingSchedule } from "@/lib/models";
 import { appConfig } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { ScheduleEditSheet, WEEKDAYS } from "@/app/dashboard/company/operating-hours/schedule-edit-sheet";
 
-// Display order Monday→Sunday using Calendar weekday numbers (1=Sun … 7=Sat).
-const WEEKDAYS: { num: number; label: string }[] = [
-  { num: 2, label: "Mon" },
-  { num: 3, label: "Tue" },
-  { num: 4, label: "Wed" },
-  { num: 5, label: "Thu" },
-  { num: 6, label: "Fri" },
-  { num: 7, label: "Sat" },
-  { num: 1, label: "Sun" }
-];
+function displayValue(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed || "Not set";
+}
 
-function newSchedule(): FleetWeeklyOperatingSchedule {
-  return {
-    id: crypto.randomUUID(),
-    isEnabled: true,
-    weekdayNumbers: [2, 3, 4, 5, 6],
-    startTime: "08:00",
-    endTime: "18:00"
-  };
+function formatTime(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return "Not set";
+  return trimmed;
 }
 
 export default function OperatingHoursPage() {
+  const [operatingHours, setOperatingHours] = useState<AppFleetOperatingHours>(emptyOperatingHours);
   const [timezone, setTimezone] = useState(appConfig.timezone);
-  const [schedules, setSchedules] = useState<FleetWeeklyOperatingSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(null);
 
-  useEffect(() => {
-    fetchOperatingHours()
-      .then((h) => {
-        setTimezone(h.timeZoneIdentifier || appConfig.timezone);
-        setSchedules(h.schedules.length ? h.schedules : [newSchedule()]);
-      })
-      .catch(() => setSchedules([newSchedule()]))
-      .finally(() => setLoading(false));
+  const loadData = useCallback(() => {
+    return Promise.all([fetchOperatingHours(), fetchOperatorLocale()]).then(([hours, locale]) => {
+      setOperatingHours(hours);
+      setTimezone(locale.timezone || hours.timeZoneIdentifier || appConfig.timezone);
+    });
   }, []);
 
-  function patch(id: string, p: Partial<FleetWeeklyOperatingSchedule>) {
-    setSchedules((rows) => rows.map((r) => (r.id === id ? { ...r, ...p } : r)));
+  useEffect(() => {
+    loadData()
+      .catch(() => setOperatingHours(emptyOperatingHours))
+      .finally(() => setLoading(false));
+  }, [loadData]);
+
+  function openAddSheet() {
+    setEditingSchedule(null);
+    setSheetOpen(true);
   }
 
-  function toggleDay(id: string, day: number) {
-    setSchedules((rows) =>
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        const has = r.weekdayNumbers.includes(day);
-        return {
-          ...r,
-          weekdayNumbers: has
-            ? r.weekdayNumbers.filter((d) => d !== day)
-            : [...r.weekdayNumbers, day]
-        };
-      })
-    );
+  function openEditSheet(schedule: FleetWeeklyOperatingSchedule) {
+    setEditingSchedule(schedule);
+    setSheetOpen(true);
   }
 
-  async function save() {
-    setSaving(true);
+  async function removeSchedule(id: string) {
+    const schedules = operatingHours.schedules.filter((s) => s.id !== id);
     try {
-      await saveOperatingHours({ timeZoneIdentifier: timezone, schedules });
-      toast.success("Operating hours saved.");
+      await saveOperatingHours({ ...operatingHours, schedules });
+      setOperatingHours((prev) => ({ ...prev, schedules }));
+      toast.success("Schedule removed.");
     } catch {
-      toast.error("Could not save operating hours.");
-    } finally {
-      setSaving(false);
+      toast.error("Could not remove schedule.");
     }
   }
 
   if (loading) return <p className="text-muted-foreground text-sm">Loading…</p>;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Time zone</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-sm space-y-2">
-            <Label htmlFor="tz">IANA time zone</Label>
-            <Input id="tz" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Australia/Sydney" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Weekly schedules</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setSchedules((r) => [...r, newSchedule()])}>
-            <PlusIcon /> Add schedule
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {schedules.map((s) => (
-            <div key={s.id} className="space-y-3 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Switch checked={s.isEnabled} onCheckedChange={(v) => patch(s.id, { isEnabled: v })} />
-                  <span className="text-sm font-medium">{s.isEnabled ? "Active" : "Disabled"}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSchedules((r) => r.filter((x) => x.id !== s.id))}>
-                  <Trash2Icon className="size-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {WEEKDAYS.map((d) => (
-                  <button
-                    key={d.num}
-                    type="button"
-                    onClick={() => toggleDay(s.id, d.num)}
-                    className={cn(
-                      "h-8 w-11 rounded-md border text-sm transition-colors",
-                      s.weekdayNumbers.includes(d.num)
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    )}>
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
-                <div className="space-y-1">
-                  <Label className="text-xs">Start</Label>
-                  <Input
-                    type="time"
-                    value={s.startTime ?? ""}
-                    onChange={(e) => patch(s.id, { startTime: e.target.value || null })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">End</Label>
-                  <Input
-                    type="time"
-                    value={s.endTime ?? ""}
-                    onChange={(e) => patch(s.id, { endTime: e.target.value || null })}
-                  />
-                </div>
-              </div>
+    <>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Time zone</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div>
+              <p className="text-muted-foreground text-sm">IANA time zone</p>
+              <p className="font-medium">{displayValue(timezone)}</p>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+            <p className="text-muted-foreground text-xs">
+              Configure in{" "}
+              <Link href="/dashboard/settings/locale" className="underline hover:text-foreground">
+                Settings → Locale
+              </Link>
+              .
+            </p>
+          </CardContent>
+        </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Save operating hours"}
-        </Button>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Weekly schedules</CardTitle>
+            <Button variant="outline" size="sm" onClick={openAddSheet}>
+              <PlusIcon /> Add schedule
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {operatingHours.schedules.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No schedules configured.</p>
+            ) : (
+              operatingHours.schedules.map((s) => (
+                <div key={s.id} className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{s.isEnabled ? "Active" : "Disabled"}</span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditSheet(s)}>
+                        <PencilIcon className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeSchedule(s.id)}>
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map((d) => (
+                      <span
+                        key={d.num}
+                        className={cn(
+                          "flex h-8 w-11 items-center justify-center rounded-md border text-sm",
+                          s.weekdayNumbers.includes(d.num)
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "text-muted-foreground"
+                        )}>
+                        {d.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:max-w-xs text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Start</p>
+                      <p className="font-medium">{formatTime(s.startTime)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">End</p>
+                      <p className="font-medium">{formatTime(s.endTime)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </div>
+
+      <ScheduleEditSheet
+        schedule={editingSchedule}
+        operatingHours={operatingHours}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onSaved={(schedules) => setOperatingHours((prev) => ({ ...prev, schedules }))}
+      />
+    </>
   );
 }

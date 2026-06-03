@@ -67,16 +67,13 @@ export default function CompanyOverviewPage() {
 
   return (
     <>
-      <div className="mb-6 flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          <PencilIcon /> Edit
-        </Button>
-      </div>
-
       <div className="space-y-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Company details</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <PencilIcon /> Edit
+            </Button>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <DetailField label="Company name" value={company.name} />

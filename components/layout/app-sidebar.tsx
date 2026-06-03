@@ -51,7 +51,7 @@ function NavMenuItem({ item, pathname }: { item: NavItem; pathname: string }) {
     <Collapsible defaultOpen={parentActive || childActive} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title} isActive={parentActive}>
+          <SidebarMenuButton tooltip={item.title}>
             {item.icon && <item.icon />}
             <span>{item.title}</span>
             <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />

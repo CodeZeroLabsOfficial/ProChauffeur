@@ -95,13 +95,16 @@ export default function LocalePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="timezone">Time zone</Label>
+              <Label htmlFor="timezone">IANA time zone</Label>
               <Input
                 id="timezone"
                 name="timezone"
                 defaultValue={value.timezone ?? ""}
                 placeholder={appConfig.timezone}
               />
+              <p className="text-muted-foreground text-xs">
+                Used for operating hours and fleet scheduling. Example: Australia/Sydney
+              </p>
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save overrides"}
