@@ -47,7 +47,8 @@ export function ListTableToolbar<TData>({
   filters,
   endActions,
   nowrap = false,
-  inlineControls = false
+  inlineControls = false,
+  className
 }: {
   table: Table<TData>;
   searchPlaceholder: string;
@@ -57,6 +58,7 @@ export function ListTableToolbar<TData>({
   nowrap?: boolean;
   /** Search, filters, and columns on one row (no trailing column group). */
   inlineControls?: boolean;
+  className?: string;
 }) {
   const searchInput = (
     <Input
@@ -71,7 +73,7 @@ export function ListTableToolbar<TData>({
 
   if (inlineControls) {
     return (
-      <div className="flex flex-nowrap items-center gap-2 py-4">
+      <div className={cn("flex flex-nowrap items-center gap-2 py-4", className)}>
         {searchInput}
         {filters}
         {endActions}
@@ -81,7 +83,7 @@ export function ListTableToolbar<TData>({
   }
 
   return (
-    <div className={cn("flex items-center gap-4 py-4", nowrap && "flex-nowrap")}>
+    <div className={cn("flex items-center gap-4 py-4", nowrap && "flex-nowrap", className)}>
       <div className={cn("flex gap-2", nowrap ? "min-w-0 flex-1 flex-nowrap" : "flex-wrap")}>
         {searchInput}
         {filters}

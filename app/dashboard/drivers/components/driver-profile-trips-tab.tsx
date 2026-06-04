@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { DateRange } from "react-day-picker";
 import {
   flexRender,
   getCoreRowModel,
@@ -16,8 +17,10 @@ import {
 
 import { tripPickupReferenceDate, tripStatusTitle, TRIP_STATUSES, type Trip } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
+import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { sortTripsByPickupDesc } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { DateRangePicker, last7DaysRange } from "@/components/custom-date-range-picker";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -45,14 +48,25 @@ function multiSelectFilter(
   return values.includes(String(row.getValue(columnId) ?? ""));
 }
 
+function tripInDateRange(trip: Trip, range: DateRange | undefined) {
+  if (!range?.from) return true;
+  const ref = tripPickupReferenceDate(trip);
+  const start = startOfDay(range.from);
+  const end = endOfDay(range.to ?? range.from);
+  return ref >= start && ref <= end;
+}
+
 export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "pickup", desc: true }]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ searchLabel: false });
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
 
   const data = useMemo(
     () =>
-      sortTripsByPickupDesc(trips).map((trip) => ({
+      sortTripsByPickupDesc(trips)
+        .filter((trip) => tripInDateRange(trip, dateRange))
+        .map((trip) => ({
         ...trip,
         bookingIdLabel: shortBookingId(trip.id),
         searchLabel: [
@@ -67,7 +81,7 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
         pickupLabel: formatDateTime(tripPickupReferenceDate(trip)),
         pickupSort: tripPickupReferenceDate(trip).getTime()
       })),
-    [trips]
+    [trips, dateRange]
   );
 
   const columns = useMemo<ColumnDef<(typeof data)[number]>[]>(
@@ -128,13 +142,14 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
   });
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
+    <Card className="py-0">
+      <CardContent className="space-y-2 px-6 pb-4 pt-4">
         <ListTableToolbar
           table={table}
           searchPlaceholder="Search bookings or customers…"
           searchColumnId="searchLabel"
-          nowrap
+          inlineControls
+          className="py-2"
           filters={
             <ListFilterPopover
               label="Status"
@@ -147,6 +162,15 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
                 setStatusFilter(values);
                 table.getColumn("status")?.setFilterValue(values.length ? values : undefined);
               }}
+            />
+          }
+          endActions={
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range) => {
+                if (range?.from) setDateRange(range);
+              }}
+              className="shrink-0"
             />
           }
         />
