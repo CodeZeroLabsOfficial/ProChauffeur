@@ -11,7 +11,7 @@ import {
   overviewRevenueMetrics,
   type DriverOverviewPeriod
 } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -69,13 +69,14 @@ export function DriverProfileRevenueStat({
     <Card>
       <CardHeader>
         <CardTitle>Revenue Stat</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4 flex flex-col items-baseline justify-between lg:flex-row">
+        <CardDescription>
+          Paid revenue for the {selectedOption.label.toLowerCase()}
+        </CardDescription>
+        <CardAction className="flex flex-col items-end gap-1 text-end">
           <span className="text-2xl font-semibold tracking-tight lg:text-3xl">
             {formatCurrency(total)}
           </span>
-          <div className="flex items-center gap-1 text-sm">
+          <div className="flex flex-wrap items-center justify-end gap-1 text-sm">
             {percentageChange >= 0 ? (
               <TrendingUp className="size-4 text-green-600" />
             ) : (
@@ -89,11 +90,9 @@ export function DriverProfileRevenueStat({
             </span>
             <span className="text-muted-foreground">from previous period</span>
           </div>
-        </div>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Paid revenue for the {selectedOption.label.toLowerCase()}
-        </p>
-
+        </CardAction>
+      </CardHeader>
+      <CardContent>
         <ChartContainer config={chartConfig} className="h-[240px] w-full">
           <BarChart data={data} margin={{ top: 20, right: 0, left: -30, bottom: 0 }}>
             <defs>

@@ -10,6 +10,8 @@ import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
 import { driverOverviewMetrics } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
+import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
 import { DriverProfileSidebar } from "@/app/dashboard/drivers/components/driver-profile-sidebar";
 import { DriverProfileOverviewTab } from "@/app/dashboard/drivers/components/driver-profile-overview-tab";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
@@ -48,6 +50,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
 
   const loadUser = useCallback(() => {
     return fetchUser(driverId).then((loaded) => {
@@ -115,13 +118,22 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           value={activeTab}
           onValueChange={(v) => setTab(v as ProfileTab)}
           className="gap-4">
-          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="trips">Trips</TabsTrigger>
-            <TabsTrigger value="financials">Financials</TabsTrigger>
-            <TabsTrigger value="compliance">Compliance</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="trips">Trips</TabsTrigger>
+              <TabsTrigger value="financials">Financials</TabsTrigger>
+              <TabsTrigger value="compliance">Compliance</TabsTrigger>
+              <TabsTrigger value="operations">Operations</TabsTrigger>
+            </TabsList>
+            {activeTab === "overview" ? (
+              <DriverProfileOverviewPeriodSelector
+                value={overviewPeriod}
+                onChange={setOverviewPeriod}
+                className="shrink-0"
+              />
+            ) : null}
+          </div>
 
           <div className="grid gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
@@ -140,6 +152,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                   trips={metrics.driverTrips}
                   invoices={metrics.driverInvoices}
                   driverId={driverId}
+                  period={overviewPeriod}
                 />
               </TabsContent>
               <TabsContent value="trips" className="mt-0">
