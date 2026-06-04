@@ -44,9 +44,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
@@ -124,17 +128,19 @@ export function DriversDataTable({
     []
   );
 
-  const toggleCustomerAppVisibility = useCallback(
-    async (user: User) => {
+  const setCustomerAppVisibility = useCallback(
+    async (user: User, visible: boolean) => {
       const profile = user.driverProfile ?? defaultDriverProfile();
-      const next = !profile.visibleOnCustomerApp;
+      if (profile.visibleOnCustomerApp === visible) return;
       try {
         await updateUserDriverProfile(
           user.id,
-          { ...profile, visibleOnCustomerApp: next },
+          { ...profile, visibleOnCustomerApp: visible },
           { driverTitle: driverTitle(user) }
         );
-        toast.success(next ? "Driver is now visible on the customer app." : "Driver hidden from the customer app.");
+        toast.success(
+          visible ? "Driver is now visible on the customer app." : "Driver hidden from the customer app."
+        );
       } catch {
         toast.error("Could not update customer app visibility.");
       }
@@ -142,17 +148,19 @@ export function DriversDataTable({
     [driverTitle]
   );
 
-  const toggleDispatchAcceptance = useCallback(
-    async (user: User) => {
+  const setDispatchAcceptance = useCallback(
+    async (user: User, accepting: boolean) => {
       const profile = user.driverProfile ?? defaultDriverProfile();
-      const next = !profile.acceptsDispatchAssignments;
+      if (profile.acceptsDispatchAssignments === accepting) return;
       try {
         await updateUserDriverProfile(
           user.id,
-          { ...profile, acceptsDispatchAssignments: next },
+          { ...profile, acceptsDispatchAssignments: accepting },
           { driverTitle: driverTitle(user) }
         );
-        toast.success(next ? "Driver is now accepting dispatch." : "Dispatch paused for this driver.");
+        toast.success(
+          accepting ? "Driver is now accepting dispatch." : "Dispatch paused for this driver."
+        );
       } catch {
         toast.error("Could not update dispatch settings.");
       }
@@ -294,20 +302,47 @@ export function DriversDataTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Customer app</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toggleCustomerAppVisibility(row.original)}>
-                  {profile.visibleOnCustomerApp ? "Hide from customer app" : "Show on customer app"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Dispatch</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toggleDispatchAcceptance(row.original)}>
-                  {profile.acceptsDispatchAssignments ? "Pause dispatch" : "Accept dispatch"}
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Visibility</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem
+                          disabled={profile.visibleOnCustomerApp}
+                          onClick={() => setCustomerAppVisibility(row.original, true)}>
+                          Show on customer app
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!profile.visibleOnCustomerApp}
+                          onClick={() => setCustomerAppVisibility(row.original, false)}>
+                          Hide from customer app
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Dispatch</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem
+                          disabled={profile.acceptsDispatchAssignments}
+                          onClick={() => setDispatchAcceptance(row.original, true)}>
+                          Accept dispatch
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!profile.acceptsDispatchAssignments}
+                          onClick={() => setDispatchAcceptance(row.original, false)}>
+                          Pause dispatch
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => handleRemoveDriver(row.original)}>
-                  Delete
+                  <span>Delete</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -315,7 +350,7 @@ export function DriversDataTable({
         }
       }
     ],
-    [handleRemoveDriver, toggleCustomerAppVisibility, toggleDispatchAcceptance]
+    [handleRemoveDriver, setCustomerAppVisibility, setDispatchAcceptance]
   );
 
   const table = useReactTable({
