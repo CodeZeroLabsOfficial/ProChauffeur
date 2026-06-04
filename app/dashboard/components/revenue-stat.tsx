@@ -6,6 +6,7 @@ import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
 import { useInvoices } from "@/hooks/use-collections";
 import { formatCurrency } from "@/lib/format";
+import type { Invoice } from "@/lib/models/invoice";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -61,7 +62,7 @@ function formatYAxisTick(value: number) {
   return value.toString();
 }
 
-function buildWeeklyData(invoices: ReturnType<typeof useInvoices>["invoices"], now: Date) {
+function buildWeeklyData(invoices: Invoice[], now: Date) {
   const { start } = getWeekRange(now, 0);
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return days.map((day, index) => {
@@ -73,7 +74,7 @@ function buildWeeklyData(invoices: ReturnType<typeof useInvoices>["invoices"], n
   });
 }
 
-function buildMonthlyData(invoices: ReturnType<typeof useInvoices>["invoices"], now: Date) {
+function buildMonthlyData(invoices: Invoice[], now: Date) {
   const { start, end } = getMonthRange(now, 0);
   const weekCount = Math.ceil((end.getDate() - start.getDate() + 1) / 7);
   return Array.from({ length: weekCount }, (_, index) => {
@@ -86,7 +87,7 @@ function buildMonthlyData(invoices: ReturnType<typeof useInvoices>["invoices"], 
   });
 }
 
-function buildYearlyData(invoices: ReturnType<typeof useInvoices>["invoices"], now: Date) {
+function buildYearlyData(invoices: Invoice[], now: Date) {
   return Array.from({ length: 12 }, (_, index) => {
     const monthStart = startOfDay(new Date(now.getFullYear(), index, 1));
     const monthEnd = endOfDay(new Date(now.getFullYear(), index + 1, 0));
@@ -96,8 +97,9 @@ function buildYearlyData(invoices: ReturnType<typeof useInvoices>["invoices"], n
   });
 }
 
-export function RevenueStat() {
-  const { invoices } = useInvoices();
+export function RevenueStat({ invoices: scopedInvoices }: { invoices?: Invoice[] } = {}) {
+  const { invoices: collectionInvoices } = useInvoices();
+  const invoices = scopedInvoices ?? collectionInvoices;
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("weekly");
   const now = new Date();
 
@@ -141,7 +143,7 @@ export function RevenueStat() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Revenue stat</CardTitle>
+        <CardTitle>Revenue Stat</CardTitle>
         <CardAction>
           <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as Period)}>
             <SelectTrigger>

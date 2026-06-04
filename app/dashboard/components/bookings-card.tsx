@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Info } from "lucide-react";
 
 import { useTrips } from "@/hooks/use-collections";
+import type { Trip } from "@/lib/models";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,7 +37,7 @@ function getPeriodRange(period: Period, now: Date) {
   }
 }
 
-function countByStatus(trips: ReturnType<typeof useTrips>["trips"], start: Date, end: Date) {
+function countByStatus(trips: Trip[], start: Date, end: Date) {
   const inRange = tripsInRange(trips, start, end);
   const upcoming = inRange.filter(
     (t) => t.status === "requested" || t.status === "accepted" || t.status === "en_route_pickup" || t.status === "in_progress"
@@ -45,8 +46,9 @@ function countByStatus(trips: ReturnType<typeof useTrips>["trips"], start: Date,
   return { total: inRange.length, upcoming, completed };
 }
 
-export function BookingsCard() {
-  const { trips } = useTrips();
+export function BookingsCard({ trips: scopedTrips }: { trips?: Trip[] } = {}) {
+  const { trips: collectionTrips } = useTrips();
+  const trips = scopedTrips ?? collectionTrips;
   const [period, setPeriod] = useState<Period>("monthly");
 
   const periods = [
