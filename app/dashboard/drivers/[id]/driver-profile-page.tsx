@@ -139,6 +139,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                 <DriverProfileOverviewTab
                   trips={metrics.driverTrips}
                   invoices={metrics.driverInvoices}
+                  driverId={driverId}
                 />
               </TabsContent>
               <TabsContent value="trips" className="mt-0">
