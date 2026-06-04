@@ -9,11 +9,16 @@ import {
   type User
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import {
+  chauffeurCategoryBadgeIcon,
+  customerAppBadgeIcon,
+  dispatchBadgeIcon
+} from "@/lib/chauffeur-badge-icons";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -139,13 +144,15 @@ export function DriverDetailSheet({
             <div className="space-y-2">
               <p className="text-lg font-semibold">{displayName}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{chauffeurCategoryTitle[profile.chauffeurCategory]}</Badge>
-                <Badge variant={profile.acceptsDispatchAssignments ? "default" : "secondary"}>
+                <IconBadge icon={chauffeurCategoryBadgeIcon[profile.chauffeurCategory]}>
+                  {chauffeurCategoryTitle[profile.chauffeurCategory]}
+                </IconBadge>
+                <IconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
                   {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
-                </Badge>
-                <Badge variant={profile.visibleOnCustomerApp ? "outline" : "secondary"}>
+                </IconBadge>
+                <IconBadge icon={customerAppBadgeIcon(profile.visibleOnCustomerApp)}>
                   {profile.visibleOnCustomerApp ? "Visible on app" : "Hidden on app"}
-                </Badge>
+                </IconBadge>
               </div>
             </div>
           </div>

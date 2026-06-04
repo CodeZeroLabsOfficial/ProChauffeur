@@ -22,6 +22,7 @@ import {
   type User
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import { customerAppBadgeIcon, dispatchBadgeIcon } from "@/lib/chauffeur-badge-icons";
 import { generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
@@ -30,7 +31,7 @@ import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { DriverDetailSheet } from "@/app/dashboard/drivers/driver-detail-sheet";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -180,9 +181,9 @@ export function DriversDataTable({
         cell: ({ row }) => {
           const status = row.getValue("dispatchStatus") as DriverRow["dispatchStatus"];
           return (
-            <Badge variant={status === "accepting" ? "default" : "secondary"}>
+            <IconBadge icon={dispatchBadgeIcon(status === "accepting")}>
               {status === "accepting" ? "Accepting" : "Paused"}
-            </Badge>
+            </IconBadge>
           );
         },
         filterFn: multiSelectFilter
@@ -194,9 +195,9 @@ export function DriversDataTable({
         cell: ({ row }) => {
           const status = row.getValue("appVisibility") as DriverRow["appVisibility"];
           return (
-            <Badge variant={status === "visible" ? "outline" : "secondary"}>
+            <IconBadge icon={customerAppBadgeIcon(status === "visible")}>
               {status === "visible" ? "Visible" : "Hidden"}
-            </Badge>
+            </IconBadge>
           );
         },
         filterFn: multiSelectFilter

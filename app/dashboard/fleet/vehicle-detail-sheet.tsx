@@ -10,10 +10,11 @@ import {
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
+import { assignmentBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { vehicleMakeLabel } from "@/lib/vehicle-makes";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -132,9 +133,9 @@ export function VehicleDetailSheet({
             <div className="space-y-2">
               <p className="text-lg font-semibold">{name}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={assigned ? "default" : "secondary"}>
+                <IconBadge icon={assignmentBadgeIcon(assigned)}>
                   {assigned ? "Assigned" : "Unassigned"}
-                </Badge>
+                </IconBadge>
               </div>
             </div>
           </div>
