@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { createTrip } from "@/lib/services/firebase-service";
+import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import type { Trip } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,18 +22,42 @@ import {
   SheetTrigger
 } from "@/components/ui/sheet";
 
+function requireAddressSelection(
+  label: string,
+  selection: AddressSuggestion | null
+): selection is AddressSuggestion {
+  if (!selection?.addressLine.trim()) {
+    toast.error(`Enter a ${label} address.`);
+    return false;
+  }
+  if (!hasValidCoordinate(selection.coordinate)) {
+    toast.error(`Choose a ${label} address from the suggestions.`);
+    return false;
+  }
+  return true;
+}
+
 export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
+  const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setPickup(null);
+      setDropoff(null);
+    }
+  }, [open]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!requireAddressSelection("pickup", pickup) || !requireAddressSelection("drop-off", dropoff)) {
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
-    const num = (k: string) => {
-      const v = parseFloat(get(k));
-      return Number.isFinite(v) ? v : 0;
-    };
 
     const scheduledRaw = get("scheduledPickupAt");
     const trip: Trip = {
@@ -42,10 +68,10 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       customerPhoneNumber: get("customerPhoneNumber") || null,
       customerEmail: get("customerEmail") || null,
       driverID: null,
-      pickup: { latitude: num("pickupLat"), longitude: num("pickupLng") },
-      dropoff: { latitude: num("dropoffLat"), longitude: num("dropoffLng") },
-      pickupAddressLine: get("pickupAddressLine") || null,
-      dropoffAddressLine: get("dropoffAddressLine") || null,
+      pickup: pickup.coordinate,
+      dropoff: dropoff.coordinate,
+      pickupAddressLine: pickup.addressLine,
+      dropoffAddressLine: dropoff.addressLine,
       notes: get("notes") || null,
       bookingPassengerCount: get("bookingPassengerCount") ? Number(get("bookingPassengerCount")) : null,
       scheduledPickupAt: scheduledRaw ? new Date(scheduledRaw) : null,
@@ -91,20 +117,24 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
 
           <div className="space-y-2">
             <Label htmlFor="pickupAddressLine">Pickup address</Label>
-            <Input id="pickupAddressLine" name="pickupAddressLine" required />
-            <div className="grid grid-cols-2 gap-3">
-              <Input name="pickupLat" placeholder="Latitude" inputMode="decimal" />
-              <Input name="pickupLng" placeholder="Longitude" inputMode="decimal" />
-            </div>
+            <AddressAutocomplete
+              id="pickupAddressLine"
+              value={pickup}
+              onChange={setPickup}
+              placeholder="Search pickup address…"
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="dropoffAddressLine">Drop-off address</Label>
-            <Input id="dropoffAddressLine" name="dropoffAddressLine" required />
-            <div className="grid grid-cols-2 gap-3">
-              <Input name="dropoffLat" placeholder="Latitude" inputMode="decimal" />
-              <Input name="dropoffLng" placeholder="Longitude" inputMode="decimal" />
-            </div>
+            <AddressAutocomplete
+              id="dropoffAddressLine"
+              value={dropoff}
+              onChange={setDropoff}
+              placeholder="Search drop-off address…"
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
