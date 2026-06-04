@@ -11,8 +11,9 @@ import {
 import { formatDate } from "@/lib/format";
 import {
   chauffeurCategoryBadgeIcon,
-  customerAppBadgeIcon,
-  dispatchBadgeIcon
+  dispatchBadgeIcon,
+  visibilityBadgeIcon,
+  visibilityStatusLabel
 } from "@/lib/chauffeur-badge-icons";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
@@ -149,8 +150,8 @@ export function DriverDetailSheet({
                 <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
                   {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
                 </DetailSheetIconBadge>
-                <DetailSheetIconBadge icon={customerAppBadgeIcon(profile.visibleOnCustomerApp)}>
-                  {profile.visibleOnCustomerApp ? "Visible on app" : "Hidden on app"}
+                <DetailSheetIconBadge icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
+                  {visibilityStatusLabel(profile.visibleOnCustomerApp)}
                 </DetailSheetIconBadge>
               </div>
             </div>

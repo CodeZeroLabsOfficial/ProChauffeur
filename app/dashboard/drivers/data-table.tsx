@@ -29,7 +29,10 @@ import {
   type User
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
-import { customerAppBadgeIcon, dispatchBadgeIcon } from "@/lib/chauffeur-badge-icons";
+import {
+  DriverDispatchListBadge,
+  DriverVisibilityListBadge
+} from "@/components/driver-list-status-badge";
 import { generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
@@ -39,7 +42,6 @@ import { DriverDetailSheet } from "@/app/dashboard/drivers/driver-detail-sheet";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { IconBadge } from "@/components/ui/icon-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -66,7 +68,7 @@ type DriverRow = User & {
   searchLabel: string;
   category: string;
   dispatchStatus: "accepting" | "paused";
-  appVisibility: "visible" | "hidden";
+  visibilityStatus: "active" | "inactive";
 };
 
 function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown) {
@@ -92,7 +94,7 @@ export function DriversDataTable({
   const [rowSelection, setRowSelection] = useState({});
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dispatchFilter, setDispatchFilter] = useState<string[]>([]);
-  const [appFilter, setAppFilter] = useState<string[]>([]);
+  const [visibilityFilter, setVisibilityFilter] = useState<string[]>([]);
 
   const candidates = useMemo(
     () => users.filter((u) => u.role !== "driver"),
@@ -114,9 +116,9 @@ export function DriversDataTable({
             dispatchStatus: (dp?.acceptsDispatchAssignments ? "accepting" : "paused") as
               | "accepting"
               | "paused",
-            appVisibility: (dp?.visibleOnCustomerApp ? "visible" : "hidden") as
-              | "visible"
-              | "hidden"
+            visibilityStatus: (dp?.visibleOnCustomerApp ? "active" : "inactive") as
+              | "active"
+              | "inactive"
           };
         })
         .sort((a, b) => a.profile.displayName.localeCompare(b.profile.displayName)),
@@ -128,21 +130,21 @@ export function DriversDataTable({
     []
   );
 
-  const setCustomerAppVisibility = useCallback(
-    async (user: User, visible: boolean) => {
+  const setDriverVisibility = useCallback(
+    async (user: User, active: boolean) => {
       const profile = user.driverProfile ?? defaultDriverProfile();
-      if (profile.visibleOnCustomerApp === visible) return;
+      if (profile.visibleOnCustomerApp === active) return;
       try {
         await updateUserDriverProfile(
           user.id,
-          { ...profile, visibleOnCustomerApp: visible },
+          { ...profile, visibleOnCustomerApp: active },
           { driverTitle: driverTitle(user) }
         );
         toast.success(
-          visible ? "Driver is now visible on the customer app." : "Driver hidden from the customer app."
+          active ? "Driver visibility set to active." : "Driver visibility set to inactive."
         );
       } catch {
-        toast.error("Could not update customer app visibility.");
+        toast.error("Could not update driver visibility.");
       }
     },
     [driverTitle]
@@ -266,25 +268,17 @@ export function DriversDataTable({
         header: "Dispatch",
         cell: ({ row }) => {
           const status = row.getValue("dispatchStatus") as DriverRow["dispatchStatus"];
-          return (
-            <IconBadge icon={dispatchBadgeIcon(status === "accepting")}>
-              {status === "accepting" ? "Accepting" : "Paused"}
-            </IconBadge>
-          );
+          return <DriverDispatchListBadge accepting={status === "accepting"} />;
         },
         filterFn: multiSelectFilter
       },
       {
-        id: "customerApp",
-        accessorKey: "appVisibility",
-        header: "Customer app",
+        id: "visibility",
+        accessorKey: "visibilityStatus",
+        header: "Visibility",
         cell: ({ row }) => {
-          const status = row.getValue("appVisibility") as DriverRow["appVisibility"];
-          return (
-            <IconBadge icon={customerAppBadgeIcon(status === "visible")}>
-              {status === "visible" ? "Visible" : "Hidden"}
-            </IconBadge>
-          );
+          const active = row.getValue("visibilityStatus") === "active";
+          return <DriverVisibilityListBadge active={active} />;
         },
         filterFn: multiSelectFilter
       },
@@ -309,13 +303,13 @@ export function DriversDataTable({
                       <DropdownMenuSubContent>
                         <DropdownMenuItem
                           disabled={profile.visibleOnCustomerApp}
-                          onClick={() => setCustomerAppVisibility(row.original, true)}>
-                          Show on customer app
+                          onClick={() => setDriverVisibility(row.original, true)}>
+                          Set active
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={!profile.visibleOnCustomerApp}
-                          onClick={() => setCustomerAppVisibility(row.original, false)}>
-                          Hide from customer app
+                          onClick={() => setDriverVisibility(row.original, false)}>
+                          Set inactive
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuPortal>
@@ -350,7 +344,7 @@ export function DriversDataTable({
         }
       }
     ],
-    [handleRemoveDriver, setCustomerAppVisibility, setDispatchAcceptance]
+    [handleRemoveDriver, setDriverVisibility, setDispatchAcceptance]
   );
 
   const table = useReactTable({
@@ -448,15 +442,15 @@ export function DriversDataTable({
                 }}
               />
               <ListFilterPopover
-                label="Customer app"
+                label="Visibility"
                 options={[
-                  { value: "visible", label: "Visible" },
-                  { value: "hidden", label: "Hidden" }
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" }
                 ]}
-                selected={appFilter}
+                selected={visibilityFilter}
                 onSelectedChange={(values) => {
-                  setAppFilter(values);
-                  table.getColumn("customerApp")?.setFilterValue(values.length ? values : undefined);
+                  setVisibilityFilter(values);
+                  table.getColumn("visibility")?.setFilterValue(values.length ? values : undefined);
                 }}
               />
             </>

@@ -25,6 +25,10 @@ export function dispatchBadgeIcon(accepting: boolean): LucideIcon {
   return accepting ? ZapIcon : PauseIcon;
 }
 
-export function customerAppBadgeIcon(visible: boolean): LucideIcon {
-  return visible ? EyeIcon : EyeOffIcon;
+export function visibilityBadgeIcon(active: boolean): LucideIcon {
+  return active ? EyeIcon : EyeOffIcon;
+}
+
+export function visibilityStatusLabel(active: boolean): "Active" | "Inactive" {
+  return active ? "Active" : "Inactive";
 }
