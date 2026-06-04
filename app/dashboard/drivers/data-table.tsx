@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,11 +13,18 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
+import { MoreHorizontalIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import { useUsers } from "@/hooks/use-collections";
 import {
+  removeDriver,
+  updateUserDriverProfile
+} from "@/lib/services/firebase-service";
+import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
+  defaultDriverProfile,
   type ChauffeurCategory,
   type User
 } from "@/lib/models";
@@ -31,8 +38,17 @@ import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { DriverDetailSheet } from "@/app/dashboard/drivers/driver-detail-sheet";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -101,6 +117,68 @@ export function DriversDataTable({
         })
         .sort((a, b) => a.profile.displayName.localeCompare(b.profile.displayName)),
     [users]
+  );
+
+  const driverTitle = useCallback(
+    (user: User) => user.profile.displayName?.trim() || user.email || "Chauffeur",
+    []
+  );
+
+  const toggleCustomerAppVisibility = useCallback(
+    async (user: User) => {
+      const profile = user.driverProfile ?? defaultDriverProfile();
+      const next = !profile.visibleOnCustomerApp;
+      try {
+        await updateUserDriverProfile(
+          user.id,
+          { ...profile, visibleOnCustomerApp: next },
+          { driverTitle: driverTitle(user) }
+        );
+        toast.success(next ? "Driver is now visible on the customer app." : "Driver hidden from the customer app.");
+      } catch {
+        toast.error("Could not update customer app visibility.");
+      }
+    },
+    [driverTitle]
+  );
+
+  const toggleDispatchAcceptance = useCallback(
+    async (user: User) => {
+      const profile = user.driverProfile ?? defaultDriverProfile();
+      const next = !profile.acceptsDispatchAssignments;
+      try {
+        await updateUserDriverProfile(
+          user.id,
+          { ...profile, acceptsDispatchAssignments: next },
+          { driverTitle: driverTitle(user) }
+        );
+        toast.success(next ? "Driver is now accepting dispatch." : "Dispatch paused for this driver.");
+      } catch {
+        toast.error("Could not update dispatch settings.");
+      }
+    },
+    [driverTitle]
+  );
+
+  const handleRemoveDriver = useCallback(
+    async (user: User) => {
+      const name = driverTitle(user);
+      if (!window.confirm(`Remove ${name} from chauffeurs? Their fleet vehicle will also be removed if one exists.`)) {
+        return;
+      }
+      try {
+        await removeDriver(user.id, name);
+        if (selectedId === user.id) {
+          setDetailOpen(false);
+          setEditOpen(false);
+          setSelectedId(null);
+        }
+        toast.success("Driver removed.");
+      } catch {
+        toast.error("Could not remove the driver.");
+      }
+    },
+    [driverTitle, selectedId]
   );
 
   const columns = useMemo<ColumnDef<DriverRow>[]>(
@@ -201,9 +279,43 @@ export function DriversDataTable({
           );
         },
         filterFn: multiSelectFilter
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const profile = row.original.driverProfile ?? defaultDriverProfile();
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontalIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Customer app</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => toggleCustomerAppVisibility(row.original)}>
+                  {profile.visibleOnCustomerApp ? "Hide from customer app" : "Show on customer app"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Dispatch</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => toggleDispatchAcceptance(row.original)}>
+                  {profile.acceptsDispatchAssignments ? "Pause dispatch" : "Accept dispatch"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => handleRemoveDriver(row.original)}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        }
       }
     ],
-    []
+    [handleRemoveDriver, toggleCustomerAppVisibility, toggleDispatchAcceptance]
   );
 
   const table = useReactTable({
@@ -345,7 +457,9 @@ export function DriversDataTable({
                     className="cursor-pointer"
                     onClick={() => openDriver(row.original)}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}

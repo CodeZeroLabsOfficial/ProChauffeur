@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,8 +13,15 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
+import { MoreHorizontalIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import { useUsers, useVehicles } from "@/hooks/use-collections";
+import {
+  assignFleetVehicle,
+  deleteVehicle,
+  unassignFleetVehicle
+} from "@/lib/services/firebase-service";
 import {
   VEHICLE_TYPES,
   effectiveChauffeurUserId,
@@ -32,8 +39,20 @@ import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { VehicleDetailSheet } from "@/app/dashboard/fleet/vehicle-detail-sheet";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
+import { Button } from "@/components/ui/button";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -99,6 +118,48 @@ export function FleetDataTable({
         };
       }),
     [vehicles, driverNameById]
+  );
+
+  const handleAssignVehicle = useCallback(
+    async (vehicle: Vehicle, chauffeurUserId: string) => {
+      try {
+        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId);
+        toast.success("Vehicle assigned.");
+      } catch {
+        toast.error("Could not assign the vehicle.");
+      }
+    },
+    [vehicles]
+  );
+
+  const handleUnassignVehicle = useCallback(async (vehicle: Vehicle) => {
+    try {
+      await unassignFleetVehicle(vehicle.driverID);
+      toast.success("Vehicle unassigned.");
+    } catch {
+      toast.error("Could not unassign the vehicle.");
+    }
+  }, []);
+
+  const handleDeleteVehicle = useCallback(
+    async (vehicle: Vehicle) => {
+      const name = vehicleDisplayName(vehicle) || "this vehicle";
+      if (!window.confirm(`Delete ${name}? This cannot be undone.`)) {
+        return;
+      }
+      try {
+        await deleteVehicle(vehicle.driverID);
+        if (selectedId === vehicle.driverID) {
+          setDetailOpen(false);
+          setEditOpen(false);
+          setSelectedId(null);
+        }
+        toast.success("Vehicle deleted.");
+      } catch {
+        toast.error("Could not delete the vehicle.");
+      }
+    },
+    [selectedId]
   );
 
   const columns = useMemo<ColumnDef<FleetRow>[]>(
@@ -204,9 +265,56 @@ export function FleetDataTable({
             {formatDate(row.original.registrationExpiry ?? null)}
           </span>
         )
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const vehicle = row.original;
+          const assignedChauffeurId = effectiveChauffeurUserId(vehicle);
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontalIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Assignment</DropdownMenuLabel>
+                {assignedChauffeurId ? (
+                  <DropdownMenuItem onClick={() => handleUnassignVehicle(vehicle)}>
+                    Unassign chauffeur
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Assign chauffeur</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {drivers.length ? (
+                      drivers.map((driver) => (
+                        <DropdownMenuItem
+                          key={driver.id}
+                          disabled={assignedChauffeurId === driver.id}
+                          onClick={() => handleAssignVehicle(vehicle, driver.id)}>
+                          {driver.profile.displayName || driver.email}
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>No chauffeurs available</DropdownMenuItem>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => handleDeleteVehicle(vehicle)}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        }
       }
     ],
-    []
+    [drivers, handleAssignVehicle, handleDeleteVehicle, handleUnassignVehicle]
   );
 
   const table = useReactTable({
@@ -346,7 +454,9 @@ export function FleetDataTable({
                     className="cursor-pointer"
                     onClick={() => openVehicle(row.original)}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}

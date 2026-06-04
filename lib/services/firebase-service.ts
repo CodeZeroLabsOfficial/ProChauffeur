@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  deleteField,
   getDoc,
   getDocs,
   limit as fsLimit,
@@ -260,6 +261,20 @@ export async function updateUserRole(uid: string, role: UserRole): Promise<void>
   await updateDoc(doc(db(), Collections.users, uid), { role });
 }
 
+/** Demotes a chauffeur to customer and removes their driver profile (and fleet vehicle if any). */
+export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
+  const vehicleRef = doc(db(), Collections.vehicles, uid);
+  const vehicleSnap = await getDoc(vehicleRef);
+  if (vehicleSnap.exists()) {
+    await deleteVehicle(uid);
+  }
+  await updateDoc(doc(db(), Collections.users, uid), {
+    role: "customer",
+    driverProfile: deleteField()
+  });
+  void createActivityNotification(driverNotification("deleted", driverTitle ?? "Chauffeur", uid));
+}
+
 // ────────────────────────────── Vehicles ─────────────────────────────
 
 export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
@@ -320,6 +335,13 @@ export async function assignFleetVehicle(
     assignedChauffeurUserId: toChauffeurUserId
   });
   await batch.commit();
+}
+
+/** Clears the chauffeur linked to a fleet vehicle. */
+export async function unassignFleetVehicle(vehicleDocumentId: string): Promise<void> {
+  await updateDoc(doc(db(), Collections.vehicles, vehicleDocumentId), {
+    assignedChauffeurUserId: ""
+  });
 }
 
 // ───────────────────────────── Locations ─────────────────────────────
