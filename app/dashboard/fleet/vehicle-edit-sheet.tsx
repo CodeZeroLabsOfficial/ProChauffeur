@@ -15,6 +15,7 @@ import {
   type VehicleType
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
+import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,7 @@ export function VehicleEditSheet({
 }) {
   const isNew = !vehicle;
   const [tier, setTier] = useState<VehicleType>(vehicle?.pricingVehicleType ?? "sedan");
+  const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.make));
   const [manufactureYear, setManufactureYear] = useState(
     vehicle?.manufactureYear ?? new Date().getFullYear()
   );
@@ -141,6 +143,7 @@ export function VehicleEditSheet({
   if (currentKey !== seededId) {
     setSeededId(currentKey);
     setTier(vehicle?.pricingVehicleType ?? "sedan");
+    setMake(vehicleMakeSelectValue(vehicle?.make));
     setManufactureYear(vehicle?.manufactureYear ?? new Date().getFullYear());
     setPassengerCapacity(vehicle?.passengerCapacity ?? 4);
     setSmallBags(vehicle?.fleetSmallLuggageCount ?? 0);
@@ -155,6 +158,10 @@ export function VehicleEditSheet({
       toast.error("No chauffeur is available to link this vehicle to.");
       return;
     }
+    if (!make) {
+      toast.error("Select a vehicle make.");
+      return;
+    }
 
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
@@ -164,7 +171,7 @@ export function VehicleEditSheet({
       ...base,
       driverID,
       assignedChauffeurUserId: base.assignedChauffeurUserId ?? driverID,
-      make: get("make"),
+      make,
       model: get("model"),
       color: get("color"),
       licensePlate: get("licensePlate"),
@@ -227,8 +234,19 @@ export function VehicleEditSheet({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="make">Make</Label>
-                <Input id="make" name="make" required defaultValue={vehicle?.make} />
+                <Label>Make</Label>
+                <Select value={make} onValueChange={setMake} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select make" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LUXURY_VEHICLE_MAKES.map((entry) => (
+                      <SelectItem key={entry.id} value={entry.label}>
+                        {entry.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
