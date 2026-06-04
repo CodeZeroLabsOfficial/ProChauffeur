@@ -212,7 +212,7 @@ export function VehicleEditSheet({
             <SectionHeading>Vehicle details</SectionHeading>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Vehicle category</Label>
+                <Label>Vehicle tier</Label>
                 <Select value={tier} onValueChange={(v) => setTier(v as VehicleType)}>
                   <SelectTrigger className="w-full">
                     <SelectValue />

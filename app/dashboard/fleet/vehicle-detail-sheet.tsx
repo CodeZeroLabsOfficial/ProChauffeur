@@ -20,6 +20,11 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+
+const tabTriggerClassName =
+  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 function DetailField({
   label,
@@ -38,6 +43,48 @@ function DetailField({
       <h4 className="text-sm font-medium">{label}</h4>
       <p className="text-muted-foreground text-sm">{text}</p>
     </div>
+  );
+}
+
+function VehicleOverviewFields({
+  vehicle,
+  tierLabel
+}: {
+  vehicle: Vehicle;
+  tierLabel: string;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Vehicle tier" value={tierLabel} />
+        <DetailField label="Vehicle ID / VIN" value={vehicle.vehicleIdentificationNumber} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Make" value={vehicleMakeLabel(vehicle.make)} />
+        <DetailField label="Model" value={vehicle.model} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Year" value={vehicle.manufactureYear} />
+        <DetailField label="Colour" value={vehicle.color} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Engine type" value={vehicle.engineTypeDescription} />
+        <DetailField label="Transmission" value={vehicle.gearTypeDescription} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Rego state" value={vehicle.registrationJurisdictionCode} />
+        <DetailField label="License plate" value={vehicle.licensePlate} />
+      </div>
+      <DetailField label="Rego expiry" value={formatDate(vehicle.registrationExpiry)} />
+    </div>
+  );
+}
+
+function VehicleTabPlaceholder({ label }: { label: string }) {
+  return (
+    <p className="text-muted-foreground py-6 text-center text-sm">
+      No {label.toLowerCase()} information yet.
+    </p>
   );
 }
 
@@ -77,7 +124,7 @@ export function VehicleDetailSheet({
           </div>
         </SheetHeader>
 
-        <div className="space-y-6 px-4">
+        <div className="space-y-4 px-4">
           <div className="inline-flex items-center gap-4 align-top">
             <VehicleMakeAvatar make={vehicle.make} />
             <div className="space-y-2">
@@ -92,32 +139,44 @@ export function VehicleDetailSheet({
 
           <Separator />
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Vehicle class / tier" value={tierLabel} />
-              <DetailField
-                label="Vehicle ID / VIN"
-                value={vehicle.vehicleIdentificationNumber}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Make" value={vehicleMakeLabel(vehicle.make)} />
-              <DetailField label="Model" value={vehicle.model} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Year" value={vehicle.manufactureYear} />
-              <DetailField label="Colour" value={vehicle.color} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Engine type" value={vehicle.engineTypeDescription} />
-              <DetailField label="Transmission" value={vehicle.gearTypeDescription} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Rego state" value={vehicle.registrationJurisdictionCode} />
-              <DetailField label="License plate" value={vehicle.licensePlate} />
-            </div>
-            <DetailField label="Rego expiry" value={formatDate(vehicle.registrationExpiry)} />
-          </div>
+          <Tabs defaultValue="overview" className="gap-4">
+            <TabsList
+              className={cn(
+                "-mb-0.5 h-auto w-full justify-start gap-4 overflow-x-auto border-none bg-transparent p-0"
+              )}>
+              <TabsTrigger value="overview" className={tabTriggerClassName}>
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="features" className={tabTriggerClassName}>
+                Features
+              </TabsTrigger>
+              <TabsTrigger value="compliance" className={tabTriggerClassName}>
+                Compliance
+              </TabsTrigger>
+              <TabsTrigger value="maintenance" className={tabTriggerClassName}>
+                Maintenance
+              </TabsTrigger>
+              <TabsTrigger value="operations" className={tabTriggerClassName}>
+                Operations
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="mt-0">
+              <VehicleOverviewFields vehicle={vehicle} tierLabel={tierLabel} />
+            </TabsContent>
+            <TabsContent value="features" className="mt-0">
+              <VehicleTabPlaceholder label="Features" />
+            </TabsContent>
+            <TabsContent value="compliance" className="mt-0">
+              <VehicleTabPlaceholder label="Compliance" />
+            </TabsContent>
+            <TabsContent value="maintenance" className="mt-0">
+              <VehicleTabPlaceholder label="Maintenance" />
+            </TabsContent>
+            <TabsContent value="operations" className="mt-0">
+              <VehicleTabPlaceholder label="Operations" />
+            </TabsContent>
+          </Tabs>
         </div>
       </SheetContent>
     </Sheet>
