@@ -31,6 +31,7 @@ import { ListTableToolbar } from "@/components/list-table-toolbar";
 import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { VehicleDetailSheet } from "@/app/dashboard/fleet/vehicle-detail-sheet";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
+import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -130,7 +131,10 @@ export function FleetDataTable({
         accessorFn: (row) => vehicleDisplayName(row) || "Vehicle",
         header: "Vehicle",
         cell: ({ row }) => (
-          <span className="font-medium">{vehicleDisplayName(row.original) || "Vehicle"}</span>
+          <div className="flex items-center gap-3">
+            <VehicleMakeAvatar make={row.original.make} className="size-9" />
+            <div className="font-medium">{vehicleDisplayName(row.original) || "Vehicle"}</div>
+          </div>
         ),
         filterFn: (row, _columnId, filterValue) => {
           const q = String(filterValue ?? "")
