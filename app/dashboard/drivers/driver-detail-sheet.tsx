@@ -18,8 +18,7 @@ import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { IconBadge } from "@/components/ui/icon-badge";
-import { Separator } from "@/components/ui/separator";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
   Sheet,
   SheetContent,
@@ -144,20 +143,18 @@ export function DriverDetailSheet({
             <div className="space-y-2">
               <p className="text-lg font-semibold">{displayName}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <IconBadge icon={chauffeurCategoryBadgeIcon[profile.chauffeurCategory]}>
+                <DetailSheetIconBadge icon={chauffeurCategoryBadgeIcon[profile.chauffeurCategory]}>
                   {chauffeurCategoryTitle[profile.chauffeurCategory]}
-                </IconBadge>
-                <IconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
+                </DetailSheetIconBadge>
+                <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
                   {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
-                </IconBadge>
-                <IconBadge icon={customerAppBadgeIcon(profile.visibleOnCustomerApp)}>
+                </DetailSheetIconBadge>
+                <DetailSheetIconBadge icon={customerAppBadgeIcon(profile.visibleOnCustomerApp)}>
                   {profile.visibleOnCustomerApp ? "Visible on app" : "Hidden on app"}
-                </IconBadge>
+                </DetailSheetIconBadge>
               </div>
             </div>
           </div>
-
-          <Separator />
 
           <Tabs defaultValue="overview" className="gap-4">
             <TabsList

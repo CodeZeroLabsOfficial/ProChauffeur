@@ -17,3 +17,18 @@ export function IconBadge({
     </Badge>
   );
 }
+
+/** Dark pill badges for read-only detail sheet hero sections. */
+export function DetailSheetIconBadge({
+  icon: Icon,
+  children,
+  className,
+  ...props
+}: Omit<ComponentProps<typeof Badge>, "variant"> & { icon: LucideIcon }) {
+  return (
+    <Badge variant="detail" className={cn(className)} {...props}>
+      <Icon aria-hidden="true" className="-ms-0.5" size={12} />
+      {children}
+    </Badge>
+  );
+}
