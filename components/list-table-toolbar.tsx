@@ -14,13 +14,40 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 
+function TableColumnsMenu<TData>({ table }: { table: Table<TData> }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="shrink-0 whitespace-nowrap">
+          <Columns /> <span className="hidden md:inline">Columns</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {table
+          .getAllColumns()
+          .filter((column) => column.getCanHide())
+          .map((column) => (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              className="capitalize"
+              checked={column.getIsVisible()}
+              onCheckedChange={(value) => column.toggleVisibility(value)}>
+              {column.id}
+            </DropdownMenuCheckboxItem>
+          ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function ListTableToolbar<TData>({
   table,
   searchPlaceholder,
   searchColumnId,
   filters,
   endActions,
-  nowrap = false
+  nowrap = false,
+  inlineControls = false
 }: {
   table: Table<TData>;
   searchPlaceholder: string;
@@ -28,43 +55,40 @@ export function ListTableToolbar<TData>({
   filters?: ReactNode;
   endActions?: ReactNode;
   nowrap?: boolean;
+  /** Search, filters, and columns on one row (no trailing column group). */
+  inlineControls?: boolean;
 }) {
+  const searchInput = (
+    <Input
+      placeholder={searchPlaceholder}
+      value={(table.getColumn(searchColumnId)?.getFilterValue() as string) ?? ""}
+      onChange={(event) =>
+        table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
+      }
+      className={cn("max-w-sm", (nowrap || inlineControls) && "shrink-0")}
+    />
+  );
+
+  if (inlineControls) {
+    return (
+      <div className="flex flex-nowrap items-center gap-2 py-4">
+        {searchInput}
+        {filters}
+        {endActions}
+        <TableColumnsMenu table={table} />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex items-center gap-4 py-4", nowrap && "flex-nowrap")}>
       <div className={cn("flex gap-2", nowrap ? "min-w-0 flex-1 flex-nowrap" : "flex-wrap")}>
-        <Input
-          placeholder={searchPlaceholder}
-          value={(table.getColumn(searchColumnId)?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
-          }
-          className={cn("max-w-sm", nowrap && "shrink-0")}
-        />
+        {searchInput}
         {filters}
       </div>
       <div className={cn("flex shrink-0 items-center gap-2", !nowrap && "ml-auto")}>
         {endActions}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="shrink-0 whitespace-nowrap">
-              <Columns /> <span className="hidden md:inline">Columns</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(value)}>
-                  {column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableColumnsMenu table={table} />
       </div>
     </div>
   );

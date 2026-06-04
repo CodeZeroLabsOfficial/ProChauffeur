@@ -128,8 +128,11 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)}>
-          <TabsList className="w-full justify-start overflow-x-auto">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setTab(v as ProfileTab)}
+          className="gap-4">
+          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="trips">Trips</TabsTrigger>
             <TabsTrigger value="financials">Financials</TabsTrigger>
@@ -137,7 +140,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
             <TabsTrigger value="operations">Operations</TabsTrigger>
           </TabsList>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
               <DriverProfileSidebar
                 user={user}
