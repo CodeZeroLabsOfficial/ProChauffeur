@@ -9,9 +9,9 @@ import { createTrip } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import type { Trip, User } from "@/lib/models";
 import { customerDisplayName } from "@/lib/users/customer-display";
+import { DateTimePicker } from "@/components/datetime-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -60,6 +60,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const [passengerCount, setPassengerCount] = useState(1);
   const [smallLuggageCount, setSmallLuggageCount] = useState(0);
   const [largeLuggageCount, setLargeLuggageCount] = useState(0);
+  const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -69,6 +70,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       setPassengerCount(1);
       setSmallLuggageCount(0);
       setLargeLuggageCount(0);
+      setScheduledPickupAt(null);
     }
   }, [open]);
 
@@ -85,7 +87,6 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
 
-    const scheduledRaw = get("scheduledPickupAt");
     const trip: Trip = {
       id: crypto.randomUUID(),
       status: "requested",
@@ -102,7 +103,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       bookingPassengerCount: passengerCount,
       bookingSmallLuggageCount: smallLuggageCount,
       bookingLargeLuggageCount: largeLuggageCount,
-      scheduledPickupAt: scheduledRaw ? new Date(scheduledRaw) : null,
+      scheduledPickupAt,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -163,7 +164,13 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="scheduledPickupAt">Pickup time</Label>
-              <Input id="scheduledPickupAt" name="scheduledPickupAt" type="datetime-local" />
+              <DateTimePicker
+                id="scheduledPickupAt"
+                value={scheduledPickupAt}
+                onChange={setScheduledPickupAt}
+                placeholder="Pick pickup time"
+                disabled={saving}
+              />
             </div>
             <NumberStepper
               id="bookingPassengerCount"
