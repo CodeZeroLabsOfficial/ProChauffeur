@@ -1,5 +1,7 @@
 "use client";
 
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,9 +14,12 @@ import {
   type ChauffeurCategory,
   type User
 } from "@/lib/models";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -55,6 +60,9 @@ export function DriverEditSheet({
   const [category, setCategory] = useState<ChauffeurCategory>(profile.chauffeurCategory);
   const [visible, setVisible] = useState(profile.visibleOnCustomerApp);
   const [dispatch, setDispatch] = useState(profile.acceptsDispatchAssignments);
+  const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
+    profile.driversLicenseExpiry ?? undefined
+  );
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
@@ -64,6 +72,7 @@ export function DriverEditSheet({
     setCategory(profile.chauffeurCategory);
     setVisible(profile.visibleOnCustomerApp);
     setDispatch(profile.acceptsDispatchAssignments);
+    setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -83,7 +92,7 @@ export function DriverEditSheet({
       driversLicenseNumber: get("driversLicenseNumber") || null,
       driversLicenseClassOrType: get("driversLicenseClassOrType") || null,
       driversLicenseJurisdictionCode: get("driversLicenseJurisdictionCode") || null,
-      driversLicenseExpiry: get("driversLicenseExpiry") ? new Date(get("driversLicenseExpiry")) : null,
+      driversLicenseExpiry: driversLicenseExpiry ?? null,
       operatorAccreditationNumber: get("operatorAccreditationNumber") || null,
       visibleOnCustomerApp: visible,
       acceptsDispatchAssignments: dispatch
@@ -196,18 +205,43 @@ export function DriverEditSheet({
                 defaultValue={profile.driversLicenseJurisdictionCode ?? ""}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="driversLicenseExpiry">Licence expiry</Label>
-              <Input
-                id="driversLicenseExpiry"
-                name="driversLicenseExpiry"
-                type="date"
-                defaultValue={
-                  profile.driversLicenseExpiry
-                    ? profile.driversLicenseExpiry.toISOString().slice(0, 10)
-                    : ""
-                }
-              />
+            <div className="flex flex-col space-y-2">
+              <Label>Licence expiry</Label>
+              <Popover modal>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !driversLicenseExpiry && "text-muted-foreground"
+                    )}>
+                    {driversLicenseExpiry ? (
+                      format(driversLicenseExpiry, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className={cn(
+                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                    nested && "z-[110]"
+                  )}
+                  align="start">
+                  <Calendar
+                    mode="single"
+                    captionLayout="dropdown"
+                    fromYear={new Date().getFullYear() - 10}
+                    toYear={new Date().getFullYear() + 20}
+                    selected={driversLicenseExpiry}
+                    onSelect={setDriversLicenseExpiry}
+                    defaultMonth={driversLicenseExpiry}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { Edit } from "lucide-react";
+import Link from "next/link";
+import { Edit, ExternalLink } from "lucide-react";
 
 import {
   chauffeurCategoryTitle,
@@ -122,14 +123,24 @@ export function DriverDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <div className="flex items-start justify-between pe-6">
+          <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
             <SheetTitle>Profile details</SheetTitle>
-            {onEditClick && (
-              <Button variant="outline" onClick={onEditClick}>
-                <Edit />
-                Edit
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link
+                  href={`/dashboard/drivers/${displayUser.id}`}
+                  onClick={() => onOpenChange(false)}>
+                  <ExternalLink />
+                  View profile
+                </Link>
               </Button>
-            )}
+              {onEditClick && (
+                <Button variant="outline" onClick={onEditClick}>
+                  <Edit />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
         </SheetHeader>
 
