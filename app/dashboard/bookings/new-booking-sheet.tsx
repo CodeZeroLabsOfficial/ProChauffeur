@@ -4,9 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
+import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { createTrip } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
-import type { Trip } from "@/lib/models";
+import type { Trip, User } from "@/lib/models";
+import { customerDisplayName } from "@/lib/users/customer-display";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +17,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -37,14 +38,28 @@ function requireAddressSelection(
   return true;
 }
 
+function requireCustomerSelection(customer: User | null): customer is User {
+  if (!customer) {
+    toast.error("Choose a customer from the directory.");
+    return false;
+  }
+  if (customer.role !== "customer") {
+    toast.error("Choose a customer from the directory.");
+    return false;
+  }
+  return true;
+}
+
 export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customer, setCustomer] = useState<User | null>(null);
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
 
   useEffect(() => {
     if (!open) {
+      setCustomer(null);
       setPickup(null);
       setDropoff(null);
     }
@@ -52,7 +67,11 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!requireAddressSelection("pickup", pickup) || !requireAddressSelection("drop-off", dropoff)) {
+    if (
+      !requireCustomerSelection(customer) ||
+      !requireAddressSelection("pickup", pickup) ||
+      !requireAddressSelection("drop-off", dropoff)
+    ) {
       return;
     }
 
@@ -63,10 +82,10 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     const trip: Trip = {
       id: crypto.randomUUID(),
       status: "requested",
-      customerID: get("customerID") || crypto.randomUUID(),
-      customerDisplayName: get("customerDisplayName") || null,
-      customerPhoneNumber: get("customerPhoneNumber") || null,
-      customerEmail: get("customerEmail") || null,
+      customerID: customer.id,
+      customerDisplayName: customerDisplayName(customer) || null,
+      customerPhoneNumber: customer.profile.phoneNumber ?? null,
+      customerEmail: customer.email || null,
       driverID: null,
       pickup: pickup.coordinate,
       dropoff: dropoff.coordinate,
@@ -97,22 +116,17 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>New booking</SheetTitle>
-          <SheetDescription>Create a chauffeur trip. It starts in “Requested”.</SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4">
           <div className="space-y-2">
-            <Label htmlFor="customerDisplayName">Customer name</Label>
-            <Input id="customerDisplayName" name="customerDisplayName" required />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="customerPhoneNumber">Phone</Label>
-              <Input id="customerPhoneNumber" name="customerPhoneNumber" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customerEmail">Email</Label>
-              <Input id="customerEmail" name="customerEmail" type="email" />
-            </div>
+            <Label htmlFor="customer">Customer</Label>
+            <CustomerAutocomplete
+              id="customer"
+              value={customer}
+              onChange={setCustomer}
+              placeholder="Search customers…"
+              required
+            />
           </div>
 
           <div className="space-y-2">
