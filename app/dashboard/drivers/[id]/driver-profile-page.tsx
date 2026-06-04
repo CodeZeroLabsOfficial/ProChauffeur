@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeftIcon, PencilIcon } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 
 import { useInvoices, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { fetchUser } from "@/lib/services/firebase-service";
@@ -136,13 +136,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           <div
             ref={chromeRef}
             className="bg-muted/40 supports-[backdrop-filter]:bg-muted/95 sticky top-0 z-10 -mx-4 space-y-4 px-4 pb-4 backdrop-blur-sm md:-mx-6 md:px-6">
-            <div className="flex flex-row items-center justify-between gap-4">
-              <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Driver profile</h1>
-              <Button variant="outline" onClick={() => setEditOpen(true)}>
-                <PencilIcon />
-                Edit
-              </Button>
-            </div>
+            <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Driver profile</h1>
             <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="trips">Trips</TabsTrigger>
@@ -161,6 +155,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                 statTrips={metrics.totalTrips}
                 statCompleted={metrics.completed}
                 statRevenueLabel={revenueLabel}
+                onEditClick={() => setEditOpen(true)}
               />
             </div>
 

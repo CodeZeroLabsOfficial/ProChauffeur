@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Link2Icon, Mail, MapPin, PhoneCall } from "lucide-react";
+import { Link2Icon, Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
 
 import {
   chauffeurCategoryTitle,
@@ -16,6 +16,7 @@ import {
 import { driverProfileCompleteness } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
@@ -39,12 +40,14 @@ export function DriverProfileSidebar({
   user,
   statTrips,
   statCompleted,
-  statRevenueLabel
+  statRevenueLabel,
+  onEditClick
 }: {
   user: User;
   statTrips: number;
   statCompleted: number;
   statRevenueLabel: string;
+  onEditClick?: () => void;
 }) {
   const profile = user.driverProfile ?? defaultDriverProfile();
   const displayName = user.profile.displayName.trim() || user.email || "Driver";
@@ -53,6 +56,17 @@ export function DriverProfileSidebar({
   return (
     <div className="space-y-4">
       <Card className="relative">
+        {onEditClick ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="absolute top-4 right-4 z-10"
+            onClick={onEditClick}
+            aria-label="Edit profile">
+            <PencilIcon />
+          </Button>
+        ) : null}
         <CardContent>
           <div className="space-y-12">
             <div className="flex flex-col items-center space-y-4">
