@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import type { Trip } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
 import { sortTripsByPickupDesc } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
-import { DriverProfileKpiGrid } from "@/app/dashboard/drivers/components/driver-profile-kpi-grid";
 import { DriverProfileTrendChart } from "@/app/dashboard/drivers/components/driver-profile-trend-chart";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,29 +23,11 @@ function shortBookingId(id: string) {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
-export function DriverProfileOverviewTab({
-  trips,
-  totalTrips,
-  completed,
-  active,
-  monthRevenue
-}: {
-  trips: Trip[];
-  totalTrips: number;
-  completed: number;
-  active: number;
-  monthRevenue: number;
-}) {
+export function DriverProfileOverviewTab({ trips }: { trips: Trip[] }) {
   const recent = useMemo(() => sortTripsByPickupDesc(trips).slice(0, 8), [trips]);
 
   return (
     <div className="space-y-4">
-      <DriverProfileKpiGrid
-        totalTrips={totalTrips}
-        completed={completed}
-        active={active}
-        monthRevenue={monthRevenue}
-      />
       <DriverProfileTrendChart trips={trips} />
       <Card>
         <CardHeader>

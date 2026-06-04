@@ -1,11 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CalendarIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
   Select,
@@ -14,17 +22,23 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   endOfDay,
-  getMonthRange,
-  getWeekRange,
   isSameDay,
   percentChange,
   startOfDay,
   tripsInRange
 } from "@/app/dashboard/lib/dashboard-metrics";
 
-type RangeKey = "this-week" | "last-week" | "this-month";
+type RangeKey = "7d" | "30d" | "90d" | "1y";
+
+const RANGE_OPTIONS: { value: RangeKey; label: string; shortLabel: string; days: number }[] = [
+  { value: "90d", label: "Last 90 days", shortLabel: "Last 90 days", days: 90 },
+  { value: "30d", label: "Last 30 days", shortLabel: "Last 30 days", days: 30 },
+  { value: "7d", label: "Last 7 days", shortLabel: "Last 7 days", days: 7 },
+  { value: "1y", label: "Last year", shortLabel: "Last year", days: 365 }
+];
 
 const chartConfig = {
   completed: {
@@ -37,15 +51,19 @@ const chartConfig = {
   }
 };
 
-function performanceComparisonLabel(range: RangeKey): string {
-  switch (range) {
-    case "this-week":
-      return "Compared to last week";
-    case "last-week":
-      return "Compared to two weeks ago";
-    case "this-month":
-      return "Compared to last month";
-  }
+function rollingWindow(reference: Date, days: number) {
+  const end = endOfDay(reference);
+  const start = startOfDay(new Date(reference));
+  start.setDate(start.getDate() - (days - 1));
+  return { start, end };
+}
+
+function previousWindow(windowStart: Date, days: number) {
+  const prevEnd = endOfDay(new Date(windowStart));
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = startOfDay(new Date(prevEnd));
+  prevStart.setDate(prevStart.getDate() - (days - 1));
+  return { start: prevStart, end: prevEnd };
 }
 
 function buildDailySeries(trips: Trip[], days: number, end: Date) {
@@ -96,80 +114,89 @@ function chartYDomain(chartData: { booked: number; completed: number }[]) {
 }
 
 function getRangeData(trips: Trip[], range: RangeKey, now: Date) {
-  switch (range) {
-    case "this-week": {
-      const { start, end } = getWeekRange(now, 0);
-      const prev = getWeekRange(now, -1);
-      const chartData = buildDailySeries(tripsInRange(trips, start, end), 7, end);
-      const completed = countCompletedInRange(trips, start, end);
-      const prevCompleted = countCompletedInRange(trips, prev.start, prev.end);
-      return {
-        booked: countBookedInRange(trips, start, end),
-        completed,
-        performanceChange: percentChange(completed, prevCompleted) ?? 0,
-        chartData,
-        ...chartYDomain(chartData)
-      };
-    }
-    case "last-week": {
-      const { start, end } = getWeekRange(now, -1);
-      const prev = getWeekRange(now, -2);
-      const chartData = buildDailySeries(tripsInRange(trips, start, end), 7, end);
-      const completed = countCompletedInRange(trips, start, end);
-      const prevCompleted = countCompletedInRange(trips, prev.start, prev.end);
-      return {
-        booked: countBookedInRange(trips, start, end),
-        completed,
-        performanceChange: percentChange(completed, prevCompleted) ?? 0,
-        chartData,
-        ...chartYDomain(chartData)
-      };
-    }
-    case "this-month": {
-      const { start, end } = getMonthRange(now, 0);
-      const prev = getMonthRange(now, -1);
-      const inRange = tripsInRange(trips, start, end);
-      const days = Math.min(
-        31,
-        Math.max(7, Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1)
-      );
-      const chartData = buildDailySeries(inRange, days, end);
-      const completed = countCompletedInRange(trips, start, end);
-      const prevCompleted = countCompletedInRange(trips, prev.start, prev.end);
-      return {
-        booked: countBookedInRange(trips, start, end),
-        completed,
-        performanceChange: percentChange(completed, prevCompleted) ?? 0,
-        chartData,
-        ...chartYDomain(chartData)
-      };
-    }
-  }
+  const option = RANGE_OPTIONS.find((o) => o.value === range) ?? RANGE_OPTIONS[1];
+  const { start, end } = rollingWindow(now, option.days);
+  const prev = previousWindow(start, option.days);
+  const inRange = tripsInRange(trips, start, end);
+  const chartData = buildDailySeries(inRange, option.days, end);
+  const completed = countCompletedInRange(trips, start, end);
+  const prevCompleted = countCompletedInRange(trips, prev.start, prev.end);
+
+  return {
+    booked: countBookedInRange(trips, start, end),
+    completed,
+    performanceChange: percentChange(completed, prevCompleted) ?? 0,
+    chartData,
+    descriptionLabel: option.label.toLowerCase(),
+    ...chartYDomain(chartData)
+  };
+}
+
+function PeriodSelector({
+  value,
+  onChange
+}: {
+  value: RangeKey;
+  onChange: (value: RangeKey) => void;
+}) {
+  return (
+    <>
+      <ToggleGroup
+        type="single"
+        value={value}
+        onValueChange={(next) => next && onChange(next as RangeKey)}
+        variant="outline"
+        className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex">
+        {RANGE_OPTIONS.map((option) => (
+          <ToggleGroupItem key={option.value} value={option.value}>
+            {option.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <Select value={value} onValueChange={(v) => onChange(v as RangeKey)}>
+        <SelectTrigger
+          className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+          size="sm"
+          aria-label="Select period">
+          <SelectValue placeholder="Last 30 days" />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl">
+          {RANGE_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value} className="rounded-lg">
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
 }
 
 export function DriverProfileTrendChart({ trips }: { trips: Trip[] }) {
-  const [range, setRange] = useState<RangeKey>("this-week");
+  const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState<RangeKey>("30d");
   const now = useMemo(() => new Date(), []);
-  const metrics = useMemo(() => getRangeData(trips, range, now), [trips, range, now]);
+  const metrics = useMemo(() => getRangeData(trips, timeRange, now), [trips, timeRange, now]);
+
+  useEffect(() => {
+    if (isMobile) setTimeRange("7d");
+  }, [isMobile]);
 
   const performancePositive = metrics.performanceChange >= 0;
+  const selectedOption = RANGE_OPTIONS.find((o) => o.value === timeRange) ?? RANGE_OPTIONS[1];
 
   return (
-    <Card>
+    <Card className="@container/card">
       <CardHeader>
         <CardTitle>Booking activity</CardTitle>
+        <CardDescription>
+          <span className="hidden @[540px]/card:block">
+            Total for the {metrics.descriptionLabel}
+          </span>
+          <span className="@[540px]/card:hidden">{selectedOption.shortLabel}</span>
+        </CardDescription>
         <CardAction>
-          <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
-            <SelectTrigger className="min-w-44 shrink-0">
-              <CalendarIcon className="text-muted-foreground size-4 shrink-0" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="this-week">This week</SelectItem>
-              <SelectItem value="last-week">Last week</SelectItem>
-              <SelectItem value="this-month">This month</SelectItem>
-            </SelectContent>
-          </Select>
+          <PeriodSelector value={timeRange} onChange={setTimeRange} />
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -191,9 +218,7 @@ export function DriverProfileTrendChart({ trips }: { trips: Trip[] }) {
                 {performancePositive ? "+" : ""}
                 {metrics.performanceChange.toFixed(1)}%
               </span>
-              <span className="text-muted-foreground ml-1">
-                {performanceComparisonLabel(range)}
-              </span>
+              <span className="text-muted-foreground ml-1">Compared to previous period</span>
             </p>
           </div>
         </div>
@@ -209,6 +234,8 @@ export function DriverProfileTrendChart({ trips }: { trips: Trip[] }) {
               tickLine={false}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               dy={10}
+              interval="preserveStartEnd"
+              minTickGap={32}
             />
             <YAxis
               axisLine={false}
