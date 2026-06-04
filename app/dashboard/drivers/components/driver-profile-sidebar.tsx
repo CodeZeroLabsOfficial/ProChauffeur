@@ -6,7 +6,6 @@ import { Link2Icon, Mail, MapPin, PhoneCall } from "lucide-react";
 import {
   chauffeurCategoryTitle,
   defaultDriverProfile,
-  type DriverProfile,
   type User
 } from "@/lib/models";
 import {
@@ -17,7 +16,6 @@ import {
 import { driverProfileCompleteness } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
@@ -51,11 +49,6 @@ export function DriverProfileSidebar({
   const profile = user.driverProfile ?? defaultDriverProfile();
   const displayName = user.profile.displayName.trim() || user.email || "Driver";
   const progressValue = driverProfileCompleteness(user, profile);
-  const qualifications = [
-    ...profile.qualifications,
-    ...profile.serviceSpecialties,
-    ...profile.vehicleOrServiceFocus
-  ].filter((item, index, arr) => item.trim() && arr.indexOf(item) === index);
 
   return (
     <div className="space-y-4">
@@ -137,25 +130,6 @@ export function DriverProfileSidebar({
         <CardContent className="flex items-center gap-4">
           <Progress value={progressValue} className="flex-1" />
           <div className="text-muted-foreground text-sm">%{progressValue}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Qualifications & specialties</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {qualifications.length ? (
-            <div className="flex flex-wrap gap-2">
-              {qualifications.map((item) => (
-                <Badge key={item} variant="outline">
-                  {item}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">No qualifications listed yet.</p>
-          )}
         </CardContent>
       </Card>
     </div>

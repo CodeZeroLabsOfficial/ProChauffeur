@@ -134,7 +134,7 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
           table={table}
           searchPlaceholder="Search bookings or customers…"
           searchColumnId="searchLabel"
-          inlineControls
+          nowrap
           filters={
             <ListFilterPopover
               label="Status"

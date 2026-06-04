@@ -37,9 +37,7 @@ export function driverProfileCompleteness(user: User, profile: DriverProfile): n
     Boolean(profile.bioStatement?.trim()),
     Boolean(profile.driversLicenseNumber?.trim()),
     Boolean(profile.driversLicenseExpiry),
-    Boolean(profile.operatorAccreditationNumber?.trim()),
-    profile.qualifications.length > 0,
-    profile.serviceSpecialties.length > 0
+    Boolean(profile.operatorAccreditationNumber?.trim())
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }

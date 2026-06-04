@@ -124,7 +124,7 @@ export function DriverDetailSheet({
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
-            <SheetTitle>Profile details</SheetTitle>
+            <SheetTitle>Driver profile</SheetTitle>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
                 <Link

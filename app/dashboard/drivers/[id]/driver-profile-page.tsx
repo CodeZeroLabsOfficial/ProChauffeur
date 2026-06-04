@@ -101,7 +101,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     );
   }
 
-  const displayName = user.profile.displayName.trim() || user.email || "Driver";
   const revenueLabel =
     metrics.totalRevenue >= 1000
       ? formatCurrency(metrics.totalRevenue).replace(/\.\d{2}$/, "")
@@ -111,17 +110,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     <>
       <div className="space-y-4">
         <div className="flex flex-row items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button variant="outline" size="icon" asChild>
-              <Link href="/dashboard/drivers" aria-label="Back to drivers">
-                <ChevronLeftIcon />
-              </Link>
-            </Button>
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight lg:text-2xl">{displayName}</h1>
-              <p className="text-muted-foreground text-sm">Chauffeur profile</p>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Driver profile</h1>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <PencilIcon />
             Edit
