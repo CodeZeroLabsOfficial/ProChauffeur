@@ -162,7 +162,10 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                 <DriverProfileFinancialsTab invoices={metrics.driverInvoices} />
               </TabsContent>
               <TabsContent value="compliance" className="mt-0">
-                <DriverProfileComplianceTab user={user} />
+                <DriverProfileComplianceTab
+                  user={user}
+                  onUserUpdated={() => void loadUser()}
+                />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
                 <DriverProfileOperationsTab user={user} vehicle={vehicle} />

@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import { PencilIcon } from "lucide-react";
+
+import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
 import { defaultDriverProfile, type User } from "@/lib/models";
 import { formatDate } from "@/lib/format";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -31,14 +36,30 @@ function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
   );
 }
 
-export function DriverProfileComplianceTab({ user }: { user: User }) {
+export function DriverProfileComplianceTab({
+  user,
+  onUserUpdated
+}: {
+  user: User;
+  onUserUpdated?: () => void;
+}) {
   const profile = user.driverProfile ?? defaultDriverProfile();
   const licenceWarn = expiryWarning(profile.driversLicenseExpiry);
   const accWarn = expiryWarning(profile.operatorAccreditationExpiry);
+  const [licenceEditOpen, setLicenceEditOpen] = useState(false);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
+      <Card className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="absolute top-4 right-4 z-10"
+          onClick={() => setLicenceEditOpen(true)}
+          aria-label="Edit driver licence">
+          <PencilIcon />
+        </Button>
         <CardHeader>
           <CardTitle>Driver licence</CardTitle>
         </CardHeader>
@@ -60,6 +81,13 @@ export function DriverProfileComplianceTab({ user }: { user: User }) {
           </div>
         </CardContent>
       </Card>
+
+      <DriverLicenceEditSheet
+        user={user}
+        open={licenceEditOpen}
+        onOpenChange={setLicenceEditOpen}
+        onSaved={onUserUpdated}
+      />
 
       <Card>
         <CardHeader>
