@@ -14,8 +14,6 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { fetchDriverLastSignIn } from "@/lib/services/firebase-service";
 import {
   chauffeurCategoryBadgeIcon,
-  dispatchBadgeIcon,
-  visibilityBadgeIcon,
   visibilityStatusLabel
 } from "@/lib/chauffeur-badge-icons";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
@@ -119,8 +117,9 @@ function DriverOverviewFields({
     <div className="space-y-6">
       <div className="space-y-4">
         <SectionHeading>Details</SectionHeading>
-        <DetailField label="Name" value={displayName} />
         <div className="grid grid-cols-2 gap-4">
+          <DetailField label="Name" value={displayName} />
+          <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
           <DetailField label="Email" value={user.email} href={`mailto:${user.email}`} />
           <DetailField
             label="Phone"
@@ -129,26 +128,21 @@ function DriverOverviewFields({
           />
         </div>
         <DetailField label="Address" value={address} />
-        <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
       </div>
 
       <div className="space-y-4">
         <SectionHeading>Status</SectionHeading>
-        <DetailField
-          label="Category"
-          value={chauffeurCategoryTitle[profile.chauffeurCategory]}
-        />
-        <DetailField
-          label="Dispatch"
-          value={
-            profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"
-          }
-        />
-        <DetailField
-          label="Visibility"
-          value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
-        />
         <div className="grid grid-cols-2 gap-4">
+          <DetailField
+            label="Dispatch"
+            value={
+              profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"
+            }
+          />
+          <DetailField
+            label="Visibility"
+            value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
+          />
           <DetailField label="Join date" value={formatDate(user.createdAt)} />
           <DetailField label="Last activity" value={lastActivityLabel} />
         </div>
@@ -279,12 +273,6 @@ export function DriverDetailSheet({
               <div className="flex flex-wrap items-center gap-2">
                 <DetailSheetIconBadge icon={chauffeurCategoryBadgeIcon[profile.chauffeurCategory]}>
                   {chauffeurCategoryTitle[profile.chauffeurCategory]}
-                </DetailSheetIconBadge>
-                <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
-                  {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
-                </DetailSheetIconBadge>
-                <DetailSheetIconBadge icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
-                  {visibilityStatusLabel(profile.visibleOnCustomerApp)}
                 </DetailSheetIconBadge>
               </div>
             </div>
