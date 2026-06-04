@@ -37,12 +37,14 @@ export function DriverEditSheet({
   user,
   candidates,
   open,
-  onOpenChange
+  onOpenChange,
+  nested = false
 }: {
   user: User | null;
   candidates: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  nested?: boolean;
 }) {
   const isNew = !user;
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -113,9 +115,9 @@ export function DriverEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isNew ? "Add driver" : activeUser?.profile.displayName || "Driver"}</SheetTitle>
+          <SheetTitle>{isNew ? "Add driver" : "Edit driver"}</SheetTitle>
           <SheetDescription>
             {isNew
               ? "Promote an existing account to chauffeur and set their roster profile."

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -26,6 +26,7 @@ import { generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
+import { DriverDetailSheet } from "@/app/dashboard/drivers/driver-detail-sheet";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,8 @@ export function DriversDataTable({
   onCreateOpenChange?: (open: boolean) => void;
 }) {
   const { users, loading } = useUsers();
-  const [selected, setSelected] = useState<User | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -224,21 +226,45 @@ export function DriversDataTable({
     }
   });
 
+  const selectedUser = useMemo(
+    () => (selectedId ? users.find((u) => u.id === selectedId) ?? null : null),
+    [selectedId, users]
+  );
+
+  useEffect(() => {
+    if (createOpen) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+  }, [createOpen]);
+
   function openDriver(u: User) {
     onCreateOpenChange?.(false);
-    setSelected(u);
-    setEditOpen(true);
+    setSelectedId(u.id);
+    setEditOpen(false);
+    setDetailOpen(true);
   }
 
-  const sheetOpen = createOpen || editOpen;
-  const user = createOpen && !editOpen ? null : selected;
-
-  function handleSheetOpenChange(next: boolean) {
+  function handleDetailOpenChange(next: boolean) {
     if (!next) {
+      setDetailOpen(false);
       setEditOpen(false);
-      setSelected(null);
-      onCreateOpenChange?.(false);
+      setSelectedId(null);
     }
+  }
+
+  function handleEditOpenChange(next: boolean) {
+    if (!next) setEditOpen(false);
+  }
+
+  function handleCreateOpenChange(next: boolean) {
+    if (next) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+    onCreateOpenChange?.(next);
   }
 
   return (
@@ -339,11 +365,22 @@ export function DriversDataTable({
         <ListTablePagination table={table} />
       </div>
 
+      <DriverDetailSheet
+        user={selectedUser}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+        onEditClick={() => setEditOpen(true)}
+      />
+
       <DriverEditSheet
-        user={user}
+        user={createOpen ? null : selectedUser}
         candidates={candidates}
-        open={sheetOpen}
-        onOpenChange={handleSheetOpenChange}
+        open={createOpen || editOpen}
+        onOpenChange={(next) => {
+          if (createOpen) handleCreateOpenChange(next);
+          else handleEditOpenChange(next);
+        }}
+        nested={detailOpen && editOpen}
       />
     </>
   );
