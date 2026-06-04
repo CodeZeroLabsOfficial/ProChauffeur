@@ -10,7 +10,7 @@ import {
   overviewPeriodOption,
   type DriverOverviewPeriod
 } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export function DriverProfileBookingsCard({
@@ -34,15 +34,15 @@ export function DriverProfileBookingsCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="grid-cols-[1fr_auto]">
         <CardTitle>Bookings</CardTitle>
-        <CardDescription>Trips in the {periodLabel}</CardDescription>
-        <CardAction className="flex flex-col items-end gap-1 text-end">
-          <span className="text-2xl font-semibold lg:text-3xl">
-            {currentData.total.toLocaleString()}
-          </span>
-          <span className="text-muted-foreground text-sm">Total bookings</span>
-        </CardAction>
+        <CardDescription>Trips {periodLabel}</CardDescription>
+        <span className="col-start-2 row-start-1 justify-self-end text-2xl font-semibold lg:text-3xl">
+          {currentData.total.toLocaleString()}
+        </span>
+        <span className="col-start-2 row-start-2 justify-self-end self-center text-muted-foreground text-sm">
+          Total bookings
+        </span>
       </CardHeader>
       <CardContent className="space-y-4">
         <Separator />

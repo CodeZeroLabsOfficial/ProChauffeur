@@ -11,7 +11,7 @@ import {
   overviewRevenueMetrics,
   type DriverOverviewPeriod
 } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -67,30 +67,28 @@ export function DriverProfileRevenueStat({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="grid-cols-[1fr_auto]">
         <CardTitle>Revenue Stat</CardTitle>
         <CardDescription>
-          Paid revenue for the {selectedOption.label.toLowerCase()}
+          Revenue {selectedOption.label.toLowerCase()}
         </CardDescription>
-        <CardAction className="flex flex-col items-end gap-1 text-end">
-          <span className="text-2xl font-semibold tracking-tight lg:text-3xl">
-            {formatCurrency(total)}
+        <span className="col-start-2 row-start-1 justify-self-end text-2xl font-semibold tracking-tight lg:text-3xl">
+          {formatCurrency(total)}
+        </span>
+        <div className="col-start-2 row-start-2 flex flex-wrap items-center justify-end gap-1 self-center text-sm">
+          {percentageChange >= 0 ? (
+            <TrendingUp className="size-4 text-green-600" />
+          ) : (
+            <TrendingDown className="size-4 text-red-600" />
+          )}
+          <span
+            className={
+              percentageChange >= 0 ? "font-medium text-green-600" : "font-medium text-red-600"
+            }>
+            {Math.abs(percentageChange).toFixed(0)}%
           </span>
-          <div className="flex flex-wrap items-center justify-end gap-1 text-sm">
-            {percentageChange >= 0 ? (
-              <TrendingUp className="size-4 text-green-600" />
-            ) : (
-              <TrendingDown className="size-4 text-red-600" />
-            )}
-            <span
-              className={
-                percentageChange >= 0 ? "font-medium text-green-600" : "font-medium text-red-600"
-              }>
-              {Math.abs(percentageChange).toFixed(0)}%
-            </span>
-            <span className="text-muted-foreground">from previous period</span>
-          </div>
-        </CardAction>
+          <span className="text-muted-foreground">from previous period</span>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[240px] w-full">
