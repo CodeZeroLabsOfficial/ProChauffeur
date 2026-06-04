@@ -9,6 +9,7 @@ import {
   type Vehicle
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { vehicleMakeLabel } from "@/lib/vehicle-makes";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -101,12 +102,13 @@ export function VehicleDetailSheet({
   onOpenChange: (open: boolean) => void;
   onEditClick?: () => void;
 }) {
-  if (!vehicle) return null;
+  const displayVehicle = useSheetDisplayItem(vehicle, open);
+  if (!displayVehicle) return null;
 
-  const name = vehicleDisplayName(vehicle) || "Vehicle";
-  const assigned = Boolean(effectiveChauffeurUserId(vehicle));
-  const tierLabel = vehicle.pricingVehicleType
-    ? vehicleTypeTitle[vehicle.pricingVehicleType]
+  const name = vehicleDisplayName(displayVehicle) || "Vehicle";
+  const assigned = Boolean(effectiveChauffeurUserId(displayVehicle));
+  const tierLabel = displayVehicle.pricingVehicleType
+    ? vehicleTypeTitle[displayVehicle.pricingVehicleType]
     : "—";
 
   return (
@@ -126,7 +128,7 @@ export function VehicleDetailSheet({
 
         <div className="space-y-4 px-4">
           <div className="inline-flex items-center gap-4 align-top">
-            <VehicleMakeAvatar make={vehicle.make} />
+            <VehicleMakeAvatar make={displayVehicle.make} />
             <div className="space-y-2">
               <p className="text-lg font-semibold">{name}</p>
               <div className="flex flex-wrap items-center gap-2">
@@ -162,7 +164,7 @@ export function VehicleDetailSheet({
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
-              <VehicleOverviewFields vehicle={vehicle} tierLabel={tierLabel} />
+              <VehicleOverviewFields vehicle={displayVehicle} tierLabel={tierLabel} />
             </TabsContent>
             <TabsContent value="features" className="mt-0">
               <VehicleTabPlaceholder label="Features" />

@@ -8,6 +8,7 @@ import {
   type User
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -57,10 +58,11 @@ export function DriverDetailSheet({
   onOpenChange: (open: boolean) => void;
   onEditClick?: () => void;
 }) {
-  if (!user) return null;
+  const displayUser = useSheetDisplayItem(user, open);
+  if (!displayUser) return null;
 
-  const profile = user.driverProfile ?? defaultDriverProfile();
-  const displayName = user.profile.displayName.trim() || "Driver";
+  const profile = displayUser.driverProfile ?? defaultDriverProfile();
+  const displayName = displayUser.profile.displayName.trim() || "Driver";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -89,17 +91,17 @@ export function DriverDetailSheet({
         <div className="space-y-6 p-4">
           <div className="flex items-center gap-4">
             <Avatar className="size-16">
-              <AvatarImage src={user.profile.photoURL ?? undefined} />
-              <AvatarFallback>{generateAvatarFallback(displayName || user.email)}</AvatarFallback>
+              <AvatarImage src={displayUser.profile.photoURL ?? undefined} />
+              <AvatarFallback>{generateAvatarFallback(displayName || displayUser.email)}</AvatarFallback>
             </Avatar>
             <div className="space-y-1">
               <p className="font-medium">{displayName}</p>
-              <p className="text-muted-foreground text-sm">{user.email}</p>
-              {user.profile.phoneNumber ? (
+              <p className="text-muted-foreground text-sm">{displayUser.email}</p>
+              {displayUser.profile.phoneNumber ? (
                 <a
-                  href={`tel:${user.profile.phoneNumber}`}
+                  href={`tel:${displayUser.profile.phoneNumber}`}
                   className="text-muted-foreground text-sm hover:underline">
-                  {user.profile.phoneNumber}
+                  {displayUser.profile.phoneNumber}
                 </a>
               ) : null}
             </div>
@@ -128,11 +130,11 @@ export function DriverDetailSheet({
         <Separator />
 
         <div className="grid grid-cols-2 gap-4 p-4">
-          <DetailField label="Email" value={user.email} href={`mailto:${user.email}`} />
+          <DetailField label="Email" value={displayUser.email} href={`mailto:${displayUser.email}`} />
           <DetailField
             label="Phone"
-            value={user.profile.phoneNumber}
-            href={user.profile.phoneNumber ? `tel:${user.profile.phoneNumber}` : undefined}
+            value={displayUser.profile.phoneNumber}
+            href={displayUser.profile.phoneNumber ? `tel:${displayUser.profile.phoneNumber}` : undefined}
           />
         </div>
       </SheetContent>

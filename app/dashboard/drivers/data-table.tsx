@@ -26,6 +26,7 @@ import { generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
+import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { DriverDetailSheet } from "@/app/dashboard/drivers/driver-detail-sheet";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -247,10 +248,10 @@ export function DriversDataTable({
   }
 
   function handleDetailOpenChange(next: boolean) {
+    setDetailOpen(next);
     if (!next) {
-      setDetailOpen(false);
       setEditOpen(false);
-      setSelectedId(null);
+      window.setTimeout(() => setSelectedId(null), SHEET_EXIT_ANIMATION_MS);
     }
   }
 

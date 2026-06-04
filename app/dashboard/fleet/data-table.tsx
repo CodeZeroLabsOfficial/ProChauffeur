@@ -27,6 +27,7 @@ import { formatDate } from "@/lib/format";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
+import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { VehicleDetailSheet } from "@/app/dashboard/fleet/vehicle-detail-sheet";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -249,10 +250,10 @@ export function FleetDataTable({
   }
 
   function handleDetailOpenChange(next: boolean) {
+    setDetailOpen(next);
     if (!next) {
-      setDetailOpen(false);
       setEditOpen(false);
-      setSelectedId(null);
+      window.setTimeout(() => setSelectedId(null), SHEET_EXIT_ANIMATION_MS);
     }
   }
 
