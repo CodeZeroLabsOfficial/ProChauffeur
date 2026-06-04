@@ -217,7 +217,7 @@ export function VehicleEditSheet({
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className={cn(nested && "z-[110]")}>
                     {VEHICLE_TYPES.map((t) => (
                       <SelectItem key={t} value={t}>
                         {vehicleTypeTitle[t]}
@@ -237,11 +237,11 @@ export function VehicleEditSheet({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Make</Label>
-                <Select value={make} onValueChange={setMake} required>
+                <Select value={make || undefined} onValueChange={setMake}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className={cn(nested && "z-[110]")}>
                     {LUXURY_VEHICLE_MAKES.map((entry) => (
                       <SelectItem key={entry.id} value={entry.label}>
                         {entry.label}

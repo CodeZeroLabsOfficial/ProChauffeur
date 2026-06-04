@@ -108,7 +108,10 @@ export function VehicleDetailSheet({
               <DetailField label="Year" value={vehicle.manufactureYear} />
               <DetailField label="Colour" value={vehicle.color} />
             </div>
-            <DetailField label="Engine type" value={vehicle.engineTypeDescription} />
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label="Engine type" value={vehicle.engineTypeDescription} />
+              <DetailField label="Transmission" value={vehicle.gearTypeDescription} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <DetailField label="Rego state" value={vehicle.registrationJurisdictionCode} />
               <DetailField label="License plate" value={vehicle.licensePlate} />
