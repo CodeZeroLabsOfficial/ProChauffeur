@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -27,6 +27,7 @@ import { formatDate } from "@/lib/format";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
+import { VehicleDetailSheet } from "@/app/dashboard/fleet/vehicle-detail-sheet";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,7 +60,8 @@ export function FleetDataTable({
 }) {
   const { vehicles, loading } = useVehicles();
   const { users } = useUsers();
-  const [selected, setSelected] = useState<Vehicle | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -215,21 +217,51 @@ export function FleetDataTable({
     }
   });
 
+  const selectedVehicle = useMemo(
+    () => (selectedId ? vehicles.find((v) => v.driverID === selectedId) ?? null : null),
+    [selectedId, vehicles]
+  );
+
+  const selectedChauffeurName = useMemo(() => {
+    if (!selectedVehicle) return "Unassigned";
+    const chauffeur = effectiveChauffeurUserId(selectedVehicle);
+    return chauffeur ? (driverNameById.get(chauffeur) ?? "Unknown") : "Unassigned";
+  }, [selectedVehicle, driverNameById]);
+
+  useEffect(() => {
+    if (createOpen) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+  }, [createOpen]);
+
   function openVehicle(v: Vehicle) {
     onCreateOpenChange?.(false);
-    setSelected(v);
-    setEditOpen(true);
+    setSelectedId(v.driverID);
+    setEditOpen(false);
+    setDetailOpen(true);
   }
 
-  const sheetOpen = createOpen || editOpen;
-  const vehicle = createOpen && !editOpen ? null : selected;
-
-  function handleSheetOpenChange(next: boolean) {
+  function handleDetailOpenChange(next: boolean) {
     if (!next) {
+      setDetailOpen(false);
       setEditOpen(false);
-      setSelected(null);
-      onCreateOpenChange?.(false);
+      setSelectedId(null);
     }
+  }
+
+  function handleEditOpenChange(next: boolean) {
+    if (!next) setEditOpen(false);
+  }
+
+  function handleCreateOpenChange(next: boolean) {
+    if (next) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+    onCreateOpenChange?.(next);
   }
 
   function handleTierFilter(values: string[]) {
@@ -322,11 +354,23 @@ export function FleetDataTable({
         <ListTablePagination table={table} />
       </div>
 
+      <VehicleDetailSheet
+        vehicle={selectedVehicle}
+        chauffeurName={selectedChauffeurName}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+        onEditClick={() => setEditOpen(true)}
+      />
+
       <VehicleEditSheet
-        vehicle={vehicle}
+        vehicle={createOpen ? null : selectedVehicle}
         drivers={drivers}
-        open={sheetOpen}
-        onOpenChange={handleSheetOpenChange}
+        open={createOpen || editOpen}
+        onOpenChange={(next) => {
+          if (createOpen) handleCreateOpenChange(next);
+          else handleEditOpenChange(next);
+        }}
+        nested={detailOpen && editOpen}
       />
     </>
   );

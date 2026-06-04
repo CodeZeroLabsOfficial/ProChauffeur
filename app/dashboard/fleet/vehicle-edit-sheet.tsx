@@ -59,12 +59,14 @@ export function VehicleEditSheet({
   vehicle,
   drivers,
   open,
-  onOpenChange
+  onOpenChange,
+  nested = false
 }: {
   vehicle: Vehicle | null;
   drivers: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  nested?: boolean;
 }) {
   const isNew = !vehicle;
   const [driverID, setDriverID] = useState(vehicle?.driverID ?? "");
@@ -123,7 +125,7 @@ export function VehicleEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add vehicle" : "Edit vehicle"}</SheetTitle>
           <SheetDescription>
