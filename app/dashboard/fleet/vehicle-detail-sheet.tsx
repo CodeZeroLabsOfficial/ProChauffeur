@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit } from "lucide-react";
+import { CarFrontIcon, Edit } from "lucide-react";
 
 import {
   effectiveChauffeurUserId,
@@ -9,6 +9,7 @@ import {
   type Vehicle
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -62,7 +63,7 @@ export function VehicleDetailSheet({
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <div className="flex items-start justify-between pe-6">
-            <SheetTitle>{name}</SheetTitle>
+            <SheetTitle>Vehicle details</SheetTitle>
             {onEditClick && (
               <Button variant="outline" onClick={onEditClick}>
                 <Edit />
@@ -70,17 +71,30 @@ export function VehicleDetailSheet({
               </Button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {vehicle.pricingVehicleType ? (
-              <Badge variant="outline">{vehicleTypeTitle[vehicle.pricingVehicleType]}</Badge>
-            ) : null}
-            <Badge variant={assigned ? "default" : "secondary"}>
-              {assigned ? "Assigned" : "Unassigned"}
-            </Badge>
-          </div>
         </SheetHeader>
 
-        <div className="space-y-6 p-4">
+        <div className="space-y-6 px-4">
+          <div className="inline-flex items-center gap-4 align-top">
+            <Avatar className="h-20 w-20">
+              <AvatarFallback>
+                <CarFrontIcon className="size-8 opacity-45" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold">{name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {vehicle.pricingVehicleType ? (
+                  <Badge variant="outline">{vehicleTypeTitle[vehicle.pricingVehicleType]}</Badge>
+                ) : null}
+                <Badge variant={assigned ? "default" : "secondary"}>
+                  {assigned ? "Assigned" : "Unassigned"}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="grid grid-cols-2 gap-4">
             <DetailField label="Make" value={vehicle.make} />
             <DetailField label="Model" value={vehicle.model} />

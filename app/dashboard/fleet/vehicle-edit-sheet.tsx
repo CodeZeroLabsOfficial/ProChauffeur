@@ -1,6 +1,8 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,10 +14,12 @@ import {
   type Vehicle,
   type VehicleType
 } from "@/lib/models";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -262,15 +266,36 @@ export function VehicleEditSheet({
                   defaultValue={vehicle?.registrationJurisdictionCode ?? ""}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="flex flex-col space-y-2">
                 <Label>Rego expiry</Label>
-                <div className="rounded-lg border">
-                  <Calendar
-                    mode="single"
-                    selected={registrationExpiry}
-                    onSelect={setRegistrationExpiry}
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !registrationExpiry && "text-muted-foreground"
+                      )}>
+                      {registrationExpiry ? format(registrationExpiry, "PPP") : <span>Pick a date</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0"
+                    align="start">
+                    <Calendar
+                      mode="single"
+                      captionLayout="dropdown"
+                      fromYear={new Date().getFullYear() - 10}
+                      toYear={new Date().getFullYear() + 20}
+                      selected={registrationExpiry}
+                      onSelect={setRegistrationExpiry}
+                      defaultMonth={registrationExpiry}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="space-y-2">
