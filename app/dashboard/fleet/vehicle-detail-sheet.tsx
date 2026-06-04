@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit } from "lucide-react";
+import { Edit, Car, Luggage, Users } from "lucide-react";
 
 import {
   effectiveChauffeurUserId,
@@ -20,6 +20,26 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+
+function VehicleFeatureBlock({
+  value,
+  label,
+  icon: Icon
+}: {
+  value: string | number;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="space-y-1 rounded-md border p-3 text-center">
+      <p className="text-2xl font-semibold">{value}</p>
+      <p className="text-muted-foreground inline-flex items-center justify-center gap-1">
+        <Icon className="size-4" />
+        {label}
+      </p>
+    </div>
+  );
+}
 
 function DetailField({
   label,
@@ -58,6 +78,10 @@ export function VehicleDetailSheet({
 
   const name = vehicleDisplayName(vehicle) || "Vehicle";
   const assigned = Boolean(effectiveChauffeurUserId(vehicle));
+  const tierLabel = vehicle.pricingVehicleType
+    ? vehicleTypeTitle[vehicle.pricingVehicleType]
+    : "—";
+  const totalBags = vehicle.fleetSmallLuggageCount + vehicle.fleetLargeLuggageCount;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -80,9 +104,6 @@ export function VehicleDetailSheet({
             <div className="space-y-2">
               <p className="text-lg font-semibold">{name}</p>
               <div className="flex flex-wrap items-center gap-2">
-                {vehicle.pricingVehicleType ? (
-                  <Badge variant="outline">{vehicleTypeTitle[vehicle.pricingVehicleType]}</Badge>
-                ) : null}
                 <Badge variant={assigned ? "default" : "secondary"}>
                   {assigned ? "Assigned" : "Unassigned"}
                 </Badge>
@@ -92,6 +113,16 @@ export function VehicleDetailSheet({
 
           <Separator />
 
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <VehicleFeatureBlock value={tierLabel} label="tier" icon={Car} />
+            <VehicleFeatureBlock
+              value={vehicle.passengerCapacity}
+              label="capacity"
+              icon={Users}
+            />
+            <VehicleFeatureBlock value={totalBags} label="bags" icon={Luggage} />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <DetailField label="Make" value={vehicleMakeLabel(vehicle.make)} />
             <DetailField label="Model" value={vehicle.model} />
@@ -100,25 +131,13 @@ export function VehicleDetailSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Capacity" value={vehicle.passengerCapacity} />
             <DetailField label="Year" value={vehicle.manufactureYear} />
             <DetailField label="Rego state" value={vehicle.registrationJurisdictionCode} />
             <DetailField label="Rego expiry" value={formatDate(vehicle.registrationExpiry)} />
+            <DetailField label="Luggage" value={vehicle.luggageDescription.trim() || "—"} />
           </div>
 
           <DetailField label="Assigned chauffeur" value={chauffeurName} />
-
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Small bags" value={vehicle.fleetSmallLuggageCount} />
-            <DetailField label="Large bags" value={vehicle.fleetLargeLuggageCount} />
-          </div>
-
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Luggage</h4>
-            <p className="text-muted-foreground text-sm">
-              {vehicle.luggageDescription.trim() || "No luggage capacity set."}
-            </p>
-          </div>
         </div>
 
         {(vehicle.wifiServiceDescription ||
