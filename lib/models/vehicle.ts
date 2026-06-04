@@ -31,6 +31,10 @@ export interface Vehicle {
   registrationJurisdictionCode?: string | null;
   registrationExpiry?: Date | null;
   pricingVehicleType?: VehicleType | null;
+  /** VIN or internal fleet vehicle identifier. */
+  vehicleIdentificationNumber?: string | null;
+  /** e.g. Petrol, Diesel, Electric, Hybrid. */
+  engineTypeDescription?: string | null;
   specificationChips: VehicleSpecificationChip[];
   carFeatureRows: VehicleCarFeatureRow[];
   luggageDescription: string;

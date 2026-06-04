@@ -100,6 +100,8 @@ export function mapVehicle(d: DocumentData): Vehicle {
     registrationJurisdictionCode: d.registrationJurisdictionCode ?? null,
     registrationExpiry: toDate(d.registrationExpiry),
     pricingVehicleType: d.pricingVehicleType ?? null,
+    vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
+    engineTypeDescription: d.engineTypeDescription ?? null,
     specificationChips: d.specificationChips ?? [],
     carFeatureRows: d.carFeatureRows ?? [],
     luggageDescription: d.luggageDescription ?? "",

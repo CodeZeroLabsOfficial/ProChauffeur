@@ -49,6 +49,8 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   registrationJurisdictionCode: null,
   registrationExpiry: null,
   pricingVehicleType: "sedan",
+  vehicleIdentificationNumber: null,
+  engineTypeDescription: null,
   specificationChips: [],
   carFeatureRows: [],
   luggageDescription: luggageSpecificationLabel(0, 2),
@@ -286,7 +288,7 @@ export function VehicleEditSheet({
               </div>
               <div className="flex flex-col space-y-2">
                 <Label>Rego expiry</Label>
-                <Popover>
+                <Popover modal>
                   <PopoverTrigger asChild>
                     <Button
                       type="button"
@@ -300,7 +302,10 @@ export function VehicleEditSheet({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0"
+                    className={cn(
+                      "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                      nested && "z-[110]"
+                    )}
                     align="start">
                     <Calendar
                       mode="single"
