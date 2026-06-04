@@ -120,8 +120,8 @@ export function DriverProfileTrendChart({ trips }: { trips: Trip[] }) {
         <CardTitle>Booking activity</CardTitle>
         <CardAction>
           <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
-            <SelectTrigger className="w-[140px]">
-              <CalendarIcon className="text-muted-foreground size-4" />
+            <SelectTrigger className="min-w-44 shrink-0">
+              <CalendarIcon className="text-muted-foreground size-4 shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
