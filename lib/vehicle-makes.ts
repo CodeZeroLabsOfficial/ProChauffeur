@@ -73,10 +73,18 @@ export function vehicleMakeSelectValue(make: string | null | undefined): string 
   return MAKE_LABEL_BY_ID.other;
 }
 
+/** File extension per make logo (defaults to svg). */
+const MAKE_LOGO_EXTENSION: Partial<Record<VehicleMakeId, "svg" | "png">> = {
+  audi: "png",
+  bmw: "png",
+  "mercedes-benz": "png"
+};
+
 /** Public URL for a make avatar logo, or undefined for unknown / Other. */
 export function vehicleMakeLogoUrl(make: string | null | undefined): string | undefined {
   const id = resolveVehicleMakeId(make);
   if (!id || id === "other") return undefined;
-  // Source SVGs: assets/vehicles/makes/ — served via public/assets/vehicles/makes/
-  return `/assets/vehicles/makes/${id}.svg`;
+  const ext = MAKE_LOGO_EXTENSION[id] ?? "svg";
+  // Source files: assets/vehicles/makes/ — served via public/assets/vehicles/makes/
+  return `/assets/vehicles/makes/${id}.${ext}`;
 }
