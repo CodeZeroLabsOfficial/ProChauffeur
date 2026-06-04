@@ -122,7 +122,7 @@ export function VehicleDetailSheet({
               <DetailField label="Service class" value={vehicle.serviceClassDescription} />
               <DetailField label="Interior" value={vehicle.interiorDescription} />
               <DetailField label="Climate control" value={vehicle.climateControlDescription} />
-              <DetailField label="Gear type" value={vehicle.gearTypeDescription} />
+              <DetailField label="Transmission" value={vehicle.gearTypeDescription} />
             </div>
           </>
         )}

@@ -74,6 +74,11 @@ export function FleetDataTable({
 
   const drivers = useMemo(() => users.filter((u) => u.role === "driver"), [users]);
 
+  const defaultCreateDriverId = useMemo(() => {
+    const vehicleDriverIds = new Set(vehicles.map((v) => v.driverID));
+    return drivers.find((d) => !vehicleDriverIds.has(d.id))?.id;
+  }, [drivers, vehicles]);
+
   const driverNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const u of users) map.set(u.id, u.profile.displayName || u.email);
@@ -364,7 +369,7 @@ export function FleetDataTable({
 
       <VehicleEditSheet
         vehicle={createOpen ? null : selectedVehicle}
-        drivers={drivers}
+        defaultCreateDriverId={defaultCreateDriverId}
         open={createOpen || editOpen}
         onOpenChange={(next) => {
           if (createOpen) handleCreateOpenChange(next);
