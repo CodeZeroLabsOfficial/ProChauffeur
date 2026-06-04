@@ -13,6 +13,7 @@ import {
   type VehicleType
 } from "@/lib/models";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -54,6 +55,9 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   climateControlDescription: "",
   gearTypeDescription: ""
 });
+
+const MIN_MANUFACTURE_YEAR = 1980;
+const maxManufactureYear = new Date().getFullYear() + 1;
 
 function NumberStepper({
   label,
@@ -117,9 +121,15 @@ export function VehicleEditSheet({
 }) {
   const isNew = !vehicle;
   const [tier, setTier] = useState<VehicleType>(vehicle?.pricingVehicleType ?? "sedan");
+  const [manufactureYear, setManufactureYear] = useState(
+    vehicle?.manufactureYear ?? new Date().getFullYear()
+  );
   const [passengerCapacity, setPassengerCapacity] = useState(vehicle?.passengerCapacity ?? 4);
   const [smallBags, setSmallBags] = useState(vehicle?.fleetSmallLuggageCount ?? 0);
   const [largeBags, setLargeBags] = useState(vehicle?.fleetLargeLuggageCount ?? 2);
+  const [registrationExpiry, setRegistrationExpiry] = useState<Date | undefined>(
+    vehicle?.registrationExpiry ?? undefined
+  );
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
@@ -127,9 +137,11 @@ export function VehicleEditSheet({
   if (currentKey !== seededId) {
     setSeededId(currentKey);
     setTier(vehicle?.pricingVehicleType ?? "sedan");
+    setManufactureYear(vehicle?.manufactureYear ?? new Date().getFullYear());
     setPassengerCapacity(vehicle?.passengerCapacity ?? 4);
     setSmallBags(vehicle?.fleetSmallLuggageCount ?? 0);
     setLargeBags(vehicle?.fleetLargeLuggageCount ?? 2);
+    setRegistrationExpiry(vehicle?.registrationExpiry ?? undefined);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -153,9 +165,9 @@ export function VehicleEditSheet({
       color: get("color"),
       licensePlate: get("licensePlate"),
       passengerCapacity,
-      manufactureYear: get("manufactureYear") ? Number(get("manufactureYear")) : null,
+      manufactureYear,
       registrationJurisdictionCode: get("registrationJurisdictionCode") || null,
-      registrationExpiry: get("registrationExpiry") ? new Date(get("registrationExpiry")) : null,
+      registrationExpiry: registrationExpiry ?? null,
       pricingVehicleType: tier,
       gearTypeDescription: get("gearTypeDescription"),
       fleetSmallLuggageCount: smallBags,
@@ -181,6 +193,7 @@ export function VehicleEditSheet({
         <SheetHeader>
           <SheetTitle>{isNew ? "Add vehicle" : "Edit vehicle"}</SheetTitle>
         </SheetHeader>
+        <Separator />
         <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
           <div className="space-y-4">
             <SectionHeading>Vehicle details</SectionHeading>
@@ -188,7 +201,7 @@ export function VehicleEditSheet({
               <div className="space-y-2">
                 <Label>Vehicle category</Label>
                 <Select value={tier} onValueChange={(v) => setTier(v as VehicleType)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -200,15 +213,13 @@ export function VehicleEditSheet({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="manufactureYear">Year</Label>
-                <Input
-                  id="manufactureYear"
-                  name="manufactureYear"
-                  type="number"
-                  defaultValue={vehicle?.manufactureYear ?? ""}
-                />
-              </div>
+              <NumberStepper
+                label="Year"
+                value={manufactureYear}
+                onChange={setManufactureYear}
+                min={MIN_MANUFACTURE_YEAR}
+                max={maxManufactureYear}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -252,17 +263,14 @@ export function VehicleEditSheet({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="registrationExpiry">Rego expiry</Label>
-                <Input
-                  id="registrationExpiry"
-                  name="registrationExpiry"
-                  type="date"
-                  defaultValue={
-                    vehicle?.registrationExpiry
-                      ? vehicle.registrationExpiry.toISOString().slice(0, 10)
-                      : ""
-                  }
-                />
+                <Label>Rego expiry</Label>
+                <div className="rounded-lg border">
+                  <Calendar
+                    mode="single"
+                    selected={registrationExpiry}
+                    onSelect={setRegistrationExpiry}
+                  />
+                </div>
               </div>
             </div>
             <div className="space-y-2">
