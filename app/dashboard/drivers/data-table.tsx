@@ -106,17 +106,17 @@ export function DriversDataTable({
       users
         .filter((u) => u.role === "driver")
         .map((u) => {
-          const dp = u.driverProfile;
+          const profile = u.driverProfile ?? defaultDriverProfile();
           return {
             ...u,
             searchLabel: [u.profile.displayName, u.email, u.profile.phoneNumber]
               .filter(Boolean)
               .join(" "),
-            category: dp ? chauffeurCategoryTitle[dp.chauffeurCategory] : "—",
-            dispatchStatus: (dp?.acceptsDispatchAssignments ? "accepting" : "paused") as
+            category: chauffeurCategoryTitle[profile.chauffeurCategory],
+            dispatchStatus: (profile.acceptsDispatchAssignments ? "accepting" : "paused") as
               | "accepting"
               | "paused",
-            visibilityStatus: (dp?.visibleOnCustomerApp ? "active" : "inactive") as
+            visibilityStatus: (profile.visibleOnCustomerApp ? "active" : "inactive") as
               | "active"
               | "inactive"
           };
@@ -267,8 +267,8 @@ export function DriversDataTable({
         accessorKey: "dispatchStatus",
         header: "Dispatch",
         cell: ({ row }) => {
-          const status = row.getValue("dispatchStatus") as DriverRow["dispatchStatus"];
-          return <DriverDispatchListBadge accepting={status === "accepting"} />;
+          const profile = row.original.driverProfile ?? defaultDriverProfile();
+          return <DriverDispatchListBadge accepting={profile.acceptsDispatchAssignments} />;
         },
         filterFn: multiSelectFilter
       },
@@ -277,8 +277,8 @@ export function DriversDataTable({
         accessorKey: "visibilityStatus",
         header: "Visibility",
         cell: ({ row }) => {
-          const active = row.getValue("visibilityStatus") === "active";
-          return <DriverVisibilityListBadge active={active} />;
+          const profile = row.original.driverProfile ?? defaultDriverProfile();
+          return <DriverVisibilityListBadge active={profile.visibleOnCustomerApp} />;
         },
         filterFn: multiSelectFilter
       },
