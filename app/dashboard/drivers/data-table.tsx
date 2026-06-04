@@ -141,11 +141,8 @@ export function DriversDataTable({
                 )}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <div className="font-medium">
-                {row.original.profile.displayName || "Driver"}
-              </div>
-              <div className="text-muted-foreground text-xs">{row.original.email}</div>
+            <div className="font-medium">
+              {row.original.profile.displayName || "Driver"}
             </div>
           </div>
         ),
