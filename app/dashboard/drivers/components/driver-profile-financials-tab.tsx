@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
+import { ReceiptIcon } from "lucide-react";
 
 import { invoiceStatusTitle, type Invoice, type InvoiceStatus } from "@/lib/models";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { paidRevenueForInvoices } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -101,16 +108,18 @@ export function DriverProfileFinancialsTab({ invoices }: { invoices: Invoice[] }
               </TableBody>
             </Table>
           ) : (
-            <p className="text-muted-foreground px-6 py-8 text-center text-sm">
-              No invoices linked to this chauffeur&apos;s trips yet.
-            </p>
+            <Empty className="border-0 py-12 md:py-16">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ReceiptIcon />
+                </EmptyMedia>
+                <EmptyTitle className="text-xl">No Financials Yet</EmptyTitle>
+                <EmptyDescription>
+                  This driver hasn&apos;t generated any invoices or completed trips.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
-          <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-            Revenue is attributed via invoices that include this chauffeur&apos;s trip IDs.{" "}
-            <Link href="/dashboard/billing" className="hover:underline">
-              Open billing
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </div>
