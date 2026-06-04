@@ -18,12 +18,13 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTrips, useUsers } from "@/hooks/use-collections";
+import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
   tripStatusTitle,
+  vehicleDisplayName,
   type Trip,
   type TripStatus
 } from "@/lib/models";
@@ -53,12 +54,17 @@ import {
   TableRow
 } from "@/components/ui/table";
 
+const UNASSIGNED_CHAUFFEUR = "__unassigned__";
+const NO_VEHICLE = "__none__";
+
 type BookingRow = Trip & {
   searchLabel: string;
   bookingIdLabel: string;
   chauffeurLabel: string;
+  chauffeurFilterValue: string;
   pickupLabel: string;
   vehicleLabel: string;
+  vehicleFilterValue: string;
 };
 
 function shortBookingId(id: string) {
@@ -82,12 +88,15 @@ function tripInDateRange(trip: Trip, range: DateRange | undefined) {
 export function BookingsDataTable() {
   const { trips, loading } = useTrips();
   const { users } = useUsers();
+  const { vehicles } = useVehicles();
   const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [chauffeurFilter, setChauffeurFilter] = useState<string[]>([]);
+  const [vehicleFilter, setVehicleFilter] = useState<string[]>([]);
 
   const changeStatus = useCallback(async (id: string, status: TripStatus) => {
     try {
@@ -104,6 +113,33 @@ export function BookingsDataTable() {
     return map;
   }, [users]);
 
+  const chauffeurOptions = useMemo(
+    () => [
+      { value: UNASSIGNED_CHAUFFEUR, label: "Unassigned" },
+      ...users
+        .filter((u) => u.role === "driver")
+        .map((u) => ({
+          value: u.id,
+          label: u.profile.displayName || u.email
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+    ],
+    [users]
+  );
+
+  const vehicleOptions = useMemo(
+    () => [
+      { value: NO_VEHICLE, label: "No vehicle" },
+      ...vehicles
+        .map((v) => ({
+          value: v.driverID,
+          label: vehicleDisplayName(v)
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+    ],
+    [vehicles]
+  );
+
   const data = useMemo<BookingRow[]>(
     () =>
       trips
@@ -116,6 +152,7 @@ export function BookingsDataTable() {
             ...t,
             bookingIdLabel: shortBookingId(t.id),
             chauffeurLabel,
+            chauffeurFilterValue: t.driverID ?? UNASSIGNED_CHAUFFEUR,
             searchLabel: [
               t.id,
               shortBookingId(t.id),
@@ -126,9 +163,9 @@ export function BookingsDataTable() {
               .filter(Boolean)
               .join(" "),
             pickupLabel: formatDateTime(tripPickupReferenceDate(t)),
-            vehicleLabel: t.vehicleSnapshot
-              ? `${t.vehicleSnapshot.color} ${t.vehicleSnapshot.make} ${t.vehicleSnapshot.model}`.trim()
-              : "—"
+            vehicleLabel: t.vehicleSnapshot ? vehicleDisplayName(t.vehicleSnapshot) : "—",
+            vehicleFilterValue:
+              t.fleetVehicleDocumentId ?? t.vehicleSnapshot?.driverID ?? NO_VEHICLE
           };
         }),
     [trips, dateRange, driverNameById]
@@ -188,11 +225,12 @@ export function BookingsDataTable() {
       },
       {
         id: "chauffeur",
-        accessorKey: "chauffeurLabel",
+        accessorKey: "chauffeurFilterValue",
         header: "Chauffeur",
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.chauffeurLabel}</span>
-        )
+        ),
+        filterFn: multiSelectFilter
       },
       {
         id: "pickupTime",
@@ -202,11 +240,12 @@ export function BookingsDataTable() {
       },
       {
         id: "vehicle",
-        accessorKey: "vehicleLabel",
+        accessorKey: "vehicleFilterValue",
         header: "Vehicle",
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.vehicleLabel}</span>
-        )
+        ),
+        filterFn: multiSelectFilter
       },
       {
         id: "status",
@@ -272,18 +311,38 @@ export function BookingsDataTable() {
         searchColumnId="customer"
         nowrap
         filters={
-          <ListFilterPopover
-            label="Status"
-            options={TRIP_STATUSES.map((status) => ({
-              value: status,
-              label: tripStatusTitle[status]
-            }))}
-            selected={statusFilter}
-            onSelectedChange={(values) => {
-              setStatusFilter(values);
-              table.getColumn("status")?.setFilterValue(values.length ? values : undefined);
-            }}
-          />
+          <>
+            <ListFilterPopover
+              label="Status"
+              options={TRIP_STATUSES.map((status) => ({
+                value: status,
+                label: tripStatusTitle[status]
+              }))}
+              selected={statusFilter}
+              onSelectedChange={(values) => {
+                setStatusFilter(values);
+                table.getColumn("status")?.setFilterValue(values.length ? values : undefined);
+              }}
+            />
+            <ListFilterPopover
+              label="Chauffeur"
+              options={chauffeurOptions}
+              selected={chauffeurFilter}
+              onSelectedChange={(values) => {
+                setChauffeurFilter(values);
+                table.getColumn("chauffeur")?.setFilterValue(values.length ? values : undefined);
+              }}
+            />
+            <ListFilterPopover
+              label="Vehicle"
+              options={vehicleOptions}
+              selected={vehicleFilter}
+              onSelectedChange={(values) => {
+                setVehicleFilter(values);
+                table.getColumn("vehicle")?.setFilterValue(values.length ? values : undefined);
+              }}
+            />
+          </>
         }
         endActions={
           <DateRangePicker
