@@ -117,6 +117,34 @@ service cloud.firestore {
           && directedTripFleetAssignmentValid(data.fleetVehicleDocumentId, data.driverID);
       }
 
+      // Web admin writes GeoPoint; iOS may use map or GeoPoint.
+      function validTripLocation(coord) {
+        return coord is latlng
+          || (coord is map
+            && coord.keys().hasAll(['latitude', 'longitude'])
+            && coord.latitude is number
+            && coord.longitude is number);
+      }
+
+      function validTripCreatePayload(data) {
+        return data.status == 'requested'
+          && validTripLocation(data.pickup)
+          && validTripLocation(data.dropoff)
+          && (
+            tripCreateOpenPool(data)
+            || tripCreateDirectedToChauffeur(data)
+          )
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp;
+      }
+
+      function tripCreateCustomerIdValid(data) {
+        return data.customerID == request.auth.uid
+          || (isAdmin()
+            && data.customerID is string
+            && data.customerID.size() > 0);
+      }
+
       allow read: if signedIn() && (
         isAdmin()
         || isCustomerOfTrip()
@@ -125,16 +153,8 @@ service cloud.firestore {
       );
 
       allow create: if signedIn()
-        && request.resource.data.customerID == request.auth.uid
-        && request.resource.data.status == 'requested'
-        && request.resource.data.pickup is map
-        && request.resource.data.dropoff is map
-        && (
-          tripCreateOpenPool(request.resource.data)
-          || tripCreateDirectedToChauffeur(request.resource.data)
-        )
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+        && tripCreateCustomerIdValid(request.resource.data)
+        && validTripCreatePayload(request.resource.data);
 
       allow update: if signedIn() && (
         isAdmin()

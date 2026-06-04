@@ -113,8 +113,10 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       await createTrip(trip);
       toast.success("Booking created.");
       setOpen(false);
-    } catch {
-      toast.error("Could not create the booking.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not create the booking.";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

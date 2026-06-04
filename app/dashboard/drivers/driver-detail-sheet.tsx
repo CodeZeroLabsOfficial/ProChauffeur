@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Edit, ExternalLink } from "lucide-react";
 
 import {
@@ -9,7 +10,8 @@ import {
   type DriverProfile,
   type User
 } from "@/lib/models";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { fetchDriverLastSignIn } from "@/lib/services/firebase-service";
 import {
   chauffeurCategoryBadgeIcon,
   dispatchBadgeIcon,
@@ -19,6 +21,7 @@ import {
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
@@ -58,38 +61,138 @@ function DetailField({
   );
 }
 
-function DriverOverviewFields({ user, profile }: { user: User; profile: DriverProfile }) {
+function SectionHeading({ children }: { children: string }) {
+  return <h4 className="text-sm font-semibold">{children}</h4>;
+}
+
+function expiryWarning(date: Date | null | undefined): "expired" | "soon" | null {
+  if (!date) return null;
+  const now = new Date();
+  if (date < now) return "expired";
+  const days = (date.getTime() - now.getTime()) / 86400000;
+  if (days <= 60) return "soon";
+  return null;
+}
+
+function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
   return (
-    <div className="space-y-4">
+    <Badge variant={level === "expired" ? "destructive" : "outline"} className="ms-2">
+      {level === "expired" ? "Expired" : "Expiring soon"}
+    </Badge>
+  );
+}
+
+function ExpiryDetailField({
+  label,
+  date
+}: {
+  label: string;
+  date: Date | null | undefined;
+}) {
+  const warn = expiryWarning(date);
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium">{label}</h4>
+      <p className="text-muted-foreground text-sm">
+        {formatDate(date)}
+        {warn ? <ExpiryBadge level={warn} /> : null}
+      </p>
+    </div>
+  );
+}
+
+function DriverOverviewFields({
+  user,
+  profile,
+  lastSignInAt
+}: {
+  user: User;
+  profile: DriverProfile;
+  lastSignInAt: Date | null | undefined;
+}) {
+  const displayName = user.profile.displayName.trim() || user.email || "—";
+  const address = profile.homeAddressLine?.trim() || user.profile.address?.trim() || undefined;
+  const lastActivityLabel =
+    lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <SectionHeading>Details</SectionHeading>
+        <DetailField label="Name" value={displayName} />
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField label="Email" value={user.email} href={`mailto:${user.email}`} />
+          <DetailField
+            label="Phone"
+            value={user.profile.phoneNumber}
+            href={user.profile.phoneNumber ? `tel:${user.profile.phoneNumber}` : undefined}
+          />
+        </div>
+        <DetailField label="Address" value={address} />
+        <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
+      </div>
+
+      <div className="space-y-4">
+        <SectionHeading>Status</SectionHeading>
+        <DetailField
+          label="Category"
+          value={chauffeurCategoryTitle[profile.chauffeurCategory]}
+        />
+        <DetailField
+          label="Dispatch"
+          value={
+            profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"
+          }
+        />
+        <DetailField
+          label="Visibility"
+          value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField label="Join date" value={formatDate(user.createdAt)} />
+          <DetailField label="Last activity" value={lastActivityLabel} />
+        </div>
+      </div>
+
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">Bio</h4>
+        <SectionHeading>Bio</SectionHeading>
         <p className="text-muted-foreground text-sm">
           {profile.bioStatement.trim() || "No bio provided."}
         </p>
       </div>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-2 gap-4">
-        <DetailField label="Email" value={user.email} href={`mailto:${user.email}`} />
+function DriverComplianceFields({ profile }: { profile: DriverProfile }) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <SectionHeading>Driver licence</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField label="Licence no." value={profile.driversLicenseNumber} />
+          <DetailField label="Class / type" value={profile.driversLicenseClassOrType} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField label="State" value={profile.driversLicenseJurisdictionCode} />
+          <DetailField label="Conditions" value={profile.driversLicenseConditions} />
+        </div>
+        <DetailField label="Summary" value={profile.driversLicenseSummary} />
+        <ExpiryDetailField label="Expiry" date={profile.driversLicenseExpiry} />
+      </div>
+
+      <div className="space-y-4">
+        <SectionHeading>Operator accreditation</SectionHeading>
         <DetailField
-          label="Phone"
-          value={user.profile.phoneNumber}
-          href={user.profile.phoneNumber ? `tel:${user.profile.phoneNumber}` : undefined}
+          label="Accreditation no."
+          value={profile.operatorAccreditationNumber}
         />
+        <DetailField
+          label="Issuing authority"
+          value={profile.operatorAccreditationIssuingAuthority}
+        />
+        <ExpiryDetailField label="Expiry" date={profile.operatorAccreditationExpiry} />
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <DetailField label="Licence no." value={profile.driversLicenseNumber} />
-        <DetailField label="Class" value={profile.driversLicenseClassOrType} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <DetailField label="State" value={profile.driversLicenseJurisdictionCode} />
-        <DetailField label="Licence expiry" value={formatDate(profile.driversLicenseExpiry)} />
-      </div>
-
-      <DetailField
-        label="Operator accreditation no."
-        value={profile.operatorAccreditationNumber}
-      />
     </div>
   );
 }
@@ -114,6 +217,25 @@ export function DriverDetailSheet({
   onEditClick?: () => void;
 }) {
   const displayUser = useSheetDisplayItem(user, open);
+  const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!open || !displayUser?.id) {
+      setLastSignInAt(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setLastSignInAt(undefined);
+    void fetchDriverLastSignIn(displayUser.id).then((date) => {
+      if (!cancelled) setLastSignInAt(date);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, displayUser?.id]);
+
   if (!displayUser) return null;
 
   const profile = displayUser.driverProfile ?? defaultDriverProfile();
@@ -185,10 +307,14 @@ export function DriverDetailSheet({
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
-              <DriverOverviewFields user={displayUser} profile={profile} />
+              <DriverOverviewFields
+                user={displayUser}
+                profile={profile}
+                lastSignInAt={lastSignInAt}
+              />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
-              <DriverTabPlaceholder label="Compliance" />
+              <DriverComplianceFields profile={profile} />
             </TabsContent>
             <TabsContent value="operations" className="mt-0">
               <DriverTabPlaceholder label="Operations" />

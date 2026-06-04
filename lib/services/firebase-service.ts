@@ -223,6 +223,16 @@ export async function fetchUser(uid: string): Promise<User | null> {
   return snap.exists() ? mapUser(snap.id, snap.data()) : null;
 }
 
+/** Firebase Auth last sign-in; null if never signed in or no Auth user. */
+export async function fetchDriverLastSignIn(uid: string): Promise<Date | null> {
+  const res = await fetch(`/api/drivers/${uid}/last-sign-in`);
+  if (!res.ok) return null;
+  const body = (await res.json().catch(() => ({}))) as { lastSignInAt?: string | null };
+  if (!body.lastSignInAt) return null;
+  const date = new Date(body.lastSignInAt);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function updateUserProfile(uid: string, profile: UserProfile): Promise<void> {
   await updateDoc(doc(db(), Collections.users, uid), { profile: stripUndefined({ ...profile }) });
   const title = profile.displayName?.trim() || "Profile";
