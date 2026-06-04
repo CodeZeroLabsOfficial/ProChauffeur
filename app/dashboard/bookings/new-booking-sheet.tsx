@@ -9,6 +9,7 @@ import { createTrip } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import type { Trip, User } from "@/lib/models";
 import { customerDisplayName } from "@/lib/users/customer-display";
+import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,12 +57,18 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const [customer, setCustomer] = useState<User | null>(null);
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
+  const [passengerCount, setPassengerCount] = useState(1);
+  const [smallLuggageCount, setSmallLuggageCount] = useState(0);
+  const [largeLuggageCount, setLargeLuggageCount] = useState(0);
 
   useEffect(() => {
     if (!open) {
       setCustomer(null);
       setPickup(null);
       setDropoff(null);
+      setPassengerCount(1);
+      setSmallLuggageCount(0);
+      setLargeLuggageCount(0);
     }
   }, [open]);
 
@@ -92,7 +99,9 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       pickupAddressLine: pickup.addressLine,
       dropoffAddressLine: dropoff.addressLine,
       notes: get("notes") || null,
-      bookingPassengerCount: get("bookingPassengerCount") ? Number(get("bookingPassengerCount")) : null,
+      bookingPassengerCount: passengerCount,
+      bookingSmallLuggageCount: smallLuggageCount,
+      bookingLargeLuggageCount: largeLuggageCount,
       scheduledPickupAt: scheduledRaw ? new Date(scheduledRaw) : null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -151,16 +160,38 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="scheduledPickupAt">Pickup time</Label>
-              <Input id="scheduledPickupAt" name="scheduledPickupAt" type="datetime-local" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bookingPassengerCount">Passengers</Label>
-              <Input id="bookingPassengerCount" name="bookingPassengerCount" type="number" min={1} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="scheduledPickupAt">Pickup time</Label>
+            <Input id="scheduledPickupAt" name="scheduledPickupAt" type="datetime-local" />
           </div>
+
+          <NumberStepper
+            id="bookingPassengerCount"
+            label="Passengers"
+            value={passengerCount}
+            onChange={setPassengerCount}
+            min={1}
+            max={20}
+            disabled={saving}
+          />
+          <NumberStepper
+            id="bookingSmallLuggageCount"
+            label="Small luggage"
+            value={smallLuggageCount}
+            onChange={setSmallLuggageCount}
+            min={0}
+            max={20}
+            disabled={saving}
+          />
+          <NumberStepper
+            id="bookingLargeLuggageCount"
+            label="Large luggage"
+            value={largeLuggageCount}
+            onChange={setLargeLuggageCount}
+            min={0}
+            max={20}
+            disabled={saving}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
