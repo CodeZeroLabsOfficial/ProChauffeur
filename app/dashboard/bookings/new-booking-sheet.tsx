@@ -160,38 +160,39 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="scheduledPickupAt">Pickup time</Label>
-            <Input id="scheduledPickupAt" name="scheduledPickupAt" type="datetime-local" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="scheduledPickupAt">Pickup time</Label>
+              <Input id="scheduledPickupAt" name="scheduledPickupAt" type="datetime-local" />
+            </div>
+            <NumberStepper
+              id="bookingPassengerCount"
+              label="Passengers"
+              value={passengerCount}
+              onChange={setPassengerCount}
+              min={1}
+              max={20}
+              disabled={saving}
+            />
+            <NumberStepper
+              id="bookingSmallLuggageCount"
+              label="Small luggage"
+              value={smallLuggageCount}
+              onChange={setSmallLuggageCount}
+              min={0}
+              max={20}
+              disabled={saving}
+            />
+            <NumberStepper
+              id="bookingLargeLuggageCount"
+              label="Large luggage"
+              value={largeLuggageCount}
+              onChange={setLargeLuggageCount}
+              min={0}
+              max={20}
+              disabled={saving}
+            />
           </div>
-
-          <NumberStepper
-            id="bookingPassengerCount"
-            label="Passengers"
-            value={passengerCount}
-            onChange={setPassengerCount}
-            min={1}
-            max={20}
-            disabled={saving}
-          />
-          <NumberStepper
-            id="bookingSmallLuggageCount"
-            label="Small luggage"
-            value={smallLuggageCount}
-            onChange={setSmallLuggageCount}
-            min={0}
-            max={20}
-            disabled={saving}
-          />
-          <NumberStepper
-            id="bookingLargeLuggageCount"
-            label="Large luggage"
-            value={largeLuggageCount}
-            onChange={setLargeLuggageCount}
-            min={0}
-            max={20}
-            disabled={saving}
-          />
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
