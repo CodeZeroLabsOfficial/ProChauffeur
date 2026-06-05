@@ -9,13 +9,16 @@ import {
   Fuel,
   Hash,
   Landmark,
+  Luggage,
   Palette,
   RectangleHorizontal,
-  Tags
+  Tags,
+  Users
 } from "lucide-react";
 
 import {
   effectiveChauffeurUserId,
+  luggageSpecificationLabel,
   VEHICLE_TYPES,
   vehicleDisplayName,
   vehicleTypeTitle,
@@ -50,6 +53,10 @@ const tabTriggerClassName =
 
 const MIN_MANUFACTURE_YEAR = 1980;
 const maxManufactureYear = new Date().getFullYear() + 1;
+const MIN_PASSENGER_CAPACITY = 1;
+const MAX_PASSENGER_CAPACITY = 20;
+const MIN_LUGGAGE_COUNT = 0;
+const MAX_LUGGAGE_COUNT = 12;
 
 const TIER_OPTIONS = VEHICLE_TYPES.map((type) => ({
   value: type,
@@ -66,22 +73,43 @@ function nullableTrim(value: string): string | null {
   return trimmed || null;
 }
 
+function parseBoundedInt(
+  value: string,
+  min: number,
+  max: number,
+  label: string
+): { ok: true; n: number } | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { ok: false, message: `${label} is required.` };
+  }
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || n < min || n > max) {
+    return { ok: false, message: `Enter a number between ${min} and ${max}.` };
+  }
+  return { ok: true, n };
+}
+
+async function saveVehicleFields(
+  vehicle: Vehicle,
+  patch: Partial<Vehicle>
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    await upsertVehicle({ ...vehicle, ...patch });
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Could not save." };
+  }
+}
+
 function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   const tierValue = vehicle.pricingVehicleType ?? "sedan";
   const makeValue = vehicleMakeSelectValue(vehicle.make);
-  const regoExpiryWarn = expiryWarning(vehicle.registrationExpiry);
 
-  async function saveVehicle(
-    patch: Partial<Vehicle>
-  ): Promise<{ ok: boolean; message?: string }> {
-    try {
-      await upsertVehicle({ ...vehicle, ...patch });
-      return { ok: true };
-    } catch {
-      return { ok: false, message: "Could not save." };
-    }
+  async function saveVehicle(patch: Partial<Vehicle>) {
+    return saveVehicleFields(vehicle, patch);
   }
 
   return (
@@ -242,57 +270,154 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
       </div>
 
       <div className="space-y-4">
-        <SectionHeading>Registration details</SectionHeading>
+        <SectionHeading>Vehicle capacity</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <DetailLabel icon={Landmark}>Rego state</DetailLabel>
+            <DetailLabel icon={Users}>Capacity</DetailLabel>
             <dd>
               <InlineEditableField
-                fieldId="regoState"
+                fieldId="capacity"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.registrationJurisdictionCode?.trim() ?? ""}
-                editLabel="rego state"
-                placeholder="NSW"
-                onSave={async (next) =>
-                  saveVehicle({ registrationJurisdictionCode: nullableTrim(next) })
-                }
+                value={String(vehicle.passengerCapacity)}
+                editLabel="capacity"
+                placeholder="4"
+                onSave={async (next) => {
+                  const parsed = parseBoundedInt(
+                    next,
+                    MIN_PASSENGER_CAPACITY,
+                    MAX_PASSENGER_CAPACITY,
+                    "Capacity"
+                  );
+                  if (!parsed.ok) return parsed;
+                  return saveVehicle({ passengerCapacity: parsed.n });
+                }}
+              />
+            </dd>
+          </div>
+          <div aria-hidden="true" />
+          <div className="space-y-1">
+            <DetailLabel icon={Luggage}>Small bags</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="smallBags"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={String(vehicle.fleetSmallLuggageCount)}
+                editLabel="small bags"
+                placeholder="0"
+                onSave={async (next) => {
+                  const parsed = parseBoundedInt(
+                    next,
+                    MIN_LUGGAGE_COUNT,
+                    MAX_LUGGAGE_COUNT,
+                    "Small bags"
+                  );
+                  if (!parsed.ok) return parsed;
+                  const small = parsed.n;
+                  const large = vehicle.fleetLargeLuggageCount;
+                  return saveVehicle({
+                    fleetSmallLuggageCount: small,
+                    luggageDescription: luggageSpecificationLabel(small, large)
+                  });
+                }}
               />
             </dd>
           </div>
           <div className="space-y-1">
-            <DetailLabel icon={RectangleHorizontal}>Plate</DetailLabel>
+            <DetailLabel icon={Luggage}>Large bags</DetailLabel>
             <dd>
               <InlineEditableField
-                fieldId="plate"
+                fieldId="largeBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.licensePlate?.trim() ?? ""}
-                editLabel="plate"
-                placeholder="Plate number"
-                onSave={async (next) => saveVehicle({ licensePlate: next.trim() })}
-              />
-            </dd>
-          </div>
-          <div className="col-span-2 space-y-1">
-            <DetailLabel icon={Calendar}>Rego expiry</DetailLabel>
-            <dd>
-              <InlineEditableDateField
-                fieldId="regoExpiry"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.registrationExpiry}
-                editLabel="rego expiry"
-                dateRange="expiry"
-                trailingContent={
-                  regoExpiryWarn ? <ExpiryBadge level={regoExpiryWarn} /> : null
-                }
-                onSave={async (next) => saveVehicle({ registrationExpiry: next })}
+                value={String(vehicle.fleetLargeLuggageCount)}
+                editLabel="large bags"
+                placeholder="2"
+                onSave={async (next) => {
+                  const parsed = parseBoundedInt(
+                    next,
+                    MIN_LUGGAGE_COUNT,
+                    MAX_LUGGAGE_COUNT,
+                    "Large bags"
+                  );
+                  if (!parsed.ok) return parsed;
+                  const large = parsed.n;
+                  const small = vehicle.fleetSmallLuggageCount;
+                  return saveVehicle({
+                    fleetLargeLuggageCount: large,
+                    luggageDescription: luggageSpecificationLabel(small, large)
+                  });
+                }}
               />
             </dd>
           </div>
         </dl>
       </div>
+    </div>
+  );
+}
+
+function VehicleComplianceFields({ vehicle }: { vehicle: Vehicle }) {
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const regoExpiryWarn = expiryWarning(vehicle.registrationExpiry);
+
+  async function saveVehicle(patch: Partial<Vehicle>) {
+    return saveVehicleFields(vehicle, patch);
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionHeading>Registration details</SectionHeading>
+      <dl className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <DetailLabel icon={Landmark}>Rego state</DetailLabel>
+          <dd>
+            <InlineEditableField
+              fieldId="regoState"
+              activeFieldId={activeFieldId}
+              onActiveFieldIdChange={setActiveFieldId}
+              value={vehicle.registrationJurisdictionCode?.trim() ?? ""}
+              editLabel="rego state"
+              placeholder="NSW"
+              onSave={async (next) =>
+                saveVehicle({ registrationJurisdictionCode: nullableTrim(next) })
+              }
+            />
+          </dd>
+        </div>
+        <div className="space-y-1">
+          <DetailLabel icon={RectangleHorizontal}>Plate</DetailLabel>
+          <dd>
+            <InlineEditableField
+              fieldId="plate"
+              activeFieldId={activeFieldId}
+              onActiveFieldIdChange={setActiveFieldId}
+              value={vehicle.licensePlate?.trim() ?? ""}
+              editLabel="plate"
+              placeholder="Plate number"
+              onSave={async (next) => saveVehicle({ licensePlate: next.trim() })}
+            />
+          </dd>
+        </div>
+        <div className="col-span-2 space-y-1">
+          <DetailLabel icon={Calendar}>Rego expiry</DetailLabel>
+          <dd>
+            <InlineEditableDateField
+              fieldId="regoExpiry"
+              activeFieldId={activeFieldId}
+              onActiveFieldIdChange={setActiveFieldId}
+              value={vehicle.registrationExpiry}
+              editLabel="rego expiry"
+              dateRange="expiry"
+              trailingContent={
+                regoExpiryWarn ? <ExpiryBadge level={regoExpiryWarn} /> : null
+              }
+              onSave={async (next) => saveVehicle({ registrationExpiry: next })}
+            />
+          </dd>
+        </div>
+      </dl>
     </div>
   );
 }
@@ -308,11 +433,13 @@ function VehicleTabPlaceholder({ label }: { label: string }) {
 export function VehicleDetailSheet({
   vehicle,
   open,
-  onOpenChange
+  onOpenChange,
+  modal = true
 }: {
   vehicle: Vehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  modal?: boolean;
 }) {
   const displayVehicle = useSheetDisplayItem(vehicle, open);
   if (!displayVehicle) return null;
@@ -321,7 +448,7 @@ export function VehicleDetailSheet({
   const assigned = Boolean(effectiveChauffeurUserId(displayVehicle));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={modal}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Vehicle details</SheetTitle>
@@ -369,7 +496,7 @@ export function VehicleDetailSheet({
               <VehicleTabPlaceholder label="Features" />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
-              <VehicleTabPlaceholder label="Compliance" />
+              <VehicleComplianceFields vehicle={displayVehicle} />
             </TabsContent>
             <TabsContent value="maintenance" className="mt-0">
               <VehicleTabPlaceholder label="Maintenance" />

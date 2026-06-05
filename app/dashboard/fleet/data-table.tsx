@@ -482,6 +482,7 @@ export function FleetDataTable({
         vehicle={selectedVehicle}
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
+        modal={!editOpen}
       />
 
       <VehicleEditSheet

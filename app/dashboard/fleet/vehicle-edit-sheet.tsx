@@ -201,7 +201,7 @@ export function VehicleEditSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={isNew}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add vehicle" : "Edit vehicle"}</SheetTitle>
