@@ -516,7 +516,6 @@ export function DriversDataTable({
         user={selectedUser}
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
-        onEditClick={() => setEditOpen(true)}
       />
 
       <DriverEditSheet

@@ -1,27 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 
-import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 
-export interface InlineEditableDateFieldProps {
+export interface InlineEditableToggleFieldProps {
   fieldId: string;
   activeFieldId: string | null;
   onActiveFieldIdChange: (fieldId: string | null) => void;
-  value: Date | null | undefined;
-  onSave: (value: Date | null) => Promise<{ ok: boolean; message?: string }>;
+  value: boolean;
+  formatValue: (value: boolean) => string;
+  onSave: (value: boolean) => Promise<{ ok: boolean; message?: string }>;
   disabled?: boolean;
   editLabel: string;
-  emptyDisplay?: string;
-  /** `past` for birth dates; `expiry` for licence/accreditation expiry. */
-  dateRange?: "past" | "expiry";
-  trailingContent?: React.ReactNode;
   className?: string;
 }
 
@@ -31,78 +25,59 @@ const viewBoxHoverClass =
   "hover:border-border/80 hover:bg-muted/25 focus-within:border-border/80 focus-within:bg-muted/25";
 const actionButtonClass = "h-8 w-8 shrink-0 rounded-full";
 
-export function InlineEditableDateField({
+export function InlineEditableToggleField({
   fieldId,
   activeFieldId,
   onActiveFieldIdChange,
   value,
+  formatValue,
   onSave,
   disabled = false,
   editLabel,
-  emptyDisplay = "—",
-  dateRange = "past",
-  trailingContent,
   className
-}: InlineEditableDateFieldProps) {
-  const fromYear =
-    dateRange === "expiry" ? new Date().getFullYear() - 10 : 1900;
-  const toYear =
-    dateRange === "expiry" ? new Date().getFullYear() + 20 : new Date().getFullYear();
-  const disableDate =
-    dateRange === "expiry"
-      ? undefined
-      : (date: Date) => date > new Date() || date < new Date("1900-01-01");
-  const [draft, setDraft] = React.useState<Date | undefined>(value ?? undefined);
+}: InlineEditableToggleFieldProps) {
+  const [draft, setDraft] = React.useState(value);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [calendarOpen, setCalendarOpen] = React.useState(false);
 
   const isEditing = activeFieldId === fieldId;
-  const displayText = value ? formatDate(value) : emptyDisplay;
-  const isEmpty = !value;
 
   React.useEffect(() => {
     if (!isEditing) {
-      setDraft(value ?? undefined);
+      setDraft(value);
       setError(null);
-      setCalendarOpen(false);
     }
   }, [isEditing, value]);
 
   function startEditing() {
     if (disabled || saving) return;
-    setDraft(value ?? undefined);
+    setDraft(value);
     setError(null);
     onActiveFieldIdChange(fieldId);
-    setCalendarOpen(true);
   }
 
   function cancelEditing() {
-    setDraft(value ?? undefined);
+    setDraft(value);
     setError(null);
-    setCalendarOpen(false);
     onActiveFieldIdChange(null);
   }
 
-  async function confirmEditing(next: Date | null) {
+  async function confirmEditing() {
     if (saving) return;
     setSaving(true);
     setError(null);
-    const res = await onSave(next);
+    const res = await onSave(draft);
     setSaving(false);
     if (!res.ok) {
       setError(res.message ?? "Could not save.");
       return;
     }
-    setCalendarOpen(false);
     onActiveFieldIdChange(null);
   }
 
   if (disabled) {
     return (
-      <p className={cn("text-sm text-foreground", isEmpty && "text-muted-foreground", className)}>
-        {displayText}
-      </p>
+      <p className={cn("text-sm text-foreground", className)}>{formatValue(value)}</p>
     );
   }
 
@@ -110,41 +85,22 @@ export function InlineEditableDateField({
     return (
       <div className={cn("space-y-1", className)}>
         <div className="flex items-center gap-1.5">
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn(
-                  "h-9 flex-1 justify-start pl-3 text-left font-normal",
-                  !draft && "text-muted-foreground"
-                )}
-                disabled={saving}
-                aria-label={editLabel}>
-                {draft ? format(draft, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                captionLayout="dropdown"
-                fromYear={fromYear}
-                toYear={toYear}
-                selected={draft}
-                onSelect={(d) => setDraft(d)}
-                disabled={disableDate}
-                defaultMonth={draft}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="border-input flex h-9 flex-1 items-center justify-between gap-3 rounded-md border px-3">
+            <span className="text-sm">{formatValue(draft)}</span>
+            <Switch
+              checked={draft}
+              onCheckedChange={setDraft}
+              disabled={saving}
+              aria-label={editLabel}
+            />
+          </div>
           <Button
             type="button"
             size="icon"
             className={actionButtonClass}
             disabled={saving}
             aria-label={`Save ${editLabel}`}
-            onClick={() => void confirmEditing(draft ?? null)}>
+            onClick={() => void confirmEditing()}>
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
@@ -180,14 +136,7 @@ export function InlineEditableDateField({
             startEditing();
           }
         }}>
-        <span
-          className={cn(
-            "flex min-w-0 flex-1 items-center gap-2 truncate",
-            isEmpty && "text-muted-foreground"
-          )}>
-          <span className="truncate">{displayText}</span>
-          {trailingContent}
-        </span>
+        <span className="min-w-0 flex-1 truncate">{formatValue(value)}</span>
         <Button
           type="button"
           variant="ghost"

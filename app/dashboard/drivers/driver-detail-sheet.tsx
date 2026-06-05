@@ -2,7 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Cake, Edit, ExternalLink, Mail, MapPin, Phone, User as UserIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  Cake,
+  Calendar,
+  CalendarPlus,
+  Clock,
+  ExternalLink,
+  IdCard,
+  Landmark,
+  ListChecks,
+  Mail,
+  MapPin,
+  Phone,
+  Tags,
+  User as UserIcon
+} from "lucide-react";
 import { z } from "zod";
 
 import {
@@ -13,6 +30,7 @@ import {
 } from "@/lib/models";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
+import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   fetchDriverLastSignIn,
@@ -22,6 +40,8 @@ import {
 } from "@/lib/services/firebase-service";
 import {
   chauffeurCategoryBadgeIcon,
+  dispatchBadgeIcon,
+  visibilityBadgeIcon,
   visibilityStatusLabel
 } from "@/lib/chauffeur-badge-icons";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
@@ -46,34 +66,49 @@ const detailLabelClass =
 
 const detailLabelIconClass = "size-3.5 shrink-0 opacity-80";
 
-function DetailField({
+function SectionHeading({ children }: { children: string }) {
+  return <h4 className="text-sm font-semibold">{children}</h4>;
+}
+
+function DetailLabel({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
+  return (
+    <dt className={detailLabelClass}>
+      <Icon className={detailLabelIconClass} aria-hidden />
+      {children}
+    </dt>
+  );
+}
+
+function LabeledDetailValue({
+  icon,
   label,
   value,
-  href
+  href,
+  className
 }: {
+  icon: LucideIcon;
   label: string;
   value: string | null | undefined;
   href?: string;
+  className?: string;
 }) {
   const text = value?.trim() || "—";
   const hasLink = Boolean(href && value?.trim());
 
   return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium">{label}</h4>
-      {hasLink ? (
-        <a href={href} className="text-muted-foreground text-sm hover:underline">
-          {text}
-        </a>
-      ) : (
-        <p className="text-muted-foreground text-sm">{text}</p>
-      )}
+    <div className={cn("space-y-1", className)}>
+      <DetailLabel icon={icon}>{label}</DetailLabel>
+      <dd>
+        {hasLink ? (
+          <a href={href} className="text-muted-foreground text-sm hover:underline">
+            {text}
+          </a>
+        ) : (
+          <p className="text-muted-foreground text-sm">{text}</p>
+        )}
+      </dd>
     </div>
   );
-}
-
-function SectionHeading({ children }: { children: string }) {
-  return <h4 className="text-sm font-semibold">{children}</h4>;
 }
 
 function expiryWarning(date: Date | null | undefined): "expired" | "soon" | null {
@@ -90,25 +125,6 @@ function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
     <Badge variant={level === "expired" ? "destructive" : "outline"} className="ms-2">
       {level === "expired" ? "Expired" : "Expiring soon"}
     </Badge>
-  );
-}
-
-function ExpiryDetailField({
-  label,
-  date
-}: {
-  label: string;
-  date: Date | null | undefined;
-}) {
-  const warn = expiryWarning(date);
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium">{label}</h4>
-      <p className="text-muted-foreground text-sm">
-        {formatDate(date)}
-        {warn ? <ExpiryBadge level={warn} /> : null}
-      </p>
-    </div>
   );
 }
 
@@ -139,16 +155,24 @@ function DriverOverviewFields({
     }
   }
 
+  async function saveDriver(
+    patch: Partial<DriverProfile>
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      await updateUserDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: "Could not save." };
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <SectionHeading>Details</SectionHeading>
+        <SectionHeading>Contact Details</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <dt className={detailLabelClass}>
-              <UserIcon className={detailLabelIconClass} aria-hidden />
-              Name
-            </dt>
+            <DetailLabel icon={UserIcon}>Name</DetailLabel>
             <dd>
               <InlineEditableField
                 fieldId="name"
@@ -168,10 +192,7 @@ function DriverOverviewFields({
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className={detailLabelClass}>
-              <Cake className={detailLabelIconClass} aria-hidden />
-              Date of birth
-            </dt>
+            <DetailLabel icon={Cake}>Date of birth</DetailLabel>
             <dd>
               <InlineEditableDateField
                 fieldId="dateOfBirth"
@@ -184,10 +205,7 @@ function DriverOverviewFields({
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className={detailLabelClass}>
-              <Mail className={detailLabelIconClass} aria-hidden />
-              Email
-            </dt>
+            <DetailLabel icon={Mail}>Email</DetailLabel>
             <dd>
               <InlineEditableField
                 fieldId="email"
@@ -216,10 +234,7 @@ function DriverOverviewFields({
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className={detailLabelClass}>
-              <Phone className={detailLabelIconClass} aria-hidden />
-              Phone
-            </dt>
+            <DetailLabel icon={Phone}>Phone</DetailLabel>
             <dd>
               <InlineEditableField
                 fieldId="phone"
@@ -234,10 +249,7 @@ function DriverOverviewFields({
             </dd>
           </div>
           <div className="col-span-2 space-y-1">
-            <dt className={detailLabelClass}>
-              <MapPin className={detailLabelIconClass} aria-hidden />
-              Address
-            </dt>
+            <DetailLabel icon={MapPin}>Address</DetailLabel>
             <dd>
               <InlineEditableField
                 fieldId="address"
@@ -272,61 +284,213 @@ function DriverOverviewFields({
 
       <div className="space-y-4">
         <SectionHeading>Status</SectionHeading>
-        <div className="grid grid-cols-2 gap-4">
-          <DetailField
-            label="Dispatch"
-            value={
-              profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"
-            }
+        <dl className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <DetailLabel icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
+              Dispatch
+            </DetailLabel>
+            <dd>
+              <InlineEditableToggleField
+                fieldId="dispatch"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.acceptsDispatchAssignments}
+                formatValue={(v) => (v ? "Accepting dispatch" : "Dispatch paused")}
+                editLabel="dispatch"
+                onSave={async (next) => saveDriver({ acceptsDispatchAssignments: next })}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
+              Visibility
+            </DetailLabel>
+            <dd>
+              <InlineEditableToggleField
+                fieldId="visibility"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.visibleOnCustomerApp}
+                formatValue={(v) => visibilityStatusLabel(v)}
+                editLabel="visibility"
+                onSave={async (next) => saveDriver({ visibleOnCustomerApp: next })}
+              />
+            </dd>
+          </div>
+          <LabeledDetailValue
+            icon={CalendarPlus}
+            label="Join date"
+            value={formatDate(user.createdAt)}
           />
-          <DetailField
-            label="Visibility"
-            value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
-          />
-          <DetailField label="Join date" value={formatDate(user.createdAt)} />
-          <DetailField label="Last activity" value={lastActivityLabel} />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <SectionHeading>Bio</SectionHeading>
-        <p className="text-muted-foreground text-sm">
-          {profile.bioStatement.trim() || "No bio provided."}
-        </p>
+          <LabeledDetailValue icon={Clock} label="Last activity" value={lastActivityLabel} />
+        </dl>
       </div>
     </div>
   );
 }
 
-function DriverComplianceFields({ profile }: { profile: DriverProfile }) {
+function DriverComplianceFields({ user, profile }: { user: User; profile: DriverProfile }) {
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
+
+  async function saveDriver(
+    patch: Partial<DriverProfile>
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      await updateUserDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: "Could not save." };
+    }
+  }
+
+  const licenceExpiryWarn = expiryWarning(profile.driversLicenseExpiry);
+  const accreditationExpiryWarn = expiryWarning(profile.operatorAccreditationExpiry);
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <SectionHeading>Driver licence</SectionHeading>
-        <div className="grid grid-cols-2 gap-4">
-          <DetailField label="Licence no." value={profile.driversLicenseNumber} />
-          <DetailField label="Class / type" value={profile.driversLicenseClassOrType} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <DetailField label="State" value={profile.driversLicenseJurisdictionCode} />
-          <DetailField label="Conditions" value={profile.driversLicenseConditions} />
-        </div>
-        <ExpiryDetailField label="Expiry" date={profile.driversLicenseExpiry} />
+        <dl className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <DetailLabel icon={IdCard}>Licence no.</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="licenceNo"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.driversLicenseNumber?.trim() ?? ""}
+                editLabel="licence number"
+                placeholder="Licence number"
+                onSave={async (next) =>
+                  saveDriver({ driversLicenseNumber: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Tags}>Class / type</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="licenceClass"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.driversLicenseClassOrType?.trim() ?? ""}
+                editLabel="licence class"
+                placeholder="Class / type"
+                onSave={async (next) =>
+                  saveDriver({ driversLicenseClassOrType: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Landmark}>State</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="licenceState"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.driversLicenseJurisdictionCode?.trim() ?? ""}
+                editLabel="licence state"
+                placeholder="NSW"
+                onSave={async (next) =>
+                  saveDriver({ driversLicenseJurisdictionCode: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={ListChecks}>Conditions</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="licenceConditions"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.driversLicenseConditions?.trim() ?? ""}
+                editLabel="licence conditions"
+                placeholder="Conditions"
+                onSave={async (next) =>
+                  saveDriver({ driversLicenseConditions: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <DetailLabel icon={Calendar}>Expiry</DetailLabel>
+            <dd>
+              <InlineEditableDateField
+                fieldId="licenceExpiry"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.driversLicenseExpiry}
+                editLabel="licence expiry"
+                dateRange="expiry"
+                trailingContent={
+                  licenceExpiryWarn ? <ExpiryBadge level={licenceExpiryWarn} /> : null
+                }
+                onSave={async (next) => saveDriver({ driversLicenseExpiry: next })}
+              />
+            </dd>
+          </div>
+        </dl>
       </div>
 
       <div className="space-y-4">
         <SectionHeading>Operator accreditation</SectionHeading>
-        <div className="grid grid-cols-2 gap-4">
-          <DetailField
-            label="Accreditation no."
-            value={profile.operatorAccreditationNumber}
-          />
-          <DetailField
-            label="Issuing authority"
-            value={profile.operatorAccreditationIssuingAuthority}
-          />
-        </div>
-        <ExpiryDetailField label="Expiry" date={profile.operatorAccreditationExpiry} />
+        <dl className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <DetailLabel icon={BadgeCheck}>Accreditation no.</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="accreditationNo"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.operatorAccreditationNumber?.trim() ?? ""}
+                editLabel="accreditation number"
+                placeholder="Accreditation no."
+                onSave={async (next) =>
+                  saveDriver({ operatorAccreditationNumber: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Building2}>Issuing authority</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="accreditationAuthority"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.operatorAccreditationIssuingAuthority?.trim() ?? ""}
+                editLabel="issuing authority"
+                placeholder="Issuing authority"
+                onSave={async (next) =>
+                  saveDriver({ operatorAccreditationIssuingAuthority: next.trim() || null })
+                }
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <DetailLabel icon={Calendar}>Expiry</DetailLabel>
+            <dd>
+              <InlineEditableDateField
+                fieldId="accreditationExpiry"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={profile.operatorAccreditationExpiry}
+                editLabel="accreditation expiry"
+                dateRange="expiry"
+                trailingContent={
+                  accreditationExpiryWarn ? (
+                    <ExpiryBadge level={accreditationExpiryWarn} />
+                  ) : null
+                }
+                onSave={async (next) => saveDriver({ operatorAccreditationExpiry: next })}
+              />
+            </dd>
+          </div>
+        </dl>
       </div>
     </div>
   );
@@ -343,13 +507,11 @@ function DriverTabPlaceholder({ label }: { label: string }) {
 export function DriverDetailSheet({
   user,
   open,
-  onOpenChange,
-  onEditClick
+  onOpenChange
 }: {
   user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEditClick?: () => void;
 }) {
   const displayUser = useSheetDisplayItem(user, open);
   const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
@@ -391,12 +553,6 @@ export function DriverDetailSheet({
                   View profile
                 </Link>
               </Button>
-              {onEditClick && (
-                <Button variant="outline" onClick={onEditClick}>
-                  <Edit />
-                  Edit
-                </Button>
-              )}
             </div>
           </div>
         </SheetHeader>
@@ -443,7 +599,7 @@ export function DriverDetailSheet({
               />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
-              <DriverComplianceFields profile={profile} />
+              <DriverComplianceFields user={displayUser} profile={profile} />
             </TabsContent>
             <TabsContent value="operations" className="mt-0">
               <DriverTabPlaceholder label="Operations" />
