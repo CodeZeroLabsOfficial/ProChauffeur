@@ -171,20 +171,21 @@ function DriverComplianceFields({ profile }: { profile: DriverProfile }) {
           <DetailField label="State" value={profile.driversLicenseJurisdictionCode} />
           <DetailField label="Conditions" value={profile.driversLicenseConditions} />
         </div>
-        <DetailField label="Summary" value={profile.driversLicenseSummary} />
         <ExpiryDetailField label="Expiry" date={profile.driversLicenseExpiry} />
       </div>
 
       <div className="space-y-4">
         <SectionHeading>Operator accreditation</SectionHeading>
-        <DetailField
-          label="Accreditation no."
-          value={profile.operatorAccreditationNumber}
-        />
-        <DetailField
-          label="Issuing authority"
-          value={profile.operatorAccreditationIssuingAuthority}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField
+            label="Accreditation no."
+            value={profile.operatorAccreditationNumber}
+          />
+          <DetailField
+            label="Issuing authority"
+            value={profile.operatorAccreditationIssuingAuthority}
+          />
+        </div>
         <ExpiryDetailField label="Expiry" date={profile.operatorAccreditationExpiry} />
       </div>
     </div>
