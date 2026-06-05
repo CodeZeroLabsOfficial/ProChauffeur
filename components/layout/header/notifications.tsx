@@ -161,9 +161,9 @@ export function HeaderNotifications() {
         <DropdownMenuLabel className="bg-background dark:bg-muted sticky top-0 z-10 p-0">
           <div className="flex justify-between border-b px-6 py-4">
             <div className="font-medium">Notifications</div>
-            {pendingCount > 0 ? (
-              <span className="text-muted-foreground text-sm">{pendingCount} pending</span>
-            ) : null}
+            <Button variant="link" className="h-auto p-0 text-xs" size="icon-sm" asChild>
+              <Link href="/dashboard/notifications">View all</Link>
+            </Button>
           </div>
         </DropdownMenuLabel>
 

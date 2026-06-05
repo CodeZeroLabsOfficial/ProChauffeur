@@ -140,6 +140,15 @@ export async function markNotificationRead(id: string): Promise<void> {
   await updateDoc(doc(db(), Collections.notifications, id), { readAt: serverTimestamp() });
 }
 
+export async function markAllNotificationsRead(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const batch = writeBatch(db());
+  for (const id of ids) {
+    batch.update(doc(db(), Collections.notifications, id), { readAt: serverTimestamp() });
+  }
+  await batch.commit();
+}
+
 // ─────────────────────────────── Trips ───────────────────────────────
 
 /** Admin overview listener: recent trips across the fleet, newest first. */
