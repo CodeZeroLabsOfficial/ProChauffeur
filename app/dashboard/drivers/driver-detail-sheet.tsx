@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Cake, Edit, ExternalLink, Mail, MapPin, Phone, User } from "lucide-react";
+import { Cake, Edit, ExternalLink, Mail, MapPin, Phone, User as UserIcon } from "lucide-react";
 import { z } from "zod";
 
 import {
@@ -146,7 +146,7 @@ function DriverOverviewFields({
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <dt className={detailLabelClass}>
-              <User className={detailLabelIconClass} aria-hidden />
+              <UserIcon className={detailLabelIconClass} aria-hidden />
               Name
             </dt>
             <dd>
