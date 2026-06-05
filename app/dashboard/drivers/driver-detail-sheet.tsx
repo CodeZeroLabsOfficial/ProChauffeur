@@ -10,8 +10,14 @@ import {
   type DriverProfile,
   type User
 } from "@/lib/models";
+import { EditableDetailField } from "@/app/dashboard/drivers/components/editable-detail-field";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { fetchDriverLastSignIn } from "@/lib/services/firebase-service";
+import {
+  fetchDriverLastSignIn,
+  updateUserDriverProfile,
+  updateUserEmail,
+  updateUserProfile
+} from "@/lib/services/firebase-service";
 import {
   chauffeurCategoryBadgeIcon,
   visibilityStatusLabel
@@ -108,26 +114,80 @@ function DriverOverviewFields({
   profile: DriverProfile;
   lastSignInAt: Date | null | undefined;
 }) {
-  const displayName = user.profile.displayName.trim() || user.email || "—";
-  const address = profile.homeAddressLine?.trim() || user.profile.address?.trim() || undefined;
+  const displayName = user.profile.displayName.trim() || user.email || "";
+  const address = profile.homeAddressLine?.trim() || user.profile.address?.trim() || "";
   const lastActivityLabel =
     lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
+  const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <SectionHeading>Details</SectionHeading>
         <div className="grid grid-cols-2 gap-4">
-          <DetailField label="Name" value={displayName} />
-          <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
-          <DetailField label="Email" value={user.email} href={`mailto:${user.email}`} />
-          <DetailField
+          <EditableDetailField
+            label="Name"
+            value={displayName}
+            placeholder="Add name"
+            onSave={async (value) => {
+              await updateUserProfile(user.id, {
+                ...user.profile,
+                displayName: value
+              });
+            }}
+          />
+          <EditableDetailField
+            label="Date of birth"
+            type="date"
+            value={user.profile.dateOfBirth}
+            onSave={async (value) => {
+              await updateUserProfile(user.id, {
+                ...user.profile,
+                dateOfBirth: value
+              });
+            }}
+          />
+          <EditableDetailField
+            label="Email"
+            type="email"
+            value={user.email}
+            placeholder="Add email"
+            onSave={async (value) => {
+              await updateUserEmail(user.id, value);
+            }}
+          />
+          <EditableDetailField
             label="Phone"
-            value={user.profile.phoneNumber}
-            href={user.profile.phoneNumber ? `tel:${user.profile.phoneNumber}` : undefined}
+            type="tel"
+            value={user.profile.phoneNumber?.trim() ?? ""}
+            placeholder="Add phone"
+            onSave={async (value) => {
+              await updateUserProfile(user.id, {
+                ...user.profile,
+                phoneNumber: value || null
+              });
+            }}
           />
         </div>
-        <DetailField label="Address" value={address} />
+        <EditableDetailField
+          label="Address"
+          value={address}
+          placeholder="Add address"
+          onSave={async (value) => {
+            await updateUserProfile(user.id, {
+              ...user.profile,
+              address: value || null
+            });
+            await updateUserDriverProfile(
+              user.id,
+              {
+                ...profile,
+                homeAddressLine: value || null
+              },
+              { driverTitle }
+            );
+          }}
+        />
       </div>
 
       <div className="space-y-4">

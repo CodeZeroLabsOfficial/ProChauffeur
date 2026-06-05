@@ -239,6 +239,10 @@ export async function updateUserProfile(uid: string, profile: UserProfile): Prom
   void createActivityNotification(profileNotification(title, uid));
 }
 
+export async function updateUserEmail(uid: string, email: string): Promise<void> {
+  await updateDoc(doc(db(), Collections.users, uid), { email: email.trim() });
+}
+
 export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
