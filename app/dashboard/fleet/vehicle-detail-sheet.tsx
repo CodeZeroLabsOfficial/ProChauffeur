@@ -37,6 +37,7 @@ import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
+import { InlineEditableStepperField } from "@/components/inline-editable-stepper-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
@@ -71,23 +72,6 @@ const MAKE_OPTIONS = LUXURY_VEHICLE_MAKES.map((entry) => ({
 function nullableTrim(value: string): string | null {
   const trimmed = value.trim();
   return trimmed || null;
-}
-
-function parseBoundedInt(
-  value: string,
-  min: number,
-  max: number,
-  label: string
-): { ok: true; n: number } | { ok: false; message: string } {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { ok: false, message: `${label} is required.` };
-  }
-  const n = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(n) || n < min || n > max) {
-    return { ok: false, message: `Enter a number between ${min} and ${max}.` };
-  }
-  return { ok: true, n };
 }
 
 async function saveVehicleFields(
@@ -140,7 +124,7 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
                 onActiveFieldIdChange={setActiveFieldId}
                 value={vehicle.vehicleIdentificationNumber?.trim() ?? ""}
                 editLabel="vehicle ID / VIN"
-                placeholder="VIN or fleet ID"
+                placeholder="VIN number"
                 onSave={async (next) =>
                   saveVehicle({ vehicleIdentificationNumber: nullableTrim(next) })
                 }
@@ -275,23 +259,15 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
           <div className="space-y-1">
             <DetailLabel icon={Users}>Capacity</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableStepperField
                 fieldId="capacity"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={String(vehicle.passengerCapacity)}
+                value={vehicle.passengerCapacity}
+                min={MIN_PASSENGER_CAPACITY}
+                max={MAX_PASSENGER_CAPACITY}
                 editLabel="capacity"
-                placeholder="4"
-                onSave={async (next) => {
-                  const parsed = parseBoundedInt(
-                    next,
-                    MIN_PASSENGER_CAPACITY,
-                    MAX_PASSENGER_CAPACITY,
-                    "Capacity"
-                  );
-                  if (!parsed.ok) return parsed;
-                  return saveVehicle({ passengerCapacity: parsed.n });
-                }}
+                onSave={async (next) => saveVehicle({ passengerCapacity: next })}
               />
             </dd>
           </div>
@@ -299,56 +275,46 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
           <div className="space-y-1">
             <DetailLabel icon={Luggage}>Small bags</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableStepperField
                 fieldId="smallBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={String(vehicle.fleetSmallLuggageCount)}
+                value={vehicle.fleetSmallLuggageCount}
+                min={MIN_LUGGAGE_COUNT}
+                max={MAX_LUGGAGE_COUNT}
                 editLabel="small bags"
-                placeholder="0"
-                onSave={async (next) => {
-                  const parsed = parseBoundedInt(
-                    next,
-                    MIN_LUGGAGE_COUNT,
-                    MAX_LUGGAGE_COUNT,
-                    "Small bags"
-                  );
-                  if (!parsed.ok) return parsed;
-                  const small = parsed.n;
-                  const large = vehicle.fleetLargeLuggageCount;
-                  return saveVehicle({
+                onSave={async (small) =>
+                  saveVehicle({
                     fleetSmallLuggageCount: small,
-                    luggageDescription: luggageSpecificationLabel(small, large)
-                  });
-                }}
+                    luggageDescription: luggageSpecificationLabel(
+                      small,
+                      vehicle.fleetLargeLuggageCount
+                    )
+                  })
+                }
               />
             </dd>
           </div>
           <div className="space-y-1">
             <DetailLabel icon={Luggage}>Large bags</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableStepperField
                 fieldId="largeBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={String(vehicle.fleetLargeLuggageCount)}
+                value={vehicle.fleetLargeLuggageCount}
+                min={MIN_LUGGAGE_COUNT}
+                max={MAX_LUGGAGE_COUNT}
                 editLabel="large bags"
-                placeholder="2"
-                onSave={async (next) => {
-                  const parsed = parseBoundedInt(
-                    next,
-                    MIN_LUGGAGE_COUNT,
-                    MAX_LUGGAGE_COUNT,
-                    "Large bags"
-                  );
-                  if (!parsed.ok) return parsed;
-                  const large = parsed.n;
-                  const small = vehicle.fleetSmallLuggageCount;
-                  return saveVehicle({
+                onSave={async (large) =>
+                  saveVehicle({
                     fleetLargeLuggageCount: large,
-                    luggageDescription: luggageSpecificationLabel(small, large)
-                  });
-                }}
+                    luggageDescription: luggageSpecificationLabel(
+                      vehicle.fleetSmallLuggageCount,
+                      large
+                    )
+                  })
+                }
               />
             </dd>
           </div>
