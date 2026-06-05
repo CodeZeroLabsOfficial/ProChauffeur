@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const tabTriggerClassName =
-  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
+  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 function DetailField({
   label,
@@ -142,7 +142,7 @@ export function VehicleDetailSheet({
           <Tabs defaultValue="overview" className="gap-4">
             <TabsList
               className={cn(
-                "-mb-0.5 h-auto w-full justify-start gap-4 overflow-x-auto border-none bg-transparent p-0"
+                "-mb-0.5 h-auto w-full justify-start gap-4 border-none bg-transparent p-0"
               )}>
               <TabsTrigger value="overview" className={tabTriggerClassName}>
                 Overview

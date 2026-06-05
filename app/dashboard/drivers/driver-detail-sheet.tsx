@@ -59,7 +59,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabTriggerClassName =
-  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
+  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 const detailLabelClass =
   "text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase";
@@ -321,8 +321,14 @@ function DriverOverviewFields({
             icon={CalendarPlus}
             label="Join date"
             value={formatDate(user.createdAt)}
+            className="pb-4"
           />
-          <LabeledDetailValue icon={Clock} label="Last activity" value={lastActivityLabel} />
+          <LabeledDetailValue
+            icon={Clock}
+            label="Last activity"
+            value={lastActivityLabel}
+            className="pb-4"
+          />
         </dl>
       </div>
     </div>
@@ -578,7 +584,7 @@ export function DriverDetailSheet({
           <Tabs defaultValue="overview" className="gap-4">
             <TabsList
               className={cn(
-                "-mb-0.5 h-auto w-full justify-start gap-4 overflow-x-auto border-none bg-transparent p-0"
+                "-mb-0.5 h-auto w-full justify-start gap-4 border-none bg-transparent p-0"
               )}>
               <TabsTrigger value="overview" className={tabTriggerClassName}>
                 Overview
