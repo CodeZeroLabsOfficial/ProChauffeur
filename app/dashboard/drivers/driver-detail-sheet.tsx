@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Edit, ExternalLink } from "lucide-react";
+import { Cake, Edit, ExternalLink, Mail, MapPin, Phone, User } from "lucide-react";
+import { z } from "zod";
 
 import {
   chauffeurCategoryTitle,
@@ -10,7 +11,8 @@ import {
   type DriverProfile,
   type User
 } from "@/lib/models";
-import { EditableDetailField } from "@/app/dashboard/drivers/components/editable-detail-field";
+import { InlineEditableDateField } from "@/components/inline-editable-date-field";
+import { InlineEditableField } from "@/components/inline-editable-field";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   fetchDriverLastSignIn,
@@ -38,6 +40,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
+
+const detailLabelClass =
+  "text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase";
+
+const detailLabelIconClass = "size-3.5 shrink-0 opacity-80";
 
 function DetailField({
   label,
@@ -114,80 +121,153 @@ function DriverOverviewFields({
   profile: DriverProfile;
   lastSignInAt: Date | null | undefined;
 }) {
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = user.profile.displayName.trim() || user.email || "";
   const address = profile.homeAddressLine?.trim() || user.profile.address?.trim() || "";
   const lastActivityLabel =
     lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
   const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
 
+  async function saveProfile(
+    patch: Partial<User["profile"]>
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      await updateUserProfile(user.id, { ...user.profile, ...patch });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: "Could not save." };
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <SectionHeading>Details</SectionHeading>
-        <div className="grid grid-cols-2 gap-4">
-          <EditableDetailField
-            label="Name"
-            value={displayName}
-            placeholder="Add name"
-            onSave={async (value) => {
-              await updateUserProfile(user.id, {
-                ...user.profile,
-                displayName: value
-              });
-            }}
-          />
-          <EditableDetailField
-            label="Date of birth"
-            type="date"
-            value={user.profile.dateOfBirth}
-            onSave={async (value) => {
-              await updateUserProfile(user.id, {
-                ...user.profile,
-                dateOfBirth: value
-              });
-            }}
-          />
-          <EditableDetailField
-            label="Email"
-            type="email"
-            value={user.email}
-            placeholder="Add email"
-            onSave={async (value) => {
-              await updateUserEmail(user.id, value);
-            }}
-          />
-          <EditableDetailField
-            label="Phone"
-            type="tel"
-            value={user.profile.phoneNumber?.trim() ?? ""}
-            placeholder="Add phone"
-            onSave={async (value) => {
-              await updateUserProfile(user.id, {
-                ...user.profile,
-                phoneNumber: value || null
-              });
-            }}
-          />
-        </div>
-        <EditableDetailField
-          label="Address"
-          value={address}
-          placeholder="Add address"
-          onSave={async (value) => {
-            await updateUserProfile(user.id, {
-              ...user.profile,
-              address: value || null
-            });
-            await updateUserDriverProfile(
-              user.id,
-              {
-                ...profile,
-                homeAddressLine: value || null
-              },
-              { driverTitle }
-            );
-          }}
-        />
+        <dl className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <dt className={detailLabelClass}>
+              <User className={detailLabelIconClass} aria-hidden />
+              Name
+            </dt>
+            <dd>
+              <InlineEditableField
+                fieldId="name"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={displayName}
+                editLabel="name"
+                placeholder="Add name"
+                onSave={async (next) => {
+                  const trimmed = next.trim();
+                  if (!trimmed) {
+                    return { ok: false, message: "Name is required." };
+                  }
+                  return saveProfile({ displayName: trimmed });
+                }}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <dt className={detailLabelClass}>
+              <Cake className={detailLabelIconClass} aria-hidden />
+              Date of birth
+            </dt>
+            <dd>
+              <InlineEditableDateField
+                fieldId="dateOfBirth"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={user.profile.dateOfBirth}
+                editLabel="date of birth"
+                onSave={async (next) => saveProfile({ dateOfBirth: next })}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <dt className={detailLabelClass}>
+              <Mail className={detailLabelIconClass} aria-hidden />
+              Email
+            </dt>
+            <dd>
+              <InlineEditableField
+                fieldId="email"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={user.email}
+                inputType="email"
+                editLabel="email"
+                placeholder="email@example.com"
+                onSave={async (next) => {
+                  const trimmed = next.trim();
+                  if (!trimmed) {
+                    return { ok: false, message: "Email is required." };
+                  }
+                  if (!z.string().email().safeParse(trimmed).success) {
+                    return { ok: false, message: "Enter a valid email address." };
+                  }
+                  try {
+                    await updateUserEmail(user.id, trimmed);
+                    return { ok: true };
+                  } catch {
+                    return { ok: false, message: "Could not save." };
+                  }
+                }}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <dt className={detailLabelClass}>
+              <Phone className={detailLabelIconClass} aria-hidden />
+              Phone
+            </dt>
+            <dd>
+              <InlineEditableField
+                fieldId="phone"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={user.profile.phoneNumber?.trim() ?? ""}
+                inputType="tel"
+                editLabel="phone"
+                placeholder="Phone number"
+                onSave={async (next) => saveProfile({ phoneNumber: next.trim() || null })}
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <dt className={detailLabelClass}>
+              <MapPin className={detailLabelIconClass} aria-hidden />
+              Address
+            </dt>
+            <dd>
+              <InlineEditableField
+                fieldId="address"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={address}
+                editLabel="address"
+                placeholder="Add address"
+                multiline
+                onSave={async (next) => {
+                  const trimmed = next.trim();
+                  try {
+                    await updateUserProfile(user.id, {
+                      ...user.profile,
+                      address: trimmed || null
+                    });
+                    await updateUserDriverProfile(
+                      user.id,
+                      { ...profile, homeAddressLine: trimmed || null },
+                      { driverTitle }
+                    );
+                    return { ok: true };
+                  } catch {
+                    return { ok: false, message: "Could not save." };
+                  }
+                }}
+              />
+            </dd>
+          </div>
+        </dl>
       </div>
 
       <div className="space-y-4">
