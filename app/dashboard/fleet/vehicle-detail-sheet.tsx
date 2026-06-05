@@ -6,7 +6,6 @@ import {
   Car,
   CarFront,
   Cog,
-  Edit,
   Fuel,
   Hash,
   Landmark,
@@ -36,7 +35,6 @@ import { InlineEditableDateField } from "@/components/inline-editable-date-field
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
-import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
   Sheet,
@@ -310,14 +308,11 @@ function VehicleTabPlaceholder({ label }: { label: string }) {
 export function VehicleDetailSheet({
   vehicle,
   open,
-  onOpenChange,
-  onEditClick
+  onOpenChange
 }: {
   vehicle: Vehicle | null;
-  chauffeurName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEditClick?: () => void;
 }) {
   const displayVehicle = useSheetDisplayItem(vehicle, open);
   if (!displayVehicle) return null;
@@ -329,15 +324,7 @@ export function VehicleDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <div className="flex items-start justify-between pe-6">
-            <SheetTitle>Vehicle details</SheetTitle>
-            {onEditClick && (
-              <Button variant="outline" onClick={onEditClick}>
-                <Edit />
-                Edit
-              </Button>
-            )}
-          </div>
+          <SheetTitle>Vehicle details</SheetTitle>
         </SheetHeader>
 
         <div className="space-y-4 px-4">

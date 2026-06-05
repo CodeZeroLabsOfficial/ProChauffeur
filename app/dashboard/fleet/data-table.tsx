@@ -46,7 +46,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -161,6 +160,12 @@ export function FleetDataTable({
     },
     [selectedId]
   );
+
+  const openVehicleEdit = useCallback((v: Vehicle) => {
+    onCreateOpenChange?.(false);
+    setSelectedId(v.driverID);
+    setEditOpen(true);
+  }, [onCreateOpenChange]);
 
   const columns = useMemo<ColumnDef<FleetRow>[]>(
     () => [
@@ -281,14 +286,10 @@ export function FleetDataTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Assignment</DropdownMenuLabel>
-                {assignedChauffeurId ? (
-                  <DropdownMenuItem onClick={() => handleUnassignVehicle(vehicle)}>
-                    Unassign chauffeur
-                  </DropdownMenuItem>
-                ) : null}
+                <DropdownMenuItem onClick={() => openVehicleEdit(vehicle)}>Edit</DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Assign chauffeur</DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger>Assignment</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     {drivers.length ? (
                       drivers.map((driver) => (
@@ -302,6 +303,14 @@ export function FleetDataTable({
                     ) : (
                       <DropdownMenuItem disabled>No chauffeurs available</DropdownMenuItem>
                     )}
+                    {assignedChauffeurId ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleUnassignVehicle(vehicle)}>
+                          Unassign chauffeur
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
@@ -314,7 +323,7 @@ export function FleetDataTable({
         }
       }
     ],
-    [drivers, handleAssignVehicle, handleDeleteVehicle, handleUnassignVehicle]
+    [drivers, handleAssignVehicle, handleDeleteVehicle, handleUnassignVehicle, openVehicleEdit]
   );
 
   const table = useReactTable({
@@ -340,12 +349,6 @@ export function FleetDataTable({
     () => (selectedId ? vehicles.find((v) => v.driverID === selectedId) ?? null : null),
     [selectedId, vehicles]
   );
-
-  const selectedChauffeurName = useMemo(() => {
-    if (!selectedVehicle) return "Unassigned";
-    const chauffeur = effectiveChauffeurUserId(selectedVehicle);
-    return chauffeur ? (driverNameById.get(chauffeur) ?? "Unknown") : "Unassigned";
-  }, [selectedVehicle, driverNameById]);
 
   useEffect(() => {
     if (createOpen) {
@@ -477,10 +480,8 @@ export function FleetDataTable({
 
       <VehicleDetailSheet
         vehicle={selectedVehicle}
-        chauffeurName={selectedChauffeurName}
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
-        onEditClick={() => setEditOpen(true)}
       />
 
       <VehicleEditSheet
