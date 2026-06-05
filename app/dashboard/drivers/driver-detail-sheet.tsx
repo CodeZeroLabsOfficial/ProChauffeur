@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   BadgeCheck,
   Building2,
@@ -31,6 +30,8 @@ import {
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
+import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
+import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   fetchDriverLastSignIn,
@@ -47,7 +48,6 @@ import {
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
@@ -60,73 +60,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
-
-const detailLabelClass =
-  "text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase";
-
-const detailLabelIconClass = "size-3.5 shrink-0 opacity-80";
-
-function SectionHeading({ children }: { children: string }) {
-  return <h4 className="text-sm font-semibold">{children}</h4>;
-}
-
-function DetailLabel({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
-  return (
-    <dt className={detailLabelClass}>
-      <Icon className={detailLabelIconClass} aria-hidden />
-      {children}
-    </dt>
-  );
-}
-
-function LabeledDetailValue({
-  icon,
-  label,
-  value,
-  href,
-  className
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string | null | undefined;
-  href?: string;
-  className?: string;
-}) {
-  const text = value?.trim() || "—";
-  const hasLink = Boolean(href && value?.trim());
-
-  return (
-    <div className={cn("space-y-1", className)}>
-      <DetailLabel icon={icon}>{label}</DetailLabel>
-      <dd>
-        {hasLink ? (
-          <a href={href} className="text-muted-foreground text-sm hover:underline">
-            {text}
-          </a>
-        ) : (
-          <p className="text-muted-foreground text-sm">{text}</p>
-        )}
-      </dd>
-    </div>
-  );
-}
-
-function expiryWarning(date: Date | null | undefined): "expired" | "soon" | null {
-  if (!date) return null;
-  const now = new Date();
-  if (date < now) return "expired";
-  const days = (date.getTime() - now.getTime()) / 86400000;
-  if (days <= 60) return "soon";
-  return null;
-}
-
-function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
-  return (
-    <Badge variant={level === "expired" ? "destructive" : "outline"} className="ms-2">
-      {level === "expired" ? "Expired" : "Expiring soon"}
-    </Badge>
-  );
-}
 
 function DriverOverviewFields({
   user,
