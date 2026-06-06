@@ -22,7 +22,11 @@ import {
   type QuerySnapshot
 } from "firebase/firestore";
 import { firestore, firebaseAuth } from "@/lib/firebase/client";
-import { coordinateToGeoPoint, stripUndefined } from "@/lib/firebase/converters";
+import {
+  coordinateToFirestoreField,
+  coordinateToGeoPoint,
+  stripUndefined
+} from "@/lib/firebase/converters";
 import {
   companyNotification,
   driverNotification,
@@ -202,13 +206,14 @@ export async function assignTripDriver(
 }
 
 export async function createTrip(trip: Trip): Promise<void> {
+  const now = new Date();
   const payload = stripUndefined({
     ...trip,
-    pickup: coordinateToGeoPoint(trip.pickup),
-    dropoff: coordinateToGeoPoint(trip.dropoff),
+    pickup: coordinateToFirestoreField(trip.pickup),
+    dropoff: coordinateToFirestoreField(trip.dropoff),
     liveLocation: trip.liveLocation ? coordinateToGeoPoint(trip.liveLocation) : undefined,
-    updatedAt: serverTimestamp(),
-    createdAt: trip.createdAt ?? serverTimestamp()
+    createdAt: trip.createdAt ?? now,
+    updatedAt: trip.updatedAt ?? now
   });
   await setDoc(doc(db(), Collections.trips, trip.id), payload);
 }

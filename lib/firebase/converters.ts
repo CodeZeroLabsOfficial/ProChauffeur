@@ -37,6 +37,11 @@ export function coordinateToGeoPoint(c: CoordinateField): GeoPoint {
   return new GeoPoint(c.latitude, c.longitude);
 }
 
+/** Writes pickup/dropoff the same way iOS `CoordinateField` encodes to Firestore. */
+export function coordinateToFirestoreField(c: CoordinateField): CoordinateField {
+  return { latitude: c.latitude, longitude: c.longitude };
+}
+
 /** Coerce a Firestore numeric field to an integer, returning fallback when absent. */
 export function toInt(value: unknown, fallback: number): number {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);

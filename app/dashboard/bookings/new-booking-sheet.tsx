@@ -71,6 +71,14 @@ function requireCustomerSelection(customer: User | null): customer is User {
   return true;
 }
 
+function requireScheduledPickup(scheduledPickupAt: Date | null): scheduledPickupAt is Date {
+  if (!scheduledPickupAt || Number.isNaN(scheduledPickupAt.getTime())) {
+    toast.error("Choose a pickup time.");
+    return false;
+  }
+  return true;
+}
+
 function addonLabel(addon: PricingAddon) {
   return `${addon.title} (${formatCurrency(addon.price, appConfig.currency)})`;
 }
@@ -128,6 +136,8 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       return;
     }
 
+    setScheduledPickupAt(new Date());
+
     fetchPricingConfiguration()
       .then((config) => setPricingAddons(config.addons))
       .catch(() => setPricingAddons(defaultPricingConfig.addons));
@@ -138,7 +148,8 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     if (
       !requireCustomerSelection(customer) ||
       !requireAddressSelection("pickup", pickup) ||
-      !requireAddressSelection("drop-off", dropoff)
+      !requireAddressSelection("drop-off", dropoff) ||
+      !requireScheduledPickup(scheduledPickupAt)
     ) {
       return;
     }
@@ -214,7 +225,9 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="scheduledPickupAt">Pickup time</Label>
+              <Label htmlFor="scheduledPickupAt">
+                Pickup time <span className="text-destructive">*</span>
+              </Label>
               <DateTimePicker
                 id="scheduledPickupAt"
                 value={scheduledPickupAt}
