@@ -13,6 +13,7 @@ import type {
   NotificationAction,
   NotificationCategory,
   PricingConfig,
+  PricingAddon,
   Trip,
   User,
   UserProfile,
@@ -115,6 +116,14 @@ export function mapVehicle(d: DocumentData): Vehicle {
   };
 }
 
+function mapPricingAddon(d: DocumentData): PricingAddon {
+  return {
+    id: d.id ?? "",
+    title: d.title ?? "",
+    price: d.price ?? 0
+  };
+}
+
 export function mapTrip(id: string, d: DocumentData): Trip {
   return {
     id,
@@ -136,6 +145,9 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     bookingPassengerCount: d.bookingPassengerCount ?? null,
     bookingSmallLuggageCount: d.bookingSmallLuggageCount ?? null,
     bookingLargeLuggageCount: d.bookingLargeLuggageCount ?? null,
+    bookingAddons: Array.isArray(d.bookingAddons)
+      ? d.bookingAddons.map((addon) => mapPricingAddon(addon as DocumentData))
+      : null,
     scheduledPickupAt: toDate(d.scheduledPickupAt),
     linkedTripID: d.linkedTripID ?? null,
     liveLocation: toCoordinate(d.liveLocation),

@@ -26,7 +26,8 @@ import {
   type TripStatus,
   type VehicleType
 } from "@/lib/models";
-import { formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDateTime } from "@/lib/format";
+import { appConfig } from "@/lib/env";
 import { generateAvatarFallback } from "@/lib/utils";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -369,8 +370,14 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </SectionCard>
 
           <SectionCard title="Extras / Add-ons">
-            {trip.notes?.trim() ? (
-              <p className="text-muted-foreground text-sm">{trip.notes.trim()}</p>
+            {trip.bookingAddons?.length ? (
+              <ul className="text-muted-foreground space-y-1 text-sm">
+                {trip.bookingAddons.map((addon) => (
+                  <li key={addon.id}>
+                    {addon.title} ({formatCurrency(addon.price, appConfig.currency)})
+                  </li>
+                ))}
+              </ul>
             ) : (
               <p className="text-muted-foreground text-sm">No add-ons or extras recorded.</p>
             )}

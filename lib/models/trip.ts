@@ -1,4 +1,5 @@
 import type { TripStatus } from "@/lib/models/enums";
+import type { PricingAddon } from "@/lib/models/pricing";
 import type { Vehicle } from "@/lib/models/vehicle";
 
 /** CoordinateField.swift — plain lat/lng pair used for pickup/dropoff. */
@@ -28,6 +29,7 @@ export interface Trip {
   bookingPassengerCount?: number | null;
   bookingSmallLuggageCount?: number | null;
   bookingLargeLuggageCount?: number | null;
+  bookingAddons?: PricingAddon[] | null;
   scheduledPickupAt?: Date | null;
   linkedTripID?: string | null;
   /** Live chauffeur GPS (Firestore GeoPoint -> lat/lng). */
