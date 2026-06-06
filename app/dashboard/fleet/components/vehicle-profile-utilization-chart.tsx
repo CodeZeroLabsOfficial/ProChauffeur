@@ -2,8 +2,14 @@
 
 import { ActivityIcon } from "lucide-react";
 
+import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
+import {
+  overviewPeriodOption,
+  type DriverOverviewPeriod
+} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -17,12 +23,28 @@ import {
   EmptyTitle
 } from "@/components/ui/empty";
 
-export function VehicleProfileUtilizationChart() {
+export function VehicleProfileUtilizationChart({
+  period,
+  onPeriodChange
+}: {
+  period: DriverOverviewPeriod;
+  onPeriodChange: (period: DriverOverviewPeriod) => void;
+}) {
+  const selectedOption = overviewPeriodOption(period);
+
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>Utilization rate</CardTitle>
-        <CardDescription>Fleet usage over time</CardDescription>
+        <CardDescription>
+          <span className="hidden @[540px]/card:block">
+            Fleet usage for the {selectedOption.label.toLowerCase()}
+          </span>
+          <span className="@[540px]/card:hidden">{selectedOption.shortLabel}</span>
+        </CardDescription>
+        <CardAction>
+          <DriverProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
+        </CardAction>
       </CardHeader>
       <CardContent>
         <Empty className="border-0 py-8 md:py-10">

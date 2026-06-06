@@ -11,7 +11,6 @@ import { formatCurrency } from "@/lib/format";
 import { effectiveChauffeurUserId, type Vehicle } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
 import { VehicleProfileSidebar } from "@/app/dashboard/fleet/components/vehicle-profile-sidebar";
 import { VehicleProfileOverviewTab } from "@/app/dashboard/fleet/components/vehicle-profile-overview-tab";
@@ -120,22 +119,13 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
           value={activeTab}
           onValueChange={(v) => setTab(v as ProfileTab)}
           className="gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="trips">Trips</TabsTrigger>
-              <TabsTrigger value="financials">Financials</TabsTrigger>
-              <TabsTrigger value="compliance">Compliance</TabsTrigger>
-              <TabsTrigger value="operations">Operations</TabsTrigger>
-            </TabsList>
-            {activeTab === "overview" ? (
-              <DriverProfileOverviewPeriodSelector
-                value={overviewPeriod}
-                onChange={setOverviewPeriod}
-                className="shrink-0"
-              />
-            ) : null}
-          </div>
+          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="trips">Trips</TabsTrigger>
+            <TabsTrigger value="financials">Financials</TabsTrigger>
+            <TabsTrigger value="compliance">Compliance</TabsTrigger>
+            <TabsTrigger value="operations">Operations</TabsTrigger>
+          </TabsList>
 
           <div className="grid gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
@@ -156,6 +146,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
                   invoices={metrics.vehicleInvoices}
                   vehicleDocumentId={vehicleDocumentId}
                   period={overviewPeriod}
+                  onPeriodChange={setOverviewPeriod}
                 />
               </TabsContent>
               <TabsContent value="trips" className="mt-0">

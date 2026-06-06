@@ -11,16 +11,18 @@ export function VehicleProfileOverviewTab({
   trips,
   invoices,
   vehicleDocumentId,
-  period
+  period,
+  onPeriodChange
 }: {
   trips: Trip[];
   invoices: Invoice[];
   vehicleDocumentId: string;
   period: DriverOverviewPeriod;
+  onPeriodChange: (period: DriverOverviewPeriod) => void;
 }) {
   return (
     <div className="space-y-4">
-      <VehicleProfileUtilizationChart />
+      <VehicleProfileUtilizationChart period={period} onPeriodChange={onPeriodChange} />
       <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:space-y-0">
         <DriverProfileRevenueStat invoices={invoices} period={period} />
         <VehicleProfileBookingsCard

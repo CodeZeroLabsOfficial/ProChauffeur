@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Hash, PencilIcon, RectangleHorizontal, Users } from "lucide-react";
+import { Calendar, Cog, Fuel, PencilIcon, RectangleHorizontal, UserRound } from "lucide-react";
 
 import {
   effectiveChauffeurUserId,
@@ -106,23 +106,8 @@ export function VehicleProfileSidebar({
             </div>
 
             <div className="flex flex-col gap-y-4">
-              {vehicle.licensePlate?.trim() ? (
-                <DetailRow icon={RectangleHorizontal}>
-                  <span>{vehicle.licensePlate}</span>
-                </DetailRow>
-              ) : null}
-              {vehicle.vehicleIdentificationNumber?.trim() ? (
-                <DetailRow icon={Hash}>
-                  <span className="text-muted-foreground">{vehicle.vehicleIdentificationNumber}</span>
-                </DetailRow>
-              ) : null}
-              {vehicle.passengerCapacity > 0 ? (
-                <DetailRow icon={Users}>
-                  <span>{vehicle.passengerCapacity} passengers</span>
-                </DetailRow>
-              ) : null}
-              {assignedChauffeur ? (
-                <DetailRow icon={Users}>
+              <DetailRow icon={UserRound}>
+                {assignedChauffeur ? (
                   <Link
                     href={`/dashboard/drivers/${assignedChauffeur.id}`}
                     className="hover:text-primary hover:underline">
@@ -130,15 +115,33 @@ export function VehicleProfileSidebar({
                       assignedChauffeur.email ||
                       "Chauffeur"}
                   </Link>
-                </DetailRow>
-              ) : null}
-              {vehicle.registrationExpiry ? (
-                <DetailRow icon={RectangleHorizontal}>
-                  <span className="text-muted-foreground">
-                    Rego expires {formatDate(vehicle.registrationExpiry)}
-                  </span>
-                </DetailRow>
-              ) : null}
+                ) : (
+                  <span className="text-muted-foreground">Unassigned</span>
+                )}
+              </DetailRow>
+              <DetailRow icon={Cog}>
+                <span className={vehicle.gearTypeDescription?.trim() ? undefined : "text-muted-foreground"}>
+                  {vehicle.gearTypeDescription?.trim() || "—"}
+                </span>
+              </DetailRow>
+              <DetailRow icon={Fuel}>
+                <span
+                  className={
+                    vehicle.engineTypeDescription?.trim() ? undefined : "text-muted-foreground"
+                  }>
+                  {vehicle.engineTypeDescription?.trim() || "—"}
+                </span>
+              </DetailRow>
+              <DetailRow icon={RectangleHorizontal}>
+                <span className={vehicle.licensePlate?.trim() ? undefined : "text-muted-foreground"}>
+                  {vehicle.licensePlate?.trim() || "—"}
+                </span>
+              </DetailRow>
+              <DetailRow icon={Calendar}>
+                <span className={vehicle.registrationExpiry ? undefined : "text-muted-foreground"}>
+                  {vehicle.registrationExpiry ? formatDate(vehicle.registrationExpiry) : "—"}
+                </span>
+              </DetailRow>
             </div>
           </div>
         </CardContent>
