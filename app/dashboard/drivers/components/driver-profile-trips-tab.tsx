@@ -142,7 +142,7 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
   });
 
   return (
-    <Card className="py-0">
+    <Card className="min-w-0 py-0">
       <CardContent className="space-y-2 px-6 pb-4 pt-4">
         <ListTableToolbar
           table={table}

@@ -67,13 +67,16 @@ export function ListTableToolbar<TData>({
       onChange={(event) =>
         table.getColumn(searchColumnId)?.setFilterValue(event.target.value)
       }
-      className={cn("max-w-sm", (nowrap || inlineControls) && "shrink-0")}
+      className={cn(
+        inlineControls ? "min-w-0 flex-1" : "max-w-sm",
+        nowrap && !inlineControls && "shrink-0"
+      )}
     />
   );
 
   if (inlineControls) {
     return (
-      <div className={cn("flex flex-nowrap items-center gap-2 py-4", className)}>
+      <div className={cn("flex min-w-0 w-full flex-nowrap items-center gap-2 py-4", className)}>
         {searchInput}
         {filters}
         {endActions}
