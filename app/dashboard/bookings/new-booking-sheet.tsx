@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
+import { useUsers } from "@/hooks/use-collections";
 import { createTrip } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import type { Trip, User } from "@/lib/models";
@@ -13,6 +14,13 @@ import { DateTimePicker } from "@/components/datetime-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -23,6 +31,8 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
+
+const UNASSIGNED_CHAUFFEUR = "__unassigned__";
 
 function requireAddressSelection(
   label: string,
@@ -52,21 +62,34 @@ function requireCustomerSelection(customer: User | null): customer is User {
 }
 
 export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
+  const { users } = useUsers();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customer, setCustomer] = useState<User | null>(null);
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
+  const [assignedChauffeur, setAssignedChauffeur] = useState(UNASSIGNED_CHAUFFEUR);
   const [passengerCount, setPassengerCount] = useState(1);
   const [smallLuggageCount, setSmallLuggageCount] = useState(0);
   const [largeLuggageCount, setLargeLuggageCount] = useState(0);
   const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
+
+  const chauffeurs = useMemo(
+    () =>
+      users
+        .filter((u) => u.role === "driver")
+        .sort((a, b) =>
+          (a.profile.displayName || a.email).localeCompare(b.profile.displayName || b.email)
+        ),
+    [users]
+  );
 
   useEffect(() => {
     if (!open) {
       setCustomer(null);
       setPickup(null);
       setDropoff(null);
+      setAssignedChauffeur(UNASSIGNED_CHAUFFEUR);
       setPassengerCount(1);
       setSmallLuggageCount(0);
       setLargeLuggageCount(0);
@@ -86,6 +109,8 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
 
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
+    const driverID =
+      assignedChauffeur === UNASSIGNED_CHAUFFEUR ? null : assignedChauffeur;
 
     const trip: Trip = {
       id: crypto.randomUUID(),
@@ -94,7 +119,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       customerDisplayName: customerDisplayName(customer) || null,
       customerPhoneNumber: customer.profile.phoneNumber ?? null,
       customerEmail: customer.email || null,
-      driverID: null,
+      driverID,
       pickup: pickup.coordinate,
       dropoff: dropoff.coordinate,
       pickupAddressLine: pickup.addressLine,
@@ -161,6 +186,32 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
               placeholder="Search drop-off address…"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assignedChauffeur">Assigned chauffeur</Label>
+            <Select
+              value={assignedChauffeur}
+              onValueChange={setAssignedChauffeur}
+              disabled={saving}>
+              <SelectTrigger id="assignedChauffeur">
+                <SelectValue placeholder="Select chauffeur" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED_CHAUFFEUR}>Unassigned</SelectItem>
+                {chauffeurs.length === 0 ? (
+                  <SelectItem value="__none__" disabled>
+                    No chauffeurs available
+                  </SelectItem>
+                ) : (
+                  chauffeurs.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.profile.displayName || u.email}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
