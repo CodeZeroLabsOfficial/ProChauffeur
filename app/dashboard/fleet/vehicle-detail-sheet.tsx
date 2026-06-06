@@ -1,17 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
   Calendar,
   Car,
   CarFront,
   Cog,
+  ExternalLink,
   Fuel,
   Hash,
-  Landmark,
   Luggage,
   Palette,
-  RectangleHorizontal,
   Tags,
   Users
 } from "lucide-react";
@@ -25,21 +25,24 @@ import {
   type Vehicle,
   type VehicleType
 } from "@/lib/models";
-import { upsertVehicle } from "@/lib/services/firebase-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { assignmentBadgeIcon } from "@/lib/vehicle-badge-icons";
+import { VehicleComplianceFields } from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
+import {
+  nullableTrim,
+  saveVehicleFields
+} from "@/app/dashboard/fleet/lib/save-vehicle-fields";
 import {
   LUXURY_VEHICLE_MAKES,
   vehicleMakeSelectValue
 } from "@/lib/vehicle-makes";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
-import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
-import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
 import { InlineEditableStepperField } from "@/components/inline-editable-stepper-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -68,23 +71,6 @@ const MAKE_OPTIONS = LUXURY_VEHICLE_MAKES.map((entry) => ({
   value: entry.label,
   label: entry.label
 }));
-
-function nullableTrim(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed || null;
-}
-
-async function saveVehicleFields(
-  vehicle: Vehicle,
-  patch: Partial<Vehicle>
-): Promise<{ ok: boolean; message?: string }> {
-  try {
-    await upsertVehicle({ ...vehicle, ...patch });
-    return { ok: true };
-  } catch {
-    return { ok: false, message: "Could not save." };
-  }
-}
 
 function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
@@ -324,70 +310,6 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
   );
 }
 
-function VehicleComplianceFields({ vehicle }: { vehicle: Vehicle }) {
-  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
-  const regoExpiryWarn = expiryWarning(vehicle.registrationExpiry);
-
-  async function saveVehicle(patch: Partial<Vehicle>) {
-    return saveVehicleFields(vehicle, patch);
-  }
-
-  return (
-    <div className="space-y-4">
-      <SectionHeading>Registration details</SectionHeading>
-      <dl className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <DetailLabel icon={Landmark}>Rego state</DetailLabel>
-          <dd>
-            <InlineEditableField
-              fieldId="regoState"
-              activeFieldId={activeFieldId}
-              onActiveFieldIdChange={setActiveFieldId}
-              value={vehicle.registrationJurisdictionCode?.trim() ?? ""}
-              editLabel="rego state"
-              placeholder="NSW"
-              onSave={async (next) =>
-                saveVehicle({ registrationJurisdictionCode: nullableTrim(next) })
-              }
-            />
-          </dd>
-        </div>
-        <div className="space-y-1">
-          <DetailLabel icon={RectangleHorizontal}>Plate</DetailLabel>
-          <dd>
-            <InlineEditableField
-              fieldId="plate"
-              activeFieldId={activeFieldId}
-              onActiveFieldIdChange={setActiveFieldId}
-              value={vehicle.licensePlate?.trim() ?? ""}
-              editLabel="plate"
-              placeholder="Plate number"
-              onSave={async (next) => saveVehicle({ licensePlate: next.trim() })}
-            />
-          </dd>
-        </div>
-        <div className="col-span-2 space-y-1">
-          <DetailLabel icon={Calendar}>Rego expiry</DetailLabel>
-          <dd>
-            <InlineEditableDateField
-              fieldId="regoExpiry"
-              activeFieldId={activeFieldId}
-              onActiveFieldIdChange={setActiveFieldId}
-              value={vehicle.registrationExpiry}
-              editLabel="rego expiry"
-              dateRange="expiry"
-              trailingContent={
-                regoExpiryWarn ? <ExpiryBadge level={regoExpiryWarn} /> : null
-              }
-              onSave={async (next) => saveVehicle({ registrationExpiry: next })}
-            />
-          </dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
 function VehicleTabPlaceholder({ label }: { label: string }) {
   return (
     <p className="text-muted-foreground py-6 text-center text-sm">
@@ -417,7 +339,17 @@ export function VehicleDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange} modal={modal}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Vehicle details</SheetTitle>
+          <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
+            <SheetTitle>Vehicle details</SheetTitle>
+            <Button variant="outline" asChild>
+              <Link
+                href={`/dashboard/fleet/${displayVehicle.driverID}`}
+                onClick={() => onOpenChange(false)}>
+                <ExternalLink />
+                View profile
+              </Link>
+            </Button>
+          </div>
         </SheetHeader>
 
         <div className="space-y-4 px-4">

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
@@ -286,6 +287,10 @@ export function FleetDataTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/fleet/${vehicle.driverID}`}>View profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => openVehicleEdit(vehicle)}>Edit</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>

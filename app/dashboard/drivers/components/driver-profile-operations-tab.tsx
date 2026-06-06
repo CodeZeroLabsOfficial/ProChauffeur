@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   defaultDriverProfile,
   vehicleDisplayName,
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b py-3 last:border-0">
       <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
@@ -61,7 +63,16 @@ export function DriverProfileOperationsTab({
         <CardContent>
           {vehicle ? (
             <>
-              <DetailRow label="Vehicle" value={vehicleDisplayName(vehicle)} />
+              <DetailRow
+                label="Vehicle"
+                value={
+                  <Link
+                    href={`/dashboard/fleet/${vehicle.driverID}`}
+                    className="hover:text-primary hover:underline">
+                    {vehicleDisplayName(vehicle)}
+                  </Link>
+                }
+              />
               <DetailRow label="Plate" value={vehicle.licensePlate || "—"} />
               <DetailRow label="Capacity" value={String(vehicle.passengerCapacity)} />
               <DetailRow

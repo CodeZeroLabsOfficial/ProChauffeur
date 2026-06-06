@@ -319,6 +319,12 @@ export async function fetchVehicles(): Promise<Vehicle[]> {
   return snap.docs.map((dc) => mapVehicle(dc.data()));
 }
 
+/** Vehicle doc id always equals driverID. */
+export async function fetchVehicle(vehicleDocumentId: string): Promise<Vehicle | null> {
+  const snap = await getDoc(doc(db(), Collections.vehicles, vehicleDocumentId));
+  return snap.exists() ? mapVehicle(snap.data()) : null;
+}
+
 /** Vehicle doc id always equals driverID (chauffeur uid). */
 export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
   const ref = doc(db(), Collections.vehicles, vehicle.driverID);

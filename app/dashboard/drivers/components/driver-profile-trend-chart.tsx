@@ -11,8 +11,10 @@ import {
   overviewPeriodRanges,
   type DriverOverviewPeriod
 } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -103,10 +105,12 @@ function getRangeData(trips: Trip[], period: DriverOverviewPeriod, now: Date) {
 
 export function DriverProfileTrendChart({
   trips,
-  period
+  period,
+  onPeriodChange
 }: {
   trips: Trip[];
   period: DriverOverviewPeriod;
+  onPeriodChange: (period: DriverOverviewPeriod) => void;
 }) {
   const now = useMemo(() => new Date(), []);
   const metrics = useMemo(() => getRangeData(trips, period, now), [trips, period, now]);
@@ -123,6 +127,9 @@ export function DriverProfileTrendChart({
           </span>
           <span className="@[540px]/card:hidden">{selectedOption.shortLabel}</span>
         </CardDescription>
+        <CardAction>
+          <DriverProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
+        </CardAction>
       </CardHeader>
       <CardContent>
         <div className="mb-4 grid items-end gap-4 lg:grid-cols-2 lg:gap-6">
