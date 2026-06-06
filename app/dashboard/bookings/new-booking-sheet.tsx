@@ -322,15 +322,15 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
             <Textarea id="notes" name="notes" rows={3} />
           </div>
 
-          <SheetFooter className="px-0">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Creating…" : "Create booking"}
-            </Button>
+          <SheetFooter className="grid grid-cols-2 gap-3 px-0">
             <SheetClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" className="w-full">
                 Cancel
               </Button>
             </SheetClose>
+            <Button type="submit" disabled={saving} className="w-full">
+              {saving ? "Creating…" : "Create booking"}
+            </Button>
           </SheetFooter>
         </form>
       </SheetContent>

@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   endOfDay,
   endOfMonth,
+  endOfYear,
   format,
   startOfDay,
   startOfMonth,
@@ -65,13 +66,13 @@ function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRang
     case "last28Days":
       return { from: startOfDay(subDays(reference, 27)), to: endOfDay(reference) };
     case "thisMonth":
-      return { from: startOfMonth(reference), to: endOfDay(reference) };
+      return { from: startOfMonth(reference), to: endOfMonth(reference) };
     case "lastMonth": {
       const lastMonth = subMonths(reference, 1);
       return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
     }
     case "thisYear":
-      return { from: startOfDay(startOfYear(reference)), to: endOfDay(reference) };
+      return { from: startOfYear(reference), to: endOfYear(reference) };
   }
 }
 
