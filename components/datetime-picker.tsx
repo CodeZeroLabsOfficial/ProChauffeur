@@ -106,6 +106,8 @@ export function DateTimePicker({
           className={cn(
             "w-full pl-3 text-left font-normal",
             !value && "text-muted-foreground",
+            invalid &&
+              "border-destructive ring-[3px] ring-destructive/20 dark:border-destructive dark:ring-destructive/40",
             className
           )}>
           {value ? format(value, "PPP p") : <span>{placeholder}</span>}

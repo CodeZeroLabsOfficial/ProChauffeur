@@ -143,8 +143,6 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       return;
     }
 
-    setScheduledPickupAt(new Date());
-
     fetchPricingConfiguration()
       .then((config) => setPricingAddons(config.addons))
       .catch(() => setPricingAddons(defaultPricingConfig.addons));
