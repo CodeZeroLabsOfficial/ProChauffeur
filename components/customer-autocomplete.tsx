@@ -26,6 +26,7 @@ export function CustomerAutocomplete({
   placeholder = "Search customers…",
   required,
   disabled,
+  invalid,
   className
 }: {
   id?: string;
@@ -34,6 +35,7 @@ export function CustomerAutocomplete({
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  invalid?: boolean;
   className?: string;
 }) {
   const listboxId = useId();
@@ -86,6 +88,7 @@ export function CustomerAutocomplete({
             value={query}
             placeholder={placeholder}
             required={required}
+            aria-invalid={invalid || undefined}
             disabled={disabled || usersLoading}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => setFocused(true)}

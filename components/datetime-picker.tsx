@@ -35,6 +35,7 @@ export function DateTimePicker({
   onChange,
   placeholder = "Pick date and time",
   disabled,
+  invalid,
   className
 }: {
   id?: string;
@@ -42,6 +43,7 @@ export function DateTimePicker({
   onChange: (value: Date | null) => void;
   placeholder?: string;
   disabled?: boolean;
+  invalid?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -100,6 +102,7 @@ export function DateTimePicker({
           type="button"
           variant="outline"
           disabled={disabled}
+          aria-invalid={invalid || undefined}
           className={cn(
             "w-full pl-3 text-left font-normal",
             !value && "text-muted-foreground",

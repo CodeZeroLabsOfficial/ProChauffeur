@@ -25,6 +25,7 @@ export function AddressAutocomplete({
   placeholder = "Search for an address…",
   required,
   disabled,
+  invalid,
   className
 }: {
   id?: string;
@@ -33,6 +34,7 @@ export function AddressAutocomplete({
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  invalid?: boolean;
   className?: string;
 }) {
   const listboxId = useId();
@@ -82,6 +84,7 @@ export function AddressAutocomplete({
             value={query}
             placeholder={placeholder}
             required={required}
+            aria-invalid={invalid || undefined}
             disabled={disabled}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => setFocused(true)}

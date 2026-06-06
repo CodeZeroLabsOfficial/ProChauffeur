@@ -44,40 +44,9 @@ import {
 
 const UNASSIGNED_CHAUFFEUR = "__unassigned__";
 
-function requireAddressSelection(
-  label: string,
-  selection: AddressSuggestion | null
-): selection is AddressSuggestion {
-  if (!selection?.addressLine.trim()) {
-    toast.error(`Enter a ${label} address.`);
-    return false;
-  }
-  if (!hasValidCoordinate(selection.coordinate)) {
-    toast.error(`Choose a ${label} address from the suggestions.`);
-    return false;
-  }
-  return true;
-}
+type RequiredField = "customer" | "scheduledPickupAt" | "pickup" | "dropoff";
 
-function requireCustomerSelection(customer: User | null): customer is User {
-  if (!customer) {
-    toast.error("Choose a customer from the directory.");
-    return false;
-  }
-  if (customer.role !== "customer") {
-    toast.error("Choose a customer from the directory.");
-    return false;
-  }
-  return true;
-}
-
-function requireScheduledPickup(scheduledPickupAt: Date | null): scheduledPickupAt is Date {
-  if (!scheduledPickupAt || Number.isNaN(scheduledPickupAt.getTime())) {
-    toast.error("Choose a pickup time.");
-    return false;
-  }
-  return true;
-}
+type FieldErrors = Partial<Record<RequiredField, boolean>>;
 
 function addonLabel(addon: PricingAddon) {
   return `${addon.title} (${formatCurrency(addon.price, appConfig.currency)})`;
@@ -87,11 +56,44 @@ function vehicleForChauffeur(vehicles: Vehicle[], chauffeurUserId: string): Vehi
   return vehicles.find((vehicle) => effectiveChauffeurUserId(vehicle) === chauffeurUserId);
 }
 
+function isValidCustomer(customer: User | null): customer is User {
+  return Boolean(customer && customer.role === "customer");
+}
+
+function isValidAddressSelection(selection: AddressSuggestion | null): selection is AddressSuggestion {
+  return Boolean(
+    selection?.addressLine.trim() && hasValidCoordinate(selection.coordinate)
+  );
+}
+
+function isValidScheduledPickup(scheduledPickupAt: Date | null): scheduledPickupAt is Date {
+  return Boolean(scheduledPickupAt && !Number.isNaN(scheduledPickupAt.getTime()));
+}
+
+function collectFieldErrors(
+  customer: User | null,
+  pickup: AddressSuggestion | null,
+  dropoff: AddressSuggestion | null,
+  scheduledPickupAt: Date | null
+): FieldErrors {
+  return {
+    customer: !isValidCustomer(customer),
+    scheduledPickupAt: !isValidScheduledPickup(scheduledPickupAt),
+    pickup: !isValidAddressSelection(pickup),
+    dropoff: !isValidAddressSelection(dropoff)
+  };
+}
+
+function hasFieldErrors(errors: FieldErrors) {
+  return Object.values(errors).some(Boolean);
+}
+
 export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const { users } = useUsers();
   const { vehicles } = useVehicles();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
@@ -122,8 +124,13 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     [pricingAddons]
   );
 
+  function clearFieldError(field: RequiredField) {
+    setFieldErrors((prev) => ({ ...prev, [field]: false }));
+  }
+
   useEffect(() => {
     if (!open) {
+      setFieldErrors({});
       setCustomer(null);
       setPickup(null);
       setDropoff(null);
@@ -145,12 +152,15 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (
-      !requireCustomerSelection(customer) ||
-      !requireAddressSelection("pickup", pickup) ||
-      !requireAddressSelection("drop-off", dropoff) ||
-      !requireScheduledPickup(scheduledPickupAt)
-    ) {
+
+    const errors = collectFieldErrors(customer, pickup, dropoff, scheduledPickupAt);
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
+      toast.error("Complete the highlighted fields before creating the booking.");
+      return;
+    }
+
+    if (!isValidCustomer(customer) || !isValidAddressSelection(pickup) || !isValidAddressSelection(dropoff) || !isValidScheduledPickup(scheduledPickupAt)) {
       return;
     }
 
@@ -212,28 +222,33 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
         <SheetHeader>
           <SheetTitle>New booking</SheetTitle>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4">
+        <form onSubmit={onSubmit} className="space-y-4 px-4" noValidate>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="customer">Customer</Label>
               <CustomerAutocomplete
                 id="customer"
                 value={customer}
-                onChange={setCustomer}
+                onChange={(value) => {
+                  setCustomer(value);
+                  clearFieldError("customer");
+                }}
                 placeholder="Search customers…"
-                required
+                invalid={fieldErrors.customer}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="scheduledPickupAt">
-                Pickup time <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="scheduledPickupAt">Pickup time</Label>
               <DateTimePicker
                 id="scheduledPickupAt"
                 value={scheduledPickupAt}
-                onChange={setScheduledPickupAt}
+                onChange={(value) => {
+                  setScheduledPickupAt(value);
+                  clearFieldError("scheduledPickupAt");
+                }}
                 placeholder="Pick pickup time"
                 disabled={saving}
+                invalid={fieldErrors.scheduledPickupAt}
               />
             </div>
           </div>
@@ -243,9 +258,12 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
             <AddressAutocomplete
               id="pickupAddressLine"
               value={pickup}
-              onChange={setPickup}
+              onChange={(value) => {
+                setPickup(value);
+                clearFieldError("pickup");
+              }}
               placeholder="Search pickup address…"
-              required
+              invalid={fieldErrors.pickup}
             />
           </div>
 
@@ -254,9 +272,12 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
             <AddressAutocomplete
               id="dropoffAddressLine"
               value={dropoff}
-              onChange={setDropoff}
+              onChange={(value) => {
+                setDropoff(value);
+                clearFieldError("dropoff");
+              }}
               placeholder="Search drop-off address…"
-              required
+              invalid={fieldErrors.dropoff}
             />
           </div>
 
