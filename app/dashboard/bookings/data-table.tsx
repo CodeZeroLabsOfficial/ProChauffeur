@@ -31,7 +31,7 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import { DateRangePicker, last7DaysRange } from "@/components/custom-date-range-picker";
+import { DateRangePicker, thisWeekRange } from "@/components/custom-date-range-picker";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -89,7 +89,7 @@ export function BookingsDataTable() {
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
-  const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
+  const [dateRange, setDateRange] = useState<DateRange>(() => thisWeekRange());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -350,6 +350,7 @@ export function BookingsDataTable() {
             onChange={(range) => {
               if (range?.from) setDateRange(range);
             }}
+            defaultPreset="thisWeek"
             className="shrink-0"
           />
         }

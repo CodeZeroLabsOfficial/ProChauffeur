@@ -51,6 +51,13 @@ export function last7DaysRange(reference = new Date()): DateRange {
   };
 }
 
+export function thisWeekRange(reference = new Date()): DateRange {
+  return {
+    from: startOfDay(startOfWeek(reference)),
+    to: endOfDay(reference)
+  };
+}
+
 function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRange {
   switch (type) {
     case "today":
@@ -60,7 +67,7 @@ function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRang
       return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
     }
     case "thisWeek":
-      return { from: startOfDay(startOfWeek(reference)), to: endOfDay(reference) };
+      return thisWeekRange(reference);
     case "last7Days":
       return last7DaysRange(reference);
     case "last28Days":
