@@ -6,10 +6,17 @@ import { toast } from "sonner";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { MultiSelectField } from "@/components/multi-select-field";
-import { useUsers } from "@/hooks/use-collections";
+import { useUsers, useVehicles } from "@/hooks/use-collections";
 import { createTrip, fetchPricingConfiguration } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
-import { defaultPricingConfig, type PricingAddon, type Trip, type User } from "@/lib/models";
+import {
+  defaultPricingConfig,
+  effectiveChauffeurUserId,
+  type PricingAddon,
+  type Trip,
+  type User,
+  type Vehicle
+} from "@/lib/models";
 import { appConfig } from "@/lib/env";
 import { formatCurrency } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
@@ -68,8 +75,13 @@ function addonLabel(addon: PricingAddon) {
   return `${addon.title} (${formatCurrency(addon.price, appConfig.currency)})`;
 }
 
+function vehicleForChauffeur(vehicles: Vehicle[], chauffeurUserId: string): Vehicle | undefined {
+  return vehicles.find((vehicle) => effectiveChauffeurUserId(vehicle) === chauffeurUserId);
+}
+
 export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const { users } = useUsers();
+  const { vehicles } = useVehicles();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customer, setCustomer] = useState<User | null>(null);
@@ -135,6 +147,13 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverID =
       assignedChauffeur === UNASSIGNED_CHAUFFEUR ? null : assignedChauffeur;
+    const assignedVehicle = driverID ? vehicleForChauffeur(vehicles, driverID) : undefined;
+    if (driverID && !assignedVehicle) {
+      toast.error(
+        "This chauffeur has no fleet vehicle assigned. Assign a vehicle in Fleet first, or leave unassigned."
+      );
+      return;
+    }
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
 
     const trip: Trip = {
@@ -145,6 +164,8 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       customerPhoneNumber: customer.profile.phoneNumber ?? null,
       customerEmail: customer.email || null,
       driverID,
+      fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
+      vehicleSnapshot: assignedVehicle ?? null,
       pickup: pickup.coordinate,
       dropoff: dropoff.coordinate,
       pickupAddressLine: pickup.addressLine,
