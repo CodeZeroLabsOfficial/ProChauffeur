@@ -6,7 +6,7 @@ import { getAdminSessionUser } from "@/lib/firebase/session";
 type RouteContext = { params: Promise<{ uid: string }> };
 
 /**
- * GET: Firebase Auth last sign-in for a user (admin dashboard driver detail).
+ * GET: Firebase Auth last sign-in for a user (admin dashboard detail sheets).
  */
 export async function GET(_request: Request, context: RouteContext) {
   const session = await getAdminSessionUser();

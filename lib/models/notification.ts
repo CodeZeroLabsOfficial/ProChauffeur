@@ -1,6 +1,7 @@
 export type NotificationAction = "created" | "updated" | "deleted";
 
 export type NotificationCategory =
+  | "customer"
   | "driver"
   | "vehicle"
   | "profile"

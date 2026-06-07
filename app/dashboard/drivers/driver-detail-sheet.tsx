@@ -34,7 +34,7 @@ import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/de
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
-  fetchDriverLastSignIn,
+  fetchUserLastSignIn,
   updateUserDriverProfile,
   updateUserEmail,
   updateUserProfile
@@ -463,7 +463,7 @@ export function DriverDetailSheet({
 
     let cancelled = false;
     setLastSignInAt(undefined);
-    void fetchDriverLastSignIn(displayUser.id).then((date) => {
+    void fetchUserLastSignIn(displayUser.id).then((date) => {
       if (!cancelled) setLastSignInAt(date);
     });
 

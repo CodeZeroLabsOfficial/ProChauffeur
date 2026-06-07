@@ -3,6 +3,7 @@ import {
   Building2Icon,
   CalendarCheckIcon,
   CarFrontIcon,
+  ContactIcon,
   LayoutDashboardIcon,
   ReceiptIcon,
   SettingsIcon,
@@ -37,6 +38,7 @@ export const navGroups: NavGroup[] = [
     title: "Operations",
     items: [
       { title: "Bookings", href: "/dashboard/bookings", icon: CalendarCheckIcon },
+      { title: "Customers", href: "/dashboard/customers", icon: ContactIcon },
       { title: "Drivers", href: "/dashboard/drivers", icon: UsersIcon },
       { title: "Fleet", href: "/dashboard/fleet", icon: CarFrontIcon },
       { title: "Billing", href: "/dashboard/billing", icon: ReceiptIcon }

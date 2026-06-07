@@ -238,13 +238,38 @@ export async function fetchUser(uid: string): Promise<User | null> {
 }
 
 /** Firebase Auth last sign-in; null if never signed in or no Auth user. */
-export async function fetchDriverLastSignIn(uid: string): Promise<Date | null> {
-  const res = await fetch(`/api/drivers/${uid}/last-sign-in`);
+export async function fetchUserLastSignIn(uid: string): Promise<Date | null> {
+  const res = await fetch(`/api/users/${uid}/last-sign-in`);
   if (!res.ok) return null;
   const body = (await res.json().catch(() => ({}))) as { lastSignInAt?: string | null };
   if (!body.lastSignInAt) return null;
   const date = new Date(body.lastSignInAt);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export type CreateCustomerInput = {
+  email: string;
+  password: string;
+  displayName: string;
+  phoneNumber?: string;
+  address?: string;
+  dateOfBirth?: string | null;
+};
+
+export async function createCustomer(input: CreateCustomerInput): Promise<{ uid: string }> {
+  const res = await fetch("/api/customers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  const body = (await res.json().catch(() => ({}))) as { uid?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not create customer.");
+  }
+  if (!body.uid) {
+    throw new Error("Could not create customer.");
+  }
+  return { uid: body.uid };
 }
 
 export async function updateUserProfile(uid: string, profile: UserProfile): Promise<void> {

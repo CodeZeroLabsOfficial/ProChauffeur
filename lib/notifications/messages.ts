@@ -1,6 +1,7 @@
 import type { CreateActivityNotificationInput, NotificationAction } from "@/lib/models/notification";
 
 const HREF = {
+  customers: "/dashboard/customers",
   drivers: "/dashboard/drivers",
   fleet: "/dashboard/fleet",
   profile: "/dashboard/settings/profile",
@@ -22,6 +23,21 @@ function actionMessage(entity: string, action: NotificationAction): string {
     case "deleted":
       return `${entity} removed`;
   }
+}
+
+export function customerNotification(
+  action: NotificationAction,
+  title: string,
+  entityId?: string
+): CreateActivityNotificationInput {
+  return {
+    category: "customer",
+    action,
+    title,
+    message: action === "created" ? "Customer account added" : "Customer profile updated",
+    href: HREF.customers,
+    entityId
+  };
 }
 
 export function driverNotification(

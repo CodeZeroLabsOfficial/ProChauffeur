@@ -3,6 +3,7 @@ import {
   Building2Icon,
   CarIcon,
   ClockIcon,
+  ContactIcon,
   DollarSignIcon,
   FileTextIcon,
   GlobeIcon,
@@ -16,6 +17,8 @@ import type { NotificationCategory } from "@/lib/models/notification";
 
 export function notificationCategoryIcon(category: NotificationCategory): LucideIcon {
   switch (category) {
+    case "customer":
+      return ContactIcon;
     case "driver":
       return UsersIcon;
     case "vehicle":
@@ -41,6 +44,8 @@ export function notificationCategoryIcon(category: NotificationCategory): Lucide
 
 export function notificationCategoryLabel(category: NotificationCategory): string {
   switch (category) {
+    case "customer":
+      return "Customer";
     case "driver":
       return "Driver";
     case "vehicle":
