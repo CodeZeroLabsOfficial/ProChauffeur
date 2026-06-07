@@ -16,21 +16,5 @@ export function resolveDriverLocation(trip: Trip, locations: LiveLocation[]): Li
     const byDriver = locations.find((l) => l.driverId === trip.driverID);
     if (byDriver) return byDriver;
   }
-  const byTrip = locations.find((l) => l.tripId === trip.id);
-  if (byTrip) return byTrip;
-
-  // Fallback while RTDB pin is absent: iOS always dual-writes Firestore `liveLocation`.
-  if (trip.liveLocation) {
-    return {
-      driverId: trip.driverID ?? trip.id,
-      lat: trip.liveLocation.latitude,
-      lng: trip.liveLocation.longitude,
-      heading: trip.liveHeadingDegrees ?? null,
-      status: trip.status,
-      tripId: trip.id,
-      updatedAt: trip.updatedAt.getTime()
-    };
-  }
-
-  return null;
+  return locations.find((l) => l.tripId === trip.id) ?? null;
 }
