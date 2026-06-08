@@ -30,30 +30,6 @@ export function useMapboxRoute(
   }, [resetKey]);
 
   useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-      body: JSON.stringify({
-        sessionId: "690ad9",
-        location: "use-mapbox-route.ts:effect",
-        message: "route effect",
-        data: {
-          resetKey,
-          enabled,
-          fromLat,
-          fromLng,
-          toLat,
-          toLng,
-          fromValid: from ? hasValidCoordinate(from) : false,
-          toValid: to ? hasValidCoordinate(to) : false
-        },
-        timestamp: Date.now(),
-        hypothesisId: "C"
-      })
-    }).catch(() => {});
-    // #endregion
-
     if (!enabled || !token || !from || !to) {
       setRoute(null);
       setLoading(false);

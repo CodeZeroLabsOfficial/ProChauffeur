@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { CalendarIcon, CarFrontIcon, MapPinIcon, RadioIcon } from "lucide-react";
 
@@ -84,69 +84,8 @@ export default function DispatchPage() {
       ? "mapbox://styles/mapbox/dark-v11"
       : "mapbox://styles/mapbox/light-v11";
 
-  useEffect(() => {
-    const onError = (event: ErrorEvent) => {
-      console.error("[dispatch-debug] window error", event.message, event.filename, event.lineno);
-      // #region agent log
-      fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-        body: JSON.stringify({
-          sessionId: "690ad9",
-          location: "page.tsx:onError",
-          message: "window error",
-          data: { message: event.message, filename: event.filename, lineno: event.lineno },
-          timestamp: Date.now(),
-          hypothesisId: "ALL"
-        })
-      }).catch(() => {});
-      // #endregion
-    };
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error("[dispatch-debug] unhandled rejection", event.reason);
-      // #region agent log
-      fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-        body: JSON.stringify({
-          sessionId: "690ad9",
-          location: "page.tsx:onUnhandledRejection",
-          message: "unhandled rejection",
-          data: { reason: String(event.reason) },
-          timestamp: Date.now(),
-          hypothesisId: "ALL"
-        })
-      }).catch(() => {});
-      // #endregion
-    };
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onUnhandledRejection);
-    return () => {
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onUnhandledRejection);
-    };
-  }, []);
-
   function toggleTripSelection(tripId: string) {
-    setSelectedTripId((current) => {
-      const next = current === tripId ? null : tripId;
-      console.debug("[dispatch-debug] trip selection", { current, tripId, next });
-      // #region agent log
-      fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-        body: JSON.stringify({
-          sessionId: "690ad9",
-          location: "page.tsx:toggleTripSelection",
-          message: "trip selection toggle",
-          data: { current, tripId, next },
-          timestamp: Date.now(),
-          hypothesisId: "B"
-        })
-      }).catch(() => {});
-      // #endregion
-      return next;
-    });
+    setSelectedTripId((current) => (current === tripId ? null : tripId));
   }
 
   function chauffeurLabel(trip: Trip) {

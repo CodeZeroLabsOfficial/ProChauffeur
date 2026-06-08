@@ -39,28 +39,6 @@ export function DispatchTripMap({
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
   const mode = dispatchMapMode(trip.status);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-    body: JSON.stringify({
-      sessionId: "690ad9",
-      location: "dispatch-trip-map.tsx:render",
-      message: "DispatchTripMap render",
-      data: {
-        tripId: trip.id,
-        status: trip.status,
-        mode,
-        pickupValid: hasValidCoordinate(trip.pickup),
-        dropoffValid: hasValidCoordinate(trip.dropoff),
-        hasDriverLocation: Boolean(driverLocation)
-      },
-      timestamp: Date.now(),
-      hypothesisId: "A,D,E"
-    })
-  }).catch(() => {});
-  // #endregion
-
   const driverCoordinate = useMemo(
     () => (driverLocation ? coordinateFromLatLng(driverLocation.lat, driverLocation.lng) : null),
     [driverLocation]
@@ -117,27 +95,6 @@ export function DispatchTripMap({
 
   useEffect(() => {
     if (!mapRef) return;
-
-    // #region agent log
-    fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "690ad9" },
-      body: JSON.stringify({
-        sessionId: "690ad9",
-        location: "dispatch-trip-map.tsx:fitEffect",
-        message: "map fit effect",
-        data: {
-          tripId: trip.id,
-          fitPointsCount: fitPoints.length,
-          fitPoints: fitPoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
-          hasRoute: Boolean(route),
-          mode
-        },
-        timestamp: Date.now(),
-        hypothesisId: "A,D"
-      })
-    }).catch(() => {});
-    // #endregion
 
     if (fitPoints.length === 0) {
       const view = companyDefaultView ?? DEFAULT_VIEW;

@@ -34,21 +34,6 @@ export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean 
     let unsub = () => {};
     try {
       const node = ref(realtimeDb(), rtdbLiveLocationsPath);
-      // #region agent log
-      fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "de9315" },
-        body: JSON.stringify({
-          sessionId: "de9315",
-          location: "use-live-locations.ts:subscribe",
-          message: "RTDB listener attaching",
-          data: { path: rtdbLiveLocationsPath },
-          timestamp: Date.now(),
-          hypothesisId: "E",
-          runId: "pre-fix"
-        })
-      }).catch(() => {});
-      // #endregion
       unsub = onValue(
         node,
         (snapshot) => {
@@ -64,44 +49,10 @@ export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean 
               updatedAt: Number(v.updatedAt ?? 0)
             }))
             .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
-          // #region agent log
-          fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "de9315" },
-            body: JSON.stringify({
-              sessionId: "de9315",
-              location: "use-live-locations.ts:onValue",
-              message: "RTDB snapshot received",
-              data: {
-                rawKeyCount: Object.keys(value).length,
-                validLocationCount: rows.length,
-                driverIds: Object.keys(value).slice(0, 5)
-              },
-              timestamp: Date.now(),
-              hypothesisId: "E",
-              runId: "pre-fix"
-            })
-          }).catch(() => {});
-          // #endregion
           setLocations(rows);
           setReady(true);
         },
         (error) => {
-          // #region agent log
-          fetch("http://127.0.0.1:7828/ingest/5d13c92e-444f-4436-80ad-efa5547b25d2", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "de9315" },
-            body: JSON.stringify({
-              sessionId: "de9315",
-              location: "use-live-locations.ts:onValue",
-              message: "RTDB listener error",
-              data: { error: error?.message ?? "unknown" },
-              timestamp: Date.now(),
-              hypothesisId: "E",
-              runId: "pre-fix"
-            })
-          }).catch(() => {});
-          // #endregion
           setReady(true);
         }
       );
