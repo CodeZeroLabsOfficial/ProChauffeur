@@ -176,7 +176,11 @@ export function DispatchTripMap({
         )}
 
         {driverLocation && mode !== "overview" && (
-          <AnimatedDriverMarker location={driverLocation} title={driverName ?? "Driver"} />
+          <AnimatedDriverMarker
+            location={driverLocation}
+            title={driverName ?? "Driver"}
+            vehicleMake={trip.vehicleSnapshot?.make}
+          />
         )}
       </MapGL>
     </div>

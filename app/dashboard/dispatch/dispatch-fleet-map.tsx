@@ -16,6 +16,7 @@ export function DispatchFleetMap({
   locations,
   activeTrips,
   driverNameById,
+  vehicleMakeByDriverId,
   selectedTripId,
   onSelectTrip
 }: {
@@ -24,6 +25,7 @@ export function DispatchFleetMap({
   locations: LiveLocation[];
   activeTrips: Trip[];
   driverNameById: Map<string, string>;
+  vehicleMakeByDriverId: Map<string, string>;
   selectedTripId: string | null;
   onSelectTrip: (tripId: string) => void;
 }) {
@@ -39,6 +41,10 @@ export function DispatchFleetMap({
           key={loc.driverId}
           location={loc}
           title={driverNameById.get(loc.driverId) ?? loc.driverId}
+          vehicleMake={
+            vehicleMakeByDriverId.get(loc.driverId) ??
+            activeTrips.find((t) => t.id === loc.tripId)?.vehicleSnapshot?.make
+          }
         />
       ))}
       {activeTrips.map((t) => (

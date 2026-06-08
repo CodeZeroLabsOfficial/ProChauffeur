@@ -10,9 +10,10 @@ import { DispatchFleetMap } from "@/app/dashboard/dispatch/dispatch-fleet-map";
 import { DispatchTripMap } from "@/app/dashboard/dispatch/dispatch-trip-map";
 import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
-import { useTrips, useUsers } from "@/hooks/use-collections";
+import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import { tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
+import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -26,6 +27,7 @@ export default function DispatchPage() {
   const { locations, ready } = useLiveLocations();
   const { trips } = useTrips();
   const { users } = useUsers();
+  const { vehicles } = useVehicles();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   let token = "";
@@ -41,6 +43,15 @@ export default function DispatchPage() {
     for (const u of users) map.set(u.id, u.profile.displayName || u.email);
     return map;
   }, [users]);
+
+  const vehicleMakeByDriverId = useMemo(() => {
+    const map = new globalThis.Map<string, string>();
+    for (const v of vehicles) {
+      const driverId = effectiveChauffeurUserId(v) ?? v.driverID;
+      if (driverId) map.set(driverId, v.make);
+    }
+    return map;
+  }, [vehicles]);
 
   const activeTrips = useMemo(
     () =>
@@ -160,6 +171,7 @@ export default function DispatchPage() {
                   locations={locations}
                   activeTrips={activeTrips}
                   driverNameById={driverNameById}
+                  vehicleMakeByDriverId={vehicleMakeByDriverId}
                   selectedTripId={selectedTripId}
                   onSelectTrip={toggleTripSelection}
                 />
