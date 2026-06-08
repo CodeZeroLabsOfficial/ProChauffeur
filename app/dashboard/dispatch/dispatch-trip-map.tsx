@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
-import { CarFrontIcon, MapPinIcon } from "lucide-react";
+import { MapPinIcon } from "lucide-react";
 
+import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import type { LiveLocation } from "@/hooks/use-live-locations";
 import { useMapboxRoute } from "@/hooks/use-mapbox-route";
 import {
@@ -55,7 +56,7 @@ export function DispatchTripMap({
       : Boolean(driverCoordinate) &&
         (mode === "to_pickup" ? pickupValid : dropoffValid);
 
-  const liveDebounce = mode === "overview" ? 0 : 3000;
+  const liveDebounce = mode === "overview" ? 0 : 1000;
 
   const { route, error: routeError } = useMapboxRoute(routeFrom, routeTo, token, routeEnabled, {
     debounceMs: liveDebounce,
@@ -174,17 +175,8 @@ export function DispatchTripMap({
           </Marker>
         )}
 
-        {driverCoordinate && mode !== "overview" && (
-          <Marker
-            longitude={driverCoordinate.longitude}
-            latitude={driverCoordinate.latitude}
-            anchor="center">
-            <div
-              className="flex size-8 items-center justify-center rounded-full border-2 border-white bg-primary text-primary-foreground shadow-lg"
-              title={driverName ?? "Driver"}>
-              <CarFrontIcon className="size-4" />
-            </div>
-          </Marker>
+        {driverLocation && mode !== "overview" && (
+          <AnimatedDriverMarker location={driverLocation} title={driverName ?? "Driver"} />
         )}
       </MapGL>
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import MapGL, { Marker, NavigationControl } from "react-map-gl/mapbox";
-import { CarFrontIcon, MapPinIcon } from "lucide-react";
+import { MapPinIcon } from "lucide-react";
 
 import type { LiveLocation } from "@/hooks/use-live-locations";
+import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import type { Trip } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
 
@@ -34,13 +35,11 @@ export function DispatchFleetMap({
       style={{ width: "100%", height: "100%" }}>
       <NavigationControl position="top-right" />
       {locations.map((loc) => (
-        <Marker key={loc.driverId} longitude={loc.lng} latitude={loc.lat} anchor="center">
-          <div
-            className="flex size-8 items-center justify-center rounded-full border-2 border-white bg-primary text-primary-foreground shadow-lg"
-            title={driverNameById.get(loc.driverId) ?? loc.driverId}>
-            <CarFrontIcon className="size-4" />
-          </div>
-        </Marker>
+        <AnimatedDriverMarker
+          key={loc.driverId}
+          location={loc}
+          title={driverNameById.get(loc.driverId) ?? loc.driverId}
+        />
       ))}
       {activeTrips.map((t) => (
         <Marker
