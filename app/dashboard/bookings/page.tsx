@@ -12,15 +12,32 @@ import type { Trip } from "@/lib/models";
 export default function BookingsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rebookSource, setRebookSource] = useState<Trip | null>(null);
+  const [editTrip, setEditTrip] = useState<Trip | null>(null);
 
   function openNewBooking() {
     setRebookSource(null);
+    setEditTrip(null);
     setSheetOpen(true);
   }
 
   function openRebook(trip: Trip) {
+    setEditTrip(null);
     setRebookSource(trip);
     setSheetOpen(true);
+  }
+
+  function openEdit(trip: Trip) {
+    setRebookSource(null);
+    setEditTrip(trip);
+    setSheetOpen(true);
+  }
+
+  function onSheetOpenChange(open: boolean) {
+    setSheetOpen(open);
+    if (!open) {
+      setRebookSource(null);
+      setEditTrip(null);
+    }
   }
 
   return (
@@ -33,11 +50,12 @@ export default function BookingsPage() {
           </Button>
         }
       />
-      <BookingsDataTable onRebook={openRebook} />
+      <BookingsDataTable onRebook={openRebook} onEdit={openEdit} />
       <NewBookingSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={onSheetOpenChange}
         sourceTrip={rebookSource}
+        editTrip={editTrip}
       />
     </>
   );

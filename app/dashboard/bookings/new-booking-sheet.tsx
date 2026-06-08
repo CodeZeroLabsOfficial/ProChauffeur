@@ -6,17 +6,17 @@ import { toast } from "sonner";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { MultiSelectField } from "@/components/multi-select-field";
+import { vehicleForChauffeur } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import { useUsers, useVehicles } from "@/hooks/use-collections";
-import { createTrip, fetchPricingConfiguration } from "@/lib/services/firebase-service";
+import { createTrip, fetchPricingConfiguration, updateTrip } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
   defaultPricingConfig,
-  effectiveChauffeurUserId,
+  tripPickupReferenceDate,
   type CoordinateField,
   type PricingAddon,
   type Trip,
-  type User,
-  type Vehicle
+  type User
 } from "@/lib/models";
 import { appConfig } from "@/lib/env";
 import { formatCurrency } from "@/lib/format";
@@ -51,10 +51,6 @@ type FieldErrors = Partial<Record<RequiredField, boolean>>;
 
 function addonLabel(addon: PricingAddon) {
   return `${addon.title} (${formatCurrency(addon.price, appConfig.currency)})`;
-}
-
-function vehicleForChauffeur(vehicles: Vehicle[], chauffeurUserId: string): Vehicle | undefined {
-  return vehicles.find((vehicle) => effectiveChauffeurUserId(vehicle) === chauffeurUserId);
 }
 
 function isValidCustomer(customer: User | null): customer is User {
@@ -133,12 +129,14 @@ export function NewBookingSheet({
   trigger,
   open,
   onOpenChange,
-  sourceTrip = null
+  sourceTrip = null,
+  editTrip = null
 }: {
   trigger?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sourceTrip?: Trip | null;
+  editTrip?: Trip | null;
 }) {
   const { users } = useUsers();
   const { vehicles } = useVehicles();
@@ -203,43 +201,51 @@ export function NewBookingSheet({
       .then((config) => setPricingAddons(config.addons))
       .catch(() => setPricingAddons(defaultPricingConfig.addons));
 
-    if (sourceTrip) {
+    if (editTrip || sourceTrip) {
+      const trip = editTrip ?? sourceTrip!;
       const matchedCustomer =
-        users.find((u) => u.id === sourceTrip.customerID && u.role === "customer") ?? null;
+        users.find((u) => u.id === trip.customerID && u.role === "customer") ?? null;
       if (!matchedCustomer) {
         toast.warning("Customer no longer found — select a customer.");
       }
 
       const chauffeurIds = new Set(users.filter((u) => u.role === "driver").map((u) => u.id));
       const chauffeur =
-        sourceTrip.driverID && chauffeurIds.has(sourceTrip.driverID)
-          ? sourceTrip.driverID
+        trip.driverID && chauffeurIds.has(trip.driverID)
+          ? trip.driverID
           : UNASSIGNED_CHAUFFEUR;
 
       setFieldErrors({});
       setCustomer(matchedCustomer);
-      setPickup(addressFromTrip(sourceTrip.pickupAddressLine, sourceTrip.pickup));
-      setDropoff(addressFromTrip(sourceTrip.dropoffAddressLine, sourceTrip.dropoff));
+      setPickup(addressFromTrip(trip.pickupAddressLine, trip.pickup));
+      setDropoff(addressFromTrip(trip.dropoffAddressLine, trip.dropoff));
       setAssignedChauffeur(chauffeur);
-      setSelectedAddonIds(sourceTrip.bookingAddons?.map((addon) => addon.id) ?? []);
-      setPassengerCount(sourceTrip.bookingPassengerCount ?? 1);
-      setSmallLuggageCount(sourceTrip.bookingSmallLuggageCount ?? 0);
-      setLargeLuggageCount(sourceTrip.bookingLargeLuggageCount ?? 0);
-      setScheduledPickupAt(null);
-      setNotes(sourceTrip.notes ?? "");
+      setSelectedAddonIds(trip.bookingAddons?.map((addon) => addon.id) ?? []);
+      setPassengerCount(trip.bookingPassengerCount ?? 1);
+      setSmallLuggageCount(trip.bookingSmallLuggageCount ?? 0);
+      setLargeLuggageCount(trip.bookingLargeLuggageCount ?? 0);
+      setScheduledPickupAt(
+        editTrip ? (trip.scheduledPickupAt ?? tripPickupReferenceDate(trip)) : null
+      );
+      setNotes(trip.notes ?? "");
       return;
     }
 
     resetFormFields(setters);
-  }, [open, sourceTrip, users]);
+  }, [open, editTrip, sourceTrip, users]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const isEdit = Boolean(editTrip);
 
     const errors = collectFieldErrors(customer, pickup, dropoff, scheduledPickupAt);
     if (hasFieldErrors(errors)) {
       setFieldErrors(errors);
-      toast.error("Complete the highlighted fields before creating the booking.");
+      toast.error(
+        isEdit
+          ? "Complete the highlighted fields before saving."
+          : "Complete the highlighted fields before creating the booking."
+      );
       return;
     }
 
@@ -258,52 +264,81 @@ export function NewBookingSheet({
     }
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
 
-    const trip: Trip = {
-      id: crypto.randomUUID(),
-      status: "requested",
-      customerID: customer.id,
-      customerDisplayName: customerDisplayName(customer) || null,
-      customerPhoneNumber: customer.profile.phoneNumber ?? null,
-      customerEmail: customer.email || null,
-      driverID,
-      fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
-      vehicleSnapshot: assignedVehicle ?? null,
-      pickup: pickup.coordinate,
-      dropoff: dropoff.coordinate,
-      pickupAddressLine: pickup.addressLine,
-      dropoffAddressLine: dropoff.addressLine,
-      notes: notes.trim() || null,
-      bookingPassengerCount: passengerCount,
-      bookingSmallLuggageCount: smallLuggageCount,
-      bookingLargeLuggageCount: largeLuggageCount,
-      bookingAddons: bookingAddons.length ? bookingAddons : null,
-      scheduledPickupAt,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
     setSaving(true);
     try {
-      await createTrip(trip);
-      toast.success("Booking created.");
+      if (isEdit) {
+        await updateTrip(editTrip!.id, {
+          customerID: customer.id,
+          customerDisplayName: customerDisplayName(customer) || null,
+          customerPhoneNumber: customer.profile.phoneNumber ?? null,
+          customerEmail: customer.email || null,
+          driverID,
+          fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
+          vehicleSnapshot: assignedVehicle ?? null,
+          pickup: pickup.coordinate,
+          dropoff: dropoff.coordinate,
+          pickupAddressLine: pickup.addressLine,
+          dropoffAddressLine: dropoff.addressLine,
+          notes: notes.trim() || null,
+          bookingPassengerCount: passengerCount,
+          bookingSmallLuggageCount: smallLuggageCount,
+          bookingLargeLuggageCount: largeLuggageCount,
+          bookingAddons: bookingAddons.length ? bookingAddons : null,
+          scheduledPickupAt
+        });
+        toast.success("Booking updated.");
+      } else {
+        const trip: Trip = {
+          id: crypto.randomUUID(),
+          status: "requested",
+          customerID: customer.id,
+          customerDisplayName: customerDisplayName(customer) || null,
+          customerPhoneNumber: customer.profile.phoneNumber ?? null,
+          customerEmail: customer.email || null,
+          driverID,
+          fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
+          vehicleSnapshot: assignedVehicle ?? null,
+          pickup: pickup.coordinate,
+          dropoff: dropoff.coordinate,
+          pickupAddressLine: pickup.addressLine,
+          dropoffAddressLine: dropoff.addressLine,
+          notes: notes.trim() || null,
+          bookingPassengerCount: passengerCount,
+          bookingSmallLuggageCount: smallLuggageCount,
+          bookingLargeLuggageCount: largeLuggageCount,
+          bookingAddons: bookingAddons.length ? bookingAddons : null,
+          scheduledPickupAt,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        await createTrip(trip);
+        toast.success("Booking created.");
+      }
       onOpenChange(false);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Could not create the booking.";
+        err instanceof Error
+          ? err.message
+          : isEdit
+            ? "Could not update the booking."
+            : "Could not create the booking.";
       toast.error(message);
     } finally {
       setSaving(false);
     }
   }
 
-  const isRebook = Boolean(sourceTrip);
+  const isEdit = Boolean(editTrip);
+  const isRebook = Boolean(sourceTrip && !editTrip);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isRebook ? "Rebook" : "New booking"}</SheetTitle>
+          <SheetTitle>
+            {isEdit ? "Edit booking" : isRebook ? "Rebook" : "New booking"}
+          </SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4" noValidate>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -452,7 +487,13 @@ export function NewBookingSheet({
               </Button>
             </SheetClose>
             <Button type="submit" disabled={saving} className="w-full">
-              {saving ? "Creating…" : "Create booking"}
+              {saving
+                ? isEdit
+                  ? "Saving…"
+                  : "Creating…"
+                : isEdit
+                  ? "Save changes"
+                  : "Create booking"}
             </Button>
           </SheetFooter>
         </form>

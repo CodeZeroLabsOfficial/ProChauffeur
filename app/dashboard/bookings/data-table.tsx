@@ -19,7 +19,9 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
-import { updateTripStatus } from "@/lib/services/firebase-service";
+import { canEditBooking } from "@/app/dashboard/bookings/lib/booking-actions";
+import { vehicleForChauffeur } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
+import { assignTripDriver, updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
@@ -95,7 +97,13 @@ function tripInDateRange(trip: Trip, range: DateRange | undefined) {
   return ref >= start && ref <= end;
 }
 
-export function BookingsDataTable({ onRebook }: { onRebook: (trip: Trip) => void }) {
+export function BookingsDataTable({
+  onRebook,
+  onEdit
+}: {
+  onRebook: (trip: Trip) => void;
+  onEdit: (trip: Trip) => void;
+}) {
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
@@ -123,6 +131,23 @@ export function BookingsDataTable({ onRebook }: { onRebook: (trip: Trip) => void
     }
   }, []);
 
+  const reassignChauffeur = useCallback(
+    async (tripId: string, chauffeurId: string | null, vehicle?: (typeof vehicles)[number]) => {
+      try {
+        await assignTripDriver(
+          tripId,
+          chauffeurId,
+          vehicle?.driverID ?? null,
+          vehicle ?? null
+        );
+        toast.success(chauffeurId ? "Chauffeur reassigned." : "Chauffeur unassigned.");
+      } catch {
+        toast.error("Could not reassign the chauffeur.");
+      }
+    },
+    []
+  );
+
   const driverNameById = useMemo(() => {
     const map = new globalThis.Map<string, string>();
     for (const u of users) map.set(u.id, u.profile.displayName || u.email);
@@ -141,6 +166,20 @@ export function BookingsDataTable({ onRebook }: { onRebook: (trip: Trip) => void
         .sort((a, b) => a.label.localeCompare(b.label))
     ],
     [users]
+  );
+
+  const reassignableChauffeurs = useMemo(
+    () =>
+      users
+        .filter((u) => u.role === "driver")
+        .map((u) => ({
+          id: u.id,
+          label: u.profile.displayName || u.email,
+          vehicle: vehicleForChauffeur(vehicles, u.id)
+        }))
+        .filter((c): c is typeof c & { vehicle: NonNullable<typeof c.vehicle> } => c.vehicle != null)
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [users, vehicles]
   );
 
   const vehicleOptions = useMemo(
@@ -295,14 +334,39 @@ export function BookingsDataTable({ onRebook }: { onRebook: (trip: Trip) => void
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={!canEditBooking(row.original.status)}>
+                  Reassign chauffeur
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    disabled={!row.original.driverID}
+                    onClick={() => reassignChauffeur(row.original.id, null)}>
+                    Unassigned
+                  </DropdownMenuItem>
+                  {reassignableChauffeurs.map(({ id, label, vehicle }) => (
+                    <DropdownMenuItem
+                      key={id}
+                      disabled={row.original.driverID === id}
+                      onClick={() => reassignChauffeur(row.original.id, id, vehicle)}>
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={!canEditBooking(row.original.status)}
+                onClick={() => onEdit(row.original)}>
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRebook(row.original)}>Rebook</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
       }
     ],
-    [changeStatus, onRebook]
+    [changeStatus, onEdit, onRebook, reassignableChauffeurs, reassignChauffeur]
   );
 
   const table = useReactTable({

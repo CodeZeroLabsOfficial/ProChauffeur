@@ -208,12 +208,30 @@ export async function updateTripStatus(id: string, status: TripStatus): Promise<
 
 export async function assignTripDriver(
   id: string,
-  driverID: string,
-  fleetVehicleDocumentId?: string
+  driverID: string | null,
+  fleetVehicleDocumentId?: string | null,
+  vehicleSnapshot?: Vehicle | null
 ): Promise<void> {
   await updateDoc(
     doc(db(), Collections.trips, id),
-    stripUndefined({ driverID, fleetVehicleDocumentId, updatedAt: serverTimestamp() })
+    stripUndefined({
+      driverID,
+      fleetVehicleDocumentId: driverID ? fleetVehicleDocumentId : null,
+      vehicleSnapshot: driverID ? vehicleSnapshot : null,
+      updatedAt: serverTimestamp()
+    })
+  );
+}
+
+export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void> {
+  await updateDoc(
+    doc(db(), Collections.trips, id),
+    stripUndefined({
+      ...patch,
+      pickup: patch.pickup ? coordinateToFirestoreField(patch.pickup) : undefined,
+      dropoff: patch.dropoff ? coordinateToFirestoreField(patch.dropoff) : undefined,
+      updatedAt: serverTimestamp()
+    })
   );
 }
 
