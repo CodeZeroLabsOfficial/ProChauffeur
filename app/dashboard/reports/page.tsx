@@ -115,7 +115,6 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Reports"
-        description="Operational performance aggregated from trips and billing."
         actions={
           <Select value={range} onValueChange={setRange}>
             <SelectTrigger className="w-44">

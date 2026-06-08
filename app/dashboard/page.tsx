@@ -16,9 +16,6 @@ export default function DashboardPage() {
       <div className="flex flex-row items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Dashboard</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Overview of chauffeur operations across dispatch, bookings and fleet.
-          </p>
         </div>
         <div className="flex gap-2">
           <Button asChild>

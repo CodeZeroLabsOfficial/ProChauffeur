@@ -80,7 +80,6 @@ export default function DispatchPage() {
     <div className="space-y-4">
       <PageHeader
         title="Dispatch"
-        description="Live driver positions and active trips. Locations stream from Realtime Database."
         actions={
           <Badge variant="outline" className="gap-1.5">
             <RadioIcon className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")} />
