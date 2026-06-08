@@ -32,6 +32,12 @@ export interface Trip {
   bookingAddons?: PricingAddon[] | null;
   scheduledPickupAt?: Date | null;
   linkedTripID?: string | null;
+  /** When the passenger trip started (`in_progress`). */
+  journeyStartedAt?: Date | null;
+  /** When the passenger trip finished (`completed`). */
+  journeyCompletedAt?: Date | null;
+  /** In-vehicle duration in seconds, set at completion when start is known. */
+  journeyDurationSeconds?: number | null;
   /** Live chauffeur GPS (Firestore GeoPoint -> lat/lng). */
   liveLocation?: CoordinateField | null;
   liveHeadingDegrees?: number | null;
@@ -42,4 +48,30 @@ export interface Trip {
 /** Effective pickup instant for list/summary UI. */
 export function tripPickupReferenceDate(trip: Trip): Date {
   return trip.scheduledPickupAt ?? trip.createdAt;
+}
+
+/** Human-readable in-vehicle journey duration (`in_progress` → `completed`). */
+export function formatJourneyDuration(from: Date, to: Date): string {
+  const minutes = Math.max(0, Math.round((to.getTime() - from.getTime()) / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (hours < 24) return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
+  const days = Math.floor(hours / 24);
+  const dayHours = hours % 24;
+  return dayHours ? `${days} d ${dayHours} hr` : `${days} d`;
+}
+
+export function tripJourneyTimeLabel(trip: Trip): string {
+  if (trip.journeyStartedAt && trip.journeyCompletedAt) {
+    return formatJourneyDuration(trip.journeyStartedAt, trip.journeyCompletedAt);
+  }
+  if (trip.journeyDurationSeconds != null && trip.journeyDurationSeconds > 0) {
+    const minutes = Math.max(1, Math.round(trip.journeyDurationSeconds / 60));
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const rem = minutes % 60;
+    return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
+  }
+  return "—";
 }

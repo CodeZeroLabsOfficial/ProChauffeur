@@ -64,6 +64,10 @@ The Dispatch map reads `liveLocations/{driverId}` from Realtime Database. The iO
 driver app dual-writes GPS to RTDB in the shape:
 `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 
+When a trip is **completed** or **cancelled**, the driver app and the web portal
+(via Admin SDK on `PATCH /api/trips/{id}/status`) clear `tripId` on that node while
+keeping the last GPS fix.
+
 ## Deployment (Vercel)
 
 Set every variable from `.env.example` in Project Settings → Environment Variables.

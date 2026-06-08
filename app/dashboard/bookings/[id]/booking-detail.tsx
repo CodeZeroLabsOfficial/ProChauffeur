@@ -20,6 +20,7 @@ import {
   TRIP_STATUSES,
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
+  tripJourneyTimeLabel,
   tripStatusTitle,
   vehicleTypeTitle,
   type Trip,
@@ -82,17 +83,6 @@ function luggageLabel(trip: Trip) {
   return `${trip.bookingSmallLuggageCount ?? 0} small, ${trip.bookingLargeLuggageCount ?? 0} large`;
 }
 
-function formatDuration(from: Date, to: Date) {
-  const minutes = Math.max(0, Math.round((to.getTime() - from.getTime()) / 60000));
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  if (hours < 24) return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
-  const days = Math.floor(hours / 24);
-  const dayHours = hours % 24;
-  return dayHours ? `${days} d ${dayHours} hr` : `${days} d`;
-}
-
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -138,15 +128,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       ? (currentStepIndex / (ACTIVE_STATUSES.length - 1)) * 100
       : 0;
 
-  const completedAt = useMemo(() => {
-    if (!trip || trip.status !== "completed") return null;
-    return trip.updatedAt;
-  }, [trip]);
+  const completedAt = useMemo(() => trip?.journeyCompletedAt ?? null, [trip]);
 
-  const journeyTime = useMemo(() => {
-    if (!trip || !completedAt) return "—";
-    return formatDuration(tripPickupReferenceDate(trip), completedAt);
-  }, [trip, completedAt]);
+  const journeyTime = useMemo(() => (trip ? tripJourneyTimeLabel(trip) : "—"), [trip]);
 
   const customer = useMemo(
     () => (trip ? users.find((u) => u.id === trip.customerID) : undefined),

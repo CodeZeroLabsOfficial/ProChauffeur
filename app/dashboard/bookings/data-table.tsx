@@ -25,8 +25,7 @@ import {
   tripPickupReferenceDate,
   tripStatusTitle,
   vehicleDisplayName,
-  type Trip,
-  type TripStatus
+  type Trip
 } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
 import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
@@ -41,8 +40,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
@@ -56,6 +57,15 @@ import {
 
 const UNASSIGNED_CHAUFFEUR = "__unassigned__";
 const NO_VEHICLE = "__none__";
+
+const ROW_STATUS_ACTIONS = [
+  { status: "accepted", label: "Accept" },
+  { status: "cancelled", label: "Cancel" },
+  { status: "en_route_pickup", label: "Enroute" },
+  { status: "in_progress", label: "In progress" }
+] as const;
+
+type RowStatusAction = (typeof ROW_STATUS_ACTIONS)[number]["status"];
 
 type BookingRow = Trip & {
   searchLabel: string;
@@ -85,7 +95,7 @@ function tripInDateRange(trip: Trip, range: DateRange | undefined) {
   return ref >= start && ref <= end;
 }
 
-export function BookingsDataTable() {
+export function BookingsDataTable({ onRebook }: { onRebook: (trip: Trip) => void }) {
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
@@ -98,10 +108,16 @@ export function BookingsDataTable() {
   const [chauffeurFilter, setChauffeurFilter] = useState<string[]>([]);
   const [vehicleFilter, setVehicleFilter] = useState<string[]>([]);
 
-  const changeStatus = useCallback(async (id: string, status: TripStatus) => {
+  const changeStatus = useCallback(async (id: string, status: RowStatusAction) => {
     try {
       await updateTripStatus(id, status);
-      toast.success(`Marked as ${tripStatusTitle[status]}.`);
+      if (status === "accepted") {
+        toast.success("Booking accepted.");
+      } else if (status === "cancelled") {
+        toast.success("Booking cancelled.");
+      } else {
+        toast.success(`Marked as ${tripStatusTitle[status]}.`);
+      }
     } catch {
       toast.error("Could not update the booking.");
     }
@@ -266,22 +282,27 @@ export function BookingsDataTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Set status</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Set status</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {ROW_STATUS_ACTIONS.map(({ status, label }) => (
+                    <DropdownMenuItem
+                      key={status}
+                      disabled={row.original.status === status}
+                      onClick={() => changeStatus(row.original.id, status)}>
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
-              {TRIP_STATUSES.map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  disabled={s === row.original.status}
-                  onClick={() => changeStatus(row.original.id, s)}>
-                  {tripStatusTitle[s]}
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuItem onClick={() => onRebook(row.original)}>Rebook</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
       }
     ],
-    [changeStatus]
+    [changeStatus, onRebook]
   );
 
   const table = useReactTable({

@@ -150,6 +150,10 @@ export function mapTrip(id: string, d: DocumentData): Trip {
       : null,
     scheduledPickupAt: toDate(d.scheduledPickupAt),
     linkedTripID: d.linkedTripID ?? null,
+    journeyStartedAt: toDate(d.journeyStartedAt),
+    journeyCompletedAt: toDate(d.journeyCompletedAt),
+    journeyDurationSeconds:
+      typeof d.journeyDurationSeconds === "number" ? d.journeyDurationSeconds : null,
     liveLocation: toCoordinate(d.liveLocation),
     liveHeadingDegrees: d.liveHeadingDegrees ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),

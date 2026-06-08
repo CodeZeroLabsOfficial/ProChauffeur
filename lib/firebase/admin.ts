@@ -2,9 +2,10 @@ import "server-only";
 
 import { cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
+import { getDatabase, type Database } from "firebase-admin/database";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, getDatabaseUrl } from "@/lib/env";
 
 /**
  * Firebase Admin SDK singletons for server-side use (route handlers, server
@@ -40,6 +41,7 @@ export function adminApp(): App {
     ? getApp()
     : initializeApp({
         credential: cert(serviceAccount as never),
+        databaseURL: getDatabaseUrl(),
         ...(storageBucket ? { storageBucket } : {})
       });
   return cachedApp;
@@ -55,4 +57,10 @@ let cachedDb: Firestore | null = null;
 export function adminFirestore(): Firestore {
   if (!cachedDb) cachedDb = getFirestore(adminApp());
   return cachedDb;
+}
+
+let cachedRtdb: Database | null = null;
+export function adminDatabase(): Database {
+  if (!cachedRtdb) cachedRtdb = getDatabase(adminApp());
+  return cachedRtdb;
 }

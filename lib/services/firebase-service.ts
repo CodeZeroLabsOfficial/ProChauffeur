@@ -188,10 +188,22 @@ export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): U
 }
 
 export async function updateTripStatus(id: string, status: TripStatus): Promise<void> {
-  await updateDoc(doc(db(), Collections.trips, id), {
-    status,
-    updatedAt: serverTimestamp()
+  const res = await fetch(`/api/trips/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
   });
+
+  if (!res.ok) {
+    let message = "Could not update the booking.";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
 }
 
 export async function assignTripDriver(

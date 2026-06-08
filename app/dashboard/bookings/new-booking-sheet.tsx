@@ -12,6 +12,7 @@ import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
   defaultPricingConfig,
   effectiveChauffeurUserId,
+  type CoordinateField,
   type PricingAddon,
   type Trip,
   type User,
@@ -88,10 +89,59 @@ function hasFieldErrors(errors: FieldErrors) {
   return Object.values(errors).some(Boolean);
 }
 
-export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
+function addressFromTrip(
+  addressLine: string | null | undefined,
+  coordinate: CoordinateField
+): AddressSuggestion | null {
+  if (!addressLine?.trim() || !hasValidCoordinate(coordinate)) return null;
+  return {
+    id: `trip-${coordinate.latitude}-${coordinate.longitude}`,
+    addressLine: addressLine.trim(),
+    coordinate
+  };
+}
+
+function resetFormFields(
+  setters: {
+    setFieldErrors: (errors: FieldErrors) => void;
+    setCustomer: (customer: User | null) => void;
+    setPickup: (pickup: AddressSuggestion | null) => void;
+    setDropoff: (dropoff: AddressSuggestion | null) => void;
+    setAssignedChauffeur: (chauffeur: string) => void;
+    setSelectedAddonIds: (ids: string[]) => void;
+    setPassengerCount: (count: number) => void;
+    setSmallLuggageCount: (count: number) => void;
+    setLargeLuggageCount: (count: number) => void;
+    setScheduledPickupAt: (date: Date | null) => void;
+    setNotes: (notes: string) => void;
+  }
+) {
+  setters.setFieldErrors({});
+  setters.setCustomer(null);
+  setters.setPickup(null);
+  setters.setDropoff(null);
+  setters.setAssignedChauffeur(UNASSIGNED_CHAUFFEUR);
+  setters.setSelectedAddonIds([]);
+  setters.setPassengerCount(1);
+  setters.setSmallLuggageCount(0);
+  setters.setLargeLuggageCount(0);
+  setters.setScheduledPickupAt(null);
+  setters.setNotes("");
+}
+
+export function NewBookingSheet({
+  trigger,
+  open,
+  onOpenChange,
+  sourceTrip = null
+}: {
+  trigger?: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sourceTrip?: Trip | null;
+}) {
   const { users } = useUsers();
   const { vehicles } = useVehicles();
-  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
@@ -104,6 +154,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   const [smallLuggageCount, setSmallLuggageCount] = useState(0);
   const [largeLuggageCount, setLargeLuggageCount] = useState(0);
   const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
+  const [notes, setNotes] = useState("");
 
   const chauffeurs = useMemo(
     () =>
@@ -129,24 +180,58 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
   }
 
   useEffect(() => {
+    const setters = {
+      setFieldErrors,
+      setCustomer,
+      setPickup,
+      setDropoff,
+      setAssignedChauffeur,
+      setSelectedAddonIds,
+      setPassengerCount,
+      setSmallLuggageCount,
+      setLargeLuggageCount,
+      setScheduledPickupAt,
+      setNotes
+    };
+
     if (!open) {
-      setFieldErrors({});
-      setCustomer(null);
-      setPickup(null);
-      setDropoff(null);
-      setAssignedChauffeur(UNASSIGNED_CHAUFFEUR);
-      setSelectedAddonIds([]);
-      setPassengerCount(1);
-      setSmallLuggageCount(0);
-      setLargeLuggageCount(0);
-      setScheduledPickupAt(null);
+      resetFormFields(setters);
       return;
     }
 
     fetchPricingConfiguration()
       .then((config) => setPricingAddons(config.addons))
       .catch(() => setPricingAddons(defaultPricingConfig.addons));
-  }, [open]);
+
+    if (sourceTrip) {
+      const matchedCustomer =
+        users.find((u) => u.id === sourceTrip.customerID && u.role === "customer") ?? null;
+      if (!matchedCustomer) {
+        toast.warning("Customer no longer found — select a customer.");
+      }
+
+      const chauffeurIds = new Set(users.filter((u) => u.role === "driver").map((u) => u.id));
+      const chauffeur =
+        sourceTrip.driverID && chauffeurIds.has(sourceTrip.driverID)
+          ? sourceTrip.driverID
+          : UNASSIGNED_CHAUFFEUR;
+
+      setFieldErrors({});
+      setCustomer(matchedCustomer);
+      setPickup(addressFromTrip(sourceTrip.pickupAddressLine, sourceTrip.pickup));
+      setDropoff(addressFromTrip(sourceTrip.dropoffAddressLine, sourceTrip.dropoff));
+      setAssignedChauffeur(chauffeur);
+      setSelectedAddonIds(sourceTrip.bookingAddons?.map((addon) => addon.id) ?? []);
+      setPassengerCount(sourceTrip.bookingPassengerCount ?? 1);
+      setSmallLuggageCount(sourceTrip.bookingSmallLuggageCount ?? 0);
+      setLargeLuggageCount(sourceTrip.bookingLargeLuggageCount ?? 0);
+      setScheduledPickupAt(null);
+      setNotes(sourceTrip.notes ?? "");
+      return;
+    }
+
+    resetFormFields(setters);
+  }, [open, sourceTrip, users]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -162,8 +247,6 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       return;
     }
 
-    const form = new FormData(e.currentTarget);
-    const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverID =
       assignedChauffeur === UNASSIGNED_CHAUFFEUR ? null : assignedChauffeur;
     const assignedVehicle = driverID ? vehicleForChauffeur(vehicles, driverID) : undefined;
@@ -189,7 +272,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
       dropoff: dropoff.coordinate,
       pickupAddressLine: pickup.addressLine,
       dropoffAddressLine: dropoff.addressLine,
-      notes: get("notes") || null,
+      notes: notes.trim() || null,
       bookingPassengerCount: passengerCount,
       bookingSmallLuggageCount: smallLuggageCount,
       bookingLargeLuggageCount: largeLuggageCount,
@@ -203,7 +286,7 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     try {
       await createTrip(trip);
       toast.success("Booking created.");
-      setOpen(false);
+      onOpenChange(false);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Could not create the booking.";
@@ -213,12 +296,14 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
     }
   }
 
+  const isRebook = Boolean(sourceTrip);
+
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>New booking</SheetTitle>
+          <SheetTitle>{isRebook ? "Rebook" : "New booking"}</SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4" noValidate>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -351,7 +436,13 @@ export function NewBookingSheet({ trigger }: { trigger: ReactNode }) {
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" name="notes" rows={3} />
+            <Textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
 
           <SheetFooter className="grid grid-cols-2 gap-3 px-0">
