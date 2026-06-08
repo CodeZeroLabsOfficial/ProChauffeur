@@ -11,24 +11,28 @@ import {
   boundsFromPoints,
   centerFromPoints,
   coordinateFromLatLng,
-  hasValidCoordinate
+  hasValidCoordinate,
+  MAP_FALLBACK_VIEW,
+  type MapViewState
 } from "@/lib/mapbox/coordinates";
 import { dispatchMapMode } from "@/lib/mapbox/dispatch-map-mode";
 import type { Trip } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_VIEW = { longitude: 151.2093, latitude: -33.8688, zoom: 11 };
+const DEFAULT_VIEW = MAP_FALLBACK_VIEW;
 
 export function DispatchTripMap({
   trip,
   driverLocation,
   driverName,
+  companyDefaultView,
   token,
   mapStyle
 }: {
   trip: Trip;
   driverLocation: LiveLocation | null;
   driverName: string | null;
+  companyDefaultView: MapViewState | null;
   token: string;
   mapStyle: string;
 }) {
@@ -78,8 +82,8 @@ export function DispatchTripMap({
 
   const initialViewState = useMemo(() => {
     if (fitPoints.length > 0) return centerFromPoints(fitPoints);
-    return DEFAULT_VIEW;
-  }, [fitPoints]);
+    return companyDefaultView ?? DEFAULT_VIEW;
+  }, [fitPoints, companyDefaultView]);
 
   const waitingForGps =
     (mode === "to_pickup" || mode === "to_dropoff") && !driverCoordinate;
@@ -90,7 +94,18 @@ export function DispatchTripMap({
     (mode === "to_dropoff" && !dropoffValid);
 
   useEffect(() => {
-    if (!mapRef || fitPoints.length === 0) return;
+    if (!mapRef) return;
+
+    if (fitPoints.length === 0) {
+      const view = companyDefaultView ?? DEFAULT_VIEW;
+      mapRef.flyTo({
+        center: [view.longitude, view.latitude],
+        zoom: view.zoom,
+        duration: 500
+      });
+      return;
+    }
+
     if (fitPoints.length === 1) {
       mapRef.flyTo({
         center: [fitPoints[0].longitude, fitPoints[0].latitude],
@@ -103,7 +118,7 @@ export function DispatchTripMap({
       padding: 64,
       duration: 500
     });
-  }, [mapRef, fitPoints, route, mode]);
+  }, [mapRef, fitPoints, route, mode, companyDefaultView]);
 
   if (coordinatesUnavailable) {
     return (

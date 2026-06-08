@@ -10,9 +10,9 @@ import { DispatchFleetMap } from "@/app/dashboard/dispatch/dispatch-fleet-map";
 import { DispatchTripMap } from "@/app/dashboard/dispatch/dispatch-trip-map";
 import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
-import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
+import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-collections";
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
-import { tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
+import { companyDefaultMapView, tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ export default function DispatchPage() {
   const { trips } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
+  const { locations: fleetLocations } = useFleetLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   let token = "";
@@ -52,6 +53,11 @@ export default function DispatchPage() {
     }
     return map;
   }, [vehicles]);
+
+  const companyDefaultView = useMemo(
+    () => companyDefaultMapView(fleetLocations),
+    [fleetLocations]
+  );
 
   const activeTrips = useMemo(
     () =>
@@ -161,6 +167,7 @@ export default function DispatchPage() {
                       ? (driverNameById.get(selectedTrip.driverID) ?? "Assigned")
                       : null
                   }
+                  companyDefaultView={companyDefaultView}
                   token={token}
                   mapStyle={mapStyle}
                 />
@@ -172,6 +179,7 @@ export default function DispatchPage() {
                   activeTrips={activeTrips}
                   driverNameById={driverNameById}
                   vehicleMakeByDriverId={vehicleMakeByDriverId}
+                  companyDefaultView={companyDefaultView}
                   selectedTripId={selectedTripId}
                   onSelectTrip={toggleTripSelection}
                 />

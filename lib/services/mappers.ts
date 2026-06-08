@@ -164,6 +164,7 @@ export function mapFleetLocation(id: string, d: DocumentData): FleetLocation {
     addressLine: d.addressLine ?? "",
     latitude: d.latitude ?? 0,
     longitude: d.longitude ?? 0,
+    isDefault: d.isDefault === true,
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     createdAt: toDate(d.createdAt) ?? new Date()
   };

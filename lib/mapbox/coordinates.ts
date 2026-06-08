@@ -1,5 +1,10 @@
 import type { CoordinateField } from "@/lib/models/trip";
 
+/** Last-resort map center when no drivers, trips, or company default exist. */
+export const MAP_FALLBACK_VIEW = { longitude: 151.2093, latitude: -33.8688, zoom: 11 };
+
+export type MapViewState = { longitude: number; latitude: number; zoom: number };
+
 export function hasValidCoordinate(coordinate: CoordinateField) {
   return coordinate.latitude !== 0 || coordinate.longitude !== 0;
 }

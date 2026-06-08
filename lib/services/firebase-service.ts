@@ -414,22 +414,43 @@ export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => v
   );
 }
 
+async function clearOtherDefaultFleetLocations(exceptId: string): Promise<void> {
+  const snap = await getDocs(collection(db(), Collections.locations));
+  const batch = writeBatch(db());
+  let hasUpdates = false;
+
+  for (const docSnap of snap.docs) {
+    if (docSnap.id !== exceptId && docSnap.data().isDefault === true) {
+      batch.update(docSnap.ref, { isDefault: false });
+      hasUpdates = true;
+    }
+  }
+
+  if (hasUpdates) await batch.commit();
+}
+
 export async function createFleetLocation(input: {
   name: string;
   addressLine: string;
   latitude: number;
   longitude: number;
+  isDefault?: boolean;
 }): Promise<void> {
   const name = input.name.trim();
   const addressLine = input.addressLine.trim();
   if (!name || !addressLine) throw new Error("Enter a name and address before saving this location.");
   const id = crypto.randomUUID();
+  const isDefault = input.isDefault === true;
+
+  if (isDefault) await clearOtherDefaultFleetLocations(id);
+
   await setDoc(doc(db(), Collections.locations, id), {
     id,
     name,
     addressLine,
     latitude: input.latitude,
     longitude: input.longitude,
+    ...(isDefault ? { isDefault: true } : {}),
     createdAt: serverTimestamp()
   });
   void createActivityNotification(locationNotification("created", name, id));
@@ -439,11 +460,16 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
   const name = location.name.trim();
   const addressLine = location.addressLine.trim();
   if (!name || !addressLine) throw new Error("Enter a name and address before saving this location.");
+  const isDefault = location.isDefault === true;
+
+  if (isDefault) await clearOtherDefaultFleetLocations(location.id);
+
   await updateDoc(doc(db(), Collections.locations, location.id), {
     name,
     addressLine,
     latitude: location.latitude,
-    longitude: location.longitude
+    longitude: location.longitude,
+    isDefault
   });
   void createActivityNotification(locationNotification("updated", name, location.id));
 }
