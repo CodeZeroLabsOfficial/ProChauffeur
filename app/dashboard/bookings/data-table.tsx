@@ -321,6 +321,12 @@ export function BookingsDataTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={!canEditBooking(row.original.status)}
+                onClick={() => onEdit(row.original)}>
+                Edit booking
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>Set status</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
@@ -336,7 +342,7 @@ export function BookingsDataTable({
               </DropdownMenuSub>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={!canEditBooking(row.original.status)}>
-                  Reassign chauffeur
+                  Reassign
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem
@@ -355,12 +361,16 @@ export function BookingsDataTable({
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={!canEditBooking(row.original.status)}
-                onClick={() => onEdit(row.original)}>
-                Edit
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRebook(row.original)}>Rebook</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={
+                  row.original.status === "cancelled" || row.original.status === "completed"
+                }
+                onClick={() => changeStatus(row.original.id, "cancelled")}>
+                Cancel booking
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
