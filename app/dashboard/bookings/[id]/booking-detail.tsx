@@ -114,6 +114,9 @@ function BookingCustomerCard({
   if (!hasCustomerDetails) {
     return (
       <Card>
+        <CardHeader>
+          <CardTitle>Passenger</CardTitle>
+        </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">No customer details on file.</p>
         </CardContent>
@@ -129,6 +132,9 @@ function BookingCustomerCard({
 
   return (
     <Card>
+      <CardHeader>
+        <CardTitle>Passenger</CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
           <Avatar className="size-12">
@@ -175,6 +181,9 @@ function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | nu
   if (!vehicleSnapshot) {
     return (
       <Card>
+        <CardHeader>
+          <CardTitle>Vehicle</CardTitle>
+        </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">No vehicle assigned for this trip.</p>
         </CardContent>
@@ -192,6 +201,9 @@ function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | nu
 
   return (
     <Card>
+      <CardHeader>
+        <CardTitle>Vehicle</CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
           <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
