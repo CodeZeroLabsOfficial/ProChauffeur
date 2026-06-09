@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { FilterIcon, RadioIcon } from "lucide-react";
@@ -153,26 +154,47 @@ export default function DispatchPage() {
                   <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
                 ) : (
                   filteredActiveTrips.map((t) => (
-                    <button
+                    <div
                       key={t.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggleTripSelection(t.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleTripSelection(t.id);
+                        }
+                      }}
                       className={cn(
-                        "border-border hover:bg-muted/60 flex w-full flex-col gap-3 border-b p-4 text-left transition-colors",
+                        "border-border hover:bg-muted/60 flex w-full cursor-pointer flex-col gap-3 border-b p-4 text-left transition-colors",
                         selectedTripId === t.id && "bg-muted"
                       )}>
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-foreground text-sm font-medium">
-                          {chauffeurLabel(t)}
-                        </span>
+                        {t.driverID ? (
+                          <Link
+                            href={`/dashboard/drivers/${t.driverID}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-foreground text-sm font-medium hover:underline">
+                            {chauffeurLabel(t)}
+                          </Link>
+                        ) : (
+                          <span className="text-foreground text-sm font-medium">Unassigned</span>
+                        )}
                         <TripStatusBadge status={t.status} />
                       </div>
-                      <p className="text-muted-foreground text-xs">{shortBookingId(t.id)}</p>
+                      <Link
+                        href={`/dashboard/bookings/${t.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground font-mono text-xs hover:underline"
+                        title={t.id}>
+                        {shortBookingId(t.id)}
+                      </Link>
                       <Separator />
                       <TripRouteStops
                         pickup={t.pickupAddressLine || "Pickup location not set"}
                         dropoff={t.dropoffAddressLine || "Destination not set"}
                       />
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
