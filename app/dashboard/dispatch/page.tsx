@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import { CalendarIcon, CarFrontIcon, MapPinIcon, RadioIcon } from "lucide-react";
+import { RadioIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -14,13 +14,17 @@ import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import { companyDefaultMapView, tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
-import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+
+function shortBookingId(id: string) {
+  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
+}
 
 export default function DispatchPage() {
   const { resolvedTheme } = useTheme();
@@ -113,36 +117,30 @@ export default function DispatchPage() {
               <p className="text-muted-foreground text-xs">{activeTrips.length} requiring attention</p>
             </div>
             <ScrollArea className="min-h-[420px] flex-1">
-              <div className="divide-y">
+              <div className="flex flex-col gap-3 p-4">
                 {activeTrips.length === 0 ? (
-                  <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
+                  <p className="text-muted-foreground py-2 text-center text-sm">No active trips.</p>
                 ) : (
                   activeTrips.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => toggleTripSelection(t.id)}
                       className={cn(
-                        "hover:bg-muted/60 flex w-full flex-col gap-2 p-4 text-left transition-colors",
+                        "border-border bg-card text-card-foreground hover:bg-muted/60 flex w-full flex-col gap-3 rounded-lg border p-4 text-left transition-colors",
                         selectedTripId === t.id && "bg-muted"
                       )}>
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          {t.customerDisplayName || "Customer"}
+                        <span className="text-foreground text-sm font-medium">
+                          {chauffeurLabel(t)}
                         </span>
                         <TripStatusBadge status={t.status} />
                       </div>
-                      <TripDetailLine icon={<CarFrontIcon className="size-3.5" />}>
-                        {chauffeurLabel(t)}
-                      </TripDetailLine>
-                      <TripDetailLine icon={<CalendarIcon className="size-3.5" />}>
-                        {formatDateTime(tripPickupReferenceDate(t))}
-                      </TripDetailLine>
-                      <TripDetailLine icon={<MapPinIcon className="size-3.5 text-green-600" />}>
-                        {t.pickupAddressLine || "Pickup location not set"}
-                      </TripDetailLine>
-                      <TripDetailLine icon={<MapPinIcon className="size-3.5 text-red-500" />}>
-                        {t.dropoffAddressLine || "Destination not set"}
-                      </TripDetailLine>
+                      <p className="text-muted-foreground text-xs">{shortBookingId(t.id)}</p>
+                      <Separator />
+                      <TripRouteStops
+                        pickup={t.pickupAddressLine || "Pickup location not set"}
+                        dropoff={t.dropoffAddressLine || "Destination not set"}
+                      />
                     </button>
                   ))
                 )}
@@ -193,11 +191,36 @@ export default function DispatchPage() {
   );
 }
 
-function TripDetailLine({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+function RouteStopDot({ variant }: { variant: "pickup" | "dropoff" }) {
+  const isPickup = variant === "pickup";
   return (
-    <span className="text-muted-foreground flex items-start gap-2 text-xs">
-      <span className="mt-0.5 shrink-0">{icon}</span>
-      <span className="min-w-0 break-words">{children}</span>
+    <span
+      className={cn(
+        "flex size-3 shrink-0 items-center justify-center rounded-full border-2",
+        isPickup ? "border-primary" : "border-muted-foreground/50"
+      )}>
+      <span
+        className={cn(
+          "size-1 rounded-full",
+          isPickup ? "bg-primary" : "bg-muted-foreground/50"
+        )}
+      />
     </span>
+  );
+}
+
+function TripRouteStops({ pickup, dropoff }: { pickup: string; dropoff: string }) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center pt-0.5">
+        <RouteStopDot variant="pickup" />
+        <span className="border-border min-h-4 flex-1 border-l border-dashed" />
+        <RouteStopDot variant="dropoff" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <p className="text-foreground text-sm font-semibold break-words">{pickup}</p>
+        <p className="text-foreground text-sm font-semibold break-words">{dropoff}</p>
+      </div>
+    </div>
   );
 }
