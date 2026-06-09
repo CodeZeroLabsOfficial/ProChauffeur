@@ -12,9 +12,10 @@ import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
 import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-collections";
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
-import { companyDefaultMapView, tripPickupReferenceDate, upcomingTripStatuses, type Trip } from "@/lib/models";
+import { companyDefaultMapView, tripPickupReferenceDate, tripStatusTitle, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { cn } from "@/lib/utils";
+import { ListFilterPopover } from "@/components/list-filter-popover";
 import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +35,7 @@ export default function DispatchPage() {
   const { vehicles } = useVehicles();
   const { locations: fleetLocations } = useFleetLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   let token = "";
   let tokenError = false;
@@ -73,9 +75,23 @@ export default function DispatchPage() {
     [trips]
   );
 
+  const filteredActiveTrips = useMemo(() => {
+    if (statusFilter.length === 0) return activeTrips;
+    return activeTrips.filter((t) => statusFilter.includes(t.status));
+  }, [activeTrips, statusFilter]);
+
+  const statusFilterOptions = useMemo(
+    () =>
+      upcomingTripStatuses.map((status) => ({
+        value: status,
+        label: tripStatusTitle[status]
+      })),
+    []
+  );
+
   const selectedTrip = useMemo(
-    () => activeTrips.find((t) => t.id === selectedTripId) ?? null,
-    [activeTrips, selectedTripId]
+    () => filteredActiveTrips.find((t) => t.id === selectedTripId) ?? null,
+    [filteredActiveTrips, selectedTripId]
   );
 
   const selectedDriverLocation = useMemo(
@@ -112,21 +128,26 @@ export default function DispatchPage() {
       <div className="grid gap-4 lg:grid-cols-[360px_1fr] lg:items-stretch">
         <Card className="order-2 flex flex-col gap-0 py-0 lg:order-1">
           <CardContent className="flex flex-1 flex-col p-0">
-            <div className="border-b p-4">
+            <div className="flex items-center justify-between gap-2 border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
-              <p className="text-muted-foreground text-xs">{activeTrips.length} requiring attention</p>
+              <ListFilterPopover
+                label="Status"
+                options={statusFilterOptions}
+                selected={statusFilter}
+                onSelectedChange={setStatusFilter}
+              />
             </div>
             <ScrollArea className="min-h-[420px] flex-1">
-              <div className="divide-y">
-                {activeTrips.length === 0 ? (
+              <div>
+                {filteredActiveTrips.length === 0 ? (
                   <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
                 ) : (
-                  activeTrips.map((t) => (
+                  filteredActiveTrips.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => toggleTripSelection(t.id)}
                       className={cn(
-                        "hover:bg-muted/60 flex w-full flex-col gap-3 p-4 text-left transition-colors",
+                        "border-border hover:bg-muted/60 flex w-full flex-col gap-3 border-b p-4 text-left transition-colors",
                         selectedTripId === t.id && "bg-muted"
                       )}>
                       <div className="flex items-start justify-between gap-2">
@@ -175,7 +196,7 @@ export default function DispatchPage() {
                   token={token}
                   mapStyle={mapStyle}
                   locations={locations}
-                  activeTrips={activeTrips}
+                  activeTrips={filteredActiveTrips}
                   driverNameById={driverNameById}
                   vehicleMakeByDriverId={vehicleMakeByDriverId}
                   companyDefaultView={companyDefaultView}
