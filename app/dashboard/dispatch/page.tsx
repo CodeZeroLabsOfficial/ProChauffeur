@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import { RadioIcon } from "lucide-react";
+import { FilterIcon, RadioIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -15,13 +15,24 @@ import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import { companyDefaultMapView, tripPickupReferenceDate, tripStatusTitle, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { cn } from "@/lib/utils";
-import { ListFilterPopover } from "@/components/list-filter-popover";
 import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import type { ListFilterOption } from "@/components/list-filter-popover";
 
 function shortBookingId(id: string) {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
@@ -114,7 +125,7 @@ export default function DispatchPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <PageHeader
         title="Dispatch"
         actions={
@@ -125,19 +136,18 @@ export default function DispatchPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr] lg:items-stretch">
-        <Card className="order-2 flex flex-col gap-0 py-0 lg:order-1">
-          <CardContent className="flex flex-1 flex-col p-0">
-            <div className="flex items-center justify-between gap-2 border-b p-4">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[360px_1fr] lg:grid-rows-1 lg:items-stretch">
+        <Card className="order-2 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 lg:order-1">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
-              <ListFilterPopover
-                label="Status"
+              <ActiveTripsStatusFilter
                 options={statusFilterOptions}
                 selected={statusFilter}
                 onSelectedChange={setStatusFilter}
               />
             </div>
-            <ScrollArea className="min-h-[420px] flex-1">
+            <ScrollArea className="min-h-0 flex-1">
               <div>
                 {filteredActiveTrips.length === 0 ? (
                   <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
@@ -170,9 +180,9 @@ export default function DispatchPage() {
           </CardContent>
         </Card>
 
-        <Card className="order-1 flex min-h-[420px] flex-col gap-0 overflow-hidden py-0 lg:order-2">
+        <Card className="order-1 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 lg:order-2">
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            <div className="min-h-[420px] flex-1">
+            <div className="h-full min-h-0 flex-1">
               {tokenError ? (
                 <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
                   Set NEXT_PUBLIC_MAPBOX_TOKEN to enable the dispatch map.
@@ -209,6 +219,63 @@ export default function DispatchPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function ActiveTripsStatusFilter({
+  options,
+  selected,
+  onSelectedChange
+}: {
+  options: ListFilterOption[];
+  selected: string[];
+  onSelectedChange: (selected: string[]) => void;
+}) {
+  function toggle(value: string) {
+    if (selected.includes(value)) {
+      onSelectedChange(selected.filter((v) => v !== value));
+    } else {
+      onSelectedChange([...selected, value]);
+    }
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" size="icon" aria-label="Filter by status">
+          <FilterIcon />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-0" align="end">
+        <Command>
+          <CommandInput placeholder="Status" className="h-9" />
+          <CommandList>
+            <CommandEmpty>No status found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={() => toggle(option.value)}>
+                  <div className="flex items-center space-x-3 py-1">
+                    <Checkbox
+                      id={`active-trips-status-${option.value}`}
+                      checked={selected.includes(option.value)}
+                      onCheckedChange={() => toggle(option.value)}
+                    />
+                    <label
+                      htmlFor={`active-trips-status-${option.value}`}
+                      className="leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      {option.label}
+                    </label>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
