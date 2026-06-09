@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
+  Mail,
+  MapPin,
   PackageIcon,
   PencilIcon,
+  PhoneCall,
   PrinterIcon
 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,11 +29,14 @@ import {
   vehicleTypeTitle,
   type Trip,
   type TripStatus,
+  type User,
+  type Vehicle,
   type VehicleType
 } from "@/lib/models";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { appConfig } from "@/lib/env";
 import { generateAvatarFallback } from "@/lib/utils";
+import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -66,14 +73,153 @@ function shortBookingId(id: string) {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
-function vehicleLabel(trip: Trip) {
-  const v = trip.vehicleSnapshot;
-  if (!v) return "—";
-  const type = v.pricingVehicleType
-    ? vehicleTypeTitle[v.pricingVehicleType as VehicleType]
+function ContactRow({
+  icon: Icon,
+  children
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <Icon className="text-muted-foreground size-4 shrink-0" />
+      {children}
+    </div>
+  );
+}
+
+function BookingCustomerCard({
+  customer,
+  customerName,
+  customerAddress,
+  customerPhone,
+  customerEmail,
+  customerCompany
+}: {
+  customer: User | undefined;
+  customerName: string | null;
+  customerAddress: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  customerCompany: string | null;
+}) {
+  const hasCustomerDetails = Boolean(
+    customerName?.trim() ||
+      customerAddress?.trim() ||
+      customerPhone?.trim() ||
+      customerEmail?.trim() ||
+      customerCompany?.trim()
+  );
+
+  if (!hasCustomerDetails) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">No customer details on file.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const profileName = customerName?.trim() || "Customer";
+  const profileSubtitle = customerCompany?.trim() || customerEmail?.trim() || "Customer";
+  const showSubtitle = profileSubtitle !== profileName || !customerName?.trim();
+  const avatarName = customerName?.trim() || customerEmail?.trim() || "Customer";
+  const showEmailInContact = Boolean(customerEmail?.trim() && customerCompany?.trim());
+
+  return (
+    <Card>
+      <CardContent>
+        <div className="flex items-center gap-4">
+          <Avatar className="size-12">
+            <AvatarImage src={customer?.profile.photoURL ?? undefined} alt={avatarName} />
+            <AvatarFallback>{generateAvatarFallback(avatarName)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h3 className="font-semibold">{profileName}</h3>
+            {showSubtitle ? (
+              <p className="text-muted-foreground text-sm">{profileSubtitle}</p>
+            ) : null}
+          </div>
+        </div>
+
+        {customerAddress?.trim() || customerPhone?.trim() || showEmailInContact ? (
+          <div className="mt-4 space-y-3">
+            {customerAddress?.trim() ? (
+              <ContactRow icon={MapPin}>{customerAddress}</ContactRow>
+            ) : null}
+            {customerPhone?.trim() ? (
+              <ContactRow icon={PhoneCall}>{customerPhone}</ContactRow>
+            ) : null}
+            {showEmailInContact ? (
+              <ContactRow icon={Mail}>{customerEmail}</ContactRow>
+            ) : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function vehicleSnapshotLuggageLabel(vehicle: Vehicle) {
+  if (vehicle.luggageDescription?.trim()) {
+    return vehicle.luggageDescription.trim();
+  }
+  if (vehicle.fleetSmallLuggageCount != null || vehicle.fleetLargeLuggageCount != null) {
+    return `${vehicle.fleetSmallLuggageCount ?? 0} small, ${vehicle.fleetLargeLuggageCount ?? 0} large`;
+  }
+  return null;
+}
+
+function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | null | undefined }) {
+  if (!vehicleSnapshot) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">No vehicle assigned for this trip.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const vehicleName = `${vehicleSnapshot.color} ${vehicleSnapshot.make} ${vehicleSnapshot.model}`.trim();
+  const vehicleType = vehicleSnapshot.pricingVehicleType
+    ? vehicleTypeTitle[vehicleSnapshot.pricingVehicleType as VehicleType]
     : null;
-  const desc = `${v.color} ${v.make} ${v.model}`.trim();
-  return type ? `${desc} (${type})` : desc;
+  const plate = vehicleSnapshot.licensePlate?.trim();
+  const subtitle = [vehicleType, plate].filter(Boolean).join(" • ");
+  const luggage = vehicleSnapshotLuggageLabel(vehicleSnapshot);
+
+  return (
+    <Card>
+      <CardContent>
+        <div className="flex items-center gap-4">
+          <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
+          <div className="flex-1">
+            <h3 className="font-semibold">{vehicleName || "Vehicle"}</h3>
+            {subtitle ? <p className="text-muted-foreground text-sm">{subtitle}</p> : null}
+          </div>
+        </div>
+
+        {vehicleSnapshot.passengerCapacity != null ||
+        vehicleSnapshot.manufactureYear != null ||
+        luggage ? (
+          <div className="mt-4 space-y-3">
+            {vehicleSnapshot.passengerCapacity != null ? (
+              <DetailRow
+                label="Passengers"
+                value={vehicleSnapshot.passengerCapacity}
+              />
+            ) : null}
+            {vehicleSnapshot.manufactureYear != null ? (
+              <DetailRow label="Year" value={vehicleSnapshot.manufactureYear} />
+            ) : null}
+            {luggage ? <DetailRow label="Luggage" value={luggage} /> : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 }
 
 function luggageLabel(trip: Trip) {
@@ -155,14 +301,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
   const customerCompany = trip?.customerCompany ?? null;
-
-  const hasCustomerDetails = Boolean(
-    customerName?.trim() ||
-      customerAddress?.trim() ||
-      customerPhone?.trim() ||
-      customerEmail?.trim() ||
-      customerCompany?.trim()
-  );
 
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
@@ -318,40 +456,16 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow label="Journey time:" value={journeyTime} />
           </SectionCard>
 
-          <SectionCard title="Customer information">
-            {hasCustomerDetails ? (
-              <div className="space-y-4">
-                {customerName?.trim() && (
-                  <p className="text-sm font-medium">{customerName}</p>
-                )}
-                {customerAddress?.trim() && (
-                  <DetailRow label="Customer address" value={customerAddress} />
-                )}
-                {customerPhone?.trim() && (
-                  <p className="text-muted-foreground text-sm">{customerPhone}</p>
-                )}
-                {customerEmail?.trim() && (
-                  <p className="text-muted-foreground text-sm">{customerEmail}</p>
-                )}
-                {customerCompany?.trim() && (
-                  <DetailRow label="Company" value={customerCompany} />
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No customer details on file.</p>
-            )}
-          </SectionCard>
+          <BookingCustomerCard
+            customer={customer}
+            customerName={customerName}
+            customerAddress={customerAddress}
+            customerPhone={customerPhone}
+            customerEmail={customerEmail}
+            customerCompany={customerCompany}
+          />
 
-          <SectionCard title="Vehicle details">
-            <p className="text-muted-foreground text-sm">
-              {trip.vehicleSnapshot ? vehicleLabel(trip) : "No vehicle assigned for this trip."}
-            </p>
-            {trip.vehicleSnapshot?.licensePlate && (
-              <p className="text-muted-foreground text-sm">
-                Plate: {trip.vehicleSnapshot.licensePlate}
-              </p>
-            )}
-          </SectionCard>
+          <BookingVehicleCard vehicleSnapshot={trip.vehicleSnapshot} />
 
           <SectionCard title="Extras / Add-ons">
             {trip.bookingAddons?.length ? (
