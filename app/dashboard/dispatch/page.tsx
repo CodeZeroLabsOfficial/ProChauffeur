@@ -117,16 +117,16 @@ export default function DispatchPage() {
               <p className="text-muted-foreground text-xs">{activeTrips.length} requiring attention</p>
             </div>
             <ScrollArea className="min-h-[420px] flex-1">
-              <div className="flex flex-col gap-3 p-4">
+              <div className="divide-y">
                 {activeTrips.length === 0 ? (
-                  <p className="text-muted-foreground py-2 text-center text-sm">No active trips.</p>
+                  <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
                 ) : (
                   activeTrips.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => toggleTripSelection(t.id)}
                       className={cn(
-                        "border-border bg-card text-card-foreground hover:bg-muted/60 flex w-full flex-col gap-3 rounded-lg border p-4 text-left transition-colors",
+                        "hover:bg-muted/60 flex w-full flex-col gap-3 p-4 text-left transition-colors",
                         selectedTripId === t.id && "bg-muted"
                       )}>
                       <div className="flex items-start justify-between gap-2">
