@@ -1,19 +1,3 @@
-
-/** VehicleSpecificationChip.swift */
-export interface VehicleSpecificationChip {
-  id: string;
-  systemImageName: string;
-  title: string;
-  value: string;
-}
-
-/** VehicleCarFeatureRow.swift */
-export interface VehicleCarFeatureRow {
-  id: string;
-  label: string;
-  value: string;
-}
-
 /**
  * Vehicle.swift — `vehicles/{driverID}` document.
  * The document id always equals `driverID` (the chauffeur user id).
@@ -34,15 +18,9 @@ export interface Vehicle {
   vehicleIdentificationNumber?: string | null;
   /** e.g. Petrol, Diesel, Electric, Hybrid. */
   engineTypeDescription?: string | null;
-  specificationChips: VehicleSpecificationChip[];
-  carFeatureRows: VehicleCarFeatureRow[];
   luggageDescription: string;
   smallLuggageCount: number;
   largeLuggageCount: number;
-  wifiServiceDescription: string;
-  serviceClassDescription: string;
-  interiorDescription: string;
-  climateControlDescription: string;
   gearTypeDescription: string;
 }
 

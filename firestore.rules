@@ -104,15 +104,10 @@ service cloud.firestore {
           );
       }
 
-      // Prefer vehicleDocumentId; accept legacy fleetVehicleDocumentId during migration.
       function tripFleetDocumentId(data) {
         return ('vehicleDocumentId' in data && data.vehicleDocumentId is string && data.vehicleDocumentId.size() > 0)
           ? data.vehicleDocumentId
-          : (
-            ('fleetVehicleDocumentId' in data && data.fleetVehicleDocumentId is string && data.fleetVehicleDocumentId.size() > 0)
-              ? data.fleetVehicleDocumentId
-              : null
-          );
+          : null;
       }
 
       function tripCreateOpenPool(data) {

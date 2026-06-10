@@ -109,15 +109,9 @@ export function mapVehicle(d: DocumentData): Vehicle {
     vehicleClassId: d.vehicleClassId ?? null,
     vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
     engineTypeDescription: d.engineTypeDescription ?? null,
-    specificationChips: d.specificationChips ?? [],
-    carFeatureRows: d.carFeatureRows ?? [],
     luggageDescription: d.luggageDescription ?? "",
-    smallLuggageCount: toInt(d.smallLuggageCount ?? d.fleetSmallLuggageCount, 0),
-    largeLuggageCount: toInt(d.largeLuggageCount ?? d.fleetLargeLuggageCount, 0),
-    wifiServiceDescription: d.wifiServiceDescription ?? "",
-    serviceClassDescription: d.serviceClassDescription ?? "",
-    interiorDescription: d.interiorDescription ?? "",
-    climateControlDescription: d.climateControlDescription ?? "",
+    smallLuggageCount: toInt(d.smallLuggageCount, 0),
+    largeLuggageCount: toInt(d.largeLuggageCount, 0),
     gearTypeDescription: d.gearTypeDescription ?? ""
   };
 }
@@ -147,7 +141,7 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
   return {
     schemaVersion: d.schemaVersion ?? 1,
     tripType: d.tripType ?? "transfer",
-    vehicleClassId: d.vehicleClassId ?? d.vehicleType ?? "",
+    vehicleClassId: d.vehicleClassId ?? "",
     garageLocationId: d.garageLocationId ?? "",
     distanceUnit: d.distanceUnit ?? "km",
     currencyCode: d.currencyCode ?? "",
@@ -185,7 +179,7 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     pickupAddressLine: d.pickupAddressLine ?? null,
     dropoffAddressLine: d.dropoffAddressLine ?? null,
     vehicleSnapshot: d.vehicleSnapshot ? mapVehicle(d.vehicleSnapshot) : null,
-    vehicleDocumentId: d.vehicleDocumentId ?? d.fleetVehicleDocumentId ?? null,
+    vehicleDocumentId: d.vehicleDocumentId ?? null,
     notes: d.notes ?? null,
     bookingPassengerCount: d.bookingPassengerCount ?? null,
     bookingSmallLuggageCount: d.bookingSmallLuggageCount ?? null,

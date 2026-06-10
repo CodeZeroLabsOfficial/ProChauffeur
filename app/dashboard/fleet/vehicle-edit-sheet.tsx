@@ -49,15 +49,9 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   vehicleClassId: null,
   vehicleIdentificationNumber: null,
   engineTypeDescription: null,
-  specificationChips: [],
-  carFeatureRows: [],
   luggageDescription: luggageSpecificationLabel(0, 2),
   smallLuggageCount: 0,
   largeLuggageCount: 2,
-  wifiServiceDescription: "Complimentary",
-  serviceClassDescription: "Business",
-  interiorDescription: "",
-  climateControlDescription: "",
   gearTypeDescription: ""
 });
 
