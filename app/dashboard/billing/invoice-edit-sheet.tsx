@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { createInvoice, updateInvoice } from "@/lib/services/firebase-service";
+import { createInvoice, fetchOperatorLocale, updateInvoice } from "@/lib/services/firebase-service";
 import {
   INVOICE_STATUSES,
   computeInvoiceTotals,
@@ -54,7 +54,20 @@ export function InvoiceEditSheet({
     invoice?.lineItems?.length ? invoice.lineItems : [newLine()]
   );
   const [taxRate, setTaxRate] = useState(invoice ? invoice.taxRate * 100 : 10);
+  const [currencyCode, setCurrencyCode] = useState(invoice?.currencyCode ?? "AUD");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open || invoice) return;
+    fetchOperatorLocale()
+      .then((locale) => {
+        setTaxRate(locale.defaultTaxRate * 100);
+        setCurrencyCode(locale.currency);
+      })
+      .catch(() => {
+        // Invoice can still be created manually when locale is not configured.
+      });
+  }, [open, invoice]);
 
   const [seededId, setSeededId] = useState<string>("__init__");
   const key = invoice?.id ?? "__new__";
@@ -86,7 +99,7 @@ export function InvoiceEditSheet({
       customerPhone: get("customerPhone") || null,
       tripIDs: invoice?.tripIDs ?? [],
       status,
-      currencyCode: appConfig.currency,
+      currencyCode: invoice?.currencyCode ?? currencyCode,
       lineItems: cleanLines,
       subtotal,
       taxRate: taxRate / 100,

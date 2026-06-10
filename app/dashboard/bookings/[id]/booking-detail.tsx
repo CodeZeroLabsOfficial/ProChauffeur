@@ -37,6 +37,7 @@ import {
   formatPostalAddress,
   postalAddressFromTripSnapshot
 } from "@/lib/models/postal-address";
+import { tripTypeTitle } from "@/lib/models";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { appConfig } from "@/lib/env";
 import { generateAvatarFallback } from "@/lib/utils";
@@ -485,12 +486,35 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
           <BookingVehicleCard vehicleSnapshot={trip.vehicleSnapshot} />
 
+          <SectionCard title="Pricing">
+            <DetailRow
+              label="Trip type:"
+              value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
+            />
+            <DetailRow
+              label="Vehicle tier:"
+              value={trip.pricingVehicleType ?? trip.vehicleSnapshot?.pricingVehicleType ?? "—"}
+            />
+            {trip.tripType === "hourly" ? (
+              <DetailRow label="Booked hours:" value={trip.bookedHours ?? "—"} />
+            ) : null}
+            <DetailRow
+              label="Quoted total:"
+              value={
+                trip.quotedTotal != null
+                  ? formatCurrency(trip.quotedTotal, trip.quotedCurrencyCode ?? appConfig.currency)
+                  : "—"
+              }
+            />
+          </SectionCard>
+
           <SectionCard title="Extras / Add-ons">
             {trip.bookingAddons?.length ? (
               <ul className="text-muted-foreground space-y-1 text-sm">
                 {trip.bookingAddons.map((addon) => (
                   <li key={addon.id}>
-                    {addon.title} ({formatCurrency(addon.price, appConfig.currency)})
+                    {addon.title} (
+                    {formatCurrency(addon.price, trip.quotedCurrencyCode ?? appConfig.currency)})
                   </li>
                 ))}
               </ul>

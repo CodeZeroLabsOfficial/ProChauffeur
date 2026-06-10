@@ -1,5 +1,6 @@
-import type { TripStatus } from "@/lib/models/enums";
+import type { TripStatus, TripType, VehicleType } from "@/lib/models/enums";
 import type { PricingAddon } from "@/lib/models/pricing";
+import type { QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { Vehicle } from "@/lib/models/vehicle";
 
 /** CoordinateField.swift — plain lat/lng pair used for pickup/dropoff. */
@@ -45,6 +46,18 @@ export interface Trip {
   /** Live chauffeur GPS (Firestore GeoPoint -> lat/lng). */
   liveLocation?: CoordinateField | null;
   liveHeadingDegrees?: number | null;
+  tripType?: TripType | null;
+  pricingVehicleType?: VehicleType | null;
+  bookedHours?: number | null;
+  quotedSubtotal?: number | null;
+  quotedTaxAmount?: number | null;
+  quotedTotal?: number | null;
+  quotedCurrencyCode?: string | null;
+  quotedTaxRate?: number | null;
+  quotedPricesIncludeTax?: boolean | null;
+  quoteBreakdown?: QuoteLineItem[] | null;
+  quoteComputedAt?: Date | null;
+  quoteSnapshot?: TripQuoteSnapshot | null;
   createdAt: Date;
   updatedAt: Date;
 }

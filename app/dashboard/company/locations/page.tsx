@@ -217,9 +217,9 @@ export default function LocationsPage() {
             </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="isDefault">Default map location</Label>
+                <Label htmlFor="isDefault">Default garage / depot</Label>
                 <p className="text-muted-foreground text-xs">
-                  Dispatch maps center here when no drivers or trips are visible.
+                  Used for dispatch map centering and pricing deadhead calculations.
                 </p>
               </div>
               <Switch id="isDefault" checked={isDefault} onCheckedChange={setIsDefault} />

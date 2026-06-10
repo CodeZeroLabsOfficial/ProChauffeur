@@ -39,6 +39,15 @@ export const upcomingTripStatuses: TripStatus[] = [
   "in_progress"
 ];
 
+export const TRIP_TYPES = ["transfer", "hourly", "round_trip"] as const;
+export type TripType = (typeof TRIP_TYPES)[number];
+
+export const tripTypeTitle: Record<TripType, string> = {
+  transfer: "Transfer",
+  hourly: "Hourly",
+  round_trip: "Round trip"
+};
+
 // VehicleType.swift — raw values align with Firestore pricing tier keys.
 export const VEHICLE_TYPES = ["sedan", "suv", "stretch_limo", "sprinter_van"] as const;
 export type VehicleType = (typeof VEHICLE_TYPES)[number];
@@ -49,6 +58,50 @@ export const vehicleTypeTitle: Record<VehicleType, string> = {
   stretch_limo: "Stretch Limo",
   sprinter_van: "Sprinter Van"
 };
+
+export const WEEKDAY_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
+export type WeekdayNumber = (typeof WEEKDAY_NUMBERS)[number];
+
+export const DISTANCE_UNITS = ["km", "mile"] as const;
+export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
+
+export const distanceUnitTitle: Record<DistanceUnit, string> = {
+  km: "Kilometres",
+  mile: "Miles"
+};
+
+export const TAX_DISPLAY_MODES = ["exclusive", "inclusive"] as const;
+export type TaxDisplayMode = (typeof TAX_DISPLAY_MODES)[number];
+
+export const taxDisplayModeTitle: Record<TaxDisplayMode, string> = {
+  exclusive: "Exclusive (tax added at checkout)",
+  inclusive: "Inclusive (tax included in price)"
+};
+
+export const ZONE_MATCH_TYPES = ["postcode", "radius", "polygon"] as const;
+export type ZoneMatchType = (typeof ZONE_MATCH_TYPES)[number];
+
+export const PRICING_RULE_TYPES = ["peak_hours", "holiday", "date_range"] as const;
+export type PricingRuleType = (typeof PRICING_RULE_TYPES)[number];
+
+export const QUOTE_ROUNDING = ["none", "dollar", "half_dollar"] as const;
+export type QuoteRounding = (typeof QUOTE_ROUNDING)[number];
+
+export const QUOTE_LINE_CATEGORIES = [
+  "base",
+  "distance",
+  "deadhead",
+  "hourly",
+  "minimum",
+  "zone_fixed",
+  "zone_surcharge",
+  "time_adjustment",
+  "addon",
+  "discount",
+  "tax",
+  "adjustment"
+] as const;
+export type QuoteLineCategory = (typeof QUOTE_LINE_CATEGORIES)[number];
 
 // ChauffeurCategory (DriverProfile.swift)
 export const CHAUFFEUR_CATEGORIES = [

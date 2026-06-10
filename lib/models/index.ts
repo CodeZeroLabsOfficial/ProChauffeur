@@ -4,6 +4,7 @@ export * from "@/lib/models/vehicle";
 export * from "@/lib/models/trip";
 export * from "@/lib/models/location";
 export * from "@/lib/models/pricing";
+export * from "@/lib/models/quote";
 export * from "@/lib/models/operating-hours";
 export * from "@/lib/models/limits";
 export * from "@/lib/models/invoice";
@@ -28,12 +29,12 @@ export const Collections = {
 export const OperatorDocs = {
   company: "company",
   locale: "locale",
-  operatingHours: "operating_hours"
+  operatingHours: "operating_hours",
+  pricing: "pricing"
 } as const;
 
 /** `app_settings` document ids. */
 export const AppSettingsDocs = {
-  pricing: "pricing",
   limits: "limits",
   branding: "branding",
   integrations: "integrations"

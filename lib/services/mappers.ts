@@ -12,14 +12,17 @@ import type {
   Invoice,
   NotificationAction,
   NotificationCategory,
-  PricingConfig,
   PricingAddon,
+  PricingConfig,
+  QuoteLineItem,
   Trip,
+  TripQuoteSnapshot,
   User,
   UserProfile,
   Vehicle
 } from "@/lib/models";
 import { UNLIMITED } from "@/lib/models/limits";
+import { parseOperatorLocale, parsePricingConfig } from "@/lib/pricing/validate";
 
 /**
  * Pure mappers from raw Firestore document data into typed app models.
@@ -83,7 +86,6 @@ export function mapUser(id: string, d: DocumentData): User {
     role: d.role ?? "customer",
     email: d.email ?? "",
     profile: mapUserProfile(d.profile),
-    // Accept the legacy `driverStaff` key for backward compatibility.
     driverProfile: mapDriverProfile(d.driverProfile ?? d.driverStaff),
     createdAt: toDate(d.createdAt) ?? new Date(),
     liveLocation: toCoordinate(d.liveLocation),
@@ -123,7 +125,42 @@ function mapPricingAddon(d: DocumentData): PricingAddon {
   return {
     id: d.id ?? "",
     title: d.title ?? "",
-    price: d.price ?? 0
+    price: d.price ?? 0,
+    isEnabled: d.isEnabled ?? true,
+    tripTypes: d.tripTypes ?? [],
+    vehicleTypes: d.vehicleTypes ?? []
+  };
+}
+
+function mapQuoteLineItem(d: DocumentData): QuoteLineItem {
+  return {
+    id: d.id ?? "",
+    label: d.label ?? "",
+    amount: d.amount ?? 0,
+    category: d.category ?? "base",
+    isInternal: d.isInternal === true
+  };
+}
+
+function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
+  return {
+    schemaVersion: d.schemaVersion ?? 1,
+    tripType: d.tripType ?? "transfer",
+    vehicleType: d.vehicleType ?? "sedan",
+    garageLocationId: d.garageLocationId ?? "",
+    distanceUnit: d.distanceUnit ?? "km",
+    currencyCode: d.currencyCode ?? "",
+    onboardUnits: d.onboardUnits ?? 0,
+    deadheadUnits: d.deadheadUnits ?? 0,
+    bookedHours: d.bookedHours ?? null,
+    matchedZoneIds: d.matchedZoneIds ?? [],
+    appliedFixedZoneId: d.appliedFixedZoneId ?? null,
+    appliedZoneSurchargeIds: d.appliedZoneSurchargeIds ?? [],
+    appliedRuleId: d.appliedRuleId ?? null,
+    addonIds: d.addonIds ?? [],
+    pickupPostcode: d.pickupPostcode ?? "",
+    dropoffPostcode: d.dropoffPostcode ?? "",
+    scheduledPickupAt: toDate(d.scheduledPickupAt) ?? new Date()
   };
 }
 
@@ -163,6 +200,20 @@ export function mapTrip(id: string, d: DocumentData): Trip {
       typeof d.journeyDurationSeconds === "number" ? d.journeyDurationSeconds : null,
     liveLocation: toCoordinate(d.liveLocation),
     liveHeadingDegrees: d.liveHeadingDegrees ?? null,
+    tripType: d.tripType ?? null,
+    pricingVehicleType: d.pricingVehicleType ?? null,
+    bookedHours: d.bookedHours ?? null,
+    quotedSubtotal: d.quotedSubtotal ?? null,
+    quotedTaxAmount: d.quotedTaxAmount ?? null,
+    quotedTotal: d.quotedTotal ?? null,
+    quotedCurrencyCode: d.quotedCurrencyCode ?? null,
+    quotedTaxRate: d.quotedTaxRate ?? null,
+    quotedPricesIncludeTax: d.quotedPricesIncludeTax ?? null,
+    quoteBreakdown: Array.isArray(d.quoteBreakdown)
+      ? d.quoteBreakdown.map((line) => mapQuoteLineItem(line as DocumentData))
+      : null,
+    quoteComputedAt: toDate(d.quoteComputedAt),
+    quoteSnapshot: d.quoteSnapshot ? mapTripQuoteSnapshot(d.quoteSnapshot as DocumentData) : null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };
@@ -182,17 +233,7 @@ export function mapFleetLocation(id: string, d: DocumentData): FleetLocation {
 }
 
 export function mapPricingConfig(d: DocumentData): PricingConfig {
-  return {
-    minimumFare: d.minimumFare ?? 0,
-    baseFare: d.baseFare ?? 0,
-    distanceRatePerKm: d.distanceRatePerKm ?? 0,
-    timeRatePerHour: d.timeRatePerHour ?? 0,
-    waitingFeeFlat: d.waitingFeeFlat ?? 0,
-    peakOrWeekendMultiplier: d.peakOrWeekendMultiplier ?? 1,
-    returnToBaseFee: d.returnToBaseFee ?? 0,
-    vehicles: d.vehicles ?? [],
-    addons: d.addons ?? []
-  };
+  return parsePricingConfig(d);
 }
 
 export function mapOperatingHours(d: DocumentData): AppFleetOperatingHours {
@@ -211,11 +252,7 @@ export function mapOperatingHours(d: DocumentData): AppFleetOperatingHours {
 }
 
 export function mapOperatorLocale(d: DocumentData): OperatorLocale {
-  return {
-    locale: typeof d.locale === "string" ? d.locale : null,
-    currency: typeof d.currency === "string" ? d.currency : null,
-    timezone: typeof d.timezone === "string" ? d.timezone : null
-  };
+  return parseOperatorLocale(d);
 }
 
 export function mapLimits(d: DocumentData): AppGlobalLimits {

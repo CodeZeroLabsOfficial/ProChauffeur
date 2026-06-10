@@ -204,21 +204,22 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // App-wide config: license limits, pricing, web branding (favicon/logos).
+    // App-wide config: license limits, web branding (favicon/logos).
     match /app_settings/{docId} {
-      allow read: if docId in ['limits', 'pricing', 'branding']
+      allow read: if docId in ['limits', 'branding']
         || (signedIn() && isAdmin() && docId == 'integrations');
-      allow write: if isAdmin() && docId in ['limits', 'pricing', 'branding', 'integrations'];
+      allow write: if isAdmin() && docId in ['limits', 'branding', 'integrations'];
     }
 
-    // Fleet operator: company profile, locale, operating hours.
+    // Fleet operator: company profile, locale, operating hours, pricing.
     // operator/branding is legacy; new branding lives in app_settings/branding.
     // operator/company — read by Company overview (and iOS); admin write.
     match /operator/{docId} {
       allow read: if docId == 'company'
         || docId == 'branding'
-        || (signedIn() && isAdmin() && docId in ['locale', 'operating_hours']);
-      allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours'];
+        || docId == 'pricing'
+        || (signedIn() && isAdmin() && docId in ['locale', 'operating_hours', 'pricing']);
+      allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours', 'pricing'];
     }
 
     function validNotificationCategories() {

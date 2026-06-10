@@ -43,10 +43,8 @@ import {
   AppSettingsDocs,
   Collections,
   OperatorDocs,
-  defaultPricingConfig,
   emptyCompanyProfile,
   emptyOperatingHours,
-  emptyOperatorLocale,
   unlimitedLimits,
   type ActivityNotification,
   type CompanyProfile,
@@ -78,6 +76,8 @@ import {
   mapUser,
   mapVehicle
 } from "@/lib/services/mappers";
+import { ConfigError } from "@/lib/pricing/errors";
+import { validateOperatorLocale, validatePricingConfig } from "@/lib/pricing/validate";
 
 type Unsub = () => void;
 
@@ -448,6 +448,11 @@ export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => v
   );
 }
 
+export async function fetchFleetLocations(): Promise<FleetLocation[]> {
+  const q = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
+  return snapToList(await getDocs(q), mapFleetLocation);
+}
+
 async function clearOtherDefaultFleetLocations(exceptId: string): Promise<void> {
   const snap = await getDocs(collection(db(), Collections.locations));
   const batch = writeBatch(db());
@@ -484,7 +489,7 @@ export async function createFleetLocation(input: {
     addressLine,
     latitude: input.latitude,
     longitude: input.longitude,
-    ...(isDefault ? { isDefault: true } : {}),
+    isDefault,
     createdAt: serverTimestamp()
   });
   void createActivityNotification(locationNotification("created", name, id));
@@ -511,20 +516,34 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
 export async function deleteFleetLocation(id: string): Promise<void> {
   const ref = doc(db(), Collections.locations, id);
   const snap = await getDoc(ref);
-  const title = snap.exists() ? mapFleetLocation(snap.id, snap.data()).name : "Location";
+  if (!snap.exists()) return;
+  const location = mapFleetLocation(snap.id, snap.data());
+  if (location.isDefault) {
+    throw new Error(
+      "Cannot delete the default garage location. Set another location as default first."
+    );
+  }
   await deleteDoc(ref);
-  void createActivityNotification(locationNotification("deleted", title, id));
+  void createActivityNotification(locationNotification("deleted", location.name, id));
 }
 
 // ───────────────────────── App settings (config) ─────────────────────
 
 export async function fetchPricingConfiguration(): Promise<PricingConfig> {
-  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.pricing));
-  return snap.exists() ? mapPricingConfig(snap.data()) : defaultPricingConfig;
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
+  if (!snap.exists()) {
+    throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
+  }
+  return mapPricingConfig(snap.data());
 }
 
 export async function savePricingConfiguration(config: PricingConfig): Promise<void> {
-  await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.pricing), config);
+  validatePricingConfig(config);
+  await setDoc(
+    doc(db(), Collections.operator, OperatorDocs.pricing),
+    stripUndefined({ ...config }),
+    { merge: true }
+  );
   void createActivityNotification(pricingNotification());
 }
 
@@ -544,15 +563,15 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
 
 export async function fetchOperatorLocale(): Promise<OperatorLocale> {
   const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.locale));
-  return snap.exists() ? mapOperatorLocale(snap.data()) : emptyOperatorLocale;
+  if (!snap.exists()) {
+    throw new ConfigError("Locale is not configured. Complete Settings → Locale first.");
+  }
+  return mapOperatorLocale(snap.data());
 }
 
 export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
-  await setDoc(
-    doc(db(), Collections.operator, OperatorDocs.locale),
-    stripUndefined({ ...locale }),
-    { merge: true }
-  );
+  validateOperatorLocale(locale);
+  await setDoc(doc(db(), Collections.operator, OperatorDocs.locale), stripUndefined({ ...locale }));
   void createActivityNotification(localeNotification());
 }
 
