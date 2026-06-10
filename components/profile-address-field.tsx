@@ -35,6 +35,7 @@ function suggestionFromPostalAddress(address: PostalAddress): AddressSuggestion 
 export function ProfileAddressField({
   id = "profile-address",
   label = "Address",
+  showLabel = true,
   value,
   onChange,
   invalid = false,
@@ -42,6 +43,7 @@ export function ProfileAddressField({
 }: {
   id?: string;
   label?: string;
+  showLabel?: boolean;
   value: PostalAddress;
   onChange: (value: PostalAddress) => void;
   invalid?: boolean;
@@ -70,7 +72,7 @@ export function ProfileAddressField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      {showLabel ? <Label htmlFor={id}>{label}</Label> : null}
       <AddressAutocomplete
         id={id}
         value={selection}
