@@ -1,4 +1,4 @@
-import type { DistanceUnit, QuoteLineCategory, TripType, VehicleType } from "@/lib/models/enums";
+import type { DistanceUnit, QuoteLineCategory, TripType } from "@/lib/models/enums";
 import type { CoordinateField } from "@/lib/models/trip";
 
 export interface QuoteLineItem {
@@ -12,7 +12,7 @@ export interface QuoteLineItem {
 export interface TripQuoteSnapshot {
   schemaVersion: number;
   tripType: TripType;
-  vehicleType: VehicleType;
+  vehicleClassId: string;
   garageLocationId: string;
   distanceUnit: DistanceUnit;
   currencyCode: string;
@@ -31,7 +31,7 @@ export interface TripQuoteSnapshot {
 
 export interface QuoteRequest {
   tripType: TripType;
-  vehicleType: VehicleType;
+  vehicleClassId: string;
   pickup: CoordinateField;
   dropoff: CoordinateField;
   pickupAddressLine: string;

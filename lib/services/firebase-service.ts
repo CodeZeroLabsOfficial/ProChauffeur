@@ -61,8 +61,15 @@ import {
   type User,
   type UserProfile,
   type UserRole,
-  type Vehicle
+  type Vehicle,
+  type VehicleClass
 } from "@/lib/models";
+import {
+  buildVehicleClassesFromLegacyPricing,
+  isLegacyPricingDocument,
+  legacyVehicleTypeToClassId,
+  migratePricingConfigToV2
+} from "@/lib/migration/vehicle-class-migration";
 import {
   mapActivityNotification,
   mapCompanyProfile,
@@ -74,10 +81,11 @@ import {
   mapPricingConfig,
   mapTrip,
   mapUser,
-  mapVehicle
+  mapVehicle,
+  mapVehicleClass
 } from "@/lib/services/mappers";
 import { ConfigError } from "@/lib/pricing/errors";
-import { validateOperatorLocale, validatePricingConfig } from "@/lib/pricing/validate";
+import { validateOperatorLocale, validatePricingConfig, validateVehicleClass } from "@/lib/pricing/validate";
 
 type Unsub = () => void;
 
@@ -209,14 +217,15 @@ export async function updateTripStatus(id: string, status: TripStatus): Promise<
 export async function assignTripDriver(
   id: string,
   driverID: string | null,
-  fleetVehicleDocumentId?: string | null,
+  vehicleDocumentId?: string | null,
   vehicleSnapshot?: Vehicle | null
 ): Promise<void> {
   await updateDoc(
     doc(db(), Collections.trips, id),
     stripUndefined({
       driverID,
-      fleetVehicleDocumentId: driverID ? fleetVehicleDocumentId : null,
+      vehicleDocumentId: driverID ? vehicleDocumentId : null,
+      fleetVehicleDocumentId: deleteField(),
       vehicleSnapshot: driverID ? vehicleSnapshot : null,
       updatedAt: serverTimestamp()
     })
@@ -545,6 +554,159 @@ export async function savePricingConfiguration(config: PricingConfig): Promise<v
     { merge: true }
   );
   void createActivityNotification(pricingNotification());
+}
+
+// ───────────────────────── Vehicle classes ─────────────────────────
+
+export async function fetchVehicleClasses(): Promise<VehicleClass[]> {
+  const snap = await getDocs(collection(db(), Collections.vehicleClasses));
+  return snap.docs
+    .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
+}
+
+export async function fetchVehicleClass(id: string): Promise<VehicleClass | null> {
+  const snap = await getDoc(doc(db(), Collections.vehicleClasses, id));
+  return snap.exists() ? mapVehicleClass(snap.id, snap.data()) : null;
+}
+
+export function listenVehicleClasses(onUpdate: (classes: VehicleClass[]) => void): Unsub {
+  return onSnapshot(
+    collection(db(), Collections.vehicleClasses),
+    (snap) => {
+      const classes = snap.docs
+        .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
+      onUpdate(classes);
+    },
+    onSnapshotError("vehicle_classes", onUpdate)
+  );
+}
+
+export async function saveVehicleClass(vehicleClass: VehicleClass): Promise<void> {
+  validateVehicleClass(vehicleClass);
+  const existing = await getDocs(
+    query(collection(db(), Collections.vehicleClasses), where("slug", "==", vehicleClass.slug))
+  );
+  const slugConflict = existing.docs.find((docSnap) => docSnap.id !== vehicleClass.id);
+  if (slugConflict) {
+    throw new Error(`Slug "${vehicleClass.slug}" is already used by another vehicle class.`);
+  }
+  await setDoc(
+    doc(db(), Collections.vehicleClasses, vehicleClass.id),
+    stripUndefined({
+      ...vehicleClass,
+      updatedAt: serverTimestamp(),
+      createdAt: vehicleClass.createdAt ?? serverTimestamp()
+    }),
+    { merge: true }
+  );
+}
+
+export async function deleteVehicleClass(id: string): Promise<void> {
+  const vehicles = await fetchVehicles();
+  if (vehicles.some((vehicle) => vehicle.vehicleClassId === id)) {
+    throw new Error("Cannot delete a vehicle class that is assigned to fleet vehicles.");
+  }
+  await deleteDoc(doc(db(), Collections.vehicleClasses, id));
+}
+
+export async function fetchPricingRaw(): Promise<DocumentData | null> {
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function migrateVehicleClassesFromLegacyPricing(): Promise<{
+  createdClassCount: number;
+  updatedVehicleCount: number;
+  updatedTripCount: number;
+}> {
+  const pricingSnap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
+  if (!pricingSnap.exists()) {
+    throw new Error("Pricing is not configured.");
+  }
+  const pricingData = pricingSnap.data();
+  const existingClasses = await fetchVehicleClasses();
+  const existingSlugs = new Set(existingClasses.map((vehicleClass) => vehicleClass.slug));
+  const newClasses = buildVehicleClassesFromLegacyPricing(pricingData, existingSlugs);
+  const allClasses = [...existingClasses, ...newClasses];
+  const classesBySlug = new Map(allClasses.map((vehicleClass) => [vehicleClass.slug, vehicleClass]));
+  const classIds = allClasses.map((vehicleClass) => vehicleClass.id);
+
+  const batch = writeBatch(db());
+  for (const vehicleClass of newClasses) {
+    batch.set(doc(db(), Collections.vehicleClasses, vehicleClass.id), stripUndefined(vehicleClass));
+  }
+
+  const vehicleSnaps = await getDocs(collection(db(), Collections.vehicles));
+  let updatedVehicleCount = 0;
+  for (const vehicleDoc of vehicleSnaps.docs) {
+    const data = vehicleDoc.data();
+    if (data.vehicleClassId) continue;
+    const classId = legacyVehicleTypeToClassId(
+      typeof data.pricingVehicleType === "string" ? data.pricingVehicleType : null,
+      classesBySlug
+    );
+    if (!classId) continue;
+    batch.update(vehicleDoc.ref, {
+      vehicleClassId: classId,
+      pricingVehicleType: deleteField(),
+      smallLuggageCount: data.smallLuggageCount ?? data.fleetSmallLuggageCount ?? 0,
+      largeLuggageCount: data.largeLuggageCount ?? data.fleetLargeLuggageCount ?? 0,
+      fleetSmallLuggageCount: deleteField(),
+      fleetLargeLuggageCount: deleteField()
+    });
+    updatedVehicleCount += 1;
+  }
+
+  if (isLegacyPricingDocument(pricingData)) {
+    const migratedPricing = migratePricingConfigToV2(pricingData, classIds);
+    validatePricingConfig(migratedPricing);
+    batch.set(
+      doc(db(), Collections.operator, OperatorDocs.pricing),
+      stripUndefined({
+        ...migratedPricing,
+        vehicles: deleteField()
+      }),
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
+
+  const tripsSnap = await getDocs(collection(db(), Collections.trips));
+  let updatedTripCount = 0;
+  const tripBatch = writeBatch(db());
+  for (const tripDoc of tripsSnap.docs) {
+    const data = tripDoc.data();
+    const patch: DocumentData = {};
+    if (!data.vehicleDocumentId && data.fleetVehicleDocumentId) {
+      patch.vehicleDocumentId = data.fleetVehicleDocumentId;
+      patch.fleetVehicleDocumentId = deleteField();
+    }
+    if (!data.vehicleClassId && data.pricingVehicleType) {
+      const classId = legacyVehicleTypeToClassId(String(data.pricingVehicleType), classesBySlug);
+      if (classId) {
+        patch.vehicleClassId = classId;
+        const vehicleClass = allClasses.find((entry) => entry.id === classId);
+        if (vehicleClass) patch.vehicleClassDisplayName = vehicleClass.displayName;
+        patch.pricingVehicleType = deleteField();
+      }
+    }
+    if (Object.keys(patch).length > 0) {
+      tripBatch.update(tripDoc.ref, patch);
+      updatedTripCount += 1;
+    }
+  }
+  if (updatedTripCount > 0) {
+    await tripBatch.commit();
+  }
+
+  return {
+    createdClassCount: newClasses.length,
+    updatedVehicleCount,
+    updatedTripCount
+  };
 }
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {

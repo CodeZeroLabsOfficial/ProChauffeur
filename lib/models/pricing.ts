@@ -1,9 +1,7 @@
 import {
-  VEHICLE_TYPES,
   type PricingRuleType,
   type QuoteRounding,
   type TripType,
-  type VehicleType,
   type WeekdayNumber,
   type ZoneMatchType
 } from "@/lib/models/enums";
@@ -28,21 +26,13 @@ export interface HourlyPricingRates {
   displayHourlyFrom: number;
 }
 
-/** PricingConfig.VehicleTier — one entry per vehicle class. */
-export interface VehicleTier {
-  type: VehicleType;
-  isEnabled: boolean;
-  transfer: TransferPricingRates;
-  hourly: HourlyPricingRates;
-}
-
 export interface PricingAddon {
   id: string;
   title: string;
   price: number;
   isEnabled: boolean;
   tripTypes: TripType[];
-  vehicleTypes: VehicleType[];
+  vehicleClassIds: string[];
 }
 
 export interface PricingZoneMatch {
@@ -81,7 +71,7 @@ export interface PricingRule {
   endDate?: string;
 }
 
-/** PricingConfig — `operator/pricing` document. */
+/** PricingConfig — `operator/pricing` document (schema v2: rates live on vehicle_classes). */
 export interface PricingConfig {
   schemaVersion: number;
   minimumFare: number;
@@ -94,10 +84,17 @@ export interface PricingConfig {
   returnToBaseFee: number;
   weekendWeekdays: WeekdayNumber[];
   quoteRounding: QuoteRounding;
-  vehicles: VehicleTier[];
   addons: PricingAddon[];
   zones: PricingZone[];
   rules: PricingRule[];
+}
+
+/** Legacy tier embedded in pricing v1 — migration only. */
+export interface LegacyVehicleTier {
+  type: string;
+  isEnabled: boolean;
+  transfer: TransferPricingRates;
+  hourly: HourlyPricingRates;
 }
 
 export function defaultTransferRates(overrides?: Partial<TransferPricingRates>): TransferPricingRates {
@@ -127,58 +124,8 @@ export function defaultHourlyRates(overrides?: Partial<HourlyPricingRates>): Hou
 
 /** Admin setup template only — not used at runtime when fetching config. */
 export function buildInitialPricingConfig(): PricingConfig {
-  const vehicleDefaults: Record<
-    VehicleType,
-    { transfer: Partial<TransferPricingRates>; hourly: Partial<HourlyPricingRates> }
-  > = {
-    sedan: {
-      transfer: defaultTransferRates(),
-      hourly: defaultHourlyRates({ displayHourlyFrom: 98 })
-    },
-    suv: {
-      transfer: defaultTransferRates({
-        minimumBaseRate: 100,
-        tripRatePerUnit: 3.8,
-        deadheadRatePerUnit: 3.1
-      }),
-      hourly: defaultHourlyRates({
-        weekdayHourlyRate: 110,
-        weekendHourlyRate: 135,
-        displayHourlyFrom: 110
-      })
-    },
-    stretch_limo: {
-      transfer: defaultTransferRates({
-        minimumBaseRate: 138,
-        tripRatePerUnit: 5.3,
-        deadheadRatePerUnit: 4.3
-      }),
-      hourly: defaultHourlyRates({
-        weekdayHourlyRate: 165,
-        weekendHourlyRate: 200,
-        weekdayMinimumHours: 4,
-        weekendMinimumHours: 4,
-        displayHourlyFrom: 165
-      })
-    },
-    sprinter_van: {
-      transfer: defaultTransferRates({
-        minimumBaseRate: 114,
-        tripRatePerUnit: 4.4,
-        deadheadRatePerUnit: 3.6
-      }),
-      hourly: defaultHourlyRates({
-        weekdayHourlyRate: 125,
-        weekendHourlyRate: 155,
-        weekdayMinimumHours: 3,
-        weekendMinimumHours: 3,
-        displayHourlyFrom: 125
-      })
-    }
-  };
-
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     minimumFare: 89,
     baseFare: 48,
     distanceRatePerUnit: 3.4,
@@ -189,12 +136,6 @@ export function buildInitialPricingConfig(): PricingConfig {
     returnToBaseFee: 55,
     weekendWeekdays: [6, 7],
     quoteRounding: "dollar",
-    vehicles: VEHICLE_TYPES.map((type) => ({
-      type,
-      isEnabled: true,
-      transfer: defaultTransferRates(vehicleDefaults[type].transfer),
-      hourly: defaultHourlyRates(vehicleDefaults[type].hourly)
-    })),
     addons: [
       {
         id: "child_seat",
@@ -202,7 +143,7 @@ export function buildInitialPricingConfig(): PricingConfig {
         price: 18,
         isEnabled: true,
         tripTypes: ["transfer", "hourly"],
-        vehicleTypes: [...VEHICLE_TYPES]
+        vehicleClassIds: []
       },
       {
         id: "meet_greet",
@@ -210,7 +151,7 @@ export function buildInitialPricingConfig(): PricingConfig {
         price: 45,
         isEnabled: true,
         tripTypes: ["transfer"],
-        vehicleTypes: [...VEHICLE_TYPES]
+        vehicleClassIds: []
       }
     ],
     zones: [],

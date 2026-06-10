@@ -22,7 +22,8 @@ import type {
   Vehicle
 } from "@/lib/models";
 import { UNLIMITED } from "@/lib/models/limits";
-import { parseOperatorLocale, parsePricingConfig } from "@/lib/pricing/validate";
+import { parseOperatorLocale, parsePricingConfig, parseVehicleClass } from "@/lib/pricing/validate";
+import type { VehicleClass } from "@/lib/models/vehicle-class";
 
 /**
  * Pure mappers from raw Firestore document data into typed app models.
@@ -105,14 +106,14 @@ export function mapVehicle(d: DocumentData): Vehicle {
     manufactureYear: d.manufactureYear != null ? toInt(d.manufactureYear, 0) : null,
     registrationJurisdictionCode: d.registrationJurisdictionCode ?? null,
     registrationExpiry: toDate(d.registrationExpiry),
-    pricingVehicleType: d.pricingVehicleType ?? null,
+    vehicleClassId: d.vehicleClassId ?? null,
     vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
     engineTypeDescription: d.engineTypeDescription ?? null,
     specificationChips: d.specificationChips ?? [],
     carFeatureRows: d.carFeatureRows ?? [],
     luggageDescription: d.luggageDescription ?? "",
-    fleetSmallLuggageCount: toInt(d.fleetSmallLuggageCount, 0),
-    fleetLargeLuggageCount: toInt(d.fleetLargeLuggageCount, 0),
+    smallLuggageCount: toInt(d.smallLuggageCount ?? d.fleetSmallLuggageCount, 0),
+    largeLuggageCount: toInt(d.largeLuggageCount ?? d.fleetLargeLuggageCount, 0),
     wifiServiceDescription: d.wifiServiceDescription ?? "",
     serviceClassDescription: d.serviceClassDescription ?? "",
     interiorDescription: d.interiorDescription ?? "",
@@ -128,7 +129,7 @@ function mapPricingAddon(d: DocumentData): PricingAddon {
     price: d.price ?? 0,
     isEnabled: d.isEnabled ?? true,
     tripTypes: d.tripTypes ?? [],
-    vehicleTypes: d.vehicleTypes ?? []
+    vehicleClassIds: d.vehicleClassIds ?? []
   };
 }
 
@@ -146,7 +147,7 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
   return {
     schemaVersion: d.schemaVersion ?? 1,
     tripType: d.tripType ?? "transfer",
-    vehicleType: d.vehicleType ?? "sedan",
+    vehicleClassId: d.vehicleClassId ?? d.vehicleType ?? "",
     garageLocationId: d.garageLocationId ?? "",
     distanceUnit: d.distanceUnit ?? "km",
     currencyCode: d.currencyCode ?? "",
@@ -184,7 +185,7 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     pickupAddressLine: d.pickupAddressLine ?? null,
     dropoffAddressLine: d.dropoffAddressLine ?? null,
     vehicleSnapshot: d.vehicleSnapshot ? mapVehicle(d.vehicleSnapshot) : null,
-    fleetVehicleDocumentId: d.fleetVehicleDocumentId ?? null,
+    vehicleDocumentId: d.vehicleDocumentId ?? d.fleetVehicleDocumentId ?? null,
     notes: d.notes ?? null,
     bookingPassengerCount: d.bookingPassengerCount ?? null,
     bookingSmallLuggageCount: d.bookingSmallLuggageCount ?? null,
@@ -201,7 +202,8 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     liveLocation: toCoordinate(d.liveLocation),
     liveHeadingDegrees: d.liveHeadingDegrees ?? null,
     tripType: d.tripType ?? null,
-    pricingVehicleType: d.pricingVehicleType ?? null,
+    vehicleClassId: d.vehicleClassId ?? null,
+    vehicleClassDisplayName: d.vehicleClassDisplayName ?? null,
     bookedHours: d.bookedHours ?? null,
     quotedSubtotal: d.quotedSubtotal ?? null,
     quotedTaxAmount: d.quotedTaxAmount ?? null,
@@ -217,6 +219,10 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };
+}
+
+export function mapVehicleClass(id: string, d: DocumentData): VehicleClass {
+  return parseVehicleClass(id, d);
 }
 
 export function mapFleetLocation(id: string, d: DocumentData): FleetLocation {

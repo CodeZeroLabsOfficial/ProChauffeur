@@ -1,4 +1,3 @@
-import type { VehicleType } from "@/lib/models/enums";
 
 /** VehicleSpecificationChip.swift */
 export interface VehicleSpecificationChip {
@@ -30,7 +29,7 @@ export interface Vehicle {
   manufactureYear?: number | null;
   registrationJurisdictionCode?: string | null;
   registrationExpiry?: Date | null;
-  pricingVehicleType?: VehicleType | null;
+  vehicleClassId?: string | null;
   /** VIN or internal fleet vehicle identifier. */
   vehicleIdentificationNumber?: string | null;
   /** e.g. Petrol, Diesel, Electric, Hybrid. */
@@ -38,8 +37,8 @@ export interface Vehicle {
   specificationChips: VehicleSpecificationChip[];
   carFeatureRows: VehicleCarFeatureRow[];
   luggageDescription: string;
-  fleetSmallLuggageCount: number;
-  fleetLargeLuggageCount: number;
+  smallLuggageCount: number;
+  largeLuggageCount: number;
   wifiServiceDescription: string;
   serviceClassDescription: string;
   interiorDescription: string;

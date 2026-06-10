@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { Calendar, Cog, Fuel, PencilIcon, RectangleHorizontal, UserRound } from "lucide-react";
 
-import {
-  effectiveChauffeurUserId,
-  vehicleDisplayName,
-  vehicleTypeTitle,
-  type User,
-  type Vehicle
-} from "@/lib/models";
+import { effectiveChauffeurUserId, vehicleDisplayName, type User, type Vehicle } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { vehicleProfileCompleteness } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
@@ -40,6 +34,7 @@ export function VehicleProfileSidebar({
   statTrips,
   statCompleted,
   statRevenueLabel,
+  vehicleClassLabel,
   onEditClick
 }: {
   vehicle: Vehicle;
@@ -47,12 +42,13 @@ export function VehicleProfileSidebar({
   statTrips: number;
   statCompleted: number;
   statRevenueLabel: string;
+  vehicleClassLabel?: string | null;
   onEditClick?: () => void;
 }) {
   const displayName = vehicleDisplayName(vehicle) || "Vehicle";
   const assigned = Boolean(effectiveChauffeurUserId(vehicle));
   const progressValue = vehicleProfileCompleteness(vehicle);
-  const tier = vehicle.pricingVehicleType;
+  const classLabel = vehicleClassLabel ?? vehicle.vehicleClassId;
 
   return (
     <div className="space-y-4">
@@ -78,9 +74,9 @@ export function VehicleProfileSidebar({
                   <div className="text-muted-foreground text-sm">{vehicle.manufactureYear}</div>
                 ) : null}
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                  {tier ? (
+                  {classLabel ? (
                     <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>
-                      {vehicleTypeTitle[tier]}
+                      {classLabel}
                     </DetailSheetIconBadge>
                   ) : null}
                   <DetailSheetIconBadge icon={assignmentBadgeIcon(assigned)}>

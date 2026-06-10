@@ -9,24 +9,28 @@ import { MultiSelectField } from "@/components/multi-select-field";
 import { vehicleForChauffeur } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import { useFleetLocations, useUsers, useVehicles } from "@/hooks/use-collections";
 import {
+  filterEligibleFleetVehicles,
+  vehicleClassesById
+} from "@/lib/bookings/booking-eligibility";
+import { validateTripAgainstVehicle } from "@/lib/bookings/validate-capacity";
+import {
   createTrip,
   fetchOperatorLocale,
   fetchPricingConfiguration,
+  fetchVehicleClasses,
   updateTrip
 } from "@/lib/services/firebase-service";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
-  VEHICLE_TYPES,
   tripPickupReferenceDate,
   tripTypeTitle,
-  vehicleTypeTitle,
   type CoordinateField,
   type OperatorLocale,
   type PricingAddon,
   type PricingConfig,
   type Trip,
   type User,
-  type VehicleType
+  type VehicleClass
 } from "@/lib/models";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
 import { formatCurrency } from "@/lib/format";
@@ -64,7 +68,7 @@ type RequiredField =
   | "pickup"
   | "dropoff"
   | "tripType"
-  | "vehicleType"
+  | "vehicleClassId"
   | "bookedHours";
 
 type FieldErrors = Partial<Record<RequiredField, boolean>>;
@@ -97,7 +101,7 @@ function collectFieldErrors(
   dropoff: AddressSuggestion | null,
   scheduledPickupAt: Date | null,
   tripType: BookingTripType,
-  vehicleType: VehicleType | null,
+  vehicleClassId: string | null,
   bookedHours: number
 ): FieldErrors {
   return {
@@ -106,7 +110,7 @@ function collectFieldErrors(
     pickup: !isValidAddressSelection(pickup),
     dropoff: !isValidAddressSelection(dropoff),
     tripType: !BOOKING_TRIP_TYPES.includes(tripType),
-    vehicleType: !vehicleType,
+    vehicleClassId: !vehicleClassId,
     bookedHours: tripType === "hourly" && bookedHours <= 0
   };
 }
@@ -141,7 +145,7 @@ function resetFormFields(
     setScheduledPickupAt: (date: Date | null) => void;
     setNotes: (notes: string) => void;
     setTripType: (type: BookingTripType) => void;
-    setVehicleType: (type: VehicleType | null) => void;
+    setVehicleClassId: (id: string | null) => void;
     setBookedHours: (hours: number) => void;
     setQuotedTotal: (total: number | null) => void;
   }
@@ -158,7 +162,7 @@ function resetFormFields(
   setters.setScheduledPickupAt(null);
   setters.setNotes("");
   setters.setTripType("transfer");
-  setters.setVehicleType("sedan");
+  setters.setVehicleClassId(null);
   setters.setBookedHours(2);
   setters.setQuotedTotal(null);
 }
@@ -194,7 +198,8 @@ export function NewBookingSheet({
   const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
   const [notes, setNotes] = useState("");
   const [tripType, setTripType] = useState<BookingTripType>("transfer");
-  const [vehicleType, setVehicleType] = useState<VehicleType | null>("sedan");
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const [vehicleClassId, setVehicleClassId] = useState<string | null>(null);
   const [bookedHours, setBookedHours] = useState(2);
   const [quotedTotal, setQuotedTotal] = useState<number | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -225,11 +230,33 @@ export function NewBookingSheet({
     setFieldErrors((prev) => ({ ...prev, [field]: false }));
   }
 
+  const classesById = useMemo(() => vehicleClassesById(vehicleClasses), [vehicleClasses]);
+
+  const bookingRequirements = useMemo(
+    () => ({
+      tripType,
+      passengers: passengerCount,
+      smallLuggage: smallLuggageCount,
+      largeLuggage: largeLuggageCount
+    }),
+    [tripType, passengerCount, smallLuggageCount, largeLuggageCount]
+  );
+
+  const eligibleVehicles = useMemo(
+    () =>
+      filterEligibleFleetVehicles(vehicles, classesById, bookingRequirements, "admin", {
+        requireChauffeur: false
+      }),
+    [vehicles, classesById, bookingRequirements]
+  );
+
+  const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
+
   useEffect(() => {
     if (assignedChauffeur === UNASSIGNED_CHAUFFEUR) return;
     const vehicle = vehicleForChauffeur(vehicles, assignedChauffeur);
-    if (vehicle?.pricingVehicleType) {
-      setVehicleType(vehicle.pricingVehicleType);
+    if (vehicle?.vehicleClassId) {
+      setVehicleClassId(vehicle.vehicleClassId);
     }
   }, [assignedChauffeur, vehicles]);
 
@@ -247,7 +274,7 @@ export function NewBookingSheet({
       setScheduledPickupAt,
       setNotes,
       setTripType,
-      setVehicleType,
+      setVehicleClassId,
       setBookedHours,
       setQuotedTotal
     };
@@ -257,10 +284,15 @@ export function NewBookingSheet({
       return;
     }
 
-    Promise.all([fetchPricingConfiguration(), fetchOperatorLocale()])
-      .then(([pricing, locale]) => {
+    Promise.all([
+      fetchPricingConfiguration(),
+      fetchOperatorLocale(),
+      fetchVehicleClasses()
+    ])
+      .then(([pricing, locale, classes]) => {
         setPricingConfig(pricing);
         setOperatorLocale(locale);
+        setVehicleClasses(classes);
       })
       .catch((err) => {
         toast.error(err instanceof Error ? err.message : "Pricing is not configured.");
@@ -296,7 +328,7 @@ export function NewBookingSheet({
       setTripType(
         trip.tripType === "hourly" || trip.tripType === "transfer" ? trip.tripType : "transfer"
       );
-      setVehicleType(trip.pricingVehicleType ?? trip.vehicleSnapshot?.pricingVehicleType ?? "sedan");
+      setVehicleClassId(trip.vehicleClassId ?? trip.vehicleSnapshot?.vehicleClassId ?? null);
       setBookedHours(trip.bookedHours ?? 2);
       setQuotedTotal(trip.quotedTotal ?? null);
       return;
@@ -313,7 +345,8 @@ export function NewBookingSheet({
       !isValidAddressSelection(pickup) ||
       !isValidAddressSelection(dropoff) ||
       !isValidScheduledPickup(scheduledPickupAt) ||
-      !vehicleType ||
+      !vehicleClassId ||
+      !selectedVehicleClass ||
       (tripType === "hourly" && bookedHours <= 0)
     ) {
       setQuotedTotal(null);
@@ -326,7 +359,7 @@ export function NewBookingSheet({
     buildQuoteForRequest(
       {
         tripType,
-        vehicleType,
+        vehicleClassId,
         pickup: pickup.coordinate,
         dropoff: dropoff.coordinate,
         pickupAddressLine: pickup.addressLine,
@@ -339,7 +372,8 @@ export function NewBookingSheet({
       },
       pricingConfig,
       operatorLocale,
-      locations
+      locations,
+      selectedVehicleClass
     )
       .then((quote) => {
         if (!cancelled) setQuotedTotal(quote.displayTotal);
@@ -363,7 +397,8 @@ export function NewBookingSheet({
     dropoff,
     scheduledPickupAt,
     tripType,
-    vehicleType,
+    vehicleClassId,
+    selectedVehicleClass,
     bookedHours,
     selectedAddonIds
   ]);
@@ -378,7 +413,7 @@ export function NewBookingSheet({
       dropoff,
       scheduledPickupAt,
       tripType,
-      vehicleType,
+      vehicleClassId,
       bookedHours
     );
     if (hasFieldErrors(errors)) {
@@ -396,7 +431,8 @@ export function NewBookingSheet({
       !isValidAddressSelection(pickup) ||
       !isValidAddressSelection(dropoff) ||
       !isValidScheduledPickup(scheduledPickupAt) ||
-      !vehicleType ||
+      !vehicleClassId ||
+      !selectedVehicleClass ||
       !pricingConfig ||
       !operatorLocale
     ) {
@@ -412,6 +448,13 @@ export function NewBookingSheet({
       );
       return;
     }
+    if (assignedVehicle) {
+      const capacityIssues = validateTripAgainstVehicle(bookingRequirements, assignedVehicle);
+      if (capacityIssues.length > 0) {
+        toast.error(capacityIssues[0]!.message);
+        return;
+      }
+    }
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
 
     setSaving(true);
@@ -419,7 +462,7 @@ export function NewBookingSheet({
       const quote = await buildQuoteForRequest(
         {
           tripType,
-          vehicleType,
+          vehicleClassId,
           pickup: pickup.coordinate,
           dropoff: dropoff.coordinate,
           pickupAddressLine: pickup.addressLine,
@@ -432,12 +475,14 @@ export function NewBookingSheet({
         },
         pricingConfig,
         operatorLocale,
-        locations
+        locations,
+        selectedVehicleClass
       );
 
       const quoteFields = {
         tripType,
-        pricingVehicleType: vehicleType,
+        vehicleClassId,
+        vehicleClassDisplayName: selectedVehicleClass.displayName,
         bookedHours: tripType === "hourly" ? bookedHours : null,
         quotedSubtotal: quote.subtotal,
         quotedTaxAmount: quote.taxAmount,
@@ -458,7 +503,7 @@ export function NewBookingSheet({
           customerEmail: customer.email || null,
           ...customerAddressSnapshotFromProfile(customer.profile),
           driverID,
-          fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
+          vehicleDocumentId: assignedVehicle?.driverID ?? null,
           vehicleSnapshot: assignedVehicle ?? null,
           pickup: pickup.coordinate,
           dropoff: dropoff.coordinate,
@@ -483,7 +528,7 @@ export function NewBookingSheet({
           customerEmail: customer.email || null,
           ...customerAddressSnapshotFromProfile(customer.profile),
           driverID,
-          fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
+          vehicleDocumentId: assignedVehicle?.driverID ?? null,
           vehicleSnapshot: assignedVehicle ?? null,
           pickup: pickup.coordinate,
           dropoff: dropoff.coordinate,
@@ -582,29 +627,38 @@ export function NewBookingSheet({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vehicleType">Vehicle tier</Label>
+              <Label htmlFor="vehicleClassId">Service class</Label>
               <Select
-                value={vehicleType ?? undefined}
+                value={vehicleClassId ?? undefined}
                 onValueChange={(value) => {
-                  setVehicleType(value as VehicleType);
-                  clearFieldError("vehicleType");
+                  setVehicleClassId(value);
+                  clearFieldError("vehicleClassId");
                 }}
                 disabled={saving || assignedChauffeur !== UNASSIGNED_CHAUFFEUR}>
                 <SelectTrigger
-                  id="vehicleType"
-                  className={fieldErrors.vehicleType ? "border-destructive" : ""}>
-                  <SelectValue />
+                  id="vehicleClassId"
+                  className={fieldErrors.vehicleClassId ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {VEHICLE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {vehicleTypeTitle[type]}
-                    </SelectItem>
-                  ))}
+                  {vehicleClasses
+                    .filter((vehicleClass) => vehicleClass.isEnabled)
+                    .map((vehicleClass) => (
+                      <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
+                        {vehicleClass.displayName}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {eligibleVehicles.length > 0 ? (
+            <p className="text-muted-foreground text-xs">
+              {eligibleVehicles.length} fleet vehicle
+              {eligibleVehicles.length === 1 ? "" : "s"} match passengers and luggage.
+            </p>
+          ) : null}
 
           {tripType === "hourly" ? (
             <NumberStepper

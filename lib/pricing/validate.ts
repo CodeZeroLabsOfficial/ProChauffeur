@@ -6,7 +6,6 @@ import {
   QUOTE_ROUNDING,
   TAX_DISPLAY_MODES,
   TRIP_TYPES,
-  VEHICLE_TYPES,
   WEEKDAY_NUMBERS,
   ZONE_MATCH_TYPES,
   type DistanceUnit,
@@ -14,7 +13,6 @@ import {
   type QuoteRounding,
   type TaxDisplayMode,
   type TripType,
-  type VehicleType,
   type WeekdayNumber
 } from "@/lib/models/enums";
 import type { OperatorLocale } from "@/lib/models/locale";
@@ -24,9 +22,9 @@ import type {
   PricingConfig,
   PricingRule,
   PricingZone,
-  TransferPricingRates,
-  VehicleTier
+  TransferPricingRates
 } from "@/lib/models/pricing";
+import type { VehicleClass } from "@/lib/models/vehicle-class";
 import { ConfigError } from "@/lib/pricing/errors";
 
 function requireNumber(value: unknown, field: string): number {
@@ -82,7 +80,7 @@ function parseWeekdays(value: unknown, field: string): WeekdayNumber[] {
   });
 }
 
-function parseTransferRates(d: DocumentData, path: string): TransferPricingRates {
+export function parseTransferRates(d: DocumentData, path: string): TransferPricingRates {
   return {
     minimumBaseRate: requireNonNegative(d.minimumBaseRate, `${path}.minimumBaseRate`),
     baseFare: requireNonNegative(d.baseFare, `${path}.baseFare`),
@@ -93,7 +91,7 @@ function parseTransferRates(d: DocumentData, path: string): TransferPricingRates
   };
 }
 
-function parseHourlyRates(d: DocumentData, path: string): HourlyPricingRates {
+export function parseHourlyRates(d: DocumentData, path: string): HourlyPricingRates {
   return {
     weekdayHourlyRate: requireNonNegative(d.weekdayHourlyRate, `${path}.weekdayHourlyRate`),
     weekendHourlyRate: requireNonNegative(d.weekendHourlyRate, `${path}.weekendHourlyRate`),
@@ -105,23 +103,13 @@ function parseHourlyRates(d: DocumentData, path: string): HourlyPricingRates {
   };
 }
 
-function parseVehicleTier(d: DocumentData, index: number): VehicleTier {
-  const path = `vehicles[${index}]`;
-  return {
-    type: requireEnum(d.type, `${path}.type`, VEHICLE_TYPES),
-    isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),
-    transfer: parseTransferRates(d.transfer ?? {}, `${path}.transfer`),
-    hourly: parseHourlyRates(d.hourly ?? {}, `${path}.hourly`)
-  };
-}
-
 function parseAddon(d: DocumentData, index: number): PricingAddon {
   const path = `addons[${index}]`;
   const tripTypes = Array.isArray(d.tripTypes)
     ? d.tripTypes.map((t, i) => requireEnum(t, `${path}.tripTypes[${i}]`, TRIP_TYPES))
     : [];
-  const vehicleTypes = Array.isArray(d.vehicleTypes)
-    ? d.vehicleTypes.map((t, i) => requireEnum(t, `${path}.vehicleTypes[${i}]`, VEHICLE_TYPES))
+  const vehicleClassIds = Array.isArray(d.vehicleClassIds)
+    ? d.vehicleClassIds.map((id, i) => requireString(id, `${path}.vehicleClassIds[${i}]`))
     : [];
   return {
     id: requireString(d.id, `${path}.id`),
@@ -129,7 +117,7 @@ function parseAddon(d: DocumentData, index: number): PricingAddon {
     price: requireNonNegative(d.price, `${path}.price`),
     isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),
     tripTypes: tripTypes as TripType[],
-    vehicleTypes: vehicleTypes as VehicleType[]
+    vehicleClassIds
   };
 }
 
@@ -183,6 +171,41 @@ function parseRule(d: DocumentData, index: number): PricingRule {
   };
 }
 
+export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
+  const path = `vehicle_classes/${id}`;
+  const supportedTripTypes = Array.isArray(d.supportedTripTypes)
+    ? d.supportedTripTypes.map((t, i) => requireEnum(t, `${path}.supportedTripTypes[${i}]`, TRIP_TYPES))
+    : [];
+  if (supportedTripTypes.length === 0) {
+    throw new ConfigError(`Invalid ${path}.supportedTripTypes: at least one trip type required.`);
+  }
+  return {
+    id,
+    slug: requireString(d.slug, `${path}.slug`),
+    displayName: requireString(d.displayName, `${path}.displayName`),
+    sortOrder: requireNumber(d.sortOrder, `${path}.sortOrder`),
+    passengerCapacity: requirePositive(d.passengerCapacity, `${path}.passengerCapacity`),
+    smallLuggageCount: requireNonNegative(d.smallLuggageCount, `${path}.smallLuggageCount`),
+    largeLuggageCount: requireNonNegative(d.largeLuggageCount, `${path}.largeLuggageCount`),
+    description: typeof d.description === "string" ? d.description : null,
+    imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
+    isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),
+    isVisible:
+      typeof d.isVisible === "boolean"
+        ? d.isVisible
+        : d.showOnBookingTool === true
+          ? true
+          : d.showOnBookingTool === false
+            ? false
+            : requireBoolean(d.isVisible, `${path}.isVisible`),
+    supportedTripTypes: supportedTripTypes as TripType[],
+    transfer: parseTransferRates(d.transfer ?? {}, `${path}.transfer`),
+    hourly: parseHourlyRates(d.hourly ?? {}, `${path}.hourly`),
+    createdAt: d.createdAt?.toDate?.() ?? new Date(),
+    updatedAt: d.updatedAt?.toDate?.() ?? new Date()
+  };
+}
+
 export function parseOperatorLocale(d: DocumentData): OperatorLocale {
   return {
     locale: requireString(d.locale, "locale"),
@@ -197,21 +220,15 @@ export function parseOperatorLocale(d: DocumentData): OperatorLocale {
 }
 
 export function parsePricingConfig(d: DocumentData): PricingConfig {
-  const vehicles = Array.isArray(d.vehicles)
-    ? d.vehicles.map((tier, index) => parseVehicleTier(tier as DocumentData, index))
-    : [];
-  if (vehicles.length !== VEHICLE_TYPES.length) {
-    throw new ConfigError(`pricing.vehicles must contain exactly ${VEHICLE_TYPES.length} tiers.`);
-  }
-  const types = new Set(vehicles.map((tier) => tier.type));
-  for (const type of VEHICLE_TYPES) {
-    if (!types.has(type)) {
-      throw new ConfigError(`pricing.vehicles is missing tier: ${type}.`);
-    }
+  const schemaVersion = requirePositive(d.schemaVersion, "schemaVersion");
+  if (schemaVersion < 2) {
+    throw new ConfigError(
+      "Pricing schema is outdated. Open Company → Vehicle Classes and run migration."
+    );
   }
 
   return {
-    schemaVersion: requirePositive(d.schemaVersion, "schemaVersion"),
+    schemaVersion,
     minimumFare: requireNonNegative(d.minimumFare, "minimumFare"),
     baseFare: requireNonNegative(d.baseFare, "baseFare"),
     distanceRatePerUnit: requireNonNegative(d.distanceRatePerUnit, "distanceRatePerUnit"),
@@ -222,7 +239,6 @@ export function parsePricingConfig(d: DocumentData): PricingConfig {
     returnToBaseFee: requireNonNegative(d.returnToBaseFee, "returnToBaseFee"),
     weekendWeekdays: parseWeekdays(d.weekendWeekdays, "weekendWeekdays"),
     quoteRounding: requireEnum(d.quoteRounding, "quoteRounding", QUOTE_ROUNDING),
-    vehicles,
     addons: Array.isArray(d.addons)
       ? d.addons.map((addon, index) => parseAddon(addon as DocumentData, index))
       : [],
@@ -241,4 +257,8 @@ export function validateOperatorLocale(locale: OperatorLocale): void {
 
 export function validatePricingConfig(config: PricingConfig): void {
   parsePricingConfig(config as unknown as DocumentData);
+}
+
+export function validateVehicleClass(vehicleClass: VehicleClass): void {
+  parseVehicleClass(vehicleClass.id, vehicleClass as unknown as DocumentData);
 }

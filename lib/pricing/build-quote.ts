@@ -3,6 +3,7 @@ import { fetchRouteMetrics } from "@/lib/mapbox/directions";
 import { requireDefaultGarageLocation, type FleetLocation } from "@/lib/models/location";
 import type { OperatorLocale } from "@/lib/models/locale";
 import type { PricingConfig } from "@/lib/models/pricing";
+import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import type { CoordinateField } from "@/lib/models/trip";
 import { computeQuote } from "@/lib/pricing/quote-engine";
@@ -24,7 +25,8 @@ export async function buildQuoteForRequest(
   request: QuoteRequest,
   pricing: PricingConfig,
   locale: OperatorLocale,
-  locations: FleetLocation[]
+  locations: FleetLocation[],
+  vehicleClass: VehicleClass
 ): Promise<QuoteResult> {
   const garageLocation = requireDefaultGarageLocation(locations);
   const token = getMapboxToken();
@@ -50,6 +52,7 @@ export async function buildQuoteForRequest(
   return computeQuote(request, {
     pricing,
     locale,
+    vehicleClass,
     garageLocation,
     routeDistanceMeters: onboard.distanceMeters,
     deadheadDistanceMeters: garageToPickup.distanceMeters + dropoffToGarage.distanceMeters,

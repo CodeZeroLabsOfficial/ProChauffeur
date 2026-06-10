@@ -220,7 +220,7 @@ export function BookingsDataTable({
             pickupLabel: formatDateTime(tripPickupReferenceDate(t)),
             vehicleLabel: t.vehicleSnapshot ? vehicleDisplayName(t.vehicleSnapshot) : "—",
             vehicleFilterValue:
-              t.fleetVehicleDocumentId ?? t.vehicleSnapshot?.driverID ?? NO_VEHICLE
+              t.vehicleDocumentId ?? t.vehicleSnapshot?.driverID ?? NO_VEHICLE
           };
         }),
     [trips, dateRange, driverNameById]

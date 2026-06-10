@@ -12,6 +12,7 @@ export * from "@/lib/models/company";
 export * from "@/lib/models/postal-address";
 export * from "@/lib/models/locale";
 export * from "@/lib/models/notification";
+export * from "@/lib/models/vehicle-class";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */
 export const Collections = {
@@ -22,7 +23,8 @@ export const Collections = {
   invoices: "invoices",
   operator: "operator",
   appSettings: "app_settings",
-  notifications: "notifications"
+  notifications: "notifications",
+  vehicleClasses: "vehicle_classes"
 } as const;
 
 /** `operator` collection document ids. */

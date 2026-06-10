@@ -5,9 +5,9 @@ import type {
   PricingConfig,
   PricingRule,
   PricingZone,
-  TransferPricingRates,
-  VehicleTier
+  TransferPricingRates
 } from "@/lib/models/pricing";
+import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult, QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { WeekdayNumber } from "@/lib/models/enums";
 import { metersToDistanceUnit } from "@/lib/pricing/distance";
@@ -16,6 +16,7 @@ import { QuoteError } from "@/lib/pricing/errors";
 export interface QuoteEngineContext {
   pricing: PricingConfig;
   locale: OperatorLocale;
+  vehicleClass: VehicleClass;
   garageLocation: FleetLocation;
   routeDistanceMeters: number;
   deadheadDistanceMeters: number;
@@ -82,20 +83,19 @@ function roundTotal(total: number, mode: PricingConfig["quoteRounding"]): number
   return Math.round(total * 100) / 100;
 }
 
-function requireVehicleTier(pricing: PricingConfig, vehicleType: QuoteRequest["vehicleType"]): VehicleTier {
-  const tier = pricing.vehicles.find((v) => v.type === vehicleType);
-  if (!tier || !tier.isEnabled) {
-    throw new QuoteError(`Vehicle tier "${vehicleType}" is not enabled.`);
+function requireVehicleClass(vehicleClass: VehicleClass): VehicleClass {
+  if (!vehicleClass.isEnabled) {
+    throw new QuoteError(`Vehicle class "${vehicleClass.displayName}" is not enabled.`);
   }
-  return tier;
+  return vehicleClass;
 }
 
 function computeTransferBase(
-  tier: VehicleTier,
+  vehicleClass: VehicleClass,
   onboardUnits: number,
   deadheadUnits: number
 ): { amount: number; lines: QuoteLineItem[] } {
-  const rates = tier.transfer;
+  const rates = vehicleClass.transfer;
   const distanceCharge =
     deadheadUnits * rates.deadheadRatePerUnit + onboardUnits * rates.tripRatePerUnit;
   const raw = rates.baseFare + distanceCharge + rates.returnToBaseFee;
@@ -140,14 +140,14 @@ function computeTransferBase(
 }
 
 function computeHourlyBase(
-  tier: VehicleTier,
+  vehicleClass: VehicleClass,
   pricing: PricingConfig,
   locale: OperatorLocale,
   scheduledPickupAt: Date,
   bookedHours: number,
   deadheadDurationMinutes: number
 ): { amount: number; lines: QuoteLineItem[] } {
-  const rates = tier.hourly;
+  const rates = vehicleClass.hourly;
   const weekday = isoWeekdayInTimezone(scheduledPickupAt, locale.timezone);
   const isWeekend = pricing.weekendWeekdays.includes(weekday);
   const hourlyRate = isWeekend ? rates.weekendHourlyRate : rates.weekdayHourlyRate;
@@ -346,7 +346,12 @@ function applyAddons(
     if (!addon.isEnabled) continue;
     if (!request.addonIds.includes(addon.id)) continue;
     if (!addon.tripTypes.includes(request.tripType)) continue;
-    if (!addon.vehicleTypes.includes(request.vehicleType)) continue;
+    if (
+      addon.vehicleClassIds.length > 0 &&
+      !addon.vehicleClassIds.includes(request.vehicleClassId)
+    ) {
+      continue;
+    }
     nextAmount += addon.price;
     nextLines.push({
       id: lineId(),
@@ -413,7 +418,10 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     throw new QuoteError("Booked hours are required for hourly trips.");
   }
 
-  const tier = requireVehicleTier(context.pricing, request.vehicleType);
+  const vehicleClass = requireVehicleClass(context.vehicleClass);
+  if (vehicleClass.id !== request.vehicleClassId) {
+    throw new QuoteError("Vehicle class does not match the quote request.");
+  }
   const onboardUnits = metersToDistanceUnit(context.routeDistanceMeters, context.locale.distanceUnit);
   const deadheadUnits = metersToDistanceUnit(context.deadheadDistanceMeters, context.locale.distanceUnit);
 
@@ -421,7 +429,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   let lines: QuoteLineItem[] = [];
 
   if (request.tripType === "transfer") {
-    const transfer = computeTransferBase(tier, onboardUnits, deadheadUnits);
+    const transfer = computeTransferBase(vehicleClass, onboardUnits, deadheadUnits);
     baseAmount = Math.max(context.pricing.minimumFare, transfer.amount);
     lines = transfer.lines;
     if (baseAmount > transfer.amount) {
@@ -435,7 +443,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     }
   } else {
     const hourly = computeHourlyBase(
-      tier,
+      vehicleClass,
       context.pricing,
       context.locale,
       request.scheduledPickupAt,
@@ -471,7 +479,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   const snapshot: TripQuoteSnapshot = {
     schemaVersion: context.pricing.schemaVersion,
     tripType: request.tripType,
-    vehicleType: request.vehicleType,
+    vehicleClassId: request.vehicleClassId,
     garageLocationId: context.garageLocation.id,
     distanceUnit: context.locale.distanceUnit,
     currencyCode: context.locale.currency,

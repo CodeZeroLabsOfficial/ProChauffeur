@@ -1,4 +1,4 @@
-import type { TripStatus, TripType, VehicleType } from "@/lib/models/enums";
+import type { TripStatus, TripType } from "@/lib/models/enums";
 import type { PricingAddon } from "@/lib/models/pricing";
 import type { QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { Vehicle } from "@/lib/models/vehicle";
@@ -29,7 +29,7 @@ export interface Trip {
   pickupAddressLine?: string | null;
   dropoffAddressLine?: string | null;
   vehicleSnapshot?: Vehicle | null;
-  fleetVehicleDocumentId?: string | null;
+  vehicleDocumentId?: string | null;
   notes?: string | null;
   bookingPassengerCount?: number | null;
   bookingSmallLuggageCount?: number | null;
@@ -47,7 +47,8 @@ export interface Trip {
   liveLocation?: CoordinateField | null;
   liveHeadingDegrees?: number | null;
   tripType?: TripType | null;
-  pricingVehicleType?: VehicleType | null;
+  vehicleClassId?: string | null;
+  vehicleClassDisplayName?: string | null;
   bookedHours?: number | null;
   quotedSubtotal?: number | null;
   quotedTaxAmount?: number | null;

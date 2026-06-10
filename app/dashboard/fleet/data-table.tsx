@@ -21,15 +21,14 @@ import { useUsers, useVehicles } from "@/hooks/use-collections";
 import {
   assignFleetVehicle,
   deleteVehicle,
+  fetchVehicleClasses,
   unassignFleetVehicle
 } from "@/lib/services/firebase-service";
 import {
-  VEHICLE_TYPES,
   effectiveChauffeurUserId,
   vehicleDisplayName,
-  vehicleTypeTitle,
   type Vehicle,
-  type VehicleType
+  type VehicleClass
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
@@ -91,8 +90,9 @@ export function FleetDataTable({
     assignment: false
   });
   const [rowSelection, setRowSelection] = useState({});
-  const [tierFilter, setTierFilter] = useState<string[]>([]);
+  const [classFilter, setClassFilter] = useState<string[]>([]);
   const [assignmentFilter, setAssignmentFilter] = useState<string[]>([]);
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
 
   const drivers = useMemo(() => users.filter((u) => u.role === "driver"), [users]);
 
@@ -106,6 +106,15 @@ export function FleetDataTable({
     for (const u of users) map.set(u.id, u.profile.displayName || u.email);
     return map;
   }, [users]);
+
+  const classesById = useMemo(
+    () => new Map(vehicleClasses.map((vehicleClass) => [vehicleClass.id, vehicleClass])),
+    [vehicleClasses]
+  );
+
+  useEffect(() => {
+    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
+  }, []);
 
   const data = useMemo<FleetRow[]>(
     () =>
@@ -221,17 +230,18 @@ export function FleetDataTable({
         )
       },
       {
-        id: "tier",
-        accessorFn: (row) => row.pricingVehicleType ?? "",
-        header: "Tier",
-        cell: ({ row }) =>
-          row.original.pricingVehicleType ? (
-            <IconBadge icon={vehicleTierBadgeIcon}>
-              {vehicleTypeTitle[row.original.pricingVehicleType as VehicleType]}
-            </IconBadge>
+        id: "vehicleClass",
+        accessorFn: (row) => row.vehicleClassId ?? "",
+        header: "Class",
+        cell: ({ row }) => {
+          const classId = row.original.vehicleClassId;
+          const label = classId ? (classesById.get(classId)?.displayName ?? classId) : null;
+          return label ? (
+            <IconBadge icon={vehicleTierBadgeIcon}>{label}</IconBadge>
           ) : (
             "—"
-          ),
+          );
+        },
         filterFn: multiSelectFilter
       },
       {
@@ -328,7 +338,14 @@ export function FleetDataTable({
         }
       }
     ],
-    [drivers, handleAssignVehicle, handleDeleteVehicle, handleUnassignVehicle, openVehicleEdit]
+    [
+      classesById,
+      drivers,
+      handleAssignVehicle,
+      handleDeleteVehicle,
+      handleUnassignVehicle,
+      openVehicleEdit
+    ]
   );
 
   const table = useReactTable({
@@ -391,9 +408,9 @@ export function FleetDataTable({
     onCreateOpenChange?.(next);
   }
 
-  function handleTierFilter(values: string[]) {
-    setTierFilter(values);
-    table.getColumn("tier")?.setFilterValue(values.length ? values : undefined);
+  function handleClassFilter(values: string[]) {
+    setClassFilter(values);
+    table.getColumn("vehicleClass")?.setFilterValue(values.length ? values : undefined);
   }
 
   function handleAssignmentFilter(values: string[]) {
@@ -412,13 +429,13 @@ export function FleetDataTable({
           filters={
             <>
               <ListFilterPopover
-                label="Tier"
-                options={VEHICLE_TYPES.map((type) => ({
-                  value: type,
-                  label: vehicleTypeTitle[type]
+                label="Class"
+                options={vehicleClasses.map((vehicleClass) => ({
+                  value: vehicleClass.id,
+                  label: vehicleClass.displayName
                 }))}
-                selected={tierFilter}
-                onSelectedChange={handleTierFilter}
+                selected={classFilter}
+                onSelectedChange={handleClassFilter}
               />
               <ListFilterPopover
                 label="Assignment"

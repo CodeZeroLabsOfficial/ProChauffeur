@@ -3,16 +3,14 @@
 import { Minus, Plus } from "lucide-react";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { upsertVehicle } from "@/lib/services/firebase-service";
+import { fetchVehicleClasses, upsertVehicle } from "@/lib/services/firebase-service";
 import {
-  VEHICLE_TYPES,
   luggageSpecificationLabel,
-  vehicleTypeTitle,
   type Vehicle,
-  type VehicleType
+  type VehicleClass
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
@@ -48,14 +46,14 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   manufactureYear: null,
   registrationJurisdictionCode: null,
   registrationExpiry: null,
-  pricingVehicleType: "sedan",
+  vehicleClassId: null,
   vehicleIdentificationNumber: null,
   engineTypeDescription: null,
   specificationChips: [],
   carFeatureRows: [],
   luggageDescription: luggageSpecificationLabel(0, 2),
-  fleetSmallLuggageCount: 0,
-  fleetLargeLuggageCount: 2,
+  smallLuggageCount: 0,
+  largeLuggageCount: 2,
   wifiServiceDescription: "Complimentary",
   serviceClassDescription: "Business",
   interiorDescription: "",
@@ -127,14 +125,15 @@ export function VehicleEditSheet({
   nested?: boolean;
 }) {
   const isNew = !vehicle;
-  const [tier, setTier] = useState<VehicleType>(vehicle?.pricingVehicleType ?? "sedan");
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const [vehicleClassId, setVehicleClassId] = useState(vehicle?.vehicleClassId ?? "");
   const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.make));
   const [manufactureYear, setManufactureYear] = useState(
     vehicle?.manufactureYear ?? new Date().getFullYear()
   );
   const [passengerCapacity, setPassengerCapacity] = useState(vehicle?.passengerCapacity ?? 4);
-  const [smallBags, setSmallBags] = useState(vehicle?.fleetSmallLuggageCount ?? 0);
-  const [largeBags, setLargeBags] = useState(vehicle?.fleetLargeLuggageCount ?? 2);
+  const [smallBags, setSmallBags] = useState(vehicle?.smallLuggageCount ?? 0);
+  const [largeBags, setLargeBags] = useState(vehicle?.largeLuggageCount ?? 2);
   const [registrationExpiry, setRegistrationExpiry] = useState<Date | undefined>(
     vehicle?.registrationExpiry ?? undefined
   );
@@ -144,14 +143,21 @@ export function VehicleEditSheet({
   const currentKey = vehicle?.driverID ?? defaultCreateDriverId ?? "__new__";
   if (currentKey !== seededId) {
     setSeededId(currentKey);
-    setTier(vehicle?.pricingVehicleType ?? "sedan");
+    setVehicleClassId(vehicle?.vehicleClassId ?? "");
     setMake(vehicleMakeSelectValue(vehicle?.make));
     setManufactureYear(vehicle?.manufactureYear ?? new Date().getFullYear());
     setPassengerCapacity(vehicle?.passengerCapacity ?? 4);
-    setSmallBags(vehicle?.fleetSmallLuggageCount ?? 0);
-    setLargeBags(vehicle?.fleetLargeLuggageCount ?? 2);
+    setSmallBags(vehicle?.smallLuggageCount ?? 0);
+    setLargeBags(vehicle?.largeLuggageCount ?? 2);
     setRegistrationExpiry(vehicle?.registrationExpiry ?? undefined);
   }
+
+  useEffect(() => {
+    if (!open) return;
+    fetchVehicleClasses()
+      .then(setVehicleClasses)
+      .catch(() => toast.error("Could not load vehicle classes."));
+  }, [open]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -162,6 +168,10 @@ export function VehicleEditSheet({
     }
     if (!make) {
       toast.error("Select a vehicle make.");
+      return;
+    }
+    if (!vehicleClassId) {
+      toast.error("Select a service class.");
       return;
     }
 
@@ -181,10 +191,10 @@ export function VehicleEditSheet({
       manufactureYear,
       registrationJurisdictionCode: get("registrationJurisdictionCode") || null,
       registrationExpiry: registrationExpiry ?? null,
-      pricingVehicleType: tier,
+      vehicleClassId,
       gearTypeDescription: get("gearTypeDescription"),
-      fleetSmallLuggageCount: smallBags,
-      fleetLargeLuggageCount: largeBags,
+      smallLuggageCount: smallBags,
+      largeLuggageCount: largeBags,
       luggageDescription: luggageSpecificationLabel(smallBags, largeBags)
     };
 
@@ -212,15 +222,15 @@ export function VehicleEditSheet({
             <SectionHeading>Vehicle details</SectionHeading>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Vehicle tier</Label>
-                <Select value={tier} onValueChange={(v) => setTier(v as VehicleType)}>
+                <Label>Service class</Label>
+                <Select value={vehicleClassId || undefined} onValueChange={setVehicleClassId}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                    {VEHICLE_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {vehicleTypeTitle[t]}
+                    {vehicleClasses.map((vehicleClass) => (
+                      <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
+                        {vehicleClass.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>

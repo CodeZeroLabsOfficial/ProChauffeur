@@ -16,7 +16,7 @@ export function tripsForVehicle(trips: Trip[], vehicle: Vehicle): Trip[] {
   const chauffeurId = effectiveChauffeurUserId(vehicle);
   return trips.filter(
     (t) =>
-      t.fleetVehicleDocumentId === vehicle.driverID ||
+      t.vehicleDocumentId === vehicle.driverID ||
       (chauffeurId != null && t.driverID === chauffeurId)
   );
 }
@@ -27,7 +27,7 @@ export function vehicleProfileCompleteness(vehicle: Vehicle): number {
     Boolean(vehicle.model?.trim()),
     Boolean(vehicle.color?.trim()),
     Boolean(vehicle.licensePlate?.trim()),
-    Boolean(vehicle.pricingVehicleType),
+    Boolean(vehicle.vehicleClassId),
     Boolean(vehicle.vehicleIdentificationNumber?.trim()),
     Boolean(vehicle.registrationExpiry),
     Boolean(vehicle.registrationJurisdictionCode?.trim())

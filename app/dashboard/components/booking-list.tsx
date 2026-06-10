@@ -23,7 +23,6 @@ import {
 
 import { useTrips } from "@/hooks/use-collections";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models/trip";
-import { vehicleTypeTitle, type VehicleType } from "@/lib/models/enums";
 import { formatDateTime } from "@/lib/format";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -62,9 +61,13 @@ function shortBookingId(id: string) {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
-function vehicleTypeLabel(trip: Trip) {
-  const type = trip.vehicleSnapshot?.pricingVehicleType;
-  return type ? vehicleTypeTitle[type as VehicleType] : "Unassigned";
+function vehicleClassLabel(trip: Trip) {
+  return (
+    trip.vehicleClassDisplayName ??
+    trip.vehicleSnapshot?.vehicleClassId ??
+    trip.vehicleClassId ??
+    "Unassigned"
+  );
 }
 
 function vehicleLabel(trip: Trip) {
@@ -83,7 +86,7 @@ function toRow(trip: Trip): BookingRow {
   return {
     bookingId: shortBookingId(trip.id),
     guestName: trip.customerDisplayName || "Customer",
-    vehicleType: vehicleTypeLabel(trip),
+    vehicleType: vehicleClassLabel(trip),
     vehicleLabel: vehicleLabel(trip),
     duration: durationLabel(trip),
     pickupAt: formatDateTime(pickup),

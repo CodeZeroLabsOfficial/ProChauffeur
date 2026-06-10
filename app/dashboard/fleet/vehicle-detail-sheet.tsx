@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Car,
@@ -19,12 +19,11 @@ import {
 import {
   effectiveChauffeurUserId,
   luggageSpecificationLabel,
-  VEHICLE_TYPES,
   vehicleDisplayName,
-  vehicleTypeTitle,
   type Vehicle,
-  type VehicleType
+  type VehicleClass
 } from "@/lib/models";
+import { fetchVehicleClasses } from "@/lib/services/firebase-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { assignmentBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleComplianceFields } from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
@@ -62,20 +61,21 @@ const MAX_PASSENGER_CAPACITY = 20;
 const MIN_LUGGAGE_COUNT = 0;
 const MAX_LUGGAGE_COUNT = 12;
 
-const TIER_OPTIONS = VEHICLE_TYPES.map((type) => ({
-  value: type,
-  label: vehicleTypeTitle[type]
-}));
-
 const MAKE_OPTIONS = LUXURY_VEHICLE_MAKES.map((entry) => ({
   value: entry.label,
   label: entry.label
 }));
 
-function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
+function VehicleOverviewFields({
+  vehicle,
+  classOptions
+}: {
+  vehicle: Vehicle;
+  classOptions: { value: string; label: string }[];
+}) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  const tierValue = vehicle.pricingVehicleType ?? "sedan";
+  const classValue = vehicle.vehicleClassId ?? classOptions[0]?.value ?? "";
   const makeValue = vehicleMakeSelectValue(vehicle.make);
 
   async function saveVehicle(patch: Partial<Vehicle>) {
@@ -88,16 +88,16 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
         <SectionHeading>Vehicle details</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <DetailLabel icon={Tags}>Vehicle tier</DetailLabel>
+            <DetailLabel icon={Tags}>Service class</DetailLabel>
             <dd>
               <InlineEditableSelectField
-                fieldId="tier"
+                fieldId="vehicleClass"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={tierValue}
-                options={TIER_OPTIONS}
-                editLabel="vehicle tier"
-                onSave={async (next) => saveVehicle({ pricingVehicleType: next as VehicleType })}
+                value={classValue}
+                options={classOptions}
+                editLabel="service class"
+                onSave={async (next) => saveVehicle({ vehicleClassId: next })}
               />
             </dd>
           </div>
@@ -265,17 +265,14 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
                 fieldId="smallBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.fleetSmallLuggageCount}
+                value={vehicle.smallLuggageCount}
                 min={MIN_LUGGAGE_COUNT}
                 max={MAX_LUGGAGE_COUNT}
                 editLabel="small bags"
                 onSave={async (small) =>
                   saveVehicle({
-                    fleetSmallLuggageCount: small,
-                    luggageDescription: luggageSpecificationLabel(
-                      small,
-                      vehicle.fleetLargeLuggageCount
-                    )
+                    smallLuggageCount: small,
+                    luggageDescription: luggageSpecificationLabel(small, vehicle.largeLuggageCount)
                   })
                 }
               />
@@ -288,17 +285,14 @@ function VehicleOverviewFields({ vehicle }: { vehicle: Vehicle }) {
                 fieldId="largeBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.fleetLargeLuggageCount}
+                value={vehicle.largeLuggageCount}
                 min={MIN_LUGGAGE_COUNT}
                 max={MAX_LUGGAGE_COUNT}
                 editLabel="large bags"
                 onSave={async (large) =>
                   saveVehicle({
-                    fleetLargeLuggageCount: large,
-                    luggageDescription: luggageSpecificationLabel(
-                      vehicle.fleetSmallLuggageCount,
-                      large
-                    )
+                    largeLuggageCount: large,
+                    luggageDescription: luggageSpecificationLabel(vehicle.smallLuggageCount, large)
                   })
                 }
               />
@@ -329,7 +323,19 @@ export function VehicleDetailSheet({
   onOpenChange: (open: boolean) => void;
   modal?: boolean;
 }) {
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
   const displayVehicle = useSheetDisplayItem(vehicle, open);
+
+  useEffect(() => {
+    if (!open) return;
+    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
+  }, [open]);
+
+  const classOptions = vehicleClasses.map((vehicleClass) => ({
+    value: vehicleClass.id,
+    label: vehicleClass.displayName
+  }));
+
   if (!displayVehicle) return null;
 
   const name = vehicleDisplayName(displayVehicle) || "Vehicle";
@@ -388,7 +394,7 @@ export function VehicleDetailSheet({
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
-              <VehicleOverviewFields vehicle={displayVehicle} />
+              <VehicleOverviewFields vehicle={displayVehicle} classOptions={classOptions} />
             </TabsContent>
             <TabsContent value="features" className="mt-0">
               <VehicleTabPlaceholder label="Features" />

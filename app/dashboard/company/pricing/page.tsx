@@ -3,20 +3,19 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { fetchOperatorLocale, fetchPricingConfiguration, savePricingConfiguration } from "@/lib/services/firebase-service";
+import {
+  fetchOperatorLocale,
+  fetchPricingConfiguration,
+  fetchVehicleClasses,
+  savePricingConfiguration
+} from "@/lib/services/firebase-service";
 import {
   QUOTE_ROUNDING,
-  TRIP_TYPES,
-  VEHICLE_TYPES,
   buildInitialPricingConfig,
   tripTypeTitle,
-  vehicleTypeTitle,
-  type HourlyPricingRates,
   type PricingAddon,
   type PricingConfig,
-  type TransferPricingRates,
-  type VehicleTier,
-  type VehicleType
+  type VehicleClass
 } from "@/lib/models";
 import { distanceUnitLabel } from "@/lib/pricing/distance";
 import { ConfigError } from "@/lib/pricing/errors";
@@ -57,27 +56,9 @@ type GlobalField = {
   step?: string;
 };
 
-const transferFields: { key: keyof TransferPricingRates; label: string; step?: string }[] = [
-  { key: "minimumBaseRate", label: "Minimum base rate" },
-  { key: "baseFare", label: "Base fare" },
-  { key: "deadheadRatePerUnit", label: "Deadhead rate", step: "0.01" },
-  { key: "tripRatePerUnit", label: "Trip rate", step: "0.01" },
-  { key: "returnToBaseFee", label: "Return-to-base fee" },
-  { key: "waitingFeeFlat", label: "Waiting fee" }
-];
-
-const hourlyFields: { key: keyof HourlyPricingRates; label: string; step?: string }[] = [
-  { key: "weekdayHourlyRate", label: "Weekday hourly rate" },
-  { key: "weekendHourlyRate", label: "Weekend hourly rate" },
-  { key: "weekdayMinimumHours", label: "Weekday min. hours", step: "0.5" },
-  { key: "weekendMinimumHours", label: "Weekend min. hours", step: "0.5" },
-  { key: "freeDeadheadMinutes", label: "Free deadhead (min)" },
-  { key: "deadheadRatePerMinute", label: "Deadhead / min", step: "0.01" },
-  { key: "displayHourlyFrom", label: "Display from" }
-];
-
 export default function PricingPage() {
   const [config, setConfig] = useState<PricingConfig>(buildInitialPricingConfig());
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
   const [distanceUnit, setDistanceUnit] = useState("km");
   const [currency, setCurrency] = useState("AUD");
   const [loading, setLoading] = useState(true);
@@ -90,6 +71,7 @@ export default function PricingPage() {
         setDistanceUnit(locale.distanceUnit);
         setCurrency(locale.currency);
       }),
+      fetchVehicleClasses().then(setVehicleClasses),
       fetchPricingConfiguration()
         .then((pricing) => {
           setConfig(pricing);
@@ -104,7 +86,7 @@ export default function PricingPage() {
     ])
       .catch((err) => {
         if (err instanceof ConfigError) return;
-        toast.error("Could not load locale for pricing labels.");
+        toast.error("Could not load pricing configuration.");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -113,35 +95,23 @@ export default function PricingPage() {
     setConfig((current) => ({ ...current, [key]: value }));
   }
 
-  function setTier(type: VehicleType, patch: Partial<VehicleTier>) {
-    setConfig((current) => ({
-      ...current,
-      vehicles: current.vehicles.map((tier) => (tier.type === type ? { ...tier, ...patch } : tier))
-    }));
-  }
-
-  function setTransferField(type: VehicleType, key: keyof TransferPricingRates, value: number) {
-    setConfig((current) => ({
-      ...current,
-      vehicles: current.vehicles.map((tier) =>
-        tier.type === type ? { ...tier, transfer: { ...tier.transfer, [key]: value } } : tier
-      )
-    }));
-  }
-
-  function setHourlyField(type: VehicleType, key: keyof HourlyPricingRates, value: number) {
-    setConfig((current) => ({
-      ...current,
-      vehicles: current.vehicles.map((tier) =>
-        tier.type === type ? { ...tier, hourly: { ...tier.hourly, [key]: value } } : tier
-      )
-    }));
-  }
-
   function setAddon(id: string, patch: Partial<PricingAddon>) {
     setConfig((current) => ({
       ...current,
       addons: current.addons.map((addon) => (addon.id === id ? { ...addon, ...patch } : addon))
+    }));
+  }
+
+  function toggleAddonClass(addonId: string, classId: string) {
+    setConfig((current) => ({
+      ...current,
+      addons: current.addons.map((addon) => {
+        if (addon.id !== addonId) return addon;
+        const selected = new Set(addon.vehicleClassIds);
+        if (selected.has(classId)) selected.delete(classId);
+        else selected.add(classId);
+        return { ...addon, vehicleClassIds: [...selected] };
+      })
     }));
   }
 
@@ -156,7 +126,7 @@ export default function PricingPage() {
           price: 0,
           isEnabled: true,
           tripTypes: ["transfer", "hourly"],
-          vehicleTypes: [...VEHICLE_TYPES]
+          vehicleClassIds: vehicleClasses.map((vehicleClass) => vehicleClass.id)
         }
       ]
     }));
@@ -172,7 +142,7 @@ export default function PricingPage() {
   async function save() {
     setSaving(true);
     try {
-      await savePricingConfiguration(config);
+      await savePricingConfiguration({ ...config, schemaVersion: 2 });
       setConfigured(true);
       toast.success("Pricing saved.");
     } catch (err) {
@@ -205,8 +175,8 @@ export default function PricingPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Review the template below, then save to store pricing in{" "}
-              <code className="text-xs">operator/pricing</code>.
+              Vehicle class rate cards live under Company → Vehicle Classes. Save global pricing
+              here after migration.
             </p>
             <Button type="button" variant="outline" onClick={() => setConfig(buildInitialPricingConfig())}>
               Reset template
@@ -217,9 +187,7 @@ export default function PricingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            Global defaults ({currency})
-          </CardTitle>
+          <CardTitle>Global defaults ({currency})</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {globalFields.map((field) => (
@@ -254,66 +222,6 @@ export default function PricingPage() {
         </CardContent>
       </Card>
 
-      {config.vehicles.map((tier) => (
-        <Card key={tier.type}>
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle>{vehicleTypeTitle[tier.type]}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Label htmlFor={`enabled-${tier.type}`} className="text-sm font-normal">
-                Enabled
-              </Label>
-              <Switch
-                id={`enabled-${tier.type}`}
-                checked={tier.isEnabled}
-                onCheckedChange={(checked) => setTier(tier.type, { isEnabled: checked })}
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-2">
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Transfer</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {transferFields.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <Label>
-                      {field.key.includes("PerUnit")
-                        ? field.label.replace("rate", `rate / ${unit}`)
-                        : field.label}
-                    </Label>
-                    <Input
-                      type="number"
-                      step={field.step ?? "1"}
-                      value={tier.transfer[field.key]}
-                      onChange={(e) =>
-                        setTransferField(tier.type, field.key, parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Hourly</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {hourlyFields.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <Label>{field.label}</Label>
-                    <Input
-                      type="number"
-                      step={field.step ?? "1"}
-                      value={tier.hourly[field.key]}
-                      onChange={(e) =>
-                        setHourlyField(tier.type, field.key, parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Add-ons</CardTitle>
@@ -331,6 +239,7 @@ export default function PricingPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Trip types</TableHead>
+                  <TableHead>Vehicle classes</TableHead>
                   <TableHead>Enabled</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
@@ -356,17 +265,30 @@ export default function PricingPage() {
                       {addon.tripTypes.map((t) => tripTypeTitle[t]).join(", ")}
                     </TableCell>
                     <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {vehicleClasses.map((vehicleClass) => {
+                          const selected = addon.vehicleClassIds.includes(vehicleClass.id);
+                          return (
+                            <Button
+                              key={vehicleClass.id}
+                              type="button"
+                              size="sm"
+                              variant={selected ? "default" : "outline"}
+                              onClick={() => toggleAddonClass(addon.id, vehicleClass.id)}>
+                              {vehicleClass.displayName}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Switch
                         checked={addon.isEnabled}
                         onCheckedChange={(checked) => setAddon(addon.id, { isEnabled: checked })}
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAddon(addon.id)}>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeAddon(addon.id)}>
                         Remove
                       </Button>
                     </TableCell>

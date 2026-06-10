@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { useInvoices, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
-import { fetchVehicle } from "@/lib/services/firebase-service";
+import { fetchVehicle, fetchVehicleClasses } from "@/lib/services/firebase-service";
+import type { VehicleClass } from "@/lib/models";
 import { formatCurrency } from "@/lib/format";
 import { effectiveChauffeurUserId, type Vehicle } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
@@ -47,6 +48,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   const { vehicles } = useVehicles();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
@@ -63,6 +65,10 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   }, [loadVehicle]);
 
   useEffect(() => {
+    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
+  }, []);
+
+  useEffect(() => {
     const live = vehicles.find((v) => v.driverID === vehicleDocumentId);
     if (live) setVehicle(live);
   }, [vehicles, vehicleDocumentId]);
@@ -71,6 +77,11 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
     () => (vehicle ? vehicleOverviewMetrics(trips, invoices, vehicle) : null),
     [trips, invoices, vehicle]
   );
+
+  const vehicleClassLabel = useMemo(() => {
+    if (!vehicle?.vehicleClassId) return null;
+    return vehicleClasses.find((c) => c.id === vehicle.vehicleClassId)?.displayName ?? vehicle.vehicleClassId;
+  }, [vehicle, vehicleClasses]);
 
   const assignedChauffeur = useMemo(() => {
     if (!vehicle) return undefined;
@@ -135,6 +146,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
                 statTrips={metrics.totalTrips}
                 statCompleted={metrics.completed}
                 statRevenueLabel={revenueLabel}
+                vehicleClassLabel={vehicleClassLabel}
                 onEditClick={() => setEditOpen(true)}
               />
             </div>

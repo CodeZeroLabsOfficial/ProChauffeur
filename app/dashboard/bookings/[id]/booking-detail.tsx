@@ -26,12 +26,10 @@ import {
   tripPickupReferenceDate,
   tripJourneyTimeLabel,
   tripStatusTitle,
-  vehicleTypeTitle,
   type Trip,
   type TripStatus,
   type User,
-  type Vehicle,
-  type VehicleType
+  type Vehicle
 } from "@/lib/models";
 import {
   formatPostalAddress,
@@ -176,8 +174,8 @@ function vehicleSnapshotLuggageLabel(vehicle: Vehicle) {
   if (vehicle.luggageDescription?.trim()) {
     return vehicle.luggageDescription.trim();
   }
-  if (vehicle.fleetSmallLuggageCount != null || vehicle.fleetLargeLuggageCount != null) {
-    return `${vehicle.fleetSmallLuggageCount ?? 0} small, ${vehicle.fleetLargeLuggageCount ?? 0} large`;
+  if (vehicle.smallLuggageCount != null || vehicle.largeLuggageCount != null) {
+    return `${vehicle.smallLuggageCount ?? 0} small, ${vehicle.largeLuggageCount ?? 0} large`;
   }
   return null;
 }
@@ -197,11 +195,9 @@ function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | nu
   }
 
   const vehicleName = `${vehicleSnapshot.color} ${vehicleSnapshot.make} ${vehicleSnapshot.model}`.trim();
-  const vehicleType = vehicleSnapshot.pricingVehicleType
-    ? vehicleTypeTitle[vehicleSnapshot.pricingVehicleType as VehicleType]
-    : null;
+  const vehicleClass = vehicleSnapshot.vehicleClassId ?? null;
   const plate = vehicleSnapshot.licensePlate?.trim();
-  const subtitle = [vehicleType, plate].filter(Boolean).join(" • ");
+  const subtitle = [vehicleClass, plate].filter(Boolean).join(" • ");
   const luggage = vehicleSnapshotLuggageLabel(vehicleSnapshot);
 
   return (
@@ -492,8 +488,13 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
             />
             <DetailRow
-              label="Vehicle tier:"
-              value={trip.pricingVehicleType ?? trip.vehicleSnapshot?.pricingVehicleType ?? "—"}
+              label="Service class:"
+              value={
+                trip.vehicleClassDisplayName ??
+                trip.vehicleClassId ??
+                trip.vehicleSnapshot?.vehicleClassId ??
+                "—"
+              }
             />
             {trip.tripType === "hourly" ? (
               <DetailRow label="Booked hours:" value={trip.bookedHours ?? "—"} />

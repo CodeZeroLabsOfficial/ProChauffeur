@@ -103,18 +103,26 @@ service cloud.firestore {
           );
       }
 
+      function tripFleetDocumentId(data) {
+        return ('vehicleDocumentId' in data && data.vehicleDocumentId is string && data.vehicleDocumentId.size() > 0)
+          ? data.vehicleDocumentId
+          : (
+            ('fleetVehicleDocumentId' in data && data.fleetVehicleDocumentId is string && data.fleetVehicleDocumentId.size() > 0)
+              ? data.fleetVehicleDocumentId
+              : null
+          );
+      }
+
       function tripCreateOpenPool(data) {
-        return driverIdEmpty(data)
-          && (!('fleetVehicleDocumentId' in data) || data.fleetVehicleDocumentId == null);
+        return driverIdEmpty(data) && tripFleetDocumentId(data) == null;
       }
 
       function tripCreateDirectedToChauffeur(data) {
         return !driverIdEmpty(data)
           && data.driverID is string
           && data.driverID.size() > 0
-          && data.fleetVehicleDocumentId is string
-          && data.fleetVehicleDocumentId.size() > 0
-          && directedTripFleetAssignmentValid(data.fleetVehicleDocumentId, data.driverID);
+          && tripFleetDocumentId(data) != null
+          && directedTripFleetAssignmentValid(tripFleetDocumentId(data), data.driverID);
       }
 
       // Web admin writes GeoPoint; iOS may use map or GeoPoint.
@@ -187,6 +195,11 @@ service cloud.firestore {
       );
 
       allow delete: if isAdmin();
+    }
+
+    match /vehicle_classes/{classId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /vehicles/{driverId} {
