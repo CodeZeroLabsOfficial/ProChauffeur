@@ -89,14 +89,6 @@ export interface PricingConfig {
   rules: PricingRule[];
 }
 
-/** Legacy tier embedded in pricing v1 — migration only. */
-export interface LegacyVehicleTier {
-  type: string;
-  isEnabled: boolean;
-  transfer: TransferPricingRates;
-  hourly: HourlyPricingRates;
-}
-
 export function defaultTransferRates(overrides?: Partial<TransferPricingRates>): TransferPricingRates {
   return {
     minimumBaseRate: 89,

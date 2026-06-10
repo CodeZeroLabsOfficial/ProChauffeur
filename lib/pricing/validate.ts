@@ -223,7 +223,7 @@ export function parsePricingConfig(d: DocumentData): PricingConfig {
   const schemaVersion = requirePositive(d.schemaVersion, "schemaVersion");
   if (schemaVersion < 2) {
     throw new ConfigError(
-      "Pricing schema is outdated. Open Company → Vehicle Classes and run migration."
+      "Pricing schema is outdated. Upgrade operator/pricing to schema v2."
     );
   }
 

@@ -1,4 +1,4 @@
-import type { TripType, VehicleType } from "@/lib/models/enums";
+import type { TripType } from "@/lib/models/enums";
 import type { HourlyPricingRates, TransferPricingRates } from "@/lib/models/pricing";
 
 /** `vehicle_classes/{id}` — service class + rate card. */
@@ -20,21 +20,6 @@ export interface VehicleClass {
   createdAt: Date;
   updatedAt: Date;
 }
-
-/** Legacy enum → slug when migrating from `pricingVehicleType`. */
-export const LEGACY_VEHICLE_TYPE_SLUGS: Record<VehicleType, string> = {
-  sedan: "sedan",
-  suv: "suv",
-  stretch_limo: "stretch-limo",
-  sprinter_van: "sprinter-van"
-};
-
-export const LEGACY_VEHICLE_TYPE_DISPLAY_NAMES: Record<VehicleType, string> = {
-  sedan: "Sedan",
-  suv: "SUV",
-  stretch_limo: "Stretch Limo",
-  sprinter_van: "Sprinter Van"
-};
 
 /** URL-safe identifier derived from a display name (e.g. "Stretch Limo" → "stretch-limo"). */
 export function slugFromDisplayName(displayName: string): string {

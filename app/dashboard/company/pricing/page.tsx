@@ -176,7 +176,7 @@ export default function PricingPage() {
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
               Vehicle class rate cards live under Company → Vehicle Classes. Save global pricing
-              here after migration.
+              here once vehicle classes are configured.
             </p>
             <Button type="button" variant="outline" onClick={() => setConfig(buildInitialPricingConfig())}>
               Reset template

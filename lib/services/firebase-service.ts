@@ -65,12 +65,6 @@ import {
   type VehicleClass
 } from "@/lib/models";
 import {
-  buildVehicleClassesFromLegacyPricing,
-  isLegacyPricingDocument,
-  legacyVehicleTypeToClassId,
-  migratePricingConfigToV2
-} from "@/lib/migration/vehicle-class-migration";
-import {
   mapActivityNotification,
   mapCompanyProfile,
   mapOperatorLocale,
@@ -613,104 +607,6 @@ export async function deleteVehicleClass(id: string): Promise<void> {
   if (!res.ok) {
     await parseApiError(res, "Could not delete vehicle class.");
   }
-}
-
-export async function fetchPricingRaw(): Promise<DocumentData | null> {
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
-  return snap.exists() ? snap.data() : null;
-}
-
-export async function migrateVehicleClassesFromLegacyPricing(): Promise<{
-  createdClassCount: number;
-  updatedVehicleCount: number;
-  updatedTripCount: number;
-}> {
-  const pricingSnap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
-  if (!pricingSnap.exists()) {
-    throw new Error("Pricing is not configured.");
-  }
-  const pricingData = pricingSnap.data();
-  const existingClasses = await fetchVehicleClasses();
-  const existingSlugs = new Set(existingClasses.map((vehicleClass) => vehicleClass.slug));
-  const newClasses = buildVehicleClassesFromLegacyPricing(pricingData, existingSlugs);
-  const allClasses = [...existingClasses, ...newClasses];
-  const classesBySlug = new Map(allClasses.map((vehicleClass) => [vehicleClass.slug, vehicleClass]));
-  const classIds = allClasses.map((vehicleClass) => vehicleClass.id);
-
-  const batch = writeBatch(db());
-  for (const vehicleClass of newClasses) {
-    batch.set(doc(db(), Collections.vehicleClasses, vehicleClass.id), stripUndefined(vehicleClass));
-  }
-
-  const vehicleSnaps = await getDocs(collection(db(), Collections.vehicles));
-  let updatedVehicleCount = 0;
-  for (const vehicleDoc of vehicleSnaps.docs) {
-    const data = vehicleDoc.data();
-    if (data.vehicleClassId) continue;
-    const classId = legacyVehicleTypeToClassId(
-      typeof data.pricingVehicleType === "string" ? data.pricingVehicleType : null,
-      classesBySlug
-    );
-    if (!classId) continue;
-    batch.update(vehicleDoc.ref, {
-      vehicleClassId: classId,
-      pricingVehicleType: deleteField(),
-      smallLuggageCount: data.smallLuggageCount ?? data.fleetSmallLuggageCount ?? 0,
-      largeLuggageCount: data.largeLuggageCount ?? data.fleetLargeLuggageCount ?? 0,
-      fleetSmallLuggageCount: deleteField(),
-      fleetLargeLuggageCount: deleteField()
-    });
-    updatedVehicleCount += 1;
-  }
-
-  if (isLegacyPricingDocument(pricingData)) {
-    const migratedPricing = migratePricingConfigToV2(pricingData, classIds);
-    validatePricingConfig(migratedPricing);
-    batch.set(
-      doc(db(), Collections.operator, OperatorDocs.pricing),
-      stripUndefined({
-        ...migratedPricing,
-        vehicles: deleteField()
-      }),
-      { merge: true }
-    );
-  }
-
-  await batch.commit();
-
-  const tripsSnap = await getDocs(collection(db(), Collections.trips));
-  let updatedTripCount = 0;
-  const tripBatch = writeBatch(db());
-  for (const tripDoc of tripsSnap.docs) {
-    const data = tripDoc.data();
-    const patch: DocumentData = {};
-    if (!data.vehicleDocumentId && data.fleetVehicleDocumentId) {
-      patch.vehicleDocumentId = data.fleetVehicleDocumentId;
-      patch.fleetVehicleDocumentId = deleteField();
-    }
-    if (!data.vehicleClassId && data.pricingVehicleType) {
-      const classId = legacyVehicleTypeToClassId(String(data.pricingVehicleType), classesBySlug);
-      if (classId) {
-        patch.vehicleClassId = classId;
-        const vehicleClass = allClasses.find((entry) => entry.id === classId);
-        if (vehicleClass) patch.vehicleClassDisplayName = vehicleClass.displayName;
-        patch.pricingVehicleType = deleteField();
-      }
-    }
-    if (Object.keys(patch).length > 0) {
-      tripBatch.update(tripDoc.ref, patch);
-      updatedTripCount += 1;
-    }
-  }
-  if (updatedTripCount > 0) {
-    await tripBatch.commit();
-  }
-
-  return {
-    createdClassCount: newClasses.length,
-    updatedVehicleCount,
-    updatedTripCount
-  };
 }
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {

@@ -4,16 +4,10 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { VehicleClassEditSheet } from "@/app/dashboard/company/vehicle-classes/vehicle-class-edit-sheet";
-import {
-  deleteVehicleClass,
-  fetchPricingRaw,
-  fetchVehicleClasses,
-  migrateVehicleClassesFromLegacyPricing
-} from "@/lib/services/firebase-service";
-import { isLegacyPricingDocument } from "@/lib/migration/vehicle-class-migration";
+import { deleteVehicleClass, fetchVehicleClasses } from "@/lib/services/firebase-service";
 import type { VehicleClass } from "@/lib/models";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -26,18 +20,11 @@ import {
 export default function VehicleClassesPage() {
   const [classes, setClasses] = useState<VehicleClass[]>([]);
   const [loading, setLoading] = useState(true);
-  const [needsMigration, setNeedsMigration] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [editClass, setEditClass] = useState<VehicleClass | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
   async function reload() {
-    const [vehicleClasses, pricingRaw] = await Promise.all([
-      fetchVehicleClasses(),
-      fetchPricingRaw()
-    ]);
-    setClasses(vehicleClasses);
-    setNeedsMigration(Boolean(pricingRaw && isLegacyPricingDocument(pricingRaw)));
+    setClasses(await fetchVehicleClasses());
   }
 
   useEffect(() => {
@@ -45,21 +32,6 @@ export default function VehicleClassesPage() {
       .catch(() => toast.error("Could not load vehicle classes."))
       .finally(() => setLoading(false));
   }, []);
-
-  async function runMigration() {
-    setMigrating(true);
-    try {
-      const result = await migrateVehicleClassesFromLegacyPricing();
-      toast.success(
-        `Migration complete: ${result.createdClassCount} classes, ${result.updatedVehicleCount} vehicles, ${result.updatedTripCount} trips.`
-      );
-      await reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Migration failed.");
-    } finally {
-      setMigrating(false);
-    }
-  }
 
   async function removeClass(vehicleClass: VehicleClass) {
     try {
@@ -77,23 +49,6 @@ export default function VehicleClassesPage() {
 
   return (
     <div className="space-y-6">
-      {needsMigration ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Migration required</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Pricing still uses the legacy vehicle tier schema. Migrate tiers into vehicle classes
-              and upgrade pricing to schema v2.
-            </p>
-            <Button onClick={runMigration} disabled={migrating}>
-              {migrating ? "Migrating…" : "Migrate from pricing tiers"}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Service classes define rate cards. Fleet vehicles and bookings reference a class for
@@ -111,9 +66,7 @@ export default function VehicleClassesPage() {
       <Card>
         <CardContent className="pt-6">
           {classes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No vehicle classes yet. Run migration or add a class.
-            </p>
+            <p className="text-sm text-muted-foreground">No vehicle classes yet. Add a class to get started.</p>
           ) : (
             <Table>
               <TableHeader>
