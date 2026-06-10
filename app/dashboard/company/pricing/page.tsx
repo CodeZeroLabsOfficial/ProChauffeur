@@ -19,7 +19,7 @@ import {
 } from "@/lib/models";
 import { ConfigError } from "@/lib/pricing/errors";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -230,7 +230,6 @@ export default function PricingPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Add-ons</CardTitle>
-            <CardDescription>Optional extras added to the quoted total.</CardDescription>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={addAddon}>
             Add add-on

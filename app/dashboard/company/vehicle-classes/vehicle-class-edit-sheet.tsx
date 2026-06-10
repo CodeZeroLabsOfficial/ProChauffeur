@@ -5,12 +5,13 @@ import { toast } from "sonner";
 
 import { saveVehicleClass } from "@/lib/services/firebase-service";
 import {
-  TRIP_TYPES,
   buildInitialVehicleClass,
   slugFromDisplayName,
   tripTypeTitle,
+  type TripType,
   type VehicleClass
 } from "@/lib/models";
+import { MultiSelectField } from "@/components/multi-select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,11 @@ const hourlyFields: RateNumberField[] = [
 
 const RATE_MIN = 0;
 const RATE_MAX = 9999;
+
+const SUPPORTED_TRIP_TYPE_OPTIONS = [
+  { value: "transfer", label: tripTypeTitle.transfer },
+  { value: "hourly", label: tripTypeTitle.hourly }
+];
 
 export function VehicleClassEditSheet({
   vehicleClass,
@@ -107,15 +113,6 @@ export function VehicleClassEditSheet({
     }));
   }
 
-  function toggleTripType(tripType: (typeof TRIP_TYPES)[number]) {
-    setDraft((current) => {
-      const selected = new Set(current.supportedTripTypes);
-      if (selected.has(tripType)) selected.delete(tripType);
-      else selected.add(tripType);
-      return { ...current, supportedTripTypes: [...selected] };
-    });
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -123,6 +120,10 @@ export function VehicleClassEditSheet({
       const slug = slugFromDisplayName(draft.displayName);
       if (!slug) {
         toast.error("Display name must contain at least one letter or number.");
+        return;
+      }
+      if (draft.supportedTripTypes.length === 0) {
+        toast.error("Select at least one supported trip type.");
         return;
       }
       await saveVehicleClass({ ...draft, slug, updatedAt: new Date() });
@@ -160,14 +161,28 @@ export function VehicleClassEditSheet({
             <TabsContent value="overview" className="mt-0 space-y-4">
               <div className="space-y-4">
                 <SectionHeading>Class details</SectionHeading>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display name</Label>
-                  <Input
-                    id="displayName"
-                    value={draft.displayName}
-                    onChange={(e) => setDraft((c) => ({ ...c, displayName: e.target.value }))}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Display name</Label>
+                    <Input
+                      id="displayName"
+                      value={draft.displayName}
+                      onChange={(e) => setDraft((c) => ({ ...c, displayName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="supportedTripTypes">Supported trips</Label>
+                    <MultiSelectField
+                      id="supportedTripTypes"
+                      options={SUPPORTED_TRIP_TYPE_OPTIONS}
+                      selected={draft.supportedTripTypes.filter((t) => t !== "round_trip")}
+                      onSelectedChange={(selected) =>
+                        setDraft((c) => ({ ...c, supportedTripTypes: selected as TripType[] }))
+                      }
+                      placeholder="Select trip types"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -221,24 +236,6 @@ export function VehicleClassEditSheet({
                       onCheckedChange={(checked) => setDraft((c) => ({ ...c, isVisible: checked }))}
                     />
                     <Label>Visible in booking</Label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Supported trip types</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {TRIP_TYPES.filter((type) => type !== "round_trip").map((tripType) => {
-                      const selected = draft.supportedTripTypes.includes(tripType);
-                      return (
-                        <Button
-                          key={tripType}
-                          type="button"
-                          size="sm"
-                          variant={selected ? "default" : "outline"}
-                          onClick={() => toggleTripType(tripType)}>
-                          {tripTypeTitle[tripType]}
-                        </Button>
-                      );
-                    })}
                   </div>
                 </div>
               </div>
