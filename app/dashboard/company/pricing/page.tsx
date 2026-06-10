@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -170,19 +169,6 @@ export default function PricingPage() {
           </CardContent>
         </Card>
       ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Vehicle class rates</CardTitle>
-          <CardDescription>
-            Quotes use each vehicle class&apos;s transfer and hourly rate card.{" "}
-            <Link href="/dashboard/company/vehicle-classes" className="text-primary underline-offset-4 hover:underline">
-              Configure vehicle classes
-            </Link>
-            .
-          </CardDescription>
-        </CardHeader>
-      </Card>
 
       <Card>
         <CardHeader>
