@@ -8,7 +8,6 @@ import {
   fetchPricingConfiguration,
   savePricingConfiguration
 } from "@/lib/services/firebase-service";
-import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import {
   QUOTE_ROUNDING,
   buildInitialPricingConfig,
@@ -48,28 +47,22 @@ const WEEKEND_WEEKDAY_OPTIONS: { value: WeekdayNumber; label: string }[] = [
 export default function PricingPage() {
   const { vehicleClasses } = useVehicleClasses();
   const [config, setConfig] = useState<PricingConfig>(buildInitialPricingConfig());
-  const [currency, setCurrency] = useState("AUD");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      getCachedOperatorLocale().then((locale) => {
-        setCurrency(locale.currency);
-      }),
-      fetchPricingConfiguration()
-        .then((pricing) => {
-          setConfig(pricing);
-          setConfigured(true);
-        })
-        .catch((err) => {
-          if (!(err instanceof ConfigError)) {
-            toast.error("Could not load pricing.");
-          }
-          setConfigured(false);
-        })
-    ])
+    fetchPricingConfiguration()
+      .then((pricing) => {
+        setConfig(pricing);
+        setConfigured(true);
+      })
+      .catch((err) => {
+        if (!(err instanceof ConfigError)) {
+          toast.error("Could not load pricing.");
+        }
+        setConfigured(false);
+      })
       .catch((err) => {
         if (err instanceof ConfigError) return;
         toast.error("Could not load pricing configuration.");
@@ -172,10 +165,7 @@ export default function PricingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Company-wide settings ({currency})</CardTitle>
-          <CardDescription>
-            Applies across all vehicle classes. Base fares and distance rates are set on each class.
-          </CardDescription>
+          <CardTitle>Global pricing</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2 sm:col-span-2 lg:col-span-3">
