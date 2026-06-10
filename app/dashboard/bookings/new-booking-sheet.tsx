@@ -38,6 +38,7 @@ import {
 import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
 import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
 import { DateTimePicker } from "@/components/datetime-picker";
@@ -985,7 +986,7 @@ export function NewBookingSheet({
                 disabled={saving}>
                 <SelectTrigger
                   id="vehicleClassId"
-                  className={fieldErrors.vehicleClassId ? "border-destructive" : ""}>
+                  className={cn("w-full", fieldErrors.vehicleClassId && "border-destructive")}>
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>

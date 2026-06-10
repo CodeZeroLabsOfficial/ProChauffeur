@@ -85,6 +85,11 @@ export function DateTimePicker({
     emit(calendarDay, timeStr);
   }
 
+  function confirmSelection() {
+    if (!calendarDay) return;
+    setOpen(false);
+  }
+
   function clear() {
     setCalendarDay(undefined);
     setTime(DEFAULT_TIME);
@@ -141,11 +146,21 @@ export function DateTimePicker({
             disabled={!calendarDay}
             onChange={(e) => onTimeChange(e.target.value)}
           />
-          {value ? (
-            <Button type="button" variant="ghost" size="sm" className="w-full" onClick={clear}>
-              Clear
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="w-full"
+              disabled={!calendarDay}
+              onClick={confirmSelection}>
+              Set
             </Button>
-          ) : null}
+            {value ? (
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={clear}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
         </div>
       </PopoverContent>
     </Popover>
