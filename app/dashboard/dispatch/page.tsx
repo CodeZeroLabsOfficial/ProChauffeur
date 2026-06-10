@@ -30,7 +30,6 @@ import {
   CommandList
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { ListFilterOption } from "@/components/list-filter-popover";
@@ -126,19 +125,21 @@ export default function DispatchPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <PageHeader
-        title="Dispatch"
-        actions={
-          <Badge variant="outline" className="gap-1.5">
-            <RadioIcon className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")} />
-            {locations.length} live
-          </Badge>
-        }
-      />
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      <div className="shrink-0">
+        <PageHeader
+          title="Dispatch"
+          actions={
+            <Badge variant="outline" className="gap-1.5">
+              <RadioIcon className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")} />
+              {locations.length} live
+            </Badge>
+          }
+        />
+      </div>
 
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[360px_1fr] lg:grid-rows-1 lg:items-stretch">
-        <Card className="order-2 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 lg:order-1">
+      <div className="grid h-0 min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-[360px_1fr] lg:grid-rows-1 lg:items-stretch">
+        <Card className="order-2 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-1">
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
@@ -148,12 +149,11 @@ export default function DispatchPage() {
                 onSelectedChange={setStatusFilter}
               />
             </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <div>
-                {filteredActiveTrips.length === 0 ? (
-                  <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
-                ) : (
-                  filteredActiveTrips.map((t) => (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {filteredActiveTrips.length === 0 ? (
+                <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
+              ) : (
+                filteredActiveTrips.map((t) => (
                     <div
                       key={t.id}
                       role="button"
@@ -196,13 +196,12 @@ export default function DispatchPage() {
                       />
                     </div>
                   ))
-                )}
-              </div>
-            </ScrollArea>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="order-1 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 lg:order-2">
+        <Card className="order-1 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-2">
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             <div className="h-full min-h-0 flex-1">
               {tokenError ? (
