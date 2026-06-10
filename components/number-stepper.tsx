@@ -103,7 +103,10 @@ export function NumberStepper({
             min={min}
             max={max}
             value={text}
-            className="h-full min-w-0 flex-1 border-0 bg-transparent text-center text-sm font-medium tabular-nums outline-none"
+            className={cn(
+              "h-full min-w-0 flex-1 border-0 bg-transparent text-center text-sm font-medium tabular-nums outline-none",
+              "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            )}
             onChange={(e) => setText(e.target.value)}
             onBlur={commit}
             onKeyDown={(e) => {
