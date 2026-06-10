@@ -228,7 +228,8 @@ service cloud.firestore {
       allow read: if docId == 'company'
         || docId == 'branding'
         || docId == 'pricing'
-        || (signedIn() && isAdmin() && docId in ['locale', 'operating_hours', 'pricing']);
+        || (signedIn() && docId == 'locale')
+        || (signedIn() && isAdmin() && docId in ['operating_hours', 'pricing']);
       allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours', 'pricing'];
     }
 

@@ -74,7 +74,7 @@ function VehicleOverviewFields({
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  const classValue = vehicle.vehicleClassId ?? classOptions[0]?.value ?? "";
+  const classValue = vehicle.vehicleClassId ?? "";
   const makeValue = vehicleMakeSelectValue(vehicle.make);
 
   async function saveVehicle(patch: Partial<Vehicle>) {
@@ -96,6 +96,7 @@ function VehicleOverviewFields({
                 value={classValue}
                 options={classOptions}
                 editLabel="service class"
+                placeholder="Select class"
                 onSave={async (next) => saveVehicle({ vehicleClassId: next })}
               />
             </dd>
