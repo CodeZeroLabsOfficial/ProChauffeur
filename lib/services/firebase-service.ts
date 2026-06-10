@@ -282,7 +282,11 @@ export type CreateCustomerInput = {
   password: string;
   displayName: string;
   phoneNumber?: string;
-  address?: string;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  country?: string | null;
   dateOfBirth?: string | null;
 };
 

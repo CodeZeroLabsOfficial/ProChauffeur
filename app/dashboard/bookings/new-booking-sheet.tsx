@@ -21,6 +21,7 @@ import {
 import { appConfig } from "@/lib/env";
 import { formatCurrency } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
+import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
 import { DateTimePicker } from "@/components/datetime-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
@@ -272,6 +273,7 @@ export function NewBookingSheet({
           customerDisplayName: customerDisplayName(customer) || null,
           customerPhoneNumber: customer.profile.phoneNumber ?? null,
           customerEmail: customer.email || null,
+          ...customerAddressSnapshotFromProfile(customer.profile),
           driverID,
           fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
           vehicleSnapshot: assignedVehicle ?? null,
@@ -295,6 +297,7 @@ export function NewBookingSheet({
           customerDisplayName: customerDisplayName(customer) || null,
           customerPhoneNumber: customer.profile.phoneNumber ?? null,
           customerEmail: customer.email || null,
+          ...customerAddressSnapshotFromProfile(customer.profile),
           driverID,
           fleetVehicleDocumentId: assignedVehicle?.driverID ?? null,
           vehicleSnapshot: assignedVehicle ?? null,

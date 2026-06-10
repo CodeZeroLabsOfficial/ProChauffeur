@@ -1,5 +1,6 @@
 import type { Invoice } from "@/lib/models/invoice";
 import type { User } from "@/lib/models/user";
+import { isCompletePostalAddress } from "@/lib/models/postal-address";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models/trip";
 import {
   getMonthRange,
@@ -22,7 +23,7 @@ export function customerProfileCompleteness(user: User): number {
     Boolean(user.profile.displayName?.trim()),
     Boolean(user.profile.phoneNumber?.trim()),
     Boolean(user.email?.trim()),
-    Boolean(user.profile.address?.trim())
+    Boolean(isCompletePostalAddress(user.profile))
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }

@@ -7,13 +7,22 @@ import { toast } from "sonner";
 
 import { createCustomer, updateUserEmail, updateUserProfile } from "@/lib/services/firebase-service";
 import type { User } from "@/lib/models";
+import {
+  isValidPostalAddress,
+  postalAddressFromProfile,
+  toProfilePostalFields,
+  type PostalAddress
+} from "@/lib/models/postal-address";
+import {
+  ProfileAddressField,
+  PROFILE_ADDRESS_VALIDATION_MESSAGE
+} from "@/components/profile-address-field";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -38,6 +47,10 @@ export function CustomerEditSheet({
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     user?.profile.dateOfBirth ?? undefined
   );
+  const [address, setAddress] = useState<PostalAddress>(() =>
+    user ? postalAddressFromProfile(user.profile) : {}
+  );
+  const [addressInvalid, setAddressInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
@@ -45,6 +58,8 @@ export function CustomerEditSheet({
   if (currentKey !== seededId) {
     setSeededId(currentKey);
     setDateOfBirth(user?.profile.dateOfBirth ?? undefined);
+    setAddress(user ? postalAddressFromProfile(user.profile) : {});
+    setAddressInvalid(false);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -54,12 +69,19 @@ export function CustomerEditSheet({
     const displayName = get("displayName");
     const email = get("email");
     const phoneNumber = get("phoneNumber") || undefined;
-    const address = get("address") || undefined;
 
     if (!displayName) {
       toast.error("Name is required.");
       return;
     }
+
+    if (!isValidPostalAddress(address)) {
+      setAddressInvalid(true);
+      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
+      return;
+    }
+
+    const addressFields = toProfilePostalFields(address);
 
     setSaving(true);
     try {
@@ -78,7 +100,7 @@ export function CustomerEditSheet({
           password,
           displayName,
           phoneNumber,
-          address,
+          ...addressFields,
           dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null
         });
         toast.success("Customer added.");
@@ -87,7 +109,7 @@ export function CustomerEditSheet({
           ...user.profile,
           displayName,
           phoneNumber: phoneNumber || null,
-          address: address || null,
+          ...addressFields,
           dateOfBirth: dateOfBirth ?? null
         };
         await updateUserProfile(user.id, profile);
@@ -164,16 +186,17 @@ export function CustomerEditSheet({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              name="address"
-              rows={2}
-              defaultValue={user?.profile.address ?? ""}
-              placeholder="Street address"
-            />
-          </div>
+          <ProfileAddressField
+            value={address}
+            onChange={(next) => {
+              setAddress(next);
+              if (addressInvalid && isValidPostalAddress(next)) {
+                setAddressInvalid(false);
+              }
+            }}
+            invalid={addressInvalid}
+            disabled={saving}
+          />
 
           <div className="flex flex-col space-y-2">
             <Label>Date of birth</Label>

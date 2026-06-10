@@ -29,6 +29,7 @@ import {
 } from "@/lib/models";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
+import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
 import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
 import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
@@ -72,7 +73,6 @@ function DriverOverviewFields({
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = user.profile.displayName.trim() || user.email || "";
-  const address = profile.homeAddressLine?.trim() || user.profile.address?.trim() || "";
   const lastActivityLabel =
     lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
   const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
@@ -184,31 +184,13 @@ function DriverOverviewFields({
           <div className="col-span-2 space-y-1">
             <DetailLabel icon={MapPin}>Address</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineProfileAddressField
                 fieldId="address"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={address}
+                profile={user.profile}
                 editLabel="address"
-                placeholder="Add address"
-                multiline
-                onSave={async (next) => {
-                  const trimmed = next.trim();
-                  try {
-                    await updateUserProfile(user.id, {
-                      ...user.profile,
-                      address: trimmed || null
-                    });
-                    await updateUserDriverProfile(
-                      user.id,
-                      { ...profile, homeAddressLine: trimmed || null },
-                      { driverTitle }
-                    );
-                    return { ok: true };
-                  } catch {
-                    return { ok: false, message: "Could not save." };
-                  }
-                }}
+                onSave={async (fields) => saveProfile(fields)}
               />
             </dd>
           </div>

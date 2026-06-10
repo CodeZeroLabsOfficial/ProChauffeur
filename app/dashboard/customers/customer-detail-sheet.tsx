@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { User } from "@/lib/models";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
+import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
 import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
@@ -146,15 +147,13 @@ function CustomerOverviewFields({
           <div className="col-span-2 space-y-1">
             <DetailLabel icon={MapPin}>Address</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineProfileAddressField
                 fieldId="address"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={user.profile.address?.trim() ?? ""}
+                profile={user.profile}
                 editLabel="address"
-                placeholder="Add address"
-                multiline
-                onSave={async (next) => saveProfile({ address: next.trim() || null })}
+                onSave={async (fields) => saveProfile(fields)}
               />
             </dd>
           </div>

@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
 
 import type { User } from "@/lib/models";
+import { formatPostalAddress } from "@/lib/models/postal-address";
 import { customerProfileCompleteness } from "@/app/dashboard/customers/lib/customer-profile-metrics";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { formatDate } from "@/lib/format";
@@ -104,8 +105,8 @@ export function CustomerProfileSidebar({
                   </a>
                 </ContactRow>
               ) : null}
-              {user.profile.address?.trim() ? (
-                <ContactRow icon={MapPin}>{user.profile.address}</ContactRow>
+              {formatPostalAddress(user.profile) ? (
+                <ContactRow icon={MapPin}>{formatPostalAddress(user.profile)}</ContactRow>
               ) : null}
             </div>
           </div>

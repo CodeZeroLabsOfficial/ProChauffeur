@@ -20,7 +20,11 @@ export async function POST(request: Request) {
     password?: string;
     displayName?: string;
     phoneNumber?: string;
-    address?: string;
+    street?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    country?: string | null;
     dateOfBirth?: string | null;
   };
   try {
@@ -44,7 +48,11 @@ export async function POST(request: Request) {
   }
 
   const phoneNumber = body.phoneNumber?.trim() || null;
-  const address = body.address?.trim() || null;
+  const street = body.street?.trim() || null;
+  const city = body.city?.trim() || null;
+  const state = body.state?.trim() || null;
+  const postcode = body.postcode?.trim() || null;
+  const country = body.country?.trim() || null;
   let dateOfBirth: Timestamp | null = null;
   if (body.dateOfBirth) {
     const parsed = new Date(body.dateOfBirth);
@@ -71,7 +79,11 @@ export async function POST(request: Request) {
         profile: {
           displayName,
           phoneNumber,
-          address,
+          street,
+          city,
+          state,
+          postcode,
+          country,
           dateOfBirth
         },
         createdAt: FieldValue.serverTimestamp()

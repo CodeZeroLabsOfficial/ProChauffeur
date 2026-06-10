@@ -8,6 +8,7 @@ import {
   defaultDriverProfile,
   type User
 } from "@/lib/models";
+import { formatPostalAddress } from "@/lib/models/postal-address";
 import {
   dispatchBadgeIcon,
   visibilityBadgeIcon,
@@ -122,10 +123,8 @@ export function DriverProfileSidebar({
                   </a>
                 </ContactRow>
               ) : null}
-              {(profile.homeAddressLine?.trim() || user.profile.address?.trim()) ? (
-                <ContactRow icon={MapPin}>
-                  {profile.homeAddressLine?.trim() || user.profile.address}
-                </ContactRow>
+              {formatPostalAddress(user.profile) ? (
+                <ContactRow icon={MapPin}>{formatPostalAddress(user.profile)}</ContactRow>
               ) : null}
               {profile.bioStatement.trim() ? (
                 <ContactRow icon={Link2Icon}>

@@ -20,7 +20,11 @@ export interface UserProfile {
   lastName?: string | null;
   phoneNumber?: string | null;
   photoURL?: string | null;
-  address?: string | null;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  country?: string | null;
   /** Calendar date only (time ignored). */
   dateOfBirth?: Date | null;
 }
@@ -47,7 +51,6 @@ export interface DriverProfile {
   operatorAccreditationExpiry?: Date | null;
   visibleOnCustomerApp: boolean;
   acceptsDispatchAssignments: boolean;
-  homeAddressLine?: string | null;
 }
 
 /** User.swift — `users/{uid}` document. */

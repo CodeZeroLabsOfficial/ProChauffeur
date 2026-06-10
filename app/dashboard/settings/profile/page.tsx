@@ -7,6 +7,7 @@ import { CircleUserRoundIcon, PencilIcon } from "lucide-react";
 import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
 import { fetchUser } from "@/lib/services/firebase-service";
 import { userRoleTitle, type User } from "@/lib/models";
+import { formatPostalAddress } from "@/lib/models/postal-address";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +107,7 @@ export default function ProfileSettingsPage() {
             />
             <DetailField label="First name" value={user.profile.firstName} />
             <DetailField label="Last name" value={user.profile.lastName} />
-            <DetailField label="Address" value={user.profile.address} />
+            <DetailField label="Address" value={formatPostalAddress(user.profile)} />
             <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
           </div>
         </CardContent>

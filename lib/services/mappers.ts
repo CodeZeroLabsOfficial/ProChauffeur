@@ -34,7 +34,11 @@ function mapUserProfile(d: DocumentData | undefined): UserProfile {
     lastName: p.lastName ?? null,
     phoneNumber: p.phoneNumber ?? null,
     photoURL: p.photoURL ?? null,
-    address: p.address ?? null,
+    street: p.street ?? null,
+    city: p.city ?? null,
+    state: p.state ?? null,
+    postcode: p.postcode ?? null,
+    country: p.country ?? null,
     dateOfBirth: toDate(p.dateOfBirth)
   };
 }
@@ -69,8 +73,7 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
     operatorAccreditationIssuingAuthority: d.operatorAccreditationIssuingAuthority ?? null,
     operatorAccreditationExpiry: toDate(d.operatorAccreditationExpiry),
     visibleOnCustomerApp: d.visibleOnCustomerApp ?? true,
-    acceptsDispatchAssignments: d.acceptsDispatchAssignments ?? true,
-    homeAddressLine: d.homeAddressLine ?? null
+    acceptsDispatchAssignments: d.acceptsDispatchAssignments ?? true
   };
 }
 
@@ -132,7 +135,11 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     customerDisplayName: d.customerDisplayName ?? null,
     customerPhoneNumber: d.customerPhoneNumber ?? null,
     customerEmail: d.customerEmail ?? null,
-    customerAddressLine: d.customerAddressLine ?? null,
+    customerStreet: d.customerStreet ?? null,
+    customerCity: d.customerCity ?? null,
+    customerState: d.customerState ?? null,
+    customerPostcode: d.customerPostcode ?? null,
+    customerCountry: d.customerCountry ?? null,
     customerCompany: d.customerCompany ?? null,
     driverID: d.driverID ?? null,
     pickup: toCoordinate(d.pickup) ?? { latitude: 0, longitude: 0 },

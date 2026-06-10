@@ -8,6 +8,7 @@ export * from "@/lib/models/operating-hours";
 export * from "@/lib/models/limits";
 export * from "@/lib/models/invoice";
 export * from "@/lib/models/company";
+export * from "@/lib/models/postal-address";
 export * from "@/lib/models/locale";
 export * from "@/lib/models/notification";
 

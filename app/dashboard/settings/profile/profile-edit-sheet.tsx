@@ -13,6 +13,16 @@ import { toast } from "sonner";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { updateUserProfile, uploadUserProfilePhoto } from "@/lib/services/firebase-service";
 import type { User } from "@/lib/models";
+import {
+  isValidPostalAddress,
+  postalAddressFromProfile,
+  toProfilePostalFields,
+  type PostalAddress
+} from "@/lib/models/postal-address";
+import {
+  ProfileAddressField,
+  PROFILE_ADDRESS_VALIDATION_MESSAGE
+} from "@/components/profile-address-field";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -41,7 +51,6 @@ const profileFormSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
   lastName: z.string().min(1, { message: "Last name is required." }),
   phoneNumber: z.string(),
-  address: z.string(),
   dateOfBirth: z.date({ required_error: "Date of birth is required." })
 });
 
@@ -68,7 +77,6 @@ function profileFormValues(user: User): ProfileFormValues {
     firstName,
     lastName,
     phoneNumber: user.profile.phoneNumber ?? "",
-    address: user.profile.address ?? "",
     dateOfBirth: user.profile.dateOfBirth
   } as ProfileFormValues;
 }
@@ -86,6 +94,8 @@ export function ProfileEditSheet({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [address, setAddress] = useState<PostalAddress>(() => postalAddressFromProfile(user.profile));
+  const [addressInvalid, setAddressInvalid] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(user.profile.photoURL ?? null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
 
@@ -108,6 +118,8 @@ export function ProfileEditSheet({
 
     setPhotoURL(user.profile.photoURL ?? null);
     setPhotoRemoved(false);
+    setAddress(postalAddressFromProfile(user.profile));
+    setAddressInvalid(false);
     clearFiles();
     form.reset(profileFormValues(user));
   }, [open, user, form, clearFiles]);
@@ -119,6 +131,12 @@ export function ProfileEditSheet({
   }
 
   async function onSubmit(data: ProfileFormValues) {
+    if (!isValidPostalAddress(address)) {
+      setAddressInvalid(true);
+      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
+      return;
+    }
+
     setSaving(true);
     try {
       let nextPhotoURL: string | null = photoRemoved ? null : photoURL;
@@ -132,7 +150,7 @@ export function ProfileEditSheet({
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: data.phoneNumber.trim() || null,
-        address: data.address.trim() || null,
+        ...toProfilePostalFields(address),
         dateOfBirth: data.dateOfBirth,
         photoURL: nextPhotoURL
       };
@@ -246,18 +264,16 @@ export function ProfileEditSheet({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input autoComplete="street-address" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ProfileAddressField
+              value={address}
+              onChange={(next) => {
+                setAddress(next);
+                if (addressInvalid && isValidPostalAddress(next)) {
+                  setAddressInvalid(false);
+                }
+              }}
+              invalid={addressInvalid}
+              disabled={saving}
             />
             <FormField
               control={form.control}

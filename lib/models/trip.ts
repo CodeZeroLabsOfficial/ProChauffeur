@@ -16,7 +16,11 @@ export interface Trip {
   customerDisplayName?: string | null;
   customerPhoneNumber?: string | null;
   customerEmail?: string | null;
-  customerAddressLine?: string | null;
+  customerStreet?: string | null;
+  customerCity?: string | null;
+  customerState?: string | null;
+  customerPostcode?: string | null;
+  customerCountry?: string | null;
   customerCompany?: string | null;
   driverID?: string | null;
   pickup: CoordinateField;

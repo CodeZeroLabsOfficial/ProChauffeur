@@ -18,6 +18,7 @@ import { MoreHorizontalIcon } from "lucide-react";
 
 import { useTrips, useUsers } from "@/hooks/use-collections";
 import type { User } from "@/lib/models";
+import { formatPostalAddress } from "@/lib/models/postal-address";
 import { formatDate } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import {
@@ -205,11 +206,11 @@ export function CustomersDataTable({
       },
       {
         id: "address",
-        accessorFn: (row) => row.profile.address ?? "",
+        accessorFn: (row) => formatPostalAddress(row.profile) ?? "",
         header: "Address",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {truncateAddress(row.original.profile.address)}
+            {truncateAddress(formatPostalAddress(row.original.profile))}
           </span>
         )
       },

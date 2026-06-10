@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { updateUserDriverProfile, updateUserRole } from "@/lib/services/firebase-service";
+import { updateUserDriverProfile, updateUserProfile, updateUserRole } from "@/lib/services/firebase-service";
 import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
@@ -14,6 +14,16 @@ import {
   type ChauffeurCategory,
   type User
 } from "@/lib/models";
+import {
+  isValidPostalAddress,
+  postalAddressFromProfile,
+  toProfilePostalFields,
+  type PostalAddress
+} from "@/lib/models/postal-address";
+import {
+  ProfileAddressField,
+  PROFILE_ADDRESS_VALIDATION_MESSAGE
+} from "@/components/profile-address-field";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -64,6 +74,10 @@ export function DriverEditSheet({
     profile.driversLicenseExpiry ?? undefined
   );
   const [saving, setSaving] = useState(false);
+  const [address, setAddress] = useState<PostalAddress>(() =>
+    activeUser ? postalAddressFromProfile(activeUser.profile) : {}
+  );
+  const [addressInvalid, setAddressInvalid] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
   const currentKey = user?.id ?? (selectedUserId || "__new__");
@@ -73,6 +87,8 @@ export function DriverEditSheet({
     setVisible(profile.visibleOnCustomerApp);
     setDispatch(profile.acceptsDispatchAssignments);
     setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
+    setAddress(activeUser ? postalAddressFromProfile(activeUser.profile) : {});
+    setAddressInvalid(false);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -80,6 +96,11 @@ export function DriverEditSheet({
     const uid = user?.id ?? selectedUserId;
     if (!uid) {
       toast.error("Select the user to add as a chauffeur.");
+      return;
+    }
+    if (!isValidPostalAddress(address)) {
+      setAddressInvalid(true);
+      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
       return;
     }
     const form = new FormData(e.currentTarget);
@@ -108,6 +129,12 @@ export function DriverEditSheet({
         selectedCandidate?.email ||
         "Chauffeur";
       await updateUserDriverProfile(uid, driverProfile, { driverTitle, isNew });
+      if (activeUser) {
+        await updateUserProfile(uid, {
+          ...activeUser.profile,
+          ...toProfilePostalFields(address)
+        });
+      }
       toast.success(isNew ? "Driver added." : "Driver profile saved.");
       onOpenChange(false);
     } catch {
@@ -173,6 +200,18 @@ export function DriverEditSheet({
               </SelectContent>
             </Select>
           </div>
+
+          <ProfileAddressField
+            value={address}
+            onChange={(next) => {
+              setAddress(next);
+              if (addressInvalid && isValidPostalAddress(next)) {
+                setAddressInvalid(false);
+              }
+            }}
+            invalid={addressInvalid}
+            disabled={saving}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="bioStatement">Bio</Label>

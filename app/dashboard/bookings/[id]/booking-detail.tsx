@@ -33,6 +33,10 @@ import {
   type Vehicle,
   type VehicleType
 } from "@/lib/models";
+import {
+  formatPostalAddress,
+  postalAddressFromTripSnapshot
+} from "@/lib/models/postal-address";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { appConfig } from "@/lib/env";
 import { generateAvatarFallback } from "@/lib/utils";
@@ -309,7 +313,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
   const customerName =
     trip?.customerDisplayName || customer?.profile.displayName || null;
-  const customerAddress = trip?.customerAddressLine ?? customer?.profile.address ?? null;
+  const customerAddress = trip
+    ? formatPostalAddress(postalAddressFromTripSnapshot(trip))
+    : null;
   const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
   const customerCompany = trip?.customerCompany ?? null;
