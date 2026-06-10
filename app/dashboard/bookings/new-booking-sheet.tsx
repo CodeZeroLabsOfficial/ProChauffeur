@@ -711,15 +711,6 @@ export function NewBookingSheet({
             </p>
           ) : null}
 
-          {quotedTotal != null ? (
-            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Estimated total: </span>
-              <span className="font-medium">
-                {quoting ? "Calculating…" : formatCurrency(quotedTotal, currency)}
-              </span>
-            </div>
-          ) : null}
-
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -747,6 +738,15 @@ export function NewBookingSheet({
                   : "Create booking"}
             </Button>
           </SheetFooter>
+
+          {quotedTotal != null ? (
+            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Estimated total: </span>
+              <span className="font-medium">
+                {quoting ? "Calculating…" : formatCurrency(quotedTotal, currency)}
+              </span>
+            </div>
+          ) : null}
         </form>
       </SheetContent>
     </Sheet>
