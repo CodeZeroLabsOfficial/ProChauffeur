@@ -347,6 +347,20 @@ export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<
   return body.photoURL;
 }
 
+export async function uploadBrandingLogo(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/settings/branding/logo", { method: "POST", body: formData });
+  const body = (await res.json().catch(() => ({}))) as { logoUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload logo.");
+  }
+  if (!body.logoUrl) {
+    throw new Error("Could not upload logo.");
+  }
+  return body.logoUrl;
+}
+
 export async function updateUserDriverProfile(
   uid: string,
   driverProfile: DriverProfile,

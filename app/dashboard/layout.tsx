@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { fetchBrandingAdmin } from "@/lib/firebase/admin-settings";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -15,6 +16,7 @@ export default async function DashboardLayout({
   const user = await getAdminSessionUser();
   if (!user) redirect("/login");
 
+  const branding = await fetchBrandingAdmin();
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
@@ -30,7 +32,7 @@ export default async function DashboardLayout({
               "--header-height": "calc(var(--spacing) * 14)"
             } as React.CSSProperties
           }>
-          <AppSidebar variant="inset" />
+          <AppSidebar variant="inset" branding={branding} />
           <SidebarInset className="min-h-0 overflow-hidden">
             <SiteHeader />
             <div className="bg-muted/40 flex min-h-0 flex-1 flex-col overflow-hidden">

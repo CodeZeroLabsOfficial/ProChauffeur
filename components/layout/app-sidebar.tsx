@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/layout/logo";
 import { navGroups, type NavItem } from "@/components/layout/nav-config";
+import type { Branding } from "@/lib/models";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -75,15 +76,28 @@ function NavMenuItem({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  branding,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { branding?: Branding | null }) {
   const pathname = usePathname();
+  const logoUrl = branding?.logoUrl;
+  const portalName = branding?.portalName ?? "ProChauffeur";
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex h-10 items-center px-1 group-data-[collapsible=icon]:justify-center">
-          <Logo className="group-data-[collapsible=icon]:hidden" />
-          <Logo className="hidden group-data-[collapsible=icon]:flex [&>span]:hidden" />
+          <Logo
+            logoUrl={logoUrl}
+            portalName={portalName}
+            className="group-data-[collapsible=icon]:hidden"
+          />
+          <Logo
+            logoUrl={logoUrl}
+            portalName={portalName}
+            className="hidden group-data-[collapsible=icon]:flex [&>span]:hidden"
+          />
         </div>
       </SidebarHeader>
       <SidebarContent>

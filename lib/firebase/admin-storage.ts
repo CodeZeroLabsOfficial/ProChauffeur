@@ -5,7 +5,7 @@ import { getStorage } from "firebase-admin/storage";
 
 import { adminApp } from "@/lib/firebase/admin";
 
-const MAX_PROFILE_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /**
  * Upload a profile photo via the Admin SDK (bypasses client Storage rules).
@@ -17,12 +17,38 @@ export async function uploadProfilePhotoAdmin(
   contentType: string,
   originalName: string
 ): Promise<string> {
-  if (buffer.length > MAX_PROFILE_PHOTO_BYTES) {
+  if (buffer.length > MAX_IMAGE_BYTES) {
     throw new Error("Image must be 5 MB or smaller.");
   }
 
   const ext = originalName.split(".").pop()?.toLowerCase() || "jpg";
   const path = `users/${uid}/profile-photo.${ext}`;
+  return saveStorageImage(path, buffer, contentType);
+}
+
+/**
+ * Upload the portal branding logo via the Admin SDK (bypasses client Storage rules).
+ * Returns a Firebase download URL with a storage token.
+ */
+export async function uploadBrandingLogoAdmin(
+  buffer: Buffer,
+  contentType: string,
+  originalName: string
+): Promise<string> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  const ext = originalName.split(".").pop()?.toLowerCase() || "png";
+  const path = `branding/logo.${ext}`;
+  return saveStorageImage(path, buffer, contentType);
+}
+
+async function saveStorageImage(
+  path: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
   const bucket = getStorage(adminApp()).bucket();
   const file = bucket.file(path);
   const token = randomUUID();

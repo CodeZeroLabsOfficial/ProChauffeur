@@ -13,6 +13,7 @@ export * from "@/lib/models/postal-address";
 export * from "@/lib/models/locale";
 export * from "@/lib/models/notification";
 export * from "@/lib/models/vehicle-class";
+export * from "@/lib/models/branding";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */
 export const Collections = {
