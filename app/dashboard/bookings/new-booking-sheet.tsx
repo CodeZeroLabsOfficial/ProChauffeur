@@ -51,7 +51,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger
@@ -568,13 +567,14 @@ export function NewBookingSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>
             {isEdit ? "Edit booking" : isRebook ? "Rebook" : "New booking"}
           </SheetTitle>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4" noValidate>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="customer">Customer</Label>
@@ -721,32 +721,35 @@ export function NewBookingSheet({
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+          </div>
 
-          <SheetFooter className="grid grid-cols-2 gap-3 px-0">
-            <SheetClose asChild>
-              <Button type="button" variant="outline" className="w-full">
-                Cancel
+          <div className="shrink-0 space-y-3 border-t px-4 pt-4 pb-4">
+            <div className="grid grid-cols-2 gap-3">
+              <SheetClose asChild>
+                <Button type="button" variant="outline" className="w-full">
+                  Cancel
+                </Button>
+              </SheetClose>
+              <Button type="submit" disabled={saving || quoting} className="w-full">
+                {saving
+                  ? isEdit
+                    ? "Saving…"
+                    : "Creating…"
+                  : isEdit
+                    ? "Save changes"
+                    : "Create booking"}
               </Button>
-            </SheetClose>
-            <Button type="submit" disabled={saving || quoting} className="w-full">
-              {saving
-                ? isEdit
-                  ? "Saving…"
-                  : "Creating…"
-                : isEdit
-                  ? "Save changes"
-                  : "Create booking"}
-            </Button>
-          </SheetFooter>
-
-          {quotedTotal != null ? (
-            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Estimated total: </span>
-              <span className="font-medium">
-                {quoting ? "Calculating…" : formatCurrency(quotedTotal, currency)}
-              </span>
             </div>
-          ) : null}
+
+            {quotedTotal != null ? (
+              <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Estimated total: </span>
+                <span className="font-medium">
+                  {quoting ? "Calculating…" : formatCurrency(quotedTotal, currency)}
+                </span>
+              </div>
+            ) : null}
+          </div>
         </form>
       </SheetContent>
     </Sheet>
