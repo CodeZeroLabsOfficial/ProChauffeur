@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { useTrips } from "@/hooks/use-collections";
+import { shortBookingId } from "@/lib/bookings/booking-display";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models/trip";
 import { formatDateTime } from "@/lib/format";
 import { TripStatusBadge } from "@/components/trip-status-badge";
@@ -55,10 +56,6 @@ interface BookingRow {
   duration: string;
   pickupAt: string;
   status: TripStatus;
-}
-
-function shortBookingId(id: string) {
-  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
 function vehicleClassLabel(trip: Trip) {

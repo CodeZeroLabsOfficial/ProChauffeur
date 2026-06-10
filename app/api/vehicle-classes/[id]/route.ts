@@ -21,9 +21,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Vehicle class id is required." }, { status: 400 });
   }
 
-  const vehiclesSnap = await adminFirestore().collection(Collections.vehicles).get();
-  const inUse = vehiclesSnap.docs.some((docSnap) => docSnap.data().vehicleClassId === id);
-  if (inUse) {
+  const inUseSnap = await adminFirestore()
+    .collection(Collections.vehicles)
+    .where("vehicleClassId", "==", id)
+    .limit(1)
+    .get();
+  if (!inUseSnap.empty) {
     return NextResponse.json(
       { error: "Cannot delete a vehicle class that is assigned to fleet vehicles." },
       { status: 409 }

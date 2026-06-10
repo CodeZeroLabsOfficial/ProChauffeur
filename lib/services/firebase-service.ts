@@ -28,6 +28,10 @@ import {
   stripUndefined
 } from "@/lib/firebase/converters";
 import {
+  invalidateOperatorLocaleCache,
+  invalidatePricingConfigurationCache
+} from "@/lib/services/operator-config-cache";
+import {
   companyNotification,
   driverNotification,
   invoiceNotification,
@@ -547,6 +551,7 @@ export async function savePricingConfiguration(config: PricingConfig): Promise<v
     stripUndefined({ ...config }),
     { merge: true }
   );
+  invalidatePricingConfigurationCache();
   void createActivityNotification(pricingNotification());
 }
 
@@ -634,6 +639,7 @@ export async function fetchOperatorLocale(): Promise<OperatorLocale> {
 export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
   validateOperatorLocale(locale);
   await setDoc(doc(db(), Collections.operator, OperatorDocs.locale), stripUndefined({ ...locale }));
+  invalidateOperatorLocaleCache();
   void createActivityNotification(localeNotification());
 }
 

@@ -20,7 +20,6 @@ import {
   endOfDay,
   getMonthRange,
   getWeekRange,
-  isSameDay,
   percentChange,
   startOfDay,
   tripsInRange
@@ -40,24 +39,25 @@ const chartConfig = {
 };
 
 function buildDailySeries(trips: ReturnType<typeof useTrips>["trips"], days: number, end: Date) {
+  const bucketByDay = new Map<number, { date: string; scheduled: number; completed: number }>();
   const buckets: { date: string; scheduled: number; completed: number }[] = [];
+
   for (let i = days - 1; i >= 0; i--) {
     const d = startOfDay(new Date(end));
     d.setDate(end.getDate() - i);
-    buckets.push({
+    const bucket = {
       date: new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short" }).format(d),
       scheduled: 0,
       completed: 0
-    });
+    };
+    bucketByDay.set(d.getTime(), bucket);
+    buckets.push(bucket);
   }
 
   for (const trip of trips) {
     const ref = tripPickupReferenceDate(trip);
-    const bucket = buckets.find((b, idx) => {
-      const d = startOfDay(new Date(end));
-      d.setDate(end.getDate() - (days - 1 - idx));
-      return isSameDay(d, ref);
-    });
+    const dayStart = startOfDay(ref).getTime();
+    const bucket = bucketByDay.get(dayStart);
     if (!bucket) continue;
     if (trip.status === "completed") bucket.completed += 1;
     else if (trip.status !== "cancelled") bucket.scheduled += 1;

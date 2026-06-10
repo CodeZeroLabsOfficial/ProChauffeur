@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 
 import { useTrip, useUsers } from "@/hooks/use-collections";
+import { shortBookingId } from "@/lib/bookings/booking-display";
 import { updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
@@ -71,10 +72,6 @@ const statusStepIcons: Record<(typeof ACTIVE_STATUSES)[number], ReactNode> = {
   in_progress: <CircleDotIcon className="size-4 lg:size-5" />,
   completed: <CheckCircle2Icon className="size-4 lg:size-5" />
 };
-
-function shortBookingId(id: string) {
-  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
-}
 
 function ContactRow({
   icon: Icon,

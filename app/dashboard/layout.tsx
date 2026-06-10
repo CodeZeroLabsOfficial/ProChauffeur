@@ -5,6 +5,7 @@ import { getAdminSessionUser } from "@/lib/firebase/session";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { FirebaseAuthProvider } from "@/components/providers/firebase-auth-provider";
+import { DashboardCollectionsProvider } from "@/components/providers/dashboard-collections-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
@@ -20,6 +21,7 @@ export default async function DashboardLayout({
   return (
     <SessionProvider user={user}>
       <FirebaseAuthProvider>
+        <DashboardCollectionsProvider>
         <SidebarProvider
           defaultOpen={defaultOpen}
           style={
@@ -38,6 +40,7 @@ export default async function DashboardLayout({
             </div>
           </SidebarInset>
         </SidebarProvider>
+        </DashboardCollectionsProvider>
       </FirebaseAuthProvider>
     </SessionProvider>
   );

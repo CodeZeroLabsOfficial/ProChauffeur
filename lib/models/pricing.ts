@@ -89,31 +89,6 @@ export interface PricingConfig {
   rules: PricingRule[];
 }
 
-export function defaultTransferRates(overrides?: Partial<TransferPricingRates>): TransferPricingRates {
-  return {
-    minimumBaseRate: 89,
-    baseFare: 48,
-    deadheadRatePerUnit: 2.8,
-    tripRatePerUnit: 3.4,
-    returnToBaseFee: 55,
-    waitingFeeFlat: 0,
-    ...overrides
-  };
-}
-
-export function defaultHourlyRates(overrides?: Partial<HourlyPricingRates>): HourlyPricingRates {
-  return {
-    weekdayHourlyRate: 98,
-    weekendHourlyRate: 120,
-    weekdayMinimumHours: 2,
-    weekendMinimumHours: 3,
-    freeDeadheadMinutes: 60,
-    deadheadRatePerMinute: 1.5,
-    displayHourlyFrom: 98,
-    ...overrides
-  };
-}
-
 /** Admin setup template only — not used at runtime when fetching config. */
 export function buildInitialPricingConfig(): PricingConfig {
   return {

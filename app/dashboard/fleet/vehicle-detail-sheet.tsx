@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Calendar,
   Car,
@@ -20,10 +20,9 @@ import {
   effectiveChauffeurUserId,
   luggageSpecificationLabel,
   vehicleDisplayName,
-  type Vehicle,
-  type VehicleClass
+  type Vehicle
 } from "@/lib/models";
-import { fetchVehicleClasses } from "@/lib/services/firebase-service";
+import { useVehicleClasses } from "@/hooks/use-collections";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { assignmentBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleComplianceFields } from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
@@ -323,13 +322,8 @@ export function VehicleDetailSheet({
   onOpenChange: (open: boolean) => void;
   modal?: boolean;
 }) {
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const { vehicleClasses } = useVehicleClasses();
   const displayVehicle = useSheetDisplayItem(vehicle, open);
-
-  useEffect(() => {
-    if (!open) return;
-    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
-  }, [open]);
 
   const classOptions = vehicleClasses.map((vehicleClass) => ({
     value: vehicleClass.id,

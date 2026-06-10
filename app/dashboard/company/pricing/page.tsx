@@ -3,19 +3,20 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { useVehicleClasses } from "@/hooks/use-collections";
 import {
-  fetchOperatorLocale,
   fetchPricingConfiguration,
-  fetchVehicleClasses,
   savePricingConfiguration
 } from "@/lib/services/firebase-service";
+import {
+  getCachedOperatorLocale
+} from "@/lib/services/operator-config-cache";
 import {
   QUOTE_ROUNDING,
   buildInitialPricingConfig,
   tripTypeTitle,
   type PricingAddon,
-  type PricingConfig,
-  type VehicleClass
+  type PricingConfig
 } from "@/lib/models";
 import { distanceUnitLabel } from "@/lib/pricing/distance";
 import { ConfigError } from "@/lib/pricing/errors";
@@ -57,8 +58,8 @@ type GlobalField = {
 };
 
 export default function PricingPage() {
+  const { vehicleClasses } = useVehicleClasses();
   const [config, setConfig] = useState<PricingConfig>(buildInitialPricingConfig());
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
   const [distanceUnit, setDistanceUnit] = useState("km");
   const [currency, setCurrency] = useState("AUD");
   const [loading, setLoading] = useState(true);
@@ -67,11 +68,10 @@ export default function PricingPage() {
 
   useEffect(() => {
     Promise.all([
-      fetchOperatorLocale().then((locale) => {
+      getCachedOperatorLocale().then((locale) => {
         setDistanceUnit(locale.distanceUnit);
         setCurrency(locale.currency);
       }),
-      fetchVehicleClasses().then(setVehicleClasses),
       fetchPricingConfiguration()
         .then((pricing) => {
           setConfig(pricing);

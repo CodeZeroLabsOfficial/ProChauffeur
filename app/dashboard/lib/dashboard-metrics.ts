@@ -80,10 +80,17 @@ export function getMonthRange(reference: Date, offsetMonths = 0) {
 }
 
 export function bookingStatusCounts(trips: Trip[]) {
-  const confirmed = trips.filter((t) => t.status === "requested" || t.status === "accepted").length;
-  const active = trips.filter(
-    (t) => t.status === "en_route_pickup" || t.status === "in_progress"
-  ).length;
-  const completed = trips.filter((t) => t.status === "completed").length;
+  let confirmed = 0;
+  let active = 0;
+  let completed = 0;
+  for (const trip of trips) {
+    if (trip.status === "requested" || trip.status === "accepted") {
+      confirmed += 1;
+    } else if (trip.status === "en_route_pickup" || trip.status === "in_progress") {
+      active += 1;
+    } else if (trip.status === "completed") {
+      completed += 1;
+    }
+  }
   return { confirmed, active, completed };
 }

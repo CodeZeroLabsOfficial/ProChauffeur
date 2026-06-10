@@ -1,5 +1,4 @@
 import type { Vehicle } from "@/lib/models/vehicle";
-import type { VehicleClass } from "@/lib/models/vehicle-class";
 
 import type { BookingRequirements } from "@/lib/bookings/booking-eligibility";
 
@@ -37,35 +36,6 @@ export function validateTripAgainstVehicle(
       severity: "error",
       field: "largeLuggage",
       message: `Large luggage (${requirements.largeLuggage}) exceeds vehicle capacity (${vehicle.largeLuggageCount}).`
-    });
-  }
-  return issues;
-}
-
-export function validateVehicleAgainstClass(
-  vehicle: Vehicle,
-  vehicleClass: VehicleClass
-): CapacityIssue[] {
-  const issues: CapacityIssue[] = [];
-  if (vehicle.passengerCapacity < vehicleClass.passengerCapacity) {
-    issues.push({
-      code: "VEHICLE_SMALLER_THAN_CLASS_PASSENGERS",
-      severity: "warning",
-      message: `Vehicle holds ${vehicle.passengerCapacity} passengers; ${vehicleClass.displayName} is advertised as ${vehicleClass.passengerCapacity}.`
-    });
-  }
-  if (vehicle.smallLuggageCount < vehicleClass.smallLuggageCount) {
-    issues.push({
-      code: "VEHICLE_SMALLER_THAN_CLASS_SMALL_LUGGAGE",
-      severity: "warning",
-      message: `Vehicle allows ${vehicle.smallLuggageCount} small bags; ${vehicleClass.displayName} allows ${vehicleClass.smallLuggageCount}.`
-    });
-  }
-  if (vehicle.largeLuggageCount < vehicleClass.largeLuggageCount) {
-    issues.push({
-      code: "VEHICLE_SMALLER_THAN_CLASS_LARGE_LUGGAGE",
-      severity: "warning",
-      message: `Vehicle allows ${vehicle.largeLuggageCount} large bags; ${vehicleClass.displayName} allows ${vehicleClass.largeLuggageCount}.`
     });
   }
   return issues;

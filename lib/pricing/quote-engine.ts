@@ -141,15 +141,13 @@ function computeTransferBase(
 
 function computeHourlyBase(
   vehicleClass: VehicleClass,
-  pricing: PricingConfig,
-  locale: OperatorLocale,
-  scheduledPickupAt: Date,
+  weekday: WeekdayNumber,
+  weekendWeekdays: Set<WeekdayNumber>,
   bookedHours: number,
   deadheadDurationMinutes: number
 ): { amount: number; lines: QuoteLineItem[] } {
   const rates = vehicleClass.hourly;
-  const weekday = isoWeekdayInTimezone(scheduledPickupAt, locale.timezone);
-  const isWeekend = pricing.weekendWeekdays.includes(weekday);
+  const isWeekend = weekendWeekdays.has(weekday);
   const hourlyRate = isWeekend ? rates.weekendHourlyRate : rates.weekdayHourlyRate;
   const minimumHours = isWeekend ? rates.weekendMinimumHours : rates.weekdayMinimumHours;
   const billableHours = Math.max(minimumHours, bookedHours);
@@ -186,9 +184,22 @@ function computeHourlyBase(
   return { amount, lines };
 }
 
-function zoneMatchesPostcode(zone: PricingZone, pickupPostcode: string, dropoffPostcode: string): boolean {
+type PickupTimeContext = {
+  weekday: WeekdayNumber;
+  time: string;
+  date: string;
+};
+
+function normalizedZonePostcodes(zone: PricingZone): Set<string> {
   const postcodes = zone.match.postcodes ?? [];
-  const normalized = new Set(postcodes.map((p) => p.trim().toUpperCase()));
+  return new Set(postcodes.map((p) => p.trim().toUpperCase()));
+}
+
+function zoneMatchesPostcode(
+  normalized: Set<string>,
+  pickupPostcode: string,
+  dropoffPostcode: string
+): boolean {
   const pickup = pickupPostcode.trim().toUpperCase();
   const dropoff = dropoffPostcode.trim().toUpperCase();
   return (
@@ -202,14 +213,16 @@ function matchingZones(
   pickupPostcode: string,
   dropoffPostcode: string
 ): PricingZone[] {
-  return pricing.zones
-    .filter((zone) => zone.isEnabled)
-    .filter((zone) => {
-      if (zone.match.type === "postcode") {
-        return zoneMatchesPostcode(zone, pickupPostcode, dropoffPostcode);
-      }
-      return false;
-    });
+  const matched: PricingZone[] = [];
+  for (const zone of pricing.zones) {
+    if (!zone.isEnabled) continue;
+    if (zone.match.type !== "postcode") continue;
+    const normalized = normalizedZonePostcodes(zone);
+    if (zoneMatchesPostcode(normalized, pickupPostcode, dropoffPostcode)) {
+      matched.push(zone);
+    }
+  }
+  return matched;
 }
 
 function applyZoneLayer(
@@ -263,10 +276,8 @@ function applyZoneLayer(
   return { amount, lines, matchedZoneIds, appliedFixedZoneId, appliedZoneSurchargeIds };
 }
 
-function ruleMatches(rule: PricingRule, request: QuoteRequest, locale: OperatorLocale): boolean {
-  const weekday = isoWeekdayInTimezone(request.scheduledPickupAt, locale.timezone);
-  const time = timeStringInTimezone(request.scheduledPickupAt, locale.timezone);
-  const date = dateStringInTimezone(request.scheduledPickupAt, locale.timezone);
+function ruleMatches(rule: PricingRule, pickupTime: PickupTimeContext): boolean {
+  const { weekday, time, date } = pickupTime;
 
   if (rule.type === "peak_hours") {
     if (rule.weekdays?.length && !rule.weekdays.includes(weekday)) return false;
@@ -290,14 +301,14 @@ function applyTimeRuleLayer(
   lines: QuoteLineItem[],
   pricing: PricingConfig,
   request: QuoteRequest,
-  locale: OperatorLocale
+  pickupTime: PickupTimeContext
 ): { amount: number; lines: QuoteLineItem[]; appliedRuleId: string | null } {
   if (request.tripType !== "transfer") {
     return { amount, lines, appliedRuleId: null };
   }
 
   const winner = pricing.rules
-    .filter((rule) => rule.isEnabled && ruleMatches(rule, request, locale))
+    .filter((rule) => rule.isEnabled && ruleMatches(rule, pickupTime))
     .sort((a, b) => b.priority - a.priority)[0];
 
   if (!winner) return { amount, lines, appliedRuleId: null };
@@ -338,13 +349,13 @@ function applyAddons(
   lines: QuoteLineItem[],
   addons: PricingAddon[],
   request: QuoteRequest,
-  locale: OperatorLocale
+  selectedAddonIds: Set<string>
 ): { amount: number; lines: QuoteLineItem[] } {
   let nextAmount = amount;
   const nextLines = [...lines];
   for (const addon of addons) {
     if (!addon.isEnabled) continue;
-    if (!request.addonIds.includes(addon.id)) continue;
+    if (!selectedAddonIds.has(addon.id)) continue;
     if (!addon.tripTypes.includes(request.tripType)) continue;
     if (
       addon.vehicleClassIds.length > 0 &&
@@ -422,6 +433,13 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   if (vehicleClass.id !== request.vehicleClassId) {
     throw new QuoteError("Vehicle class does not match the quote request.");
   }
+  const pickupTime: PickupTimeContext = {
+    weekday: isoWeekdayInTimezone(request.scheduledPickupAt, context.locale.timezone),
+    time: timeStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
+    date: dateStringInTimezone(request.scheduledPickupAt, context.locale.timezone)
+  };
+  const weekendWeekdays = new Set(context.pricing.weekendWeekdays);
+  const selectedAddonIds = new Set(request.addonIds);
   const onboardUnits = metersToDistanceUnit(context.routeDistanceMeters, context.locale.distanceUnit);
   const deadheadUnits = metersToDistanceUnit(context.deadheadDistanceMeters, context.locale.distanceUnit);
 
@@ -444,9 +462,8 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   } else {
     const hourly = computeHourlyBase(
       vehicleClass,
-      context.pricing,
-      context.locale,
-      request.scheduledPickupAt,
+      pickupTime.weekday,
+      weekendWeekdays,
       request.bookedHours!,
       context.deadheadDurationMinutes
     );
@@ -459,7 +476,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   let amount = zoneResult.amount;
   lines = zoneResult.lines;
 
-  const timeResult = applyTimeRuleLayer(amount, lines, context.pricing, request, context.locale);
+  const timeResult = applyTimeRuleLayer(amount, lines, context.pricing, request, pickupTime);
   amount = timeResult.amount;
   lines = timeResult.lines;
 
@@ -468,7 +485,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     lines,
     context.pricing.addons,
     request,
-    context.locale
+    selectedAddonIds
   );
   amount = addonResult.amount;
   lines = addonResult.lines;

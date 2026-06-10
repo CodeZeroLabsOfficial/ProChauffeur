@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { MultiSelectField } from "@/components/multi-select-field";
 import { vehicleForChauffeur } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
-import { useFleetLocations, useUsers, useVehicles } from "@/hooks/use-collections";
+import { useFleetLocations, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import {
   filterEligibleFleetVehicles,
   vehicleClassesById
@@ -15,11 +15,12 @@ import {
 import { validateTripAgainstVehicle } from "@/lib/bookings/validate-capacity";
 import {
   createTrip,
-  fetchOperatorLocale,
-  fetchPricingConfiguration,
-  fetchVehicleClasses,
   updateTrip
 } from "@/lib/services/firebase-service";
+import {
+  getCachedOperatorLocale,
+  getCachedPricingConfiguration
+} from "@/lib/services/operator-config-cache";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
   tripPickupReferenceDate,
@@ -29,9 +30,9 @@ import {
   type PricingAddon,
   type PricingConfig,
   type Trip,
-  type User,
-  type VehicleClass
+  type User
 } from "@/lib/models";
+import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
 import { formatCurrency } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
@@ -72,6 +73,46 @@ type RequiredField =
   | "bookedHours";
 
 type FieldErrors = Partial<Record<RequiredField, boolean>>;
+
+const QUOTE_DEBOUNCE_MS = 400;
+
+function quoteInputFingerprint(request: QuoteRequest): string {
+  return JSON.stringify({
+    tripType: request.tripType,
+    vehicleClassId: request.vehicleClassId,
+    pickup: request.pickup,
+    dropoff: request.dropoff,
+    pickupPostcode: request.pickupPostcode,
+    dropoffPostcode: request.dropoffPostcode,
+    scheduledPickupAt: request.scheduledPickupAt.toISOString(),
+    bookedHours: request.bookedHours,
+    addonIds: [...request.addonIds].sort()
+  });
+}
+
+function buildQuoteRequestInput(
+  tripType: BookingTripType,
+  vehicleClassId: string,
+  pickup: AddressSuggestion,
+  dropoff: AddressSuggestion,
+  scheduledPickupAt: Date,
+  bookedHours: number,
+  selectedAddonIds: string[]
+): QuoteRequest {
+  return {
+    tripType,
+    vehicleClassId,
+    pickup: pickup.coordinate,
+    dropoff: dropoff.coordinate,
+    pickupAddressLine: pickup.addressLine,
+    dropoffAddressLine: dropoff.addressLine,
+    pickupPostcode: postcodeFromAddress(pickup),
+    dropoffPostcode: postcodeFromAddress(dropoff),
+    scheduledPickupAt,
+    bookedHours: tripType === "hourly" ? bookedHours : null,
+    addonIds: selectedAddonIds
+  };
+}
 
 function addonLabel(addon: PricingAddon, currency: string) {
   return `${addon.title} (${formatCurrency(addon.price, currency)})`;
@@ -183,6 +224,7 @@ export function NewBookingSheet({
   const { users } = useUsers();
   const { vehicles } = useVehicles();
   const { locations } = useFleetLocations();
+  const { vehicleClasses } = useVehicleClasses();
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
@@ -198,11 +240,12 @@ export function NewBookingSheet({
   const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
   const [notes, setNotes] = useState("");
   const [tripType, setTripType] = useState<BookingTripType>("transfer");
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
   const [vehicleClassId, setVehicleClassId] = useState<string | null>(null);
   const [bookedHours, setBookedHours] = useState(2);
   const [quotedTotal, setQuotedTotal] = useState<number | null>(null);
   const [quoting, setQuoting] = useState(false);
+  const lastQuoteRef = useRef<{ fingerprint: string; quote: QuoteResult } | null>(null);
+  const wasOpenRef = useRef(false);
 
   const chauffeurs = useMemo(
     () =>
@@ -214,7 +257,10 @@ export function NewBookingSheet({
     [users]
   );
 
-  const pricingAddons = pricingConfig?.addons.filter((addon) => addon.isEnabled) ?? [];
+  const pricingAddons = useMemo(
+    () => pricingConfig?.addons.filter((addon) => addon.isEnabled) ?? [],
+    [pricingConfig]
+  );
   const currency = operatorLocale?.currency ?? "AUD";
 
   const addonOptions = useMemo(
@@ -261,42 +307,47 @@ export function NewBookingSheet({
   }, [assignedChauffeur, vehicles]);
 
   useEffect(() => {
-    const setters = {
-      setFieldErrors,
-      setCustomer,
-      setPickup,
-      setDropoff,
-      setAssignedChauffeur,
-      setSelectedAddonIds,
-      setPassengerCount,
-      setSmallLuggageCount,
-      setLargeLuggageCount,
-      setScheduledPickupAt,
-      setNotes,
-      setTripType,
-      setVehicleClassId,
-      setBookedHours,
-      setQuotedTotal
-    };
-
     if (!open) {
-      resetFormFields(setters);
-      return;
+      wasOpenRef.current = false;
+      lastQuoteRef.current = null;
+      resetFormFields({
+        setFieldErrors,
+        setCustomer,
+        setPickup,
+        setDropoff,
+        setAssignedChauffeur,
+        setSelectedAddonIds,
+        setPassengerCount,
+        setSmallLuggageCount,
+        setLargeLuggageCount,
+        setScheduledPickupAt,
+        setNotes,
+        setTripType,
+        setVehicleClassId,
+        setBookedHours,
+        setQuotedTotal
+      });
     }
+  }, [open]);
 
-    Promise.all([
-      fetchPricingConfiguration(),
-      fetchOperatorLocale(),
-      fetchVehicleClasses()
-    ])
-      .then(([pricing, locale, classes]) => {
+  useEffect(() => {
+    if (!open) return;
+
+    Promise.all([getCachedPricingConfiguration(), getCachedOperatorLocale()])
+      .then(([pricing, locale]) => {
         setPricingConfig(pricing);
         setOperatorLocale(locale);
-        setVehicleClasses(classes);
       })
       .catch((err) => {
         toast.error(err instanceof Error ? err.message : "Pricing is not configured.");
       });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const justOpened = !wasOpenRef.current;
+    wasOpenRef.current = true;
 
     if (editTrip || sourceTrip) {
       const trip = editTrip ?? sourceTrip!;
@@ -334,7 +385,25 @@ export function NewBookingSheet({
       return;
     }
 
-    resetFormFields(setters);
+    if (justOpened) {
+      resetFormFields({
+        setFieldErrors,
+        setCustomer,
+        setPickup,
+        setDropoff,
+        setAssignedChauffeur,
+        setSelectedAddonIds,
+        setPassengerCount,
+        setSmallLuggageCount,
+        setLargeLuggageCount,
+        setScheduledPickupAt,
+        setNotes,
+        setTripType,
+        setVehicleClassId,
+        setBookedHours,
+        setQuotedTotal
+      });
+    }
   }, [open, editTrip, sourceTrip, users]);
 
   useEffect(() => {
@@ -350,43 +419,54 @@ export function NewBookingSheet({
       (tripType === "hourly" && bookedHours <= 0)
     ) {
       setQuotedTotal(null);
+      lastQuoteRef.current = null;
       return;
     }
 
     let cancelled = false;
-    setQuoting(true);
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-    buildQuoteForRequest(
-      {
+    const runQuote = () => {
+      setQuoting(true);
+      const request = buildQuoteRequestInput(
         tripType,
         vehicleClassId,
-        pickup: pickup.coordinate,
-        dropoff: dropoff.coordinate,
-        pickupAddressLine: pickup.addressLine,
-        dropoffAddressLine: dropoff.addressLine,
-        pickupPostcode: postcodeFromAddress(pickup),
-        dropoffPostcode: postcodeFromAddress(dropoff),
+        pickup,
+        dropoff,
         scheduledPickupAt,
-        bookedHours: tripType === "hourly" ? bookedHours : null,
-        addonIds: selectedAddonIds
-      },
-      pricingConfig,
-      operatorLocale,
-      locations,
-      selectedVehicleClass
-    )
-      .then((quote) => {
-        if (!cancelled) setQuotedTotal(quote.displayTotal);
-      })
-      .catch(() => {
-        if (!cancelled) setQuotedTotal(null);
-      })
-      .finally(() => {
-        if (!cancelled) setQuoting(false);
-      });
+        bookedHours,
+        selectedAddonIds
+      );
+      const fingerprint = quoteInputFingerprint(request);
+
+      buildQuoteForRequest(
+        request,
+        pricingConfig,
+        operatorLocale,
+        locations,
+        selectedVehicleClass
+      )
+        .then((quote) => {
+          if (cancelled) return;
+          lastQuoteRef.current = { fingerprint, quote };
+          setQuotedTotal(quote.displayTotal);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            lastQuoteRef.current = null;
+            setQuotedTotal(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setQuoting(false);
+        });
+    };
+
+    debounceTimer = setTimeout(runQuote, QUOTE_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [
     open,
@@ -459,25 +539,27 @@ export function NewBookingSheet({
 
     setSaving(true);
     try {
-      const quote = await buildQuoteForRequest(
-        {
-          tripType,
-          vehicleClassId,
-          pickup: pickup.coordinate,
-          dropoff: dropoff.coordinate,
-          pickupAddressLine: pickup.addressLine,
-          dropoffAddressLine: dropoff.addressLine,
-          pickupPostcode: postcodeFromAddress(pickup),
-          dropoffPostcode: postcodeFromAddress(dropoff),
-          scheduledPickupAt,
-          bookedHours: tripType === "hourly" ? bookedHours : null,
-          addonIds: selectedAddonIds
-        },
-        pricingConfig,
-        operatorLocale,
-        locations,
-        selectedVehicleClass
+      const request = buildQuoteRequestInput(
+        tripType,
+        vehicleClassId,
+        pickup,
+        dropoff,
+        scheduledPickupAt,
+        bookedHours,
+        selectedAddonIds
       );
+      const fingerprint = quoteInputFingerprint(request);
+      const cached = lastQuoteRef.current;
+      const quote =
+        cached?.fingerprint === fingerprint
+          ? cached.quote
+          : await buildQuoteForRequest(
+              request,
+              pricingConfig,
+              operatorLocale,
+              locations,
+              selectedVehicleClass
+            );
 
       const quoteFields = {
         tripType,

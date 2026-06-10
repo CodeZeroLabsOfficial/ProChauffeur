@@ -17,18 +17,16 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useUsers, useVehicles } from "@/hooks/use-collections";
+import { useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import {
   assignFleetVehicle,
   deleteVehicle,
-  fetchVehicleClasses,
   unassignFleetVehicle
 } from "@/lib/services/firebase-service";
 import {
   effectiveChauffeurUserId,
   vehicleDisplayName,
-  type Vehicle,
-  type VehicleClass
+  type Vehicle
 } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
@@ -81,6 +79,7 @@ export function FleetDataTable({
 }) {
   const { vehicles, loading } = useVehicles();
   const { users } = useUsers();
+  const { vehicleClasses } = useVehicleClasses();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -92,7 +91,6 @@ export function FleetDataTable({
   const [rowSelection, setRowSelection] = useState({});
   const [classFilter, setClassFilter] = useState<string[]>([]);
   const [assignmentFilter, setAssignmentFilter] = useState<string[]>([]);
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
 
   const drivers = useMemo(() => users.filter((u) => u.role === "driver"), [users]);
 
@@ -111,10 +109,6 @@ export function FleetDataTable({
     () => new Map(vehicleClasses.map((vehicleClass) => [vehicleClass.id, vehicleClass])),
     [vehicleClasses]
   );
-
-  useEffect(() => {
-    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
-  }, []);
 
   const data = useMemo<FleetRow[]>(
     () =>

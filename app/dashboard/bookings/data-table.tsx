@@ -19,8 +19,9 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
+import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canEditBooking } from "@/app/dashboard/bookings/lib/booking-actions";
-import { vehicleForChauffeur } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
+import { vehiclesByChauffeurId } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import { assignTripDriver, updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
@@ -78,10 +79,6 @@ type BookingRow = Trip & {
   vehicleLabel: string;
   vehicleFilterValue: string;
 };
-
-function shortBookingId(id: string) {
-  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
-}
 
 function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown) {
   const values = filterValue as string[] | undefined;
@@ -168,19 +165,18 @@ export function BookingsDataTable({
     [users]
   );
 
-  const reassignableChauffeurs = useMemo(
-    () =>
-      users
-        .filter((u) => u.role === "driver")
-        .map((u) => ({
-          id: u.id,
-          label: u.profile.displayName || u.email,
-          vehicle: vehicleForChauffeur(vehicles, u.id)
-        }))
-        .filter((c): c is typeof c & { vehicle: NonNullable<typeof c.vehicle> } => c.vehicle != null)
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [users, vehicles]
-  );
+  const reassignableChauffeurs = useMemo(() => {
+    const vehicleByChauffeur = vehiclesByChauffeurId(vehicles);
+    return users
+      .filter((u) => u.role === "driver")
+      .map((u) => ({
+        id: u.id,
+        label: u.profile.displayName || u.email,
+        vehicle: vehicleByChauffeur.get(u.id)
+      }))
+      .filter((c): c is typeof c & { vehicle: NonNullable<typeof c.vehicle> } => c.vehicle != null)
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [users, vehicles]);
 
   const vehicleOptions = useMemo(
     () => [

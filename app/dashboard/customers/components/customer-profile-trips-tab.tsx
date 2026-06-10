@@ -15,6 +15,7 @@ import {
   type VisibilityState
 } from "@tanstack/react-table";
 
+import { shortBookingId } from "@/lib/bookings/booking-display";
 import { tripPickupReferenceDate, tripStatusTitle, TRIP_STATUSES, type Trip } from "@/lib/models";
 import { formatDateTime } from "@/lib/format";
 import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
@@ -33,10 +34,6 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-
-function shortBookingId(id: string) {
-  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
-}
 
 function multiSelectFilter(
   row: { getValue: (id: string) => unknown },

@@ -8,16 +8,25 @@ import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import type { CoordinateField } from "@/lib/models/trip";
 import { computeQuote } from "@/lib/pricing/quote-engine";
 import { QuoteError } from "@/lib/pricing/errors";
+import {
+  getCachedRouteMetrics,
+  setCachedRouteMetrics,
+  type RouteMetrics
+} from "@/lib/pricing/route-metrics-cache";
 
 async function routeMetrics(
   from: CoordinateField,
   to: CoordinateField,
   token: string
-): Promise<{ distanceMeters: number; durationSeconds: number }> {
+): Promise<RouteMetrics> {
+  const cached = getCachedRouteMetrics(from, to);
+  if (cached) return cached;
+
   const metrics = await fetchRouteMetrics(from, to, token);
   if (!metrics) {
     throw new QuoteError("Could not calculate route distance.");
   }
+  setCachedRouteMetrics(from, to, metrics);
   return metrics;
 }
 
@@ -30,24 +39,16 @@ export async function buildQuoteForRequest(
 ): Promise<QuoteResult> {
   const garageLocation = requireDefaultGarageLocation(locations);
   const token = getMapboxToken();
+  const garageCoord = {
+    latitude: garageLocation.latitude,
+    longitude: garageLocation.longitude
+  };
 
-  const onboard = await routeMetrics(request.pickup, request.dropoff, token);
-  const garageToPickup = await routeMetrics(
-    {
-      latitude: garageLocation.latitude,
-      longitude: garageLocation.longitude
-    },
-    request.pickup,
-    token
-  );
-  const dropoffToGarage = await routeMetrics(
-    request.dropoff,
-    {
-      latitude: garageLocation.latitude,
-      longitude: garageLocation.longitude
-    },
-    token
-  );
+  const [onboard, garageToPickup, dropoffToGarage] = await Promise.all([
+    routeMetrics(request.pickup, request.dropoff, token),
+    routeMetrics(garageCoord, request.pickup, token),
+    routeMetrics(request.dropoff, garageCoord, token)
+  ]);
 
   return computeQuote(request, {
     pricing,

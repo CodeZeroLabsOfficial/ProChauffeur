@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
-import { useInvoices, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
-import { fetchVehicle, fetchVehicleClasses } from "@/lib/services/firebase-service";
-import type { VehicleClass } from "@/lib/models";
+import { useInvoices, useTrips, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import { effectiveChauffeurUserId } from "@/lib/models";
 import { formatCurrency } from "@/lib/format";
-import { effectiveChauffeurUserId, type Vehicle } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
@@ -45,33 +43,17 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   const { trips } = useTrips();
   const { invoices } = useInvoices();
   const { users } = useUsers();
-  const { vehicles } = useVehicles();
+  const { vehicles, loading: vehiclesLoading } = useVehicles();
+  const { vehicleClasses } = useVehicleClasses();
 
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
 
-  const loadVehicle = useCallback(() => {
-    return fetchVehicle(vehicleDocumentId).then((loaded) => {
-      setVehicle(loaded);
-      return loaded;
-    });
-  }, [vehicleDocumentId]);
-
-  useEffect(() => {
-    loadVehicle().finally(() => setLoading(false));
-  }, [loadVehicle]);
-
-  useEffect(() => {
-    fetchVehicleClasses().then(setVehicleClasses).catch(() => setVehicleClasses([]));
-  }, []);
-
-  useEffect(() => {
-    const live = vehicles.find((v) => v.driverID === vehicleDocumentId);
-    if (live) setVehicle(live);
-  }, [vehicles, vehicleDocumentId]);
+  const vehicle = useMemo(
+    () => vehicles.find((v) => v.driverID === vehicleDocumentId) ?? null,
+    [vehicles, vehicleDocumentId]
+  );
+  const loading = vehiclesLoading && !vehicle;
 
   const metrics = useMemo(
     () => (vehicle ? vehicleOverviewMetrics(trips, invoices, vehicle) : null),
@@ -168,10 +150,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
                 <VehicleProfileFinancialsTab />
               </TabsContent>
               <TabsContent value="compliance" className="mt-0">
-                <VehicleProfileComplianceTab
-                  vehicle={vehicle}
-                  onVehicleUpdated={() => void loadVehicle()}
-                />
+                <VehicleProfileComplianceTab vehicle={vehicle} />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
                 <VehicleProfileOperationsTab
@@ -187,10 +166,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
       <VehicleEditSheet
         vehicle={vehicle}
         open={editOpen}
-        onOpenChange={(open) => {
-          setEditOpen(open);
-          if (!open) void loadVehicle();
-        }}
+        onOpenChange={setEditOpen}
         nested={false}
       />
     </>

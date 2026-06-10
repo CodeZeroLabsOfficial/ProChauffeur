@@ -1,19 +1,19 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { fetchVehicleClasses, upsertVehicle } from "@/lib/services/firebase-service";
+import { useVehicleClasses } from "@/hooks/use-collections";
+import { upsertVehicle } from "@/lib/services/firebase-service";
 import {
   luggageSpecificationLabel,
-  type Vehicle,
-  type VehicleClass
+  type Vehicle
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
+import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -64,49 +64,6 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
 const MIN_MANUFACTURE_YEAR = 1980;
 const maxManufactureYear = new Date().getFullYear() + 1;
 
-function NumberStepper({
-  label,
-  value,
-  onChange,
-  min,
-  max
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  min: number;
-  max: number;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-8 shrink-0"
-          disabled={value <= min}
-          onClick={() => onChange(Math.max(min, value - 1))}
-          aria-label={`Decrease ${label.toLowerCase()}`}>
-          <Minus className="size-4" />
-        </Button>
-        <span className="min-w-8 flex-1 text-center text-sm font-medium tabular-nums">{value}</span>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-8 shrink-0"
-          disabled={value >= max}
-          onClick={() => onChange(Math.min(max, value + 1))}
-          aria-label={`Increase ${label.toLowerCase()}`}>
-          <Plus className="size-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function SectionHeading({ children }: { children: string }) {
   return <h4 className="text-sm font-medium">{children}</h4>;
 }
@@ -125,7 +82,7 @@ export function VehicleEditSheet({
   nested?: boolean;
 }) {
   const isNew = !vehicle;
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const { vehicleClasses } = useVehicleClasses();
   const [vehicleClassId, setVehicleClassId] = useState(vehicle?.vehicleClassId ?? "");
   const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.make));
   const [manufactureYear, setManufactureYear] = useState(
@@ -151,13 +108,6 @@ export function VehicleEditSheet({
     setLargeBags(vehicle?.largeLuggageCount ?? 2);
     setRegistrationExpiry(vehicle?.registrationExpiry ?? undefined);
   }
-
-  useEffect(() => {
-    if (!open) return;
-    fetchVehicleClasses()
-      .then(setVehicleClasses)
-      .catch(() => toast.error("Could not load vehicle classes."));
-  }, [open]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -237,6 +187,7 @@ export function VehicleEditSheet({
                 </Select>
               </div>
               <NumberStepper
+                id="manufactureYear"
                 label="Year"
                 value={manufactureYear}
                 onChange={setManufactureYear}
@@ -343,6 +294,7 @@ export function VehicleEditSheet({
             <SectionHeading>Vehicle capacity</SectionHeading>
             <div className="grid grid-cols-3 gap-3">
               <NumberStepper
+                id="passengerCapacity"
                 label="Capacity"
                 value={passengerCapacity}
                 onChange={setPassengerCapacity}
@@ -350,6 +302,7 @@ export function VehicleEditSheet({
                 max={20}
               />
               <NumberStepper
+                id="smallBags"
                 label="Small bags"
                 value={smallBags}
                 onChange={setSmallBags}
@@ -357,6 +310,7 @@ export function VehicleEditSheet({
                 max={12}
               />
               <NumberStepper
+                id="largeBags"
                 label="Large bags"
                 value={largeBags}
                 onChange={setLargeBags}
