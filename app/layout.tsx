@@ -10,11 +10,19 @@ import { fontVariables } from "@/lib/fonts";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
+import { fetchBrandingAdmin } from "@/lib/firebase/admin-settings";
 
-export const metadata: Metadata = {
-  title: "ProChauffeur — Operations Portal",
-  description: "Admin portal for managing chauffeur dispatch, bookings, fleet, drivers and billing."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await fetchBrandingAdmin();
+  const portalName = branding?.portalName?.trim() || "ProChauffeur";
+  const iconUrl = branding?.faviconUrl || branding?.logoUrl;
+
+  return {
+    title: `${portalName} — Operations Portal`,
+    description: "Admin portal for managing chauffeur dispatch, bookings, fleet, drivers and billing.",
+    ...(iconUrl ? { icons: { icon: iconUrl } } : {})
+  };
+}
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();

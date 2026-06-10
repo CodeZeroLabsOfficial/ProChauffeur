@@ -44,6 +44,24 @@ export async function uploadBrandingLogoAdmin(
   return saveStorageImage(path, buffer, contentType);
 }
 
+/**
+ * Upload the portal favicon via the Admin SDK (bypasses client Storage rules).
+ * Returns a Firebase download URL with a storage token.
+ */
+export async function uploadBrandingFaviconAdmin(
+  buffer: Buffer,
+  contentType: string,
+  originalName: string
+): Promise<string> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  const ext = originalName.split(".").pop()?.toLowerCase() || "png";
+  const path = `branding/favicon.${ext}`;
+  return saveStorageImage(path, buffer, contentType);
+}
+
 async function saveStorageImage(
   path: string,
   buffer: Buffer,

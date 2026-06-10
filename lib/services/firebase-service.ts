@@ -361,6 +361,20 @@ export async function uploadBrandingLogo(file: File): Promise<string> {
   return body.logoUrl;
 }
 
+export async function uploadBrandingFavicon(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/settings/branding/favicon", { method: "POST", body: formData });
+  const body = (await res.json().catch(() => ({}))) as { faviconUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload favicon.");
+  }
+  if (!body.faviconUrl) {
+    throw new Error("Could not upload favicon.");
+  }
+  return body.faviconUrl;
+}
+
 export async function updateUserDriverProfile(
   uid: string,
   driverProfile: DriverProfile,

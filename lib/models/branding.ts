@@ -4,4 +4,5 @@ export type Branding = {
   supportEmail?: string;
   primaryColorHex?: string;
   logoUrl?: string;
+  faviconUrl?: string;
 };
