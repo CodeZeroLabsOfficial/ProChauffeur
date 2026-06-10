@@ -31,7 +31,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const dateFilterPresets = [
+export const dateFilterPresets = [
   { name: "Today", value: "today" },
   { name: "Yesterday", value: "yesterday" },
   { name: "This Week", value: "thisWeek" },
@@ -58,7 +58,7 @@ export function thisWeekRange(reference = new Date()): DateRange {
   };
 }
 
-function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRange {
+export function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRange {
   switch (type) {
     case "today":
       return { from: startOfDay(reference), to: endOfDay(reference) };

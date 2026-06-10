@@ -15,28 +15,33 @@ import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import { companyDefaultMapView, tripPickupReferenceDate, tripStatusTitle, upcomingTripStatuses, type Trip } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import {
+  dateFilterPresets,
+  rangeForPreset,
+  type DateRangePreset
+} from "@/components/custom-date-range-picker";
 import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { ListFilterOption } from "@/components/list-filter-popover";
-
-function shortBookingId(id: string) {
-  return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
-}
 
 export default function DispatchPage() {
   const { resolvedTheme } = useTheme();
@@ -47,6 +52,7 @@ export default function DispatchPage() {
   const { locations: fleetLocations } = useFleetLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [periodFilter, setPeriodFilter] = useState<DateRangePreset | "all">("all");
 
   let token = "";
   let tokenError = false;
@@ -87,9 +93,24 @@ export default function DispatchPage() {
   );
 
   const filteredActiveTrips = useMemo(() => {
-    if (statusFilter.length === 0) return activeTrips;
-    return activeTrips.filter((t) => statusFilter.includes(t.status));
-  }, [activeTrips, statusFilter]);
+    let result = activeTrips;
+
+    if (statusFilter.length > 0) {
+      result = result.filter((t) => statusFilter.includes(t.status));
+    }
+
+    if (periodFilter !== "all") {
+      const { from, to } = rangeForPreset(periodFilter);
+      if (from && to) {
+        result = result.filter((t) => {
+          const pickup = tripPickupReferenceDate(t);
+          return pickup >= from && pickup <= to;
+        });
+      }
+    }
+
+    return result;
+  }, [activeTrips, statusFilter, periodFilter]);
 
   const statusFilterOptions = useMemo(
     () =>
@@ -143,10 +164,12 @@ export default function DispatchPage() {
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
-              <ActiveTripsStatusFilter
-                options={statusFilterOptions}
-                selected={statusFilter}
-                onSelectedChange={setStatusFilter}
+              <ActiveTripsFilter
+                statusOptions={statusFilterOptions}
+                statusSelected={statusFilter}
+                onStatusSelectedChange={setStatusFilter}
+                periodFilter={periodFilter}
+                onPeriodFilterChange={setPeriodFilter}
               />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -182,13 +205,9 @@ export default function DispatchPage() {
                         )}
                         <TripStatusBadge status={t.status} />
                       </div>
-                      <Link
-                        href={`/dashboard/bookings/${t.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-muted-foreground font-mono text-xs hover:underline"
-                        title={t.id}>
-                        {shortBookingId(t.id)}
-                      </Link>
+                      <p className="text-muted-foreground text-xs">
+                        {formatDateTime(tripPickupReferenceDate(t))}
+                      </p>
                       <Separator />
                       <TripRouteStops
                         pickup={t.pickupAddressLine || "Pickup location not set"}
@@ -243,60 +262,66 @@ export default function DispatchPage() {
   );
 }
 
-function ActiveTripsStatusFilter({
-  options,
-  selected,
-  onSelectedChange
+function ActiveTripsFilter({
+  statusOptions,
+  statusSelected,
+  onStatusSelectedChange,
+  periodFilter,
+  onPeriodFilterChange
 }: {
-  options: ListFilterOption[];
-  selected: string[];
-  onSelectedChange: (selected: string[]) => void;
+  statusOptions: ListFilterOption[];
+  statusSelected: string[];
+  onStatusSelectedChange: (selected: string[]) => void;
+  periodFilter: DateRangePreset | "all";
+  onPeriodFilterChange: (period: DateRangePreset | "all") => void;
 }) {
-  function toggle(value: string) {
-    if (selected.includes(value)) {
-      onSelectedChange(selected.filter((v) => v !== value));
+  function toggleStatus(value: string) {
+    if (statusSelected.includes(value)) {
+      onStatusSelectedChange(statusSelected.filter((v) => v !== value));
     } else {
-      onSelectedChange([...selected, value]);
+      onStatusSelectedChange([...statusSelected, value]);
     }
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="icon" aria-label="Filter by status">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size="icon" aria-label="Filter active trips">
           <FilterIcon />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-52 p-0" align="end">
-        <Command>
-          <CommandInput placeholder="Status" className="h-9" />
-          <CommandList>
-            <CommandEmpty>No status found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={() => toggle(option.value)}>
-                  <div className="flex items-center space-x-3 py-1">
-                    <Checkbox
-                      id={`active-trips-status-${option.value}`}
-                      checked={selected.includes(option.value)}
-                      onCheckedChange={() => toggle(option.value)}
-                    />
-                    <label
-                      htmlFor={`active-trips-status-${option.value}`}
-                      className="leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      {option.label}
-                    </label>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel>Period</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={periodFilter}
+          onValueChange={(value) => onPeriodFilterChange(value as DateRangePreset | "all")}>
+          <DropdownMenuRadioItem value="all">All time</DropdownMenuRadioItem>
+          {dateFilterPresets.map((preset) => (
+            <DropdownMenuRadioItem key={preset.value} value={preset.value}>
+              {preset.name}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            Status
+            {statusSelected.length > 0 ? ` (${statusSelected.length})` : ""}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {statusOptions.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={statusSelected.includes(option.value)}
+                onCheckedChange={() => toggleStatus(option.value)}
+                onSelect={(e) => e.preventDefault()}>
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
