@@ -125,7 +125,7 @@ export default function DispatchPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
       <div className="shrink-0">
         <PageHeader
           title="Dispatch"
