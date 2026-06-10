@@ -36,8 +36,19 @@ export const LEGACY_VEHICLE_TYPE_DISPLAY_NAMES: Record<VehicleType, string> = {
   sprinter_van: "Sprinter Van"
 };
 
+/** URL-safe identifier derived from a display name (e.g. "Stretch Limo" → "stretch-limo"). */
+export function slugFromDisplayName(displayName: string): string {
+  return displayName
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export function buildInitialVehicleClass(
-  overrides: Partial<VehicleClass> & Pick<VehicleClass, "id" | "slug" | "displayName">
+  overrides: Partial<VehicleClass> & Pick<VehicleClass, "id" | "displayName">
 ): VehicleClass {
   const now = new Date();
   return {
@@ -67,6 +78,7 @@ export function buildInitialVehicleClass(
       deadheadRatePerMinute: 1.5,
       displayHourlyFrom: 98
     },
+    slug: slugFromDisplayName(overrides.displayName),
     createdAt: now,
     updatedAt: now,
     ...overrides
