@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
+import { endOfDay, endOfMonth, endOfWeek, endOfYear, startOfDay } from "date-fns";
 import { FilterIcon, RadioIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -17,11 +18,6 @@ import { companyDefaultMapView, tripPickupReferenceDate, tripStatusTitle, upcomi
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import {
-  dateFilterPresets,
-  rangeForPreset,
-  type DateRangePreset
-} from "@/components/custom-date-range-picker";
 import { PageHeader } from "@/components/page-header";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
@@ -30,10 +26,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -42,6 +36,37 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { ListFilterOption } from "@/components/list-filter-popover";
+
+const activeTripsPeriodPresets = [
+  { name: "Today", value: "today" },
+  { name: "This Week", value: "thisWeek" },
+  { name: "This Month", value: "thisMonth" },
+  { name: "This Year", value: "thisYear" }
+] as const;
+
+type ActiveTripsPeriodFilter = (typeof activeTripsPeriodPresets)[number]["value"] | "all";
+
+function activeTripsRangeForPreset(type: ActiveTripsPeriodFilter, reference = new Date()) {
+  const from = startOfDay(reference);
+
+  switch (type) {
+    case "today":
+      return { from, to: endOfDay(reference) };
+    case "thisWeek":
+      return { from, to: endOfWeek(reference) };
+    case "thisMonth":
+      return { from, to: endOfMonth(reference) };
+    case "thisYear":
+      return { from, to: endOfYear(reference) };
+    default:
+      return { from: undefined, to: undefined };
+  }
+}
+
+function activeTripsPeriodLabel(period: ActiveTripsPeriodFilter) {
+  if (period === "all") return null;
+  return activeTripsPeriodPresets.find((preset) => preset.value === period)?.name ?? null;
+}
 
 export default function DispatchPage() {
   const { resolvedTheme } = useTheme();
@@ -52,7 +77,7 @@ export default function DispatchPage() {
   const { locations: fleetLocations } = useFleetLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [periodFilter, setPeriodFilter] = useState<DateRangePreset | "all">("all");
+  const [periodFilter, setPeriodFilter] = useState<ActiveTripsPeriodFilter>("all");
 
   let token = "";
   let tokenError = false;
@@ -100,7 +125,7 @@ export default function DispatchPage() {
     }
 
     if (periodFilter !== "all") {
-      const { from, to } = rangeForPreset(periodFilter);
+      const { from, to } = activeTripsRangeForPreset(periodFilter);
       if (from && to) {
         result = result.filter((t) => {
           const pickup = tripPickupReferenceDate(t);
@@ -272,8 +297,8 @@ function ActiveTripsFilter({
   statusOptions: ListFilterOption[];
   statusSelected: string[];
   onStatusSelectedChange: (selected: string[]) => void;
-  periodFilter: DateRangePreset | "all";
-  onPeriodFilterChange: (period: DateRangePreset | "all") => void;
+  periodFilter: ActiveTripsPeriodFilter;
+  onPeriodFilterChange: (period: ActiveTripsPeriodFilter) => void;
 }) {
   function toggleStatus(value: string) {
     if (statusSelected.includes(value)) {
@@ -283,6 +308,8 @@ function ActiveTripsFilter({
     }
   }
 
+  const periodLabel = activeTripsPeriodLabel(periodFilter);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -291,18 +318,24 @@ function ActiveTripsFilter({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>Period</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={periodFilter}
-          onValueChange={(value) => onPeriodFilterChange(value as DateRangePreset | "all")}>
-          <DropdownMenuRadioItem value="all">All time</DropdownMenuRadioItem>
-          {dateFilterPresets.map((preset) => (
-            <DropdownMenuRadioItem key={preset.value} value={preset.value}>
-              {preset.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            Period
+            {periodLabel ? ` (${periodLabel})` : ""}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup
+              value={periodFilter}
+              onValueChange={(value) => onPeriodFilterChange(value as ActiveTripsPeriodFilter)}>
+              <DropdownMenuRadioItem value="all">All time</DropdownMenuRadioItem>
+              {activeTripsPeriodPresets.map((preset) => (
+                <DropdownMenuRadioItem key={preset.value} value={preset.value}>
+                  {preset.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             Status
