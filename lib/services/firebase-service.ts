@@ -583,32 +583,36 @@ export function listenVehicleClasses(onUpdate: (classes: VehicleClass[]) => void
   );
 }
 
+async function parseApiError(res: Response, fallback: string): Promise<never> {
+  let message = fallback;
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (body.error) message = body.error;
+  } catch {
+    // ignore
+  }
+  throw new Error(message);
+}
+
 export async function saveVehicleClass(vehicleClass: VehicleClass): Promise<void> {
   validateVehicleClass(vehicleClass);
-  const existing = await getDocs(
-    query(collection(db(), Collections.vehicleClasses), where("slug", "==", vehicleClass.slug))
-  );
-  const slugConflict = existing.docs.find((docSnap) => docSnap.id !== vehicleClass.id);
-  if (slugConflict) {
-    throw new Error(`Slug "${vehicleClass.slug}" is already used by another vehicle class.`);
+  const res = await fetch("/api/vehicle-classes", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(vehicleClass)
+  });
+  if (!res.ok) {
+    await parseApiError(res, "Could not save vehicle class.");
   }
-  await setDoc(
-    doc(db(), Collections.vehicleClasses, vehicleClass.id),
-    stripUndefined({
-      ...vehicleClass,
-      updatedAt: serverTimestamp(),
-      createdAt: vehicleClass.createdAt ?? serverTimestamp()
-    }),
-    { merge: true }
-  );
 }
 
 export async function deleteVehicleClass(id: string): Promise<void> {
-  const vehicles = await fetchVehicles();
-  if (vehicles.some((vehicle) => vehicle.vehicleClassId === id)) {
-    throw new Error("Cannot delete a vehicle class that is assigned to fleet vehicles.");
+  const res = await fetch(`/api/vehicle-classes/${encodeURIComponent(id)}`, {
+    method: "DELETE"
+  });
+  if (!res.ok) {
+    await parseApiError(res, "Could not delete vehicle class.");
   }
-  await deleteDoc(doc(db(), Collections.vehicleClasses, id));
 }
 
 export async function fetchPricingRaw(): Promise<DocumentData | null> {
