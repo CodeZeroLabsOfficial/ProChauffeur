@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   CarFrontIcon,
@@ -20,13 +20,15 @@ import { toast } from "sonner";
 
 import { useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
-import { updateTripStatus } from "@/lib/services/firebase-service";
+import { listenTrip, updateTripStatus } from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
   tripJourneyTimeLabel,
   tripStatusTitle,
+  isRoundTripLeg,
+  roundTripLegLabel,
   type Trip,
   type TripStatus,
   type User,
@@ -277,6 +279,15 @@ function SectionCard({
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
   const { users } = useUsers();
+  const [linkedTrip, setLinkedTrip] = useState<Trip | null>(null);
+
+  useEffect(() => {
+    if (!trip?.linkedTripID) {
+      setLinkedTrip(null);
+      return;
+    }
+    return listenTrip(trip.linkedTripID, setLinkedTrip);
+  }, [trip?.linkedTripID]);
 
   const currentStepIndex = trip ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number]) : -1;
   const progressValue =
@@ -313,6 +324,11 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
   const customerCompany = trip?.customerCompany ?? null;
+
+  const roundTripLeg = useMemo(
+    () => (trip ? roundTripLegLabel(trip, linkedTrip) : null),
+    [trip, linkedTrip]
+  );
 
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
@@ -484,6 +500,32 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               label="Trip type:"
               value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
             />
+            {isRoundTripLeg(trip) ? (
+              <>
+                <DetailRow
+                  label="Booking:"
+                  value={
+                    roundTripLeg === "outbound"
+                      ? "Round trip — outbound leg"
+                      : roundTripLeg === "return"
+                        ? "Round trip — return leg"
+                        : "Round trip"
+                  }
+                />
+                {trip.linkedTripID ? (
+                  <DetailRow
+                    label="Linked booking:"
+                    value={
+                      <Link
+                        href={`/dashboard/bookings/${trip.linkedTripID}`}
+                        className="text-primary underline-offset-4 hover:underline">
+                        {shortBookingId(trip.linkedTripID)}
+                      </Link>
+                    }
+                  />
+                ) : null}
+              </>
+            ) : null}
             <DetailRow
               label="Service class:"
               value={

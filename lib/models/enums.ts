@@ -43,10 +43,25 @@ export const TRIP_TYPES = ["transfer", "hourly", "round_trip"] as const;
 export type TripType = (typeof TRIP_TYPES)[number];
 
 export const tripTypeTitle: Record<TripType, string> = {
-  transfer: "Transfer",
+  transfer: "Point-to-Point",
   hourly: "Hourly",
   round_trip: "Round trip"
 };
+
+/** Admin booking form modes (round trip creates two transfer legs). */
+export const BOOKING_TRIP_MODES = ["point_to_point", "round_trip", "hourly"] as const;
+export type BookingTripMode = (typeof BOOKING_TRIP_MODES)[number];
+
+export const bookingTripModeTitle: Record<BookingTripMode, string> = {
+  point_to_point: "Point-to-Point",
+  round_trip: "Round trip",
+  hourly: "Hourly"
+};
+
+/** Trip type used for quoting, eligibility, and persisted trip documents. */
+export function quoteTripTypeForBookingMode(mode: BookingTripMode): TripType {
+  return mode === "hourly" ? "hourly" : "transfer";
+}
 
 // VehicleType.swift — raw values align with Firestore pricing tier keys.
 export const VEHICLE_TYPES = ["sedan", "suv", "stretch_limo", "sprinter_van"] as const;

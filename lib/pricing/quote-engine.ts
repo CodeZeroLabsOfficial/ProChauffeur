@@ -423,7 +423,7 @@ function applyTax(
 
 export function computeQuote(request: QuoteRequest, context: QuoteEngineContext): QuoteResult {
   if (request.tripType === "round_trip") {
-    throw new QuoteError("Round trip quotes are not supported yet.");
+    throw new QuoteError("Round trip must be quoted as separate point-to-point legs.");
   }
   if (request.tripType === "hourly" && (request.bookedHours == null || request.bookedHours <= 0)) {
     throw new QuoteError("Booked hours are required for hourly trips.");

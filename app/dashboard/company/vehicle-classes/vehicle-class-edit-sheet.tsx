@@ -222,7 +222,7 @@ export function VehicleClassEditSheet({
 
             <TabsContent value="pricing" className="mt-0 space-y-6">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium">Transfer rates</h4>
+                <h4 className="text-sm font-medium">Point-to-point rates</h4>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {transferFields.map((field) => (
                     <div key={field.key} className="space-y-2">

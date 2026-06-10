@@ -80,6 +80,21 @@ export function formatJourneyDuration(from: Date, to: Date): string {
   return dayHours ? `${days} d ${dayHours} hr` : `${days} d`;
 }
 
+export function isRoundTripLeg(trip: Trip): boolean {
+  return Boolean(trip.linkedTripID);
+}
+
+/** Outbound leg has the earlier scheduled pickup when linked to a return leg. */
+export function roundTripLegLabel(
+  trip: Trip,
+  linkedTrip: Trip | null
+): "outbound" | "return" | null {
+  if (!trip.linkedTripID || !linkedTrip) return null;
+  const thisPickup = tripPickupReferenceDate(trip).getTime();
+  const linkedPickup = tripPickupReferenceDate(linkedTrip).getTime();
+  return thisPickup <= linkedPickup ? "outbound" : "return";
+}
+
 export function tripJourneyTimeLabel(trip: Trip): string {
   if (trip.journeyStartedAt && trip.journeyCompletedAt) {
     return formatJourneyDuration(trip.journeyStartedAt, trip.journeyCompletedAt);

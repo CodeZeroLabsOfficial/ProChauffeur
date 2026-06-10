@@ -12,6 +12,7 @@ import {
   vehicleClassesById
 } from "@/lib/bookings/booking-eligibility";
 import {
+  createRoundTripBookings,
   createTrip,
   updateTrip
 } from "@/lib/services/firebase-service";
@@ -28,7 +29,11 @@ import {
   type PricingConfig,
   type Trip,
   type TripType,
-  type User
+  type User,
+  BOOKING_TRIP_MODES,
+  bookingTripModeTitle,
+  quoteTripTypeForBookingMode,
+  type BookingTripMode
 } from "@/lib/models";
 import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
@@ -56,11 +61,12 @@ import {
   SheetTrigger
 } from "@/components/ui/sheet";
 
-const DEFAULT_TRIP_TYPE: TripType = "transfer";
+const DEFAULT_BOOKING_MODE: BookingTripMode = "point_to_point";
 
 type RequiredField =
   | "customer"
   | "scheduledPickupAt"
+  | "scheduledReturnAt"
   | "pickup"
   | "dropoff"
   | "vehicleClassId";
@@ -83,15 +89,24 @@ function quoteInputFingerprint(request: QuoteRequest): string {
   });
 }
 
+function roundTripQuoteFingerprint(outbound: QuoteRequest, returnLeg: QuoteRequest): string {
+  return JSON.stringify({
+    outbound: quoteInputFingerprint(outbound),
+    returnLeg: quoteInputFingerprint(returnLeg)
+  });
+}
+
 function buildQuoteRequestInput(
+  tripType: TripType,
   vehicleClassId: string,
   pickup: AddressSuggestion,
   dropoff: AddressSuggestion,
   scheduledPickupAt: Date,
-  selectedAddonIds: string[]
+  selectedAddonIds: string[],
+  bookedHours: number | null
 ): QuoteRequest {
   return {
-    tripType: DEFAULT_TRIP_TYPE,
+    tripType,
     vehicleClassId,
     pickup: pickup.coordinate,
     dropoff: dropoff.coordinate,
@@ -100,8 +115,42 @@ function buildQuoteRequestInput(
     pickupPostcode: postcodeFromAddress(pickup),
     dropoffPostcode: postcodeFromAddress(dropoff),
     scheduledPickupAt,
-    bookedHours: null,
+    bookedHours,
     addonIds: selectedAddonIds
+  };
+}
+
+function quoteFieldsFromResult(
+  quote: QuoteResult,
+  tripType: TripType,
+  vehicleClassId: string,
+  vehicleClassDisplayName: string,
+  bookedHours: number | null
+) {
+  return {
+    tripType,
+    vehicleClassId,
+    vehicleClassDisplayName,
+    bookedHours,
+    quotedSubtotal: quote.subtotal,
+    quotedTaxAmount: quote.taxAmount,
+    quotedTotal: quote.total,
+    quotedCurrencyCode: quote.currencyCode,
+    quotedTaxRate: quote.quotedTaxRate,
+    quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
+    quoteBreakdown: quote.breakdown,
+    quoteComputedAt: new Date(),
+    quoteSnapshot: quote.snapshot
+  };
+}
+
+function buildTripCustomerFields(customer: User) {
+  return {
+    customerID: customer.id,
+    customerDisplayName: customerDisplayName(customer) || null,
+    customerPhoneNumber: customer.profile.phoneNumber ?? null,
+    customerEmail: customer.email || null,
+    ...customerAddressSnapshotFromProfile(customer.profile)
   };
 }
 
@@ -132,11 +181,15 @@ function collectFieldErrors(
   pickup: AddressSuggestion | null,
   dropoff: AddressSuggestion | null,
   scheduledPickupAt: Date | null,
-  vehicleClassId: string | null
+  scheduledReturnAt: Date | null,
+  vehicleClassId: string | null,
+  bookingMode: BookingTripMode
 ): FieldErrors {
   return {
     customer: !isValidCustomer(customer),
     scheduledPickupAt: !isValidScheduledPickup(scheduledPickupAt),
+    scheduledReturnAt:
+      bookingMode === "round_trip" ? !isValidScheduledPickup(scheduledReturnAt) : false,
     pickup: !isValidAddressSelection(pickup),
     dropoff: !isValidAddressSelection(dropoff),
     vehicleClassId: !vehicleClassId
@@ -170,6 +223,9 @@ function resetFormFields(
     setSmallLuggageCount: (count: number) => void;
     setLargeLuggageCount: (count: number) => void;
     setScheduledPickupAt: (date: Date | null) => void;
+    setScheduledReturnAt: (date: Date | null) => void;
+    setBookingMode: (mode: BookingTripMode) => void;
+    setBookedHours: (hours: number) => void;
     setNotes: (notes: string) => void;
     setVehicleClassId: (id: string | null) => void;
     setQuotedTotal: (total: number | null) => void;
@@ -184,6 +240,9 @@ function resetFormFields(
   setters.setSmallLuggageCount(0);
   setters.setLargeLuggageCount(0);
   setters.setScheduledPickupAt(null);
+  setters.setScheduledReturnAt(null);
+  setters.setBookingMode(DEFAULT_BOOKING_MODE);
+  setters.setBookedHours(2);
   setters.setNotes("");
   setters.setVehicleClassId(null);
   setters.setQuotedTotal(null);
@@ -218,16 +277,31 @@ export function NewBookingSheet({
   const [smallLuggageCount, setSmallLuggageCount] = useState(0);
   const [largeLuggageCount, setLargeLuggageCount] = useState(0);
   const [scheduledPickupAt, setScheduledPickupAt] = useState<Date | null>(null);
+  const [scheduledReturnAt, setScheduledReturnAt] = useState<Date | null>(null);
+  const [bookingMode, setBookingMode] = useState<BookingTripMode>(DEFAULT_BOOKING_MODE);
+  const [bookedHours, setBookedHours] = useState(2);
   const [notes, setNotes] = useState("");
   const [vehicleClassId, setVehicleClassId] = useState<string | null>(null);
   const [quotedTotal, setQuotedTotal] = useState<number | null>(null);
   const [quoting, setQuoting] = useState(false);
-  const lastQuoteRef = useRef<{ fingerprint: string; quote: QuoteResult } | null>(null);
+  const lastQuoteRef = useRef<
+    { fingerprint: string; quote: QuoteResult } | { fingerprint: string; outbound: QuoteResult; returnLeg: QuoteResult }
+  | null>(null);
   const wasOpenRef = useRef(false);
 
+  const isEdit = Boolean(editTrip);
+  const quoteTripType: TripType = isEdit
+    ? editTrip?.tripType === "hourly"
+      ? "hourly"
+      : "transfer"
+    : quoteTripTypeForBookingMode(bookingMode);
+
   const pricingAddons = useMemo(
-    () => pricingConfig?.addons.filter((addon) => addon.isEnabled) ?? [],
-    [pricingConfig]
+    () =>
+      pricingConfig?.addons.filter(
+        (addon) => addon.isEnabled && addon.tripTypes.includes(quoteTripType)
+      ) ?? [],
+    [pricingConfig, quoteTripType]
   );
   const currency = operatorLocale?.currency ?? "AUD";
 
@@ -248,12 +322,12 @@ export function NewBookingSheet({
 
   const bookingRequirements = useMemo(
     () => ({
-      tripType: DEFAULT_TRIP_TYPE,
+      tripType: quoteTripType,
       passengers: passengerCount,
       smallLuggage: smallLuggageCount,
       largeLuggage: largeLuggageCount
     }),
-    [passengerCount, smallLuggageCount, largeLuggageCount]
+    [quoteTripType, passengerCount, smallLuggageCount, largeLuggageCount]
   );
 
   const eligibleVehiclesInClass = useMemo(() => {
@@ -280,6 +354,9 @@ export function NewBookingSheet({
         setSmallLuggageCount,
         setLargeLuggageCount,
         setScheduledPickupAt,
+        setScheduledReturnAt,
+        setBookingMode,
+        setBookedHours,
         setNotes,
         setVehicleClassId,
         setQuotedTotal
@@ -325,6 +402,7 @@ export function NewBookingSheet({
       setScheduledPickupAt(
         editTrip ? (trip.scheduledPickupAt ?? tripPickupReferenceDate(trip)) : null
       );
+      setBookedHours(trip.bookedHours ?? 2);
       setNotes(trip.notes ?? "");
       setVehicleClassId(trip.vehicleClassId ?? trip.vehicleSnapshot?.vehicleClassId ?? null);
       setQuotedTotal(trip.quotedTotal ?? null);
@@ -342,6 +420,9 @@ export function NewBookingSheet({
         setSmallLuggageCount,
         setLargeLuggageCount,
         setScheduledPickupAt,
+        setScheduledReturnAt,
+        setBookingMode,
+        setBookedHours,
         setNotes,
         setVehicleClassId,
         setQuotedTotal
@@ -350,6 +431,12 @@ export function NewBookingSheet({
   }, [open, editTrip, sourceTrip, users]);
 
   useEffect(() => {
+    const hourlyBookedHours = isEdit ? (editTrip?.bookedHours ?? bookedHours) : bookedHours;
+    const isRoundTrip = !isEdit && bookingMode === "round_trip";
+    const needsReturnTime = isRoundTrip && !isValidScheduledPickup(scheduledReturnAt);
+    const needsHourlyHours =
+      quoteTripType === "hourly" && (!hourlyBookedHours || hourlyBookedHours <= 0);
+
     if (
       !open ||
       !pricingConfig ||
@@ -358,7 +445,9 @@ export function NewBookingSheet({
       !isValidAddressSelection(dropoff) ||
       !isValidScheduledPickup(scheduledPickupAt) ||
       !vehicleClassId ||
-      !selectedVehicleClass
+      !selectedVehicleClass ||
+      needsReturnTime ||
+      needsHourlyHours
     ) {
       setQuotedTotal(null);
       lastQuoteRef.current = null;
@@ -368,41 +457,102 @@ export function NewBookingSheet({
     let cancelled = false;
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const runQuote = () => {
+    const runQuote = async () => {
       setQuoting(true);
-      const request = buildQuoteRequestInput(
-        vehicleClassId,
-        pickup,
-        dropoff,
-        scheduledPickupAt,
-        selectedAddonIds
-      );
-      const fingerprint = quoteInputFingerprint(request);
-
-      buildQuoteForRequest(
-        request,
-        pricingConfig,
-        operatorLocale,
-        locations,
-        selectedVehicleClass
-      )
-        .then((quote) => {
-          if (cancelled) return;
-          lastQuoteRef.current = { fingerprint, quote };
-          setQuotedTotal(quote.displayTotal);
-        })
-        .catch(() => {
-          if (!cancelled) {
-            lastQuoteRef.current = null;
-            setQuotedTotal(null);
+      try {
+        if (isRoundTrip) {
+          const outboundRequest = buildQuoteRequestInput(
+            "transfer",
+            vehicleClassId,
+            pickup,
+            dropoff,
+            scheduledPickupAt,
+            selectedAddonIds,
+            null
+          );
+          const returnRequest = buildQuoteRequestInput(
+            "transfer",
+            vehicleClassId,
+            dropoff,
+            pickup,
+            scheduledReturnAt!,
+            selectedAddonIds,
+            null
+          );
+          const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
+          const cached = lastQuoteRef.current;
+          if (
+            cached &&
+            "outbound" in cached &&
+            cached.fingerprint === fingerprint
+          ) {
+            if (!cancelled) {
+              setQuotedTotal(cached.outbound.displayTotal + cached.returnLeg.displayTotal);
+            }
+            return;
           }
-        })
-        .finally(() => {
-          if (!cancelled) setQuoting(false);
-        });
+
+          const [outboundQuote, returnQuote] = await Promise.all([
+            buildQuoteForRequest(
+              outboundRequest,
+              pricingConfig,
+              operatorLocale,
+              locations,
+              selectedVehicleClass
+            ),
+            buildQuoteForRequest(
+              returnRequest,
+              pricingConfig,
+              operatorLocale,
+              locations,
+              selectedVehicleClass
+            )
+          ]);
+          if (cancelled) return;
+          lastQuoteRef.current = { fingerprint, outbound: outboundQuote, returnLeg: returnQuote };
+          setQuotedTotal(outboundQuote.displayTotal + returnQuote.displayTotal);
+          return;
+        }
+
+        const request = buildQuoteRequestInput(
+          quoteTripType,
+          vehicleClassId,
+          pickup,
+          dropoff,
+          scheduledPickupAt,
+          selectedAddonIds,
+          quoteTripType === "hourly" ? hourlyBookedHours : null
+        );
+        const fingerprint = quoteInputFingerprint(request);
+        const cached = lastQuoteRef.current;
+        if (cached && "quote" in cached && cached.fingerprint === fingerprint) {
+          if (!cancelled) setQuotedTotal(cached.quote.displayTotal);
+          return;
+        }
+
+        const quote = await buildQuoteForRequest(
+          request,
+          pricingConfig,
+          operatorLocale,
+          locations,
+          selectedVehicleClass
+        );
+        if (cancelled) return;
+        lastQuoteRef.current = { fingerprint, quote };
+        setQuotedTotal(quote.displayTotal);
+      } catch {
+        if (!cancelled) {
+          lastQuoteRef.current = null;
+          setQuotedTotal(null);
+        }
+      } finally {
+        if (!cancelled) setQuoting(false);
+      }
     };
 
-    debounceTimer = setTimeout(runQuote, QUOTE_DEBOUNCE_MS);
+    debounceTimer = setTimeout(() => {
+      void runQuote();
+    }, QUOTE_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
@@ -410,12 +560,18 @@ export function NewBookingSheet({
     };
   }, [
     open,
+    isEdit,
+    editTrip,
+    bookingMode,
+    quoteTripType,
     pricingConfig,
     operatorLocale,
     locations,
     pickup,
     dropoff,
     scheduledPickupAt,
+    scheduledReturnAt,
+    bookedHours,
     vehicleClassId,
     selectedVehicleClass,
     selectedAddonIds
@@ -423,19 +579,21 @@ export function NewBookingSheet({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const isEdit = Boolean(editTrip);
+    const isEditMode = Boolean(editTrip);
 
     const errors = collectFieldErrors(
       customer,
       pickup,
       dropoff,
       scheduledPickupAt,
-      vehicleClassId
+      scheduledReturnAt,
+      vehicleClassId,
+      isEditMode ? "point_to_point" : bookingMode
     );
     if (hasFieldErrors(errors)) {
       setFieldErrors(errors);
       toast.error(
-        isEdit
+        isEditMode
           ? "Complete the highlighted fields before saving."
           : "Complete the highlighted fields before creating the booking."
       );
@@ -455,21 +613,158 @@ export function NewBookingSheet({
       return;
     }
 
+    if (!isEditMode && bookingMode === "round_trip") {
+      if (!isValidScheduledPickup(scheduledReturnAt)) {
+        setFieldErrors((prev) => ({ ...prev, scheduledReturnAt: true }));
+        toast.error("Enter a return pickup time.");
+        return;
+      }
+      if (scheduledReturnAt.getTime() <= scheduledPickupAt.getTime()) {
+        setFieldErrors((prev) => ({ ...prev, scheduledReturnAt: true }));
+        toast.error("Return pickup time must be after the outbound pickup time.");
+        return;
+      }
+    }
+
+    if (!isEditMode && bookingMode === "hourly" && bookedHours <= 0) {
+      toast.error("Booked hours must be greater than zero.");
+      return;
+    }
+
+    const editBookedHours = editTrip?.bookedHours ?? bookedHours;
+    const submitTripType = isEditMode ? quoteTripType : quoteTripTypeForBookingMode(bookingMode);
+    const submitBookedHours = submitTripType === "hourly" ? (isEditMode ? editBookedHours : bookedHours) : null;
+
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
+    const sharedBookingFields = {
+      notes: notes.trim() || null,
+      bookingPassengerCount: passengerCount,
+      bookingSmallLuggageCount: smallLuggageCount,
+      bookingLargeLuggageCount: largeLuggageCount,
+      bookingAddons: bookingAddons.length ? bookingAddons : null
+    };
 
     setSaving(true);
     try {
+      if (!isEditMode && bookingMode === "round_trip") {
+        const outboundRequest = buildQuoteRequestInput(
+          "transfer",
+          vehicleClassId,
+          pickup,
+          dropoff,
+          scheduledPickupAt,
+          selectedAddonIds,
+          null
+        );
+        const returnRequest = buildQuoteRequestInput(
+          "transfer",
+          vehicleClassId,
+          dropoff,
+          pickup,
+          scheduledReturnAt!,
+          selectedAddonIds,
+          null
+        );
+        const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
+        const cached = lastQuoteRef.current;
+        let outboundQuote: QuoteResult;
+        let returnQuote: QuoteResult;
+        if (cached && "outbound" in cached && cached.fingerprint === fingerprint) {
+          outboundQuote = cached.outbound;
+          returnQuote = cached.returnLeg;
+        } else {
+          [outboundQuote, returnQuote] = await Promise.all([
+            buildQuoteForRequest(
+              outboundRequest,
+              pricingConfig,
+              operatorLocale,
+              locations,
+              selectedVehicleClass
+            ),
+            buildQuoteForRequest(
+              returnRequest,
+              pricingConfig,
+              operatorLocale,
+              locations,
+              selectedVehicleClass
+            )
+          ]);
+        }
+
+        const outboundId = crypto.randomUUID();
+        const returnId = crypto.randomUUID();
+        const now = new Date();
+        const customerFields = buildTripCustomerFields(customer);
+
+        const outbound: Trip = {
+          id: outboundId,
+          status: "requested",
+          ...customerFields,
+          driverID: null,
+          vehicleDocumentId: null,
+          vehicleSnapshot: null,
+          pickup: pickup.coordinate,
+          dropoff: dropoff.coordinate,
+          pickupAddressLine: pickup.addressLine,
+          dropoffAddressLine: dropoff.addressLine,
+          scheduledPickupAt,
+          linkedTripID: returnId,
+          ...sharedBookingFields,
+          ...quoteFieldsFromResult(
+            outboundQuote,
+            "transfer",
+            vehicleClassId,
+            selectedVehicleClass.displayName,
+            null
+          ),
+          createdAt: now,
+          updatedAt: now
+        };
+
+        const returnLeg: Trip = {
+          id: returnId,
+          status: "requested",
+          ...customerFields,
+          driverID: null,
+          vehicleDocumentId: null,
+          vehicleSnapshot: null,
+          pickup: dropoff.coordinate,
+          dropoff: pickup.coordinate,
+          pickupAddressLine: dropoff.addressLine,
+          dropoffAddressLine: pickup.addressLine,
+          scheduledPickupAt: scheduledReturnAt!,
+          linkedTripID: outboundId,
+          ...sharedBookingFields,
+          ...quoteFieldsFromResult(
+            returnQuote,
+            "transfer",
+            vehicleClassId,
+            selectedVehicleClass.displayName,
+            null
+          ),
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await createRoundTripBookings(outbound, returnLeg);
+        toast.success("Round trip created — 2 bookings.");
+        onOpenChange(false);
+        return;
+      }
+
       const request = buildQuoteRequestInput(
+        submitTripType,
         vehicleClassId,
         pickup,
         dropoff,
         scheduledPickupAt,
-        selectedAddonIds
+        selectedAddonIds,
+        submitBookedHours
       );
       const fingerprint = quoteInputFingerprint(request);
       const cached = lastQuoteRef.current;
       const quote =
-        cached?.fingerprint === fingerprint
+        cached && "quote" in cached && cached.fingerprint === fingerprint
           ? cached.quote
           : await buildQuoteForRequest(
               request,
@@ -479,29 +774,17 @@ export function NewBookingSheet({
               selectedVehicleClass
             );
 
-      const quoteFields = {
-        tripType: DEFAULT_TRIP_TYPE,
+      const quoteFields = quoteFieldsFromResult(
+        quote,
+        submitTripType,
         vehicleClassId,
-        vehicleClassDisplayName: selectedVehicleClass.displayName,
-        bookedHours: null,
-        quotedSubtotal: quote.subtotal,
-        quotedTaxAmount: quote.taxAmount,
-        quotedTotal: quote.total,
-        quotedCurrencyCode: quote.currencyCode,
-        quotedTaxRate: quote.quotedTaxRate,
-        quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
-        quoteBreakdown: quote.breakdown,
-        quoteComputedAt: new Date(),
-        quoteSnapshot: quote.snapshot
-      };
+        selectedVehicleClass.displayName,
+        submitBookedHours
+      );
 
-      if (isEdit) {
+      if (isEditMode) {
         await updateTrip(editTrip!.id, {
-          customerID: customer.id,
-          customerDisplayName: customerDisplayName(customer) || null,
-          customerPhoneNumber: customer.profile.phoneNumber ?? null,
-          customerEmail: customer.email || null,
-          ...customerAddressSnapshotFromProfile(customer.profile),
+          ...buildTripCustomerFields(customer),
           driverID: editTrip!.driverID ?? null,
           vehicleDocumentId: editTrip!.vehicleDocumentId ?? null,
           vehicleSnapshot: editTrip!.vehicleSnapshot ?? null,
@@ -509,12 +792,8 @@ export function NewBookingSheet({
           dropoff: dropoff.coordinate,
           pickupAddressLine: pickup.addressLine,
           dropoffAddressLine: dropoff.addressLine,
-          notes: notes.trim() || null,
-          bookingPassengerCount: passengerCount,
-          bookingSmallLuggageCount: smallLuggageCount,
-          bookingLargeLuggageCount: largeLuggageCount,
-          bookingAddons: bookingAddons.length ? bookingAddons : null,
           scheduledPickupAt,
+          ...sharedBookingFields,
           ...quoteFields
         });
         toast.success("Booking updated.");
@@ -522,11 +801,7 @@ export function NewBookingSheet({
         const trip: Trip = {
           id: crypto.randomUUID(),
           status: "requested",
-          customerID: customer.id,
-          customerDisplayName: customerDisplayName(customer) || null,
-          customerPhoneNumber: customer.profile.phoneNumber ?? null,
-          customerEmail: customer.email || null,
-          ...customerAddressSnapshotFromProfile(customer.profile),
+          ...buildTripCustomerFields(customer),
           driverID: null,
           vehicleDocumentId: null,
           vehicleSnapshot: null,
@@ -534,12 +809,8 @@ export function NewBookingSheet({
           dropoff: dropoff.coordinate,
           pickupAddressLine: pickup.addressLine,
           dropoffAddressLine: dropoff.addressLine,
-          notes: notes.trim() || null,
-          bookingPassengerCount: passengerCount,
-          bookingSmallLuggageCount: smallLuggageCount,
-          bookingLargeLuggageCount: largeLuggageCount,
-          bookingAddons: bookingAddons.length ? bookingAddons : null,
           scheduledPickupAt,
+          ...sharedBookingFields,
           ...quoteFields,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -552,7 +823,7 @@ export function NewBookingSheet({
       const message =
         err instanceof Error
           ? err.message
-          : isEdit
+          : isEditMode
             ? "Could not update the booking."
             : "Could not create the booking.";
       toast.error(message);
@@ -561,7 +832,6 @@ export function NewBookingSheet({
     }
   }
 
-  const isEdit = Boolean(editTrip);
   const isRebook = Boolean(sourceTrip && !editTrip);
 
   return (
@@ -575,6 +845,33 @@ export function NewBookingSheet({
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+          {!isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="bookingMode">Trip type</Label>
+              <Select
+                value={bookingMode}
+                onValueChange={(value) => {
+                  setBookingMode(value as BookingTripMode);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    scheduledReturnAt: false
+                  }));
+                }}
+                disabled={saving}>
+                <SelectTrigger id="bookingMode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BOOKING_TRIP_MODES.map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {bookingTripModeTitle[mode]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="customer">Customer</Label>
@@ -590,7 +887,9 @@ export function NewBookingSheet({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="scheduledPickupAt">Pickup time</Label>
+              <Label htmlFor="scheduledPickupAt">
+                {bookingMode === "round_trip" && !isEdit ? "Outbound pickup time" : "Pickup time"}
+              </Label>
               <DateTimePicker
                 id="scheduledPickupAt"
                 value={scheduledPickupAt}
@@ -604,6 +903,47 @@ export function NewBookingSheet({
               />
             </div>
           </div>
+
+          {!isEdit && bookingMode === "round_trip" ? (
+            <div className="space-y-2">
+              <Label htmlFor="scheduledReturnAt">Return pickup time</Label>
+              <DateTimePicker
+                id="scheduledReturnAt"
+                value={scheduledReturnAt}
+                onChange={(value) => {
+                  setScheduledReturnAt(value);
+                  clearFieldError("scheduledReturnAt");
+                }}
+                placeholder="Pick return pickup time"
+                disabled={saving}
+                invalid={fieldErrors.scheduledReturnAt}
+              />
+            </div>
+          ) : null}
+
+          {!isEdit && bookingMode === "hourly" ? (
+            <NumberStepper
+              id="bookedHours"
+              label="Booked hours"
+              value={bookedHours}
+              onChange={setBookedHours}
+              min={1}
+              max={24}
+              disabled={saving}
+            />
+          ) : null}
+
+          {isEdit && editTrip?.tripType === "hourly" ? (
+            <NumberStepper
+              id="bookedHours"
+              label="Booked hours"
+              value={bookedHours}
+              onChange={setBookedHours}
+              min={1}
+              max={24}
+              disabled={saving}
+            />
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="pickupAddressLine">Pickup address</Label>

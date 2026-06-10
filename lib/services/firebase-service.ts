@@ -242,9 +242,9 @@ export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void
   );
 }
 
-export async function createTrip(trip: Trip): Promise<void> {
+function tripFirestorePayload(trip: Trip): Record<string, unknown> {
   const now = new Date();
-  const payload = stripUndefined({
+  return stripUndefined({
     ...trip,
     pickup: coordinateToFirestoreField(trip.pickup),
     dropoff: coordinateToFirestoreField(trip.dropoff),
@@ -252,7 +252,17 @@ export async function createTrip(trip: Trip): Promise<void> {
     createdAt: trip.createdAt ?? now,
     updatedAt: trip.updatedAt ?? now
   });
-  await setDoc(doc(db(), Collections.trips, trip.id), payload);
+}
+
+export async function createTrip(trip: Trip): Promise<void> {
+  await setDoc(doc(db(), Collections.trips, trip.id), tripFirestorePayload(trip));
+}
+
+export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): Promise<void> {
+  const batch = writeBatch(db());
+  batch.set(doc(db(), Collections.trips, outbound.id), tripFirestorePayload(outbound));
+  batch.set(doc(db(), Collections.trips, returnLeg.id), tripFirestorePayload(returnLeg));
+  await batch.commit();
 }
 
 // ─────────────────────────────── Users ───────────────────────────────
