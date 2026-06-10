@@ -11,7 +11,7 @@ import { tripTypeTitle, type VehicleClass } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -54,7 +54,13 @@ export default function VehicleClassesPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Vehicle classes</CardTitle>
+          <div>
+            <CardTitle>Vehicle classes</CardTitle>
+            <CardDescription>
+              Transfer and hourly quotes use each class&apos;s rate card. Add-ons and company rules
+              are under Pricing.
+            </CardDescription>
+          </div>
           <Button variant="outline" size="sm" onClick={openNew}>
             <PlusIcon /> Add vehicle class
           </Button>

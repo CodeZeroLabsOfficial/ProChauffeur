@@ -71,17 +71,30 @@ export interface PricingRule {
   endDate?: string;
 }
 
-/** PricingConfig — `operator/pricing` document (schema v2: rates live on vehicle_classes). */
+/**
+ * PricingConfig — `operator/pricing` document (schema v2).
+ * Quotes read transfer/hourly rates from vehicle classes only.
+ * This document holds company-wide rules, add-ons, zones, and optional floors.
+ */
 export interface PricingConfig {
   schemaVersion: number;
+  /** Company-wide transfer floor applied after vehicle class calculation. */
   minimumFare: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   baseFare: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   distanceRatePerUnit: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   timeRatePerHour: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   waitingFeeFlat: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   waitingFeePerMinute: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   waitingGraceMinutes: number;
+  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
   returnToBaseFee: number;
+  /** Weekdays treated as weekend for hourly class rates (e.g. Sat–Sun). */
   weekendWeekdays: WeekdayNumber[];
   quoteRounding: QuoteRounding;
   addons: PricingAddon[];
@@ -89,18 +102,31 @@ export interface PricingConfig {
   rules: PricingRule[];
 }
 
+const LEGACY_PRICING_RATE_DEFAULTS = {
+  baseFare: 0,
+  distanceRatePerUnit: 0,
+  timeRatePerHour: 0,
+  waitingFeeFlat: 0,
+  waitingFeePerMinute: 0,
+  waitingGraceMinutes: 0,
+  returnToBaseFee: 0
+} as const;
+
+/** Zeros schema v2 legacy rate fields before persisting operator pricing. */
+export function preparePricingConfigForSave(config: PricingConfig): PricingConfig {
+  return {
+    ...config,
+    schemaVersion: 2,
+    ...LEGACY_PRICING_RATE_DEFAULTS
+  };
+}
+
 /** Admin setup template only — not used at runtime when fetching config. */
 export function buildInitialPricingConfig(): PricingConfig {
   return {
     schemaVersion: 2,
     minimumFare: 89,
-    baseFare: 48,
-    distanceRatePerUnit: 3.4,
-    timeRatePerHour: 98,
-    waitingFeeFlat: 0,
-    waitingFeePerMinute: 1.5,
-    waitingGraceMinutes: 15,
-    returnToBaseFee: 55,
+    ...LEGACY_PRICING_RATE_DEFAULTS,
     weekendWeekdays: [6, 7],
     quoteRounding: "dollar",
     addons: [

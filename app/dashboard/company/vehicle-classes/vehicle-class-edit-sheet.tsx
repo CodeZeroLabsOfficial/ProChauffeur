@@ -221,6 +221,10 @@ export function VehicleClassEditSheet({
             </TabsContent>
 
             <TabsContent value="pricing" className="mt-0 space-y-6">
+              <p className="text-muted-foreground text-sm">
+                These rates are used when quoting this vehicle class. Company-wide minimum fare,
+                add-ons, and surcharges are configured under Company → Pricing.
+              </p>
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">Point-to-point rates</h4>
                 <div className="grid gap-3 sm:grid-cols-2">

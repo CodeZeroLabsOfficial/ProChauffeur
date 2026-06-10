@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,20 +9,19 @@ import {
   fetchPricingConfiguration,
   savePricingConfiguration
 } from "@/lib/services/firebase-service";
-import {
-  getCachedOperatorLocale
-} from "@/lib/services/operator-config-cache";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import {
   QUOTE_ROUNDING,
   buildInitialPricingConfig,
+  preparePricingConfigForSave,
   tripTypeTitle,
   type PricingAddon,
-  type PricingConfig
+  type PricingConfig,
+  type WeekdayNumber
 } from "@/lib/models";
-import { distanceUnitLabel } from "@/lib/pricing/distance";
 import { ConfigError } from "@/lib/pricing/errors";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,26 +41,14 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-type GlobalField = {
-  key: keyof Pick<
-    PricingConfig,
-    | "minimumFare"
-    | "baseFare"
-    | "distanceRatePerUnit"
-    | "timeRatePerHour"
-    | "waitingFeeFlat"
-    | "waitingFeePerMinute"
-    | "waitingGraceMinutes"
-    | "returnToBaseFee"
-  >;
-  label: string;
-  step?: string;
-};
+const WEEKEND_WEEKDAY_OPTIONS: { value: WeekdayNumber; label: string }[] = [
+  { value: 6, label: "Saturday" },
+  { value: 7, label: "Sunday" }
+];
 
 export default function PricingPage() {
   const { vehicleClasses } = useVehicleClasses();
   const [config, setConfig] = useState<PricingConfig>(buildInitialPricingConfig());
-  const [distanceUnit, setDistanceUnit] = useState("km");
   const [currency, setCurrency] = useState("AUD");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +57,6 @@ export default function PricingPage() {
   useEffect(() => {
     Promise.all([
       getCachedOperatorLocale().then((locale) => {
-        setDistanceUnit(locale.distanceUnit);
         setCurrency(locale.currency);
       }),
       fetchPricingConfiguration()
@@ -93,6 +80,15 @@ export default function PricingPage() {
 
   function setGlobal<K extends keyof PricingConfig>(key: K, value: PricingConfig[K]) {
     setConfig((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleWeekendWeekday(weekday: WeekdayNumber) {
+    setConfig((current) => {
+      const selected = new Set(current.weekendWeekdays);
+      if (selected.has(weekday)) selected.delete(weekday);
+      else selected.add(weekday);
+      return { ...current, weekendWeekdays: [...selected].sort((a, b) => a - b) };
+    });
   }
 
   function setAddon(id: string, patch: Partial<PricingAddon>) {
@@ -142,7 +138,9 @@ export default function PricingPage() {
   async function save() {
     setSaving(true);
     try {
-      await savePricingConfiguration({ ...config, schemaVersion: 2 });
+      const payload = preparePricingConfigForSave(config);
+      await savePricingConfiguration(payload);
+      setConfig(payload);
       setConfigured(true);
       toast.success("Pricing saved.");
     } catch (err) {
@@ -154,18 +152,6 @@ export default function PricingPage() {
 
   if (loading) return <p className="text-muted-foreground text-sm">Loading…</p>;
 
-  const unit = distanceUnitLabel(distanceUnit as "km" | "mile");
-  const globalFields: GlobalField[] = [
-    { key: "minimumFare", label: "Minimum fare" },
-    { key: "baseFare", label: "Base fare" },
-    { key: "distanceRatePerUnit", label: `Default rate per ${unit}`, step: "0.01" },
-    { key: "timeRatePerHour", label: "Default hourly rate" },
-    { key: "waitingFeeFlat", label: "Waiting fee (flat)" },
-    { key: "waitingFeePerMinute", label: "Waiting fee / min", step: "0.01" },
-    { key: "waitingGraceMinutes", label: "Waiting grace (min)" },
-    { key: "returnToBaseFee", label: "Return-to-base fee" }
-  ];
-
   return (
     <div className="space-y-4">
       {!configured ? (
@@ -175,8 +161,8 @@ export default function PricingPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Vehicle class rate cards live under Company → Vehicle Classes. Save global pricing
-              here once vehicle classes are configured.
+              Set company-wide add-ons and rules here. Transfer and hourly rates are configured per
+              vehicle class.
             </p>
             <Button type="button" variant="outline" onClick={() => setConfig(buildInitialPricingConfig())}>
               Reset template
@@ -187,21 +173,41 @@ export default function PricingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Global defaults ({currency})</CardTitle>
+          <CardTitle>Vehicle class rates</CardTitle>
+          <CardDescription>
+            Quotes use each vehicle class&apos;s transfer and hourly rate card.{" "}
+            <Link href="/dashboard/company/vehicle-classes" className="text-primary underline-offset-4 hover:underline">
+              Configure vehicle classes
+            </Link>
+            .
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {globalFields.map((field) => (
-            <div key={field.key} className="space-y-2">
-              <Label htmlFor={field.key}>{field.label}</Label>
-              <Input
-                id={field.key}
-                type="number"
-                step={field.step ?? "1"}
-                value={config[field.key] as number}
-                onChange={(e) => setGlobal(field.key, parseFloat(e.target.value) || 0)}
-              />
-            </div>
-          ))}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Company-wide settings ({currency})</CardTitle>
+          <CardDescription>
+            Applies across all vehicle classes. Base fares and distance rates are set on each class.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+            <Label htmlFor="minimumFare">Minimum fare (transfer floor)</Label>
+            <Input
+              id="minimumFare"
+              type="number"
+              step="1"
+              className="max-w-xs"
+              value={config.minimumFare}
+              onChange={(e) => setGlobal("minimumFare", parseFloat(e.target.value) || 0)}
+            />
+            <p className="text-muted-foreground text-xs">
+              Applied after the vehicle class total if this amount is higher. Set per-class minimums
+              on each vehicle class as well.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="quoteRounding">Quote rounding</Label>
             <Select
@@ -219,12 +225,37 @@ export default function PricingPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Weekend days (hourly)</Label>
+            <div className="flex flex-wrap gap-2">
+              {WEEKEND_WEEKDAY_OPTIONS.map(({ value, label }) => {
+                const selected = config.weekendWeekdays.includes(value);
+                return (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={selected ? "default" : "outline"}
+                    onClick={() => toggleWeekendWeekday(value)}>
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Pickups on these days use each class&apos;s weekend hourly rate and minimum hours.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Add-ons</CardTitle>
+          <div>
+            <CardTitle>Add-ons</CardTitle>
+            <CardDescription>Optional extras added to the quoted total.</CardDescription>
+          </div>
           <Button type="button" variant="outline" size="sm" onClick={addAddon}>
             Add add-on
           </Button>
