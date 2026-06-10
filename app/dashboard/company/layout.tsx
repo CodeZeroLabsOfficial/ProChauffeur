@@ -2,10 +2,10 @@ import { SectionLayout } from "@/components/layout/sub-nav";
 
 const items = [
   { title: "Overview", href: "/dashboard/company" },
-  { title: "Vehicle Classes", href: "/dashboard/company/vehicle-classes" },
   { title: "Operating Hours", href: "/dashboard/company/operating-hours" },
   { title: "Locations", href: "/dashboard/company/locations" },
-  { title: "Pricing", href: "/dashboard/company/pricing" }
+  { title: "Pricing", href: "/dashboard/company/pricing" },
+  { title: "Vehicle Classes", href: "/dashboard/company/vehicle-classes" }
 ];
 
 export default function CompanyLayout({ children }: { children: React.ReactNode }) {

@@ -9,9 +9,18 @@ import {
   listenTrips,
   listenTrip,
   listenUsers,
+  listenVehicleClasses,
   listenVehicles
 } from "@/lib/services/firebase-service";
-import type { ActivityNotification, FleetLocation, Invoice, Trip, User, Vehicle } from "@/lib/models";
+import type {
+  ActivityNotification,
+  FleetLocation,
+  Invoice,
+  Trip,
+  User,
+  Vehicle,
+  VehicleClass
+} from "@/lib/models";
 
 export function useTrips() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -63,6 +72,19 @@ export function useFleetLocations() {
     return () => unsub();
   }, []);
   return { locations, loading };
+}
+
+export function useVehicleClasses() {
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const unsub = listenVehicleClasses((rows) => {
+      setVehicleClasses(rows);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+  return { vehicleClasses, loading };
 }
 
 export function useInvoices() {

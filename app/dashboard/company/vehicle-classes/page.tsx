@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { VehicleClassEditSheet } from "@/app/dashboard/company/vehicle-classes/vehicle-class-edit-sheet";
-import { deleteVehicleClass, fetchVehicleClasses } from "@/lib/services/firebase-service";
-import type { VehicleClass } from "@/lib/models";
+import { useVehicleClasses } from "@/hooks/use-collections";
+import { deleteVehicleClass } from "@/lib/services/firebase-service";
+import { tripTypeTitle, type VehicleClass } from "@/lib/models";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -17,114 +21,119 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-export default function VehicleClassesPage() {
-  const [classes, setClasses] = useState<VehicleClass[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editClass, setEditClass] = useState<VehicleClass | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
+function formatTripTypes(vehicleClass: VehicleClass): string {
+  if (vehicleClass.supportedTripTypes.length === 0) return "Not set";
+  return vehicleClass.supportedTripTypes.map((type) => tripTypeTitle[type]).join(", ");
+}
 
-  async function reload() {
-    setClasses(await fetchVehicleClasses());
+export default function VehicleClassesPage() {
+  const { vehicleClasses, loading } = useVehicleClasses();
+  const [editing, setEditing] = useState<VehicleClass | null>(null);
+  const [open, setOpen] = useState(false);
+
+  function openNew() {
+    setEditing(null);
+    setOpen(true);
   }
 
-  useEffect(() => {
-    reload()
-      .catch(() => toast.error("Could not load vehicle classes."))
-      .finally(() => setLoading(false));
-  }, []);
+  function openEdit(vehicleClass: VehicleClass) {
+    setEditing(vehicleClass);
+    setOpen(true);
+  }
 
-  async function removeClass(vehicleClass: VehicleClass) {
+  async function remove(vehicleClass: VehicleClass) {
     try {
       await deleteVehicleClass(vehicleClass.id);
-      toast.success(`${vehicleClass.displayName} deleted.`);
-      await reload();
+      toast.success("Vehicle class removed.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete vehicle class.");
+      toast.error(err instanceof Error ? err.message : "Could not remove vehicle class.");
     }
   }
 
-  if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading vehicle classes…</p>;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Service classes define rate cards. Fleet vehicles and bookings reference a class for
-          pricing.
-        </p>
-        <Button
-          onClick={() => {
-            setEditClass(null);
-            setEditOpen(true);
-          }}>
-          Add class
-        </Button>
-      </div>
-
+    <div className="space-y-4">
       <Card>
-        <CardContent className="pt-6">
-          {classes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No vehicle classes yet. Add a class to get started.</p>
-          ) : (
-            <Table>
-              <TableHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Vehicle classes</CardTitle>
+          <Button variant="outline" size="sm" onClick={openNew}>
+            <PlusIcon /> Add vehicle class
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Capacity</TableHead>
+                <TableHead>Trip types</TableHead>
+                <TableHead className="w-20" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                    Loading vehicle classes…
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classes.map((vehicleClass) => (
-                  <TableRow key={vehicleClass.id}>
-                    <TableCell className="font-medium">{vehicleClass.displayName}</TableCell>
-                    <TableCell>{vehicleClass.slug}</TableCell>
+              ) : vehicleClasses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                    No vehicle classes yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                vehicleClasses.map((vehicleClass) => (
+                  <TableRow
+                    key={vehicleClass.id}
+                    className={cn(!vehicleClass.isEnabled && "text-muted-foreground")}>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {vehicleClass.displayName}
+                        {!vehicleClass.isEnabled ? (
+                          <Badge variant="secondary" className="text-xs">
+                            Disabled
+                          </Badge>
+                        ) : null}
+                        {!vehicleClass.isVisible ? (
+                          <Badge variant="secondary" className="text-xs">
+                            Hidden
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {vehicleClass.passengerCapacity} pax · {vehicleClass.smallLuggageCount} small ·{" "}
                       {vehicleClass.largeLuggageCount} large
                     </TableCell>
+                    <TableCell>{formatTripTypes(vehicleClass)}</TableCell>
                     <TableCell>
-                      {vehicleClass.isEnabled ? "Enabled" : "Disabled"}
-                      {vehicleClass.isVisible ? " · Visible" : " · Hidden"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditClass(vehicleClass);
-                            setEditOpen(true);
-                          }}>
-                          Edit
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => remove(vehicleClass)}>
+                          <Trash2Icon className="size-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeClass(vehicleClass)}>
-                          Delete
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(vehicleClass)}>
+                          <PencilIcon className="size-4" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
       <VehicleClassEditSheet
-        vehicleClass={editClass}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onSaved={() => {
-          reload().catch(() => toast.error("Could not refresh vehicle classes."));
-        }}
+        vehicleClass={editing}
+        open={open}
+        onOpenChange={setOpen}
+        onSaved={() => {}}
       />
     </div>
   );
