@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PencilIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AddonEditSheet,
+  formatAddonTripTypes,
+  formatAddonVehicleClasses
+} from "@/app/dashboard/company/pricing/addon-edit-sheet";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import {
   fetchPricingConfiguration,
@@ -12,12 +18,14 @@ import {
   QUOTE_ROUNDING,
   buildInitialPricingConfig,
   preparePricingConfigForSave,
-  tripTypeTitle,
   type PricingAddon,
   type PricingConfig,
   type WeekdayNumber
 } from "@/lib/models";
+import { formatCurrency } from "@/lib/format";
 import { ConfigError } from "@/lib/pricing/errors";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -50,6 +57,8 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [configured, setConfigured] = useState(false);
+  const [editingAddon, setEditingAddon] = useState<PricingAddon | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchPricingConfiguration()
@@ -83,41 +92,26 @@ export default function PricingPage() {
     });
   }
 
-  function setAddon(id: string, patch: Partial<PricingAddon>) {
-    setConfig((current) => ({
-      ...current,
-      addons: current.addons.map((addon) => (addon.id === id ? { ...addon, ...patch } : addon))
-    }));
+  function openNewAddon() {
+    setEditingAddon(null);
+    setSheetOpen(true);
   }
 
-  function toggleAddonClass(addonId: string, classId: string) {
-    setConfig((current) => ({
-      ...current,
-      addons: current.addons.map((addon) => {
-        if (addon.id !== addonId) return addon;
-        const selected = new Set(addon.vehicleClassIds);
-        if (selected.has(classId)) selected.delete(classId);
-        else selected.add(classId);
-        return { ...addon, vehicleClassIds: [...selected] };
-      })
-    }));
+  function openEditAddon(addon: PricingAddon) {
+    setEditingAddon(addon);
+    setSheetOpen(true);
   }
 
-  function addAddon() {
-    setConfig((current) => ({
-      ...current,
-      addons: [
-        ...current.addons,
-        {
-          id: crypto.randomUUID(),
-          title: "New add-on",
-          price: 0,
-          isEnabled: true,
-          tripTypes: ["transfer", "hourly"],
-          vehicleClassIds: vehicleClasses.map((vehicleClass) => vehicleClass.id)
-        }
-      ]
-    }));
+  function upsertAddon(addon: PricingAddon) {
+    setConfig((current) => {
+      const exists = current.addons.some((item) => item.id === addon.id);
+      return {
+        ...current,
+        addons: exists
+          ? current.addons.map((item) => (item.id === addon.id ? addon : item))
+          : [...current.addons, addon]
+      };
+    });
   }
 
   function removeAddon(id: string) {
@@ -231,7 +225,7 @@ export default function PricingPage() {
           <div>
             <CardTitle>Add-ons</CardTitle>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={addAddon}>
+          <Button type="button" variant="outline" size="sm" onClick={openNewAddon}>
             Add add-on
           </Button>
         </CardHeader>
@@ -252,51 +246,33 @@ export default function PricingPage() {
               </TableHeader>
               <TableBody>
                 {config.addons.map((addon) => (
-                  <TableRow key={addon.id}>
-                    <TableCell>
-                      <Input
-                        value={addon.title}
-                        onChange={(e) => setAddon(addon.id, { title: e.target.value })}
-                      />
+                  <TableRow
+                    key={addon.id}
+                    className={cn(!addon.isEnabled && "text-muted-foreground")}>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {addon.title}
+                        {!addon.isEnabled ? (
+                          <Badge variant="secondary" className="text-xs">
+                            Disabled
+                          </Badge>
+                        ) : null}
+                      </span>
                     </TableCell>
+                    <TableCell className="tabular-nums">{formatCurrency(addon.price)}</TableCell>
+                    <TableCell>{formatAddonTripTypes(addon)}</TableCell>
+                    <TableCell>{formatAddonVehicleClasses(addon, vehicleClasses)}</TableCell>
+                    <TableCell>{addon.isEnabled ? "Yes" : "No"}</TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        className="w-28"
-                        value={addon.price}
-                        onChange={(e) => setAddon(addon.id, { price: parseFloat(e.target.value) || 0 })}
-                      />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {addon.tripTypes.map((t) => tripTypeTitle[t]).join(", ")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {vehicleClasses.map((vehicleClass) => {
-                          const selected = addon.vehicleClassIds.includes(vehicleClass.id);
-                          return (
-                            <Button
-                              key={vehicleClass.id}
-                              type="button"
-                              size="sm"
-                              variant={selected ? "default" : "outline"}
-                              onClick={() => toggleAddonClass(addon.id, vehicleClass.id)}>
-                              {vehicleClass.displayName}
-                            </Button>
-                          );
-                        })}
+                      <div className="flex items-center justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditAddon(addon)}>
+                          <PencilIcon className="size-4" />
+                        </Button>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={addon.isEnabled}
-                        onCheckedChange={(checked) => setAddon(addon.id, { isEnabled: checked })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeAddon(addon.id)}>
-                        Remove
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -305,6 +281,15 @@ export default function PricingPage() {
           )}
         </CardContent>
       </Card>
+
+      <AddonEditSheet
+        addon={editingAddon}
+        vehicleClasses={vehicleClasses}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onSave={upsertAddon}
+        onDelete={removeAddon}
+      />
 
       <div className="flex justify-end">
         <Button onClick={save} disabled={saving}>

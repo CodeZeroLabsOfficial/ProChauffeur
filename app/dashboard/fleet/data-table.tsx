@@ -231,7 +231,12 @@ export function FleetDataTable({
           const classId = row.original.vehicleClassId;
           const label = classId ? (classesById.get(classId)?.displayName ?? classId) : null;
           return label ? (
-            <IconBadge icon={vehicleTierBadgeIcon}>{label}</IconBadge>
+            <IconBadge
+              icon={vehicleTierBadgeIcon}
+              variant="outline"
+              className="gap-0 rounded-md px-2 py-1">
+              {label}
+            </IconBadge>
           ) : (
             "—"
           );
