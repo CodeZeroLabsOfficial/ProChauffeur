@@ -41,7 +41,7 @@ export function SectionLayout({
   children
 }: {
   title: string;
-  description: string;
+  description?: string;
   items: SubNavItem[];
   children: React.ReactNode;
 }) {
@@ -49,7 +49,7 @@ export function SectionLayout({
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       </div>
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="lg:w-56 lg:shrink-0">

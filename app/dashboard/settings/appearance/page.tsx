@@ -259,9 +259,6 @@ export default function AppearancePage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-muted-foreground text-xs">
-                  Set the font you want to use in the dashboard.
-                </p>
               </div>
             </div>
 

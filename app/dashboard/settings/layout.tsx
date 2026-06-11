@@ -12,10 +12,7 @@ const items = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SectionLayout
-      title="Settings"
-      description="Your profile and account, plus portal appearance, locale, licensing, administrators and integrations."
-      items={items}>
+    <SectionLayout title="Settings" items={items}>
       {children}
     </SectionLayout>
   );

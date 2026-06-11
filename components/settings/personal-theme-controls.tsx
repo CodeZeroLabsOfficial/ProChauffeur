@@ -20,7 +20,6 @@ export function ColourPresetSelector() {
   return (
     <div className="space-y-2">
       <Label htmlFor="theme-preset">Colour preset</Label>
-      <p className="text-muted-foreground text-xs">Choose a palette for buttons, accents, and charts.</p>
       <Select
         value={theme.preset}
         onValueChange={(value) =>
