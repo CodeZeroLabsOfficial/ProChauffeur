@@ -1,6 +1,5 @@
 "use client";
 
-import { MonitorIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function ThemeModeSelector() {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -17,7 +16,8 @@ export function ThemeModeSelector() {
     return <p className="text-muted-foreground text-sm">Loading theme…</p>;
   }
 
-  const value = theme ?? "system";
+  const value =
+    theme === "light" || theme === "dark" ? theme : (resolvedTheme === "dark" ? "dark" : "light");
 
   return (
     <div className="space-y-2">
@@ -65,17 +65,6 @@ export function ThemeModeSelector() {
               </div>
             </div>
             <span className="block w-full p-2 text-center text-sm font-normal">Dark</span>
-          </Label>
-        </div>
-        <div className="space-y-2">
-          <Label
-            htmlFor="theme-system"
-            className="[&:has([data-state=checked])>div]:border-primary flex cursor-pointer flex-col">
-            <RadioGroupItem value="system" id="theme-system" className="sr-only" />
-            <div className="hover:border-accent flex h-[88px] w-[120px] items-center justify-center rounded-lg border-2 p-1 sm:w-[140px]">
-              <MonitorIcon className="text-muted-foreground size-8" />
-            </div>
-            <span className="block w-full p-2 text-center text-sm font-normal">System</span>
           </Label>
         </div>
       </RadioGroup>

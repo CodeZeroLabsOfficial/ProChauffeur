@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { deleteField, type DocumentData } from "firebase/firestore";
-import { Trash2Icon, UploadIcon } from "lucide-react";
+import { UploadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -54,7 +54,6 @@ function ImageUploadField({
   errors,
   onOpenDialog,
   inputProps,
-  onRemove,
   alt
 }: {
   label: string;
@@ -64,7 +63,6 @@ function ImageUploadField({
   errors: string[];
   onOpenDialog: () => void;
   inputProps: React.InputHTMLAttributes<HTMLInputElement> & { ref: React.Ref<HTMLInputElement> };
-  onRemove: () => void;
   alt: string;
 }) {
   return (
@@ -108,12 +106,6 @@ function ImageUploadField({
       </Item>
       <input {...inputProps} className="sr-only" aria-label={label} />
       {errors.length > 0 && <p className="text-destructive text-sm">{errors[0]}</p>}
-      {previewUrl && (
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
-          <Trash2Icon className="size-4" />
-          Remove {label.toLowerCase()}
-        </Button>
-      )}
     </div>
   );
 }
@@ -126,22 +118,14 @@ export default function AppearancePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoRemoved, setLogoRemoved] = useState(false);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
-  const [faviconRemoved, setFaviconRemoved] = useState(false);
 
   const [
     { files: logoFiles, errors: logoErrors },
-    {
-      openFileDialog: openLogoDialog,
-      getInputProps: getLogoInputProps,
-      removeFile: removeLogoFile,
-      clearFiles: clearLogoFiles
-    }
+    { openFileDialog: openLogoDialog, getInputProps: getLogoInputProps, clearFiles: clearLogoFiles }
   ] = useFileUpload({
     accept: "image/png,image/jpeg,image/webp,image/svg+xml",
-    maxSize: MAX_IMAGE_BYTES,
-    onFilesAdded: () => setLogoRemoved(false)
+    maxSize: MAX_IMAGE_BYTES
   });
 
   const [
@@ -149,17 +133,15 @@ export default function AppearancePage() {
     {
       openFileDialog: openFaviconDialog,
       getInputProps: getFaviconInputProps,
-      removeFile: removeFaviconFile,
       clearFiles: clearFaviconFiles
     }
   ] = useFileUpload({
     accept: "image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico",
-    maxSize: MAX_IMAGE_BYTES,
-    onFilesAdded: () => setFaviconRemoved(false)
+    maxSize: MAX_IMAGE_BYTES
   });
 
-  const logoPreviewUrl = logoFiles[0]?.preview ?? (logoRemoved ? null : logoUrl);
-  const faviconPreviewUrl = faviconFiles[0]?.preview ?? (faviconRemoved ? null : faviconUrl);
+  const logoPreviewUrl = logoFiles[0]?.preview ?? logoUrl;
+  const faviconPreviewUrl = faviconFiles[0]?.preview ?? faviconUrl;
 
   useEffect(() => {
     fetchSettingDoc<Appearance>(AppSettingsDocs.appearance)
@@ -178,23 +160,11 @@ export default function AppearancePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleRemoveLogo() {
-    if (logoFiles[0]) removeLogoFile(logoFiles[0].id);
-    setLogoUrl(null);
-    setLogoRemoved(true);
-  }
-
-  function handleRemoveFavicon() {
-    if (faviconFiles[0]) removeFaviconFile(faviconFiles[0].id);
-    setFaviconUrl(null);
-    setFaviconRemoved(true);
-  }
-
   async function onSubmitPortal(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    let nextLogoUrl = logoRemoved ? "" : (logoUrl ?? "");
-    let nextFaviconUrl = faviconRemoved ? "" : (faviconUrl ?? "");
+    let nextLogoUrl = logoUrl ?? "";
+    let nextFaviconUrl = faviconUrl ?? "";
 
     const uploadedLogo = logoFiles[0]?.file;
     if (uploadedLogo instanceof File) {
@@ -223,15 +193,11 @@ export default function AppearancePage() {
       fontFamily
     };
 
-    if (logoRemoved) {
-      data.logoUrl = deleteField();
-    } else if (nextLogoUrl) {
+    if (nextLogoUrl) {
       data.logoUrl = nextLogoUrl;
     }
 
-    if (faviconRemoved) {
-      data.faviconUrl = deleteField();
-    } else if (nextFaviconUrl) {
+    if (nextFaviconUrl) {
       data.faviconUrl = nextFaviconUrl;
     }
 
@@ -246,16 +212,14 @@ export default function AppearancePage() {
         portalName: data.portalName as string,
         primaryColorHex: nextPrimary || undefined,
         fontFamily,
-        logoUrl: logoRemoved ? undefined : nextLogoUrl || undefined,
-        faviconUrl: faviconRemoved ? undefined : nextFaviconUrl || undefined
+        logoUrl: nextLogoUrl || undefined,
+        faviconUrl: nextFaviconUrl || undefined
       };
       setAppearance(saved);
       setPrimaryColorHex(nextPrimary);
-      setLogoUrl(logoRemoved ? null : nextLogoUrl || null);
-      setLogoRemoved(false);
+      setLogoUrl(nextLogoUrl || null);
       clearLogoFiles();
-      setFaviconUrl(faviconRemoved ? null : nextFaviconUrl || null);
-      setFaviconRemoved(false);
+      setFaviconUrl(nextFaviconUrl || null);
       clearFaviconFiles();
       toast.success("Portal appearance saved.");
       router.refresh();
@@ -335,7 +299,6 @@ export default function AppearancePage() {
                 errors={logoErrors}
                 onOpenDialog={openLogoDialog}
                 inputProps={getLogoInputProps()}
-                onRemove={handleRemoveLogo}
                 alt="Portal logo"
               />
               <ImageUploadField
@@ -346,7 +309,6 @@ export default function AppearancePage() {
                 errors={faviconErrors}
                 onOpenDialog={openFaviconDialog}
                 inputProps={getFaviconInputProps()}
-                onRemove={handleRemoveFavicon}
                 alt="Portal favicon"
               />
             </div>
@@ -360,12 +322,6 @@ export default function AppearancePage() {
         <Separator />
 
         <section className="space-y-6">
-          <div>
-            <h3 className="text-sm font-medium">Personal preferences</h3>
-            <p className="text-muted-foreground text-sm">
-              These apply only to your account on this device.
-            </p>
-          </div>
           <ThemeModeSelector />
           <PersonalThemeControls />
         </section>
