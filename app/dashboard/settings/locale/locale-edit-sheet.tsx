@@ -130,70 +130,70 @@ export function LocaleEditSheet({
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4">
-          <div className="space-y-2">
-            <Label htmlFor="language">Language</Label>
-            <Select value={language} onValueChange={setLanguage} disabled={saving}>
-              <SelectTrigger id="language">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                {languageOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select value={currency} onValueChange={setCurrency} disabled={saving}>
-              <SelectTrigger id="currency">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencyOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="timezone">Time zone</Label>
-            <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
-              <SelectTrigger id="timezone">
-                <SelectValue placeholder="Select time zone" />
-              </SelectTrigger>
-              <SelectContent>
-                {timezoneOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="distanceUnit">Distance unit</Label>
-            <Select
-              value={distanceUnit}
-              onValueChange={(v) => setDistanceUnit(v as OperatorLocale["distanceUnit"])}
-              disabled={saving}>
-              <SelectTrigger id="distanceUnit">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DISTANCE_UNITS.map((unit) => (
-                  <SelectItem key={unit} value={unit}>
-                    {distanceUnitTitle[unit]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Select value={language} onValueChange={setLanguage} disabled={saving}>
+                <SelectTrigger id="language" className="w-full">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languageOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Time zone</Label>
+              <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
+                <SelectTrigger id="timezone" className="w-full">
+                  <SelectValue placeholder="Select time zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezoneOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select value={currency} onValueChange={setCurrency} disabled={saving}>
+                <SelectTrigger id="currency" className="w-full">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencyOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="distanceUnit">Distance unit</Label>
+              <Select
+                value={distanceUnit}
+                onValueChange={(v) => setDistanceUnit(v as OperatorLocale["distanceUnit"])}
+                disabled={saving}>
+                <SelectTrigger id="distanceUnit" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISTANCE_UNITS.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {distanceUnitTitle[unit]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <NumberStepper
               id="defaultTaxRatePct"
               label="Default tax rate (%)"
@@ -215,24 +215,24 @@ export function LocaleEditSheet({
                 disabled={saving}
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="taxDisplayMode">Tax display mode</Label>
-            <Select
-              value={taxDisplayMode}
-              onValueChange={(v) => setTaxDisplayMode(v as OperatorLocale["taxDisplayMode"])}
-              disabled={saving}>
-              <SelectTrigger id="taxDisplayMode">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TAX_DISPLAY_MODES.map((mode) => (
-                  <SelectItem key={mode} value={mode}>
-                    {taxDisplayModeTitle[mode]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="taxDisplayMode">Tax display mode</Label>
+              <Select
+                value={taxDisplayMode}
+                onValueChange={(v) => setTaxDisplayMode(v as OperatorLocale["taxDisplayMode"])}
+                disabled={saving}>
+                <SelectTrigger id="taxDisplayMode" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TAX_DISPLAY_MODES.map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {taxDisplayModeTitle[mode]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-0.5">

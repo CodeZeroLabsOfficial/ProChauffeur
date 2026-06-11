@@ -32,20 +32,15 @@ function DetailField({ label, value }: { label: string; value: string }) {
 export default function LocalePage() {
   const [value, setValue] = useState<OperatorLocale>(buildInitialOperatorLocale());
   const [loading, setLoading] = useState(true);
-  const [configured, setConfigured] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     fetchOperatorLocale()
-      .then((locale) => {
-        setValue(locale);
-        setConfigured(true);
-      })
+      .then(setValue)
       .catch((err) => {
         if (!(err instanceof ConfigError)) {
           toast.error("Could not load locale settings.");
         }
-        setConfigured(false);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -61,12 +56,7 @@ export default function LocalePage() {
             <PencilIcon /> Edit
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {!configured ? (
-            <p className="text-muted-foreground text-sm">
-              Locale not configured — click Edit to set up.
-            </p>
-          ) : null}
+        <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
             <DetailField
               label="Language"
@@ -102,10 +92,7 @@ export default function LocalePage() {
         locale={value}
         open={editOpen}
         onOpenChange={setEditOpen}
-        onSaved={(locale) => {
-          setValue(locale);
-          setConfigured(true);
-        }}
+        onSaved={setValue}
       />
     </>
   );
