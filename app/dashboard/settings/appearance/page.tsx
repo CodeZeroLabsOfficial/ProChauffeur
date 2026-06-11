@@ -7,7 +7,7 @@ import { UploadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { PersonalThemeControls } from "@/components/settings/personal-theme-controls";
+import { ColourPresetSelector } from "@/components/settings/personal-theme-controls";
 import { ThemeModeSelector } from "@/components/settings/theme-mode-selector";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import {
@@ -235,22 +235,38 @@ export default function AppearancePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Appearance</CardTitle>
+        <CardTitle>Branding</CardTitle>
       </CardHeader>
       <CardContent className="space-y-8">
         <section className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium">Portal</h3>
-            <p className="text-muted-foreground text-sm">
-              Branding shared across the portal for all administrators.
-            </p>
-          </div>
           <form onSubmit={onSubmitPortal} className="space-y-6" key={appearance.portalName}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="portalName">Portal name</Label>
                 <Input id="portalName" name="portalName" defaultValue={appearance.portalName} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="fontFamily">Font</Label>
+                <Select value={fontFamily} onValueChange={(v) => setFontFamily(v as BrandingFontId)}>
+                  <SelectTrigger id="fontFamily" className="w-full">
+                    <SelectValue placeholder="Select font" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRANDING_FONTS.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        {font.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  Set the font you want to use in the dashboard.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ColourPresetSelector />
               <div className="space-y-2">
                 <Label htmlFor="primaryColorHex">Primary colour</Label>
                 <div className="flex items-center gap-2">
@@ -269,25 +285,6 @@ export default function AppearancePage() {
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fontFamily">Font</Label>
-              <Select value={fontFamily} onValueChange={(v) => setFontFamily(v as BrandingFontId)}>
-                <SelectTrigger id="fontFamily" className="w-full sm:max-w-md">
-                  <SelectValue placeholder="Select font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BRANDING_FONTS.map((font) => (
-                    <SelectItem key={font.value} value={font.value}>
-                      {font.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                Set the font you want to use in the dashboard.
-              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -323,7 +320,6 @@ export default function AppearancePage() {
 
         <section className="space-y-6">
           <ThemeModeSelector />
-          <PersonalThemeControls />
         </section>
       </CardContent>
     </Card>
