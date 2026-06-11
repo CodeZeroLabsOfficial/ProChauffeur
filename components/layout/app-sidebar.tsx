@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/layout/logo";
 import { navGroups, type NavItem } from "@/components/layout/nav-config";
-import type { Branding } from "@/lib/models";
+import type { Appearance } from "@/lib/models";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -77,12 +77,12 @@ function NavMenuItem({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 export function AppSidebar({
-  branding,
+  appearance,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { branding?: Branding | null }) {
+}: React.ComponentProps<typeof Sidebar> & { appearance?: Appearance | null }) {
   const pathname = usePathname();
-  const logoUrl = branding?.logoUrl;
-  const portalName = branding?.portalName ?? "ProChauffeur";
+  const logoUrl = appearance?.logoUrl;
+  const portalName = appearance?.portalName ?? "ProChauffeur";
 
   return (
     <Sidebar collapsible="icon" {...props}>

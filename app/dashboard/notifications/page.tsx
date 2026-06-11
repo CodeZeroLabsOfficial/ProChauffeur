@@ -42,7 +42,7 @@ export default function NotificationsPage() {
             Mark All as Read
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/settings/appearance">
               <Settings />
             </Link>
           </Button>

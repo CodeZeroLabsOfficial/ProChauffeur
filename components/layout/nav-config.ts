@@ -61,12 +61,12 @@ export const navGroups: NavGroup[] = [
       },
       {
         title: "Settings",
-        href: "/dashboard/settings",
+        href: "/dashboard/settings/appearance",
         icon: SettingsIcon,
         items: [
           { title: "Profile", href: "/dashboard/settings/profile" },
           { title: "Account", href: "/dashboard/settings/account" },
-          { title: "Branding", href: "/dashboard/settings" },
+          { title: "Appearance", href: "/dashboard/settings/appearance" },
           { title: "Locale", href: "/dashboard/settings/locale" },
           { title: "License", href: "/dashboard/settings/license" },
           { title: "Admins", href: "/dashboard/settings/admins" },

@@ -877,4 +877,23 @@ body {
     --font-sans: var(--font-overpass-mono);
     letter-spacing: -.05em;
 }
+
+[data-theme-font="outfit"] {
+    --font-sans: var(--font-outfit);
+}
+
+[data-theme-font="geist"] {
+    --font-sans: var(--font-geist);
+}
+
+[data-theme-font="plus-jakarta-sans"] {
+    --font-sans: var(--font-plus-jakarta-sans);
+}
 /* Font */
+
+/* Portal primary colour override (inline --portal-primary + data-has-portal-primary on body) */
+body[data-has-portal-primary] {
+    --primary: var(--portal-primary);
+    --ring: var(--portal-primary);
+    --sidebar-primary: var(--portal-primary);
+}

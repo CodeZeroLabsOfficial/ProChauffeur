@@ -34,18 +34,7 @@ export function ActiveThemeProvider({
   useEffect(() => {
     const body = document.body;
 
-    setThemeCookie("theme_radius", theme.radius);
-    body.setAttribute("data-theme-radius", theme.radius);
-
-    if (theme.radius != "default") {
-      setThemeCookie("theme_preset", theme.radius);
-      body.setAttribute("data-theme-radius", theme.radius);
-    } else {
-      setThemeCookie("theme_preset", null);
-      body.removeAttribute("data-theme-radius");
-    }
-
-    if (theme.preset != "default") {
+    if (theme.preset !== "default") {
       setThemeCookie("theme_preset", theme.preset);
       body.setAttribute("data-theme-preset", theme.preset);
     } else {
@@ -53,10 +42,18 @@ export function ActiveThemeProvider({
       body.removeAttribute("data-theme-preset");
     }
 
+    if (theme.radius !== "default") {
+      setThemeCookie("theme_radius", theme.radius);
+      body.setAttribute("data-theme-radius", theme.radius);
+    } else {
+      setThemeCookie("theme_radius", null);
+      body.removeAttribute("data-theme-radius");
+    }
+
     setThemeCookie("theme_content_layout", theme.contentLayout);
     body.setAttribute("data-theme-content-layout", theme.contentLayout);
 
-    if (theme.scale != "none") {
+    if (theme.scale !== "none") {
       setThemeCookie("theme_scale", theme.scale);
       body.setAttribute("data-theme-scale", theme.scale);
     } else {

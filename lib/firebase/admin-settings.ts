@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AppSettingsDocs, Collections, type Branding } from "@/lib/models";
+import { AppSettingsDocs, Collections, type Appearance } from "@/lib/models";
 import { adminFirestore } from "@/lib/firebase/admin";
 
 /** Reads `app_settings/{docId}` via the Admin SDK (server components / route handlers). */
@@ -14,6 +14,11 @@ export async function fetchAppSettingAdmin<T extends Record<string, unknown>>(
   return snap.exists ? (snap.data() as T) : null;
 }
 
-export async function fetchBrandingAdmin(): Promise<Branding | null> {
-  return fetchAppSettingAdmin<Branding>(AppSettingsDocs.branding);
+export async function fetchAppearanceAdmin(): Promise<Appearance | null> {
+  return fetchAppSettingAdmin<Appearance>(AppSettingsDocs.appearance);
+}
+
+/** @deprecated Use `fetchAppearanceAdmin` */
+export async function fetchBrandingAdmin(): Promise<Appearance | null> {
+  return fetchAppearanceAdmin();
 }

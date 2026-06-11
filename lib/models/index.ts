@@ -39,6 +39,9 @@ export const OperatorDocs = {
 /** `app_settings` document ids. */
 export const AppSettingsDocs = {
   limits: "limits",
+  /** Firestore doc id remains `branding` for backwards compatibility. */
+  appearance: "branding",
+  /** @deprecated Use `appearance` */
   branding: "branding",
   integrations: "integrations"
 } as const;

@@ -10,12 +10,13 @@ import { fontVariables } from "@/lib/fonts";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
-import { fetchBrandingAdmin } from "@/lib/firebase/admin-settings";
+import { DEFAULT_BRANDING_FONT, isBrandingFontId } from "@/lib/fonts-config";
+import { fetchAppearanceAdmin } from "@/lib/firebase/admin-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const branding = await fetchBrandingAdmin();
-  const portalName = branding?.portalName?.trim() || "ProChauffeur";
-  const iconUrl = branding?.faviconUrl || branding?.logoUrl;
+  const appearance = await fetchAppearanceAdmin();
+  const portalName = appearance?.portalName?.trim() || "ProChauffeur";
+  const iconUrl = appearance?.faviconUrl || appearance?.logoUrl;
 
   return {
     title: `${portalName} — Operations Portal`,
@@ -25,6 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const appearance = await fetchAppearanceAdmin();
   const cookieStore = await cookies();
   const themeSettings = {
     preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as never,
@@ -40,11 +42,24 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       .map(([key, value]) => [`data-theme-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`, value])
   );
 
+  const fontFamily =
+    appearance?.fontFamily && isBrandingFontId(appearance.fontFamily)
+      ? appearance.fontFamily
+      : DEFAULT_BRANDING_FONT;
+
+  const portalPrimary = appearance?.primaryColorHex?.trim();
+  const portalStyle = portalPrimary
+    ? ({ "--portal-primary": portalPrimary } as React.CSSProperties)
+    : undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className={cn("bg-background group/layout font-sans", fontVariables)}
+        data-theme-font={fontFamily}
+        {...(portalPrimary ? { "data-has-portal-primary": "" } : {})}
+        style={portalStyle}
         {...bodyAttributes}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <ActiveThemeProvider initialTheme={themeSettings}>
