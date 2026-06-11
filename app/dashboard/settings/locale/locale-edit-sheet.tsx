@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { NumberStepper } from "@/components/number-stepper";
 import { saveOperatorLocale } from "@/lib/services/firebase-service";
 import {
+  COMMON_CURRENCIES,
+  COMMON_LANGUAGES,
+  COMMON_TIMEZONES,
   DISTANCE_UNITS,
   TAX_DISPLAY_MODES,
   distanceUnitTitle,
+  optionsWithCurrent,
   taxDisplayModeTitle,
   type OperatorLocale
 } from "@/lib/models";
@@ -31,22 +36,37 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 
+function localeFormState(locale: OperatorLocale) {
+  return {
+    language: locale.locale,
+    currency: locale.currency,
+    timezone: locale.timezone,
+    distanceUnit: locale.distanceUnit,
+    defaultTaxRatePct: locale.defaultTaxRate * 100,
+    taxDisplayName: locale.taxName,
+    taxDisplayMode: locale.taxDisplayMode,
+    showTaxOnQuotes: locale.showTaxOnQuotes
+  };
+}
+
 export function LocaleEditSheet({
   locale,
-  configured,
   open,
   onOpenChange,
   onSaved
 }: {
   locale: OperatorLocale;
-  configured: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (locale: OperatorLocale) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [formKey, setFormKey] = useState(0);
+  const [language, setLanguage] = useState(locale.locale);
+  const [currency, setCurrency] = useState(locale.currency);
+  const [timezone, setTimezone] = useState(locale.timezone);
   const [distanceUnit, setDistanceUnit] = useState<OperatorLocale["distanceUnit"]>(locale.distanceUnit);
+  const [defaultTaxRatePct, setDefaultTaxRatePct] = useState(locale.defaultTaxRate * 100);
+  const [taxDisplayName, setTaxDisplayName] = useState(locale.taxName);
   const [taxDisplayMode, setTaxDisplayMode] = useState<OperatorLocale["taxDisplayMode"]>(
     locale.taxDisplayMode
   );
@@ -54,22 +74,30 @@ export function LocaleEditSheet({
 
   useEffect(() => {
     if (!open) return;
-    setFormKey((n) => n + 1);
-    setDistanceUnit(locale.distanceUnit);
-    setTaxDisplayMode(locale.taxDisplayMode);
-    setShowTaxOnQuotes(locale.showTaxOnQuotes);
+    const next = localeFormState(locale);
+    setLanguage(next.language);
+    setCurrency(next.currency);
+    setTimezone(next.timezone);
+    setDistanceUnit(next.distanceUnit);
+    setDefaultTaxRatePct(next.defaultTaxRatePct);
+    setTaxDisplayName(next.taxDisplayName);
+    setTaxDisplayMode(next.taxDisplayMode);
+    setShowTaxOnQuotes(next.showTaxOnQuotes);
   }, [open, locale]);
+
+  const languageOptions = useMemo(() => optionsWithCurrent(COMMON_LANGUAGES, language), [language]);
+  const currencyOptions = useMemo(() => optionsWithCurrent(COMMON_CURRENCIES, currency), [currency]);
+  const timezoneOptions = useMemo(() => optionsWithCurrent(COMMON_TIMEZONES, timezone), [timezone]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
     const data: OperatorLocale = {
-      locale: String(form.get("locale") ?? "").trim(),
-      currency: String(form.get("currency") ?? "").trim().toUpperCase(),
-      timezone: String(form.get("timezone") ?? "").trim(),
+      locale: language.trim(),
+      currency: currency.trim().toUpperCase(),
+      timezone: timezone.trim(),
       distanceUnit,
-      defaultTaxRate: (parseFloat(String(form.get("defaultTaxRatePct") ?? "0")) || 0) / 100,
-      taxName: String(form.get("taxName") ?? "").trim(),
+      defaultTaxRate: defaultTaxRatePct / 100,
+      taxName: taxDisplayName.trim(),
       taxDisplayMode,
       showTaxOnQuotes
     };
@@ -101,36 +129,58 @@ export function LocaleEditSheet({
             Set regional and tax preferences used for pricing, quotes, and formatting.
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4" key={formKey}>
+        <form onSubmit={onSubmit} className="space-y-4 px-4">
           <div className="space-y-2">
-            <Label htmlFor="locale">Locale</Label>
-            <Input id="locale" name="locale" required defaultValue={locale.locale} placeholder="en-AU" />
+            <Label htmlFor="language">Language</Label>
+            <Select value={language} onValueChange={setLanguage} disabled={saving}>
+              <SelectTrigger id="language">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languageOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency code</Label>
-            <Input
-              id="currency"
-              name="currency"
-              required
-              defaultValue={locale.currency}
-              placeholder="AUD"
-            />
+            <Label htmlFor="currency">Currency</Label>
+            <Select value={currency} onValueChange={setCurrency} disabled={saving}>
+              <SelectTrigger id="currency">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="timezone">IANA time zone</Label>
-            <Input
-              id="timezone"
-              name="timezone"
-              required
-              defaultValue={locale.timezone}
-              placeholder="Australia/Sydney"
-            />
+            <Label htmlFor="timezone">Time zone</Label>
+            <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
+              <SelectTrigger id="timezone">
+                <SelectValue placeholder="Select time zone" />
+              </SelectTrigger>
+              <SelectContent>
+                {timezoneOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="distanceUnit">Distance unit</Label>
             <Select
               value={distanceUnit}
-              onValueChange={(v) => setDistanceUnit(v as OperatorLocale["distanceUnit"])}>
+              onValueChange={(v) => setDistanceUnit(v as OperatorLocale["distanceUnit"])}
+              disabled={saving}>
               <SelectTrigger id="distanceUnit">
                 <SelectValue />
               </SelectTrigger>
@@ -144,28 +194,34 @@ export function LocaleEditSheet({
             </Select>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
+            <NumberStepper
+              id="defaultTaxRatePct"
+              label="Default tax rate (%)"
+              value={defaultTaxRatePct}
+              onChange={setDefaultTaxRatePct}
+              min={0}
+              max={50}
+              step={0.01}
+              decimals={2}
+              disabled={saving}
+            />
             <div className="space-y-2">
-              <Label htmlFor="defaultTaxRatePct">Default tax rate (%)</Label>
+              <Label htmlFor="taxDisplayName">Tax rate display name</Label>
               <Input
-                id="defaultTaxRatePct"
-                name="defaultTaxRatePct"
-                type="number"
-                step="0.01"
-                min="0"
+                id="taxDisplayName"
+                value={taxDisplayName}
+                onChange={(e) => setTaxDisplayName(e.target.value)}
                 required
-                defaultValue={(locale.defaultTaxRate * 100).toString()}
+                disabled={saving}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="taxName">Tax name</Label>
-              <Input id="taxName" name="taxName" required defaultValue={locale.taxName} />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="taxDisplayMode">Tax display mode</Label>
             <Select
               value={taxDisplayMode}
-              onValueChange={(v) => setTaxDisplayMode(v as OperatorLocale["taxDisplayMode"])}>
+              onValueChange={(v) => setTaxDisplayMode(v as OperatorLocale["taxDisplayMode"])}
+              disabled={saving}>
               <SelectTrigger id="taxDisplayMode">
                 <SelectValue />
               </SelectTrigger>
@@ -189,11 +245,12 @@ export function LocaleEditSheet({
               id="showTaxOnQuotes"
               checked={showTaxOnQuotes}
               onCheckedChange={setShowTaxOnQuotes}
+              disabled={saving}
             />
           </div>
           <SheetFooter className="px-0">
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : configured ? "Save changes" : "Initialize locale"}
+              {saving ? "Saving…" : "Save"}
             </Button>
           </SheetFooter>
         </form>

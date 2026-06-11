@@ -8,7 +8,11 @@ import { LocaleEditSheet } from "@/app/dashboard/settings/locale/locale-edit-she
 import { fetchOperatorLocale } from "@/lib/services/firebase-service";
 import {
   buildInitialOperatorLocale,
+  COMMON_CURRENCIES,
+  COMMON_LANGUAGES,
+  COMMON_TIMEZONES,
   distanceUnitTitle,
+  labelForOption,
   taxDisplayModeTitle,
   type OperatorLocale
 } from "@/lib/models";
@@ -64,15 +68,24 @@ export default function LocalePage() {
             </p>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
-            <DetailField label="Locale" value={value.locale} />
-            <DetailField label="Currency" value={value.currency} />
-            <DetailField label="Time zone" value={value.timezone} />
+            <DetailField
+              label="Language"
+              value={labelForOption(COMMON_LANGUAGES, value.locale)}
+            />
+            <DetailField
+              label="Currency"
+              value={labelForOption(COMMON_CURRENCIES, value.currency)}
+            />
+            <DetailField
+              label="Time zone"
+              value={labelForOption(COMMON_TIMEZONES, value.timezone)}
+            />
             <DetailField label="Distance unit" value={distanceUnitTitle[value.distanceUnit]} />
             <DetailField
               label="Default tax rate"
               value={`${(value.defaultTaxRate * 100).toFixed(2)}%`}
             />
-            <DetailField label="Tax name" value={value.taxName} />
+            <DetailField label="Tax rate display name" value={value.taxName} />
             <DetailField
               label="Tax display mode"
               value={taxDisplayModeTitle[value.taxDisplayMode]}
@@ -87,7 +100,6 @@ export default function LocalePage() {
 
       <LocaleEditSheet
         locale={value}
-        configured={configured}
         open={editOpen}
         onOpenChange={setEditOpen}
         onSaved={(locale) => {
