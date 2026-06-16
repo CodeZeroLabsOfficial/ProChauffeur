@@ -58,6 +58,11 @@ service cloud.firestore {
         || (isSelf(userId) && request.resource.data.role == resource.data.role)
         || (isSelf(userId) && customerDriverSwap());
       allow delete: if isAdmin();
+
+      match /payment_methods/{paymentMethodId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow write: if false;
+      }
     }
 
     match /locations/{locId} {
@@ -210,7 +215,9 @@ service cloud.firestore {
     }
 
     match /invoices/{invoiceId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.customerID == request.auth.uid);
+      allow write: if isAdmin();
     }
 
     match /app_settings/{docId} {

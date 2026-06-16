@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { saveVehicleClass } from "@/lib/services/firebase-service";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { saveVehicleClass, uploadVehicleClassImage } from "@/lib/services/firebase-service";
 import {
   buildInitialVehicleClass,
   slugFromDisplayName,
@@ -20,13 +23,87 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NumberStepper } from "@/components/number-stepper";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle
+} from "@/components/ui/item";
 import { cn } from "@/lib/utils";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const tabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 function SectionHeading({ children }: { children: string }) {
   return <h4 className="text-sm font-medium">{children}</h4>;
+}
+
+function ImageUploadField({
+  label,
+  title,
+  description,
+  previewUrl,
+  errors,
+  onOpenDialog,
+  inputProps,
+  alt
+}: {
+  label: string;
+  title: string;
+  description: string;
+  previewUrl: string | null;
+  errors: string[];
+  onOpenDialog: () => void;
+  inputProps: React.InputHTMLAttributes<HTMLInputElement> & { ref: React.Ref<HTMLInputElement> };
+  alt: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Item
+        variant="outline"
+        className="cursor-pointer"
+        onClick={onOpenDialog}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpenDialog();
+          }
+        }}>
+        <ItemMedia variant="image">
+          {previewUrl ? (
+            <Image
+              src={previewUrl}
+              alt={alt}
+              width={40}
+              height={40}
+              className="aspect-square size-10 rounded-sm object-cover"
+              unoptimized={previewUrl.startsWith("blob:")}
+            />
+          ) : (
+            <div className="bg-muted flex size-full items-center justify-center">
+              <UploadIcon className="text-muted-foreground size-4" />
+            </div>
+          )}
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>{title}</ItemTitle>
+          <ItemDescription>{description}</ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <UploadIcon className="text-muted-foreground size-4" />
+        </ItemActions>
+      </Item>
+      <input {...inputProps} className="sr-only" aria-label={label} />
+      {errors.length > 0 && <p className="text-destructive text-sm">{errors[0]}</p>}
+    </div>
+  );
 }
 
 type RateNumberField = {
@@ -87,6 +164,15 @@ export function VehicleClassEditSheet({
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState("");
 
+  const [
+    { files: imageFiles, errors: imageErrors },
+    { openFileDialog: openImageDialog, getInputProps: getImageInputProps, clearFiles: clearImageFiles }
+  ] = useFileUpload({
+    accept: "image/png,image/jpeg,image/webp",
+    maxSize: MAX_IMAGE_BYTES,
+    maxFiles: 1
+  });
+
   const sheetKey = vehicleClass?.id ?? "__new__";
   if (sheetKey !== seedKey) {
     setSeedKey(sheetKey);
@@ -97,6 +183,18 @@ export function VehicleClassEditSheet({
           displayName: ""
         })
     );
+  }
+
+  useEffect(() => {
+    clearImageFiles();
+  }, [sheetKey, clearImageFiles]);
+
+  const imagePreviewUrl = imageFiles[0]?.preview ?? draft.imageUrl ?? null;
+  const hasImage = Boolean(imagePreviewUrl);
+
+  function removeImage() {
+    clearImageFiles();
+    setDraft((current) => ({ ...current, imageUrl: null }));
   }
 
   function setTransferField(key: string, value: number) {
@@ -126,7 +224,17 @@ export function VehicleClassEditSheet({
         toast.error("Select at least one supported trip type.");
         return;
       }
-      await saveVehicleClass({ ...draft, slug, updatedAt: new Date() });
+      let nextImageUrl = draft.imageUrl ?? null;
+      const pendingImage = imageFiles[0]?.file;
+      if (pendingImage instanceof File) {
+        try {
+          nextImageUrl = await uploadVehicleClassImage(draft.id, pendingImage);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not upload vehicle class image.");
+          return;
+        }
+      }
+      await saveVehicleClass({ ...draft, slug, imageUrl: nextImageUrl, updatedAt: new Date() });
       toast.success(isNew ? "Vehicle class created." : "Vehicle class saved.");
       onSaved();
       onOpenChange(false);
@@ -184,6 +292,33 @@ export function VehicleClassEditSheet({
                     />
                   </div>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <SectionHeading>Booking image</SectionHeading>
+                <p className="text-muted-foreground text-sm">
+                  Shown in the customer app vehicle picker and booking flow. PNG, JPEG, or WebP up to
+                  5 MB.
+                </p>
+                <ImageUploadField
+                  label="Vehicle class image"
+                  title={hasImage ? "Replace image" : "Upload image"}
+                  description={
+                    hasImage ? "Tap to choose a different image" : "Tap to upload a hero image"
+                  }
+                  previewUrl={imagePreviewUrl}
+                  errors={imageErrors}
+                  onOpenDialog={openImageDialog}
+                  inputProps={getImageInputProps()}
+                  alt={draft.displayName || "Vehicle class"}
+                />
+                {hasImage ? (
+                  <Button type="button" variant="outline" size="sm" onClick={removeImage}>
+                    Remove image
+                  </Button>
+                ) : null}
               </div>
 
               <Separator />

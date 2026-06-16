@@ -62,6 +62,30 @@ export async function uploadBrandingFaviconAdmin(
   return saveStorageImage(path, buffer, contentType);
 }
 
+/**
+ * Upload a vehicle class booking hero image via the Admin SDK.
+ * Returns a Firebase download URL with a storage token.
+ */
+export async function uploadVehicleClassImage(
+  classId: string,
+  buffer: Buffer,
+  contentType: string,
+  originalName: string
+): Promise<string> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  const trimmedId = classId.trim();
+  if (!trimmedId) {
+    throw new Error("Vehicle class id is required.");
+  }
+
+  const ext = originalName.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `vehicle_classes/${trimmedId}/hero.${ext}`;
+  return saveStorageImage(path, buffer, contentType);
+}
+
 async function saveStorageImage(
   path: string,
   buffer: Buffer,

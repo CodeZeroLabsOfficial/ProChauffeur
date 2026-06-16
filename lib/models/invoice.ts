@@ -1,4 +1,4 @@
-import type { InvoiceStatus } from "@/lib/models/enums";
+import type { InvoiceStatus, PaymentSource } from "@/lib/models/enums";
 
 /** A single labelled charge on an invoice (shape mirrors TripQuote line items). */
 export interface InvoiceLineItem {
@@ -30,6 +30,10 @@ export interface Invoice {
   dueAt?: Date | null;
   paidAt?: Date | null;
   notes?: string | null;
+  source?: PaymentSource | null;
+  stripeInvoiceId?: string | null;
+  stripeHostedInvoiceUrl?: string | null;
+  stripePaymentIntentId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

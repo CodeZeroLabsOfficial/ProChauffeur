@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -65,6 +66,7 @@ export default function VehicleClassesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Trip types</TableHead>
@@ -74,13 +76,13 @@ export default function VehicleClassesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                  <TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
                     Loading vehicle classes…
                   </TableCell>
                 </TableRow>
               ) : vehicleClasses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
+                  <TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
                     No vehicle classes yet.
                   </TableCell>
                 </TableRow>
@@ -89,6 +91,19 @@ export default function VehicleClassesPage() {
                   <TableRow
                     key={vehicleClass.id}
                     className={cn(!vehicleClass.isEnabled && "text-muted-foreground")}>
+                    <TableCell>
+                      {vehicleClass.imageUrl ? (
+                        <Image
+                          src={vehicleClass.imageUrl}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="size-10 rounded-sm object-cover"
+                        />
+                      ) : (
+                        <div className="bg-muted size-10 rounded-sm" />
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">
                       <span className="inline-flex items-center gap-2">
                         {vehicleClass.displayName}

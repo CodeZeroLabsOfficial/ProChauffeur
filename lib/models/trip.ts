@@ -1,4 +1,4 @@
-import type { TripStatus, TripType } from "@/lib/models/enums";
+import type { PaymentSource, PaymentStatus, TripStatus, TripType } from "@/lib/models/enums";
 import type { PricingAddon } from "@/lib/models/pricing";
 import type { QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { Vehicle } from "@/lib/models/vehicle";
@@ -59,6 +59,11 @@ export interface Trip {
   quoteBreakdown?: QuoteLineItem[] | null;
   quoteComputedAt?: Date | null;
   quoteSnapshot?: TripQuoteSnapshot | null;
+  paymentStatus?: PaymentStatus | null;
+  paymentSource?: PaymentSource | null;
+  stripePaymentIntentId?: string | null;
+  invoiceId?: string | null;
+  paidAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

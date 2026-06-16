@@ -14,6 +14,7 @@ export * from "@/lib/models/locale";
 export * from "@/lib/models/locale-options";
 export * from "@/lib/models/notification";
 export * from "@/lib/models/vehicle-class";
+export * from "@/lib/models/saved-payment-method";
 export * from "@/lib/models/branding";
 
 /** Firestore collection names (mirror the iOS `collectionName` constants). */

@@ -147,3 +147,31 @@ export const invoiceStatusTitle: Record<InvoiceStatus, string> = {
   void: "Void",
   overdue: "Overdue"
 };
+
+export const PAYMENT_STATUSES = [
+  "unpaid",
+  "pending",
+  "paid",
+  "failed",
+  "invoiced",
+  "refunded"
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export const paymentStatusTitle: Record<PaymentStatus, string> = {
+  unpaid: "Unpaid",
+  pending: "Payment pending",
+  paid: "Paid",
+  failed: "Payment failed",
+  invoiced: "Invoiced",
+  refunded: "Refunded"
+};
+
+export const PAYMENT_SOURCES = ["ios", "web", "stripe"] as const;
+export type PaymentSource = (typeof PAYMENT_SOURCES)[number];
+
+export const paymentSourceTitle: Record<PaymentSource, string> = {
+  ios: "iOS app",
+  web: "Web portal",
+  stripe: "Stripe"
+};

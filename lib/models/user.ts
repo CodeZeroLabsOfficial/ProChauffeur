@@ -61,6 +61,8 @@ export interface User {
   profile: UserProfile;
   driverProfile?: DriverProfile | null;
   createdAt: Date;
+  /** Stripe Customer id for saved cards and payments. */
+  stripeCustomerId?: string | null;
   /** Live tracking fields written ad hoc by the driver app. */
   liveLocation?: { latitude: number; longitude: number } | null;
   liveLocationUpdatedAt?: Date | null;

@@ -4,9 +4,10 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getDatabase, type Database } from "firebase/database";
+import { getFunctions, type Functions } from "firebase/functions";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
-import { getFirebaseClientEnv, getDatabaseUrl } from "@/lib/env";
+import { appConfig, getFirebaseClientEnv, getDatabaseUrl } from "@/lib/env";
 
 /**
  * Lazily-initialised Firebase client singletons.
@@ -62,4 +63,12 @@ let cachedStorage: FirebaseStorage | null = null;
 export function firebaseStorage(): FirebaseStorage {
   if (!cachedStorage) cachedStorage = getStorage(firebaseApp());
   return cachedStorage;
+}
+
+let cachedFunctions: Functions | null = null;
+export function firebaseFunctions(): Functions {
+  if (!cachedFunctions) {
+    cachedFunctions = getFunctions(firebaseApp(), appConfig.functionsRegion);
+  }
+  return cachedFunctions;
 }

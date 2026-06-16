@@ -9,6 +9,7 @@ import {
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
+  FileTextIcon,
   Mail,
   MapPin,
   PackageIcon,
@@ -18,15 +19,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTrip, useUsers } from "@/hooks/use-collections";
+import { useInvoices, useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
+import { canSendTripInvoice, effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import { listenTrip, updateTripStatus } from "@/lib/services/firebase-service";
+import { createInvoiceForTrip } from "@/lib/services/payment-service";
 import {
   TRIP_STATUSES,
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
   tripJourneyTimeLabel,
   tripStatusTitle,
+  paymentSourceTitle,
   isRoundTripLeg,
   roundTripLegLabel,
   type Trip,
@@ -44,6 +48,7 @@ import { appConfig } from "@/lib/env";
 import { generateAvatarFallback } from "@/lib/utils";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { PaymentStatusBadge } from "@/components/payment-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -279,7 +284,9 @@ function SectionCard({
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
   const { users } = useUsers();
+  const { invoices } = useInvoices();
   const [linkedTrip, setLinkedTrip] = useState<Trip | null>(null);
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
   useEffect(() => {
     if (!trip?.linkedTripID) {
@@ -330,6 +337,28 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     [trip, linkedTrip]
   );
 
+  const paymentStatus = trip ? effectivePaymentStatus(trip) : "unpaid";
+  const linkedInvoice = useMemo(
+    () => (trip?.invoiceId ? invoices.find((inv) => inv.id === trip.invoiceId) : undefined),
+    [trip?.invoiceId, invoices]
+  );
+  const canSendInvoice = trip ? canSendTripInvoice(trip) : false;
+
+  async function sendInvoice() {
+    if (!trip) return;
+    setIsSendingInvoice(true);
+    try {
+      await createInvoiceForTrip(trip.id);
+      toast.success("Invoice sent to the customer.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not send the invoice.";
+      toast.error(message);
+    } finally {
+      setIsSendingInvoice(false);
+    }
+  }
+
   async function changeStatus(status: TripStatus) {
     if (!trip) return;
     try {
@@ -372,6 +401,12 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </Link>
         </Button>
         <div className="flex gap-2">
+          {canSendInvoice ? (
+            <Button variant="outline" disabled={isSendingInvoice} onClick={() => sendInvoice()}>
+              <FileTextIcon />
+              {isSendingInvoice ? "Sending…" : "Send invoice"}
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={() => window.print()}>
             <PrinterIcon />
             Print
@@ -494,6 +529,33 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           />
 
           <BookingVehicleCard vehicleSnapshot={trip.vehicleSnapshot} />
+
+          <SectionCard
+            title="Payment"
+            headerAction={<PaymentStatusBadge status={paymentStatus} />}>
+            <DetailRow
+              label="Source:"
+              value={trip.paymentSource ? paymentSourceTitle[trip.paymentSource] : "—"}
+            />
+            <DetailRow
+              label="Paid at:"
+              value={trip.paidAt ? formatDateTime(trip.paidAt) : "—"}
+            />
+            {linkedInvoice ? (
+              <DetailRow
+                label="Invoice:"
+                value={
+                  <Link
+                    href="/dashboard/billing"
+                    className="text-primary underline-offset-4 hover:underline">
+                    {linkedInvoice.invoiceNumber}
+                  </Link>
+                }
+              />
+            ) : trip.invoiceId ? (
+              <DetailRow label="Invoice:" value={shortBookingId(trip.invoiceId)} />
+            ) : null}
+          </SectionCard>
 
           <SectionCard title="Pricing">
             <DetailRow

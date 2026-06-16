@@ -18,7 +18,7 @@ const firebaseClientSchema = z.object({
   NEXT_PUBLIC_DEFAULT_LOCALE: z.string().default("en-AU"),
   NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().default("AUD"),
   NEXT_PUBLIC_DEFAULT_TIMEZONE: z.string().default("Australia/Sydney"),
-  NEXT_PUBLIC_FUNCTIONS_REGION: z.string().default("us-central1")
+  NEXT_PUBLIC_FUNCTIONS_REGION: z.string().default("australia-southeast1")
 });
 
 export type FirebaseClientEnv = z.infer<typeof firebaseClientSchema>;
@@ -118,5 +118,5 @@ export const appConfig = {
   locale: rawClientEnv.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en-AU",
   currency: rawClientEnv.NEXT_PUBLIC_DEFAULT_CURRENCY ?? "AUD",
   timezone: rawClientEnv.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "Australia/Sydney",
-  functionsRegion: rawClientEnv.NEXT_PUBLIC_FUNCTIONS_REGION ?? "us-central1"
+  functionsRegion: rawClientEnv.NEXT_PUBLIC_FUNCTIONS_REGION ?? "australia-southeast1"
 } as const;

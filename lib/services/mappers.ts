@@ -89,6 +89,7 @@ export function mapUser(id: string, d: DocumentData): User {
     profile: mapUserProfile(d.profile),
     driverProfile: mapDriverProfile(d.driverProfile ?? d.driverStaff),
     createdAt: toDate(d.createdAt) ?? new Date(),
+    stripeCustomerId: d.stripeCustomerId ?? null,
     liveLocation: toCoordinate(d.liveLocation),
     liveLocationUpdatedAt: toDate(d.liveLocationUpdatedAt)
   };
@@ -210,6 +211,11 @@ export function mapTrip(id: string, d: DocumentData): Trip {
       : null,
     quoteComputedAt: toDate(d.quoteComputedAt),
     quoteSnapshot: d.quoteSnapshot ? mapTripQuoteSnapshot(d.quoteSnapshot as DocumentData) : null,
+    paymentStatus: d.paymentStatus ?? null,
+    paymentSource: d.paymentSource ?? null,
+    stripePaymentIntentId: d.stripePaymentIntentId ?? null,
+    invoiceId: d.invoiceId ?? null,
+    paidAt: toDate(d.paidAt),
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };
@@ -323,6 +329,10 @@ export function mapInvoice(id: string, d: DocumentData): Invoice {
     dueAt: toDate(d.dueAt),
     paidAt: toDate(d.paidAt),
     notes: d.notes ?? null,
+    source: d.source ?? null,
+    stripeInvoiceId: d.stripeInvoiceId ?? null,
+    stripeHostedInvoiceUrl: d.stripeHostedInvoiceUrl ?? null,
+    stripePaymentIntentId: d.stripePaymentIntentId ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

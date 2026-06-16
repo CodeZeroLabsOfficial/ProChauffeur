@@ -375,6 +375,23 @@ export async function uploadBrandingFavicon(file: File): Promise<string> {
   return body.faviconUrl;
 }
 
+export async function uploadVehicleClassImage(classId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/vehicle-classes/${encodeURIComponent(classId)}/image`, {
+    method: "POST",
+    body: formData
+  });
+  const body = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload vehicle class image.");
+  }
+  if (!body.imageUrl) {
+    throw new Error("Could not upload vehicle class image.");
+  }
+  return body.imageUrl;
+}
+
 export async function updateUserDriverProfile(
   uid: string,
   driverProfile: DriverProfile,
