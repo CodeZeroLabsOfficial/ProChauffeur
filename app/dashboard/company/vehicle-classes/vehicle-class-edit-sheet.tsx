@@ -50,7 +50,8 @@ function ImageUploadField({
   errors,
   onOpenDialog,
   inputProps,
-  alt
+  alt,
+  hideLabel
 }: {
   label: string;
   title: string;
@@ -60,10 +61,11 @@ function ImageUploadField({
   onOpenDialog: () => void;
   inputProps: React.InputHTMLAttributes<HTMLInputElement> & { ref: React.Ref<HTMLInputElement> };
   alt: string;
+  hideLabel?: boolean;
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className={hideLabel ? "sr-only" : undefined}>{label}</Label>
       <Item
         variant="outline"
         className="cursor-pointer"
@@ -297,33 +299,6 @@ export function VehicleClassEditSheet({
               <Separator />
 
               <div className="space-y-4">
-                <SectionHeading>Booking image</SectionHeading>
-                <p className="text-muted-foreground text-sm">
-                  Shown in the customer app vehicle picker and booking flow. PNG, JPEG, or WebP up to
-                  5 MB.
-                </p>
-                <ImageUploadField
-                  label="Vehicle class image"
-                  title={hasImage ? "Replace image" : "Upload image"}
-                  description={
-                    hasImage ? "Tap to choose a different image" : "Tap to upload a hero image"
-                  }
-                  previewUrl={imagePreviewUrl}
-                  errors={imageErrors}
-                  onOpenDialog={openImageDialog}
-                  inputProps={getImageInputProps()}
-                  alt={draft.displayName || "Vehicle class"}
-                />
-                {hasImage ? (
-                  <Button type="button" variant="outline" size="sm" onClick={removeImage}>
-                    Remove image
-                  </Button>
-                ) : null}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
                 <SectionHeading>Capacity</SectionHeading>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <NumberStepper
@@ -351,6 +326,34 @@ export function VehicleClassEditSheet({
                     max={20}
                   />
                 </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <SectionHeading>Vehicle class image</SectionHeading>
+                <p className="text-muted-foreground text-sm">
+                  Shown in the customer app vehicle picker and booking flow. PNG, JPEG, or WebP up to
+                  5 MB.
+                </p>
+                <ImageUploadField
+                  label="Vehicle class image"
+                  hideLabel
+                  title={hasImage ? "Replace image" : "Upload image"}
+                  description={
+                    hasImage ? "Tap to choose a different image" : "Tap to upload a hero image"
+                  }
+                  previewUrl={imagePreviewUrl}
+                  errors={imageErrors}
+                  onOpenDialog={openImageDialog}
+                  inputProps={getImageInputProps()}
+                  alt={draft.displayName || "Vehicle class"}
+                />
+                {hasImage ? (
+                  <Button type="button" variant="outline" size="sm" onClick={removeImage}>
+                    Remove image
+                  </Button>
+                ) : null}
               </div>
 
               <Separator />
