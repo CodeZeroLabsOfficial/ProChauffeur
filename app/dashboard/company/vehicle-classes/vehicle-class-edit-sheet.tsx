@@ -146,16 +146,24 @@ const SUPPORTED_TRIP_TYPE_OPTIONS = [
 
 export function VehicleClassEditSheet({
   vehicleClass,
+  sheetMode = "create",
   open,
   onOpenChange,
   onSaved
 }: {
   vehicleClass: VehicleClass | null;
+  sheetMode?: "create" | "edit" | "clone";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
-  const isNew = !vehicleClass;
+  const isNew = sheetMode !== "edit";
+  const sheetTitle =
+    sheetMode === "clone"
+      ? "Clone vehicle class"
+      : isNew
+        ? "Add vehicle class"
+        : "Edit vehicle class";
   const [draft, setDraft] = useState<VehicleClass>(() =>
     vehicleClass ??
       buildInitialVehicleClass({
@@ -251,7 +259,7 @@ export function VehicleClassEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isNew ? "Add vehicle class" : "Edit vehicle class"}</SheetTitle>
+          <SheetTitle>{sheetTitle}</SheetTitle>
         </SheetHeader>
         <Separator />
         <form className="space-y-4 px-4" onSubmit={onSubmit}>

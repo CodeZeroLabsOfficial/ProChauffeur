@@ -2,17 +2,28 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { VehicleClassEditSheet } from "@/app/dashboard/company/vehicle-classes/vehicle-class-edit-sheet";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { deleteVehicleClass } from "@/lib/services/firebase-service";
-import { tripTypeTitle, type VehicleClass } from "@/lib/models";
+import {
+  buildInitialVehicleClass,
+  slugFromDisplayName,
+  tripTypeTitle,
+  type VehicleClass
+} from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -27,22 +38,46 @@ function formatTripTypes(vehicleClass: VehicleClass): string {
   return vehicleClass.supportedTripTypes.map((type) => tripTypeTitle[type]).join(", ");
 }
 
+type SheetMode = "create" | "edit" | "clone";
+
 export default function VehicleClassesPage() {
   const { vehicleClasses, loading } = useVehicleClasses();
   const [editing, setEditing] = useState<VehicleClass | null>(null);
+  const [sheetMode, setSheetMode] = useState<SheetMode>("create");
   const [open, setOpen] = useState(false);
 
   function openNew() {
+    setSheetMode("create");
     setEditing(null);
     setOpen(true);
   }
 
   function openEdit(vehicleClass: VehicleClass) {
+    setSheetMode("edit");
     setEditing(vehicleClass);
     setOpen(true);
   }
 
+  function openClone(source: VehicleClass) {
+    const displayName = `${source.displayName} (copy)`;
+    setSheetMode("clone");
+    setEditing(
+      buildInitialVehicleClass({
+        ...source,
+        id: crypto.randomUUID(),
+        displayName,
+        slug: slugFromDisplayName(displayName),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+    );
+    setOpen(true);
+  }
+
   async function remove(vehicleClass: VehicleClass) {
+    if (!window.confirm(`Delete "${vehicleClass.displayName}"? This cannot be undone.`)) {
+      return;
+    }
     try {
       await deleteVehicleClass(vehicleClass.id);
       toast.success("Vehicle class removed.");
@@ -66,7 +101,7 @@ export default function VehicleClassesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-14">Image</TableHead>
+                <TableHead className="w-14" />
                 <TableHead>Name</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Trip types</TableHead>
@@ -125,17 +160,28 @@ export default function VehicleClassesPage() {
                     </TableCell>
                     <TableCell>{formatTripTypes(vehicleClass)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => remove(vehicleClass)}>
-                          <Trash2Icon className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(vehicleClass)}>
-                          <PencilIcon className="size-4" />
-                        </Button>
+                      <div className="flex items-center justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontalIcon className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(vehicleClass)}>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openClone(vehicleClass)}>
+                              Clone
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => remove(vehicleClass)}>
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -148,6 +194,7 @@ export default function VehicleClassesPage() {
 
       <VehicleClassEditSheet
         vehicleClass={editing}
+        sheetMode={sheetMode}
         open={open}
         onOpenChange={setOpen}
         onSaved={() => {}}
