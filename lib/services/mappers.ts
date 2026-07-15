@@ -5,6 +5,8 @@ import type {
   ActivityNotification,
   AppFleetOperatingHours,
   AppGlobalLimits,
+  Branch,
+  BranchDriver,
   CompanyProfile,
   OperatorLocale,
   DriverProfile,
@@ -25,10 +27,7 @@ import { UNLIMITED } from "@/lib/models/limits";
 import { parseOperatorLocale, parsePricingConfig, parseVehicleClass } from "@/lib/pricing/validate";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
 
-/**
- * Pure mappers from raw Firestore document data into typed app models.
- * Field names intentionally mirror the iOS Codable models.
- */
+/** Pure mappers from raw Firestore document data into typed app models. */
 
 function mapUserProfile(d: DocumentData | undefined): UserProfile {
   const p = d ?? {};
@@ -88,10 +87,37 @@ export function mapUser(id: string, d: DocumentData): User {
     email: d.email ?? "",
     profile: mapUserProfile(d.profile),
     driverProfile: mapDriverProfile(d.driverProfile ?? d.driverStaff),
+    homeBranchId: d.homeBranchId ?? null,
+    branchIds: Array.isArray(d.branchIds) ? d.branchIds : null,
+    defaultBranchId: d.defaultBranchId ?? null,
+    canAccessAllBranches: d.canAccessAllBranches ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     stripeCustomerId: d.stripeCustomerId ?? null,
     liveLocation: toCoordinate(d.liveLocation),
     liveLocationUpdatedAt: toDate(d.liveLocationUpdatedAt)
+  };
+}
+
+export function mapBranch(id: string, d: DocumentData): Branch {
+  return {
+    id,
+    name: d.name ?? id,
+    isActive: d.isActive !== false,
+    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
+    serviceArea: d.serviceArea ?? null,
+    createdAt: toDate(d.createdAt) ?? new Date(),
+    updatedAt: toDate(d.updatedAt) ?? new Date()
+  };
+}
+
+export function mapBranchDriver(id: string, d: DocumentData): BranchDriver {
+  const profile = mapDriverProfile(d) ?? mapDriverProfile({})!;
+  return {
+    id,
+    userId: d.userId ?? id,
+    ...profile,
+    createdAt: toDate(d.createdAt) ?? new Date(),
+    updatedAt: toDate(d.updatedAt) ?? new Date()
   };
 }
 

@@ -3,14 +3,15 @@ import { NextResponse } from "next/server";
 
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { Collections, type VehicleClass } from "@/lib/models";
+import { DEFAULT_BRANCH_ID, type VehicleClass } from "@/lib/models";
 import { validateVehicleClass } from "@/lib/pricing/validate";
+
+function vehicleClassesCollection(branchId: string) {
+  return adminFirestore().collection("branches").doc(branchId).collection("vehicle_classes");
+}
 
 /**
  * PUT: create or update a vehicle class via the Admin SDK.
- *
- * Admin portal writes use the session cookie; routing through this handler avoids
- * depending on client Firestore rules for `vehicle_classes` writes.
  */
 export async function PUT(request: Request) {
   const session = await getAdminSessionUser();
@@ -26,13 +27,16 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const vehicleClass = body as VehicleClass;
+    const payload = body as VehicleClass & { branchId?: string };
+    const branchId =
+      typeof payload.branchId === "string" && payload.branchId.trim()
+        ? payload.branchId.trim()
+        : DEFAULT_BRANCH_ID;
+    const { branchId: _branchId, ...vehicleClass } = payload;
     validateVehicleClass(vehicleClass);
 
-    const slugSnap = await adminFirestore()
-      .collection(Collections.vehicleClasses)
-      .where("slug", "==", vehicleClass.slug)
-      .get();
+    const col = vehicleClassesCollection(branchId);
+    const slugSnap = await col.where("slug", "==", vehicleClass.slug).get();
     const slugConflict = slugSnap.docs.find((docSnap) => docSnap.id !== vehicleClass.id);
     if (slugConflict) {
       return NextResponse.json(
@@ -41,7 +45,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const ref = adminFirestore().collection(Collections.vehicleClasses).doc(vehicleClass.id);
+    const ref = col.doc(vehicleClass.id);
     const existing = await ref.get();
     const { createdAt: _createdAt, updatedAt: _updatedAt, ...data } = vehicleClass;
 

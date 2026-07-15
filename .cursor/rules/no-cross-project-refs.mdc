@@ -1,0 +1,10 @@
+---
+description: Do not reference other projects, apps, or kits in code or comments
+alwaysApply: true
+---
+
+# No cross-project references
+
+- Do not mention other repositories, apps, design kits, or sibling folders in source code or comments.
+- Schema and model comments describe the Firestore/RTDB contract only (collection paths, field names).
+- Do not add comments like “mirrors X”, “from Y kit”, or “like Z product”.

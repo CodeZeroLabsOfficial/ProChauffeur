@@ -53,20 +53,24 @@ The portal is **admin-only**. Sign in requires a Firebase Auth account whose
 
 ## Data model
 
-TypeScript types and helpers in `lib/models/` mirror the iOS Swift `Codable` models.
-Firestore collections: `users`, `trips`, `vehicles`, `locations`, `invoices`, and the
-`app_settings` documents (`pricing`, `limits`, `branding`, `integrations`) and `operator`
-documents (`company`, `locale`, `operating_hours`).
+Auth users live at `users/{uid}`. Operational data is scoped under branches:
+
+`branches/{branchId}/` with nested `settings`, `trips`, `vehicles`, `locations`,
+`vehicle_classes`, `invoices`, and `drivers`. During migration, dual-read may
+fall back to legacy top-level collections when nested data is empty.
+
+Company-wide: `app_settings` (`limits`, `branding`, `integrations`).
+
+Default branch id: `brisbane`. Backfill with `npm run backfill:brisbane-branch`.
 
 ### Live locations
 
-The Dispatch map reads `liveLocations/{driverId}` from Realtime Database. The iOS
-driver app dual-writes GPS to RTDB in the shape:
-`{ lat, lng, heading?, status?, tripId?, updatedAt }`.
+The Dispatch map reads `liveLocations/{branchId}/{driverId}` from Realtime Database
+(with dual-read fallback to the legacy flat `liveLocations/{driverId}` path).
+Payload shape: `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 
-When a trip is **completed** or **cancelled**, the driver app and the web portal
-(via Admin SDK on `PATCH /api/trips/{id}/status`) clear `tripId` on that node while
-keeping the last GPS fix.
+When a trip is **completed** or **cancelled**, `tripId` is cleared on that node
+while keeping the last GPS fix.
 
 ## Deployment (Vercel)
 

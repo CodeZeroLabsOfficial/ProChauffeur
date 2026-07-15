@@ -20,7 +20,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem
 } from "@/components/ui/sidebar";
-import { Logo } from "@/components/layout/logo";
+import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { navGroups, type NavItem } from "@/components/layout/nav-config";
 import type { Appearance } from "@/lib/models";
 
@@ -81,24 +81,11 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { appearance?: Appearance | null }) {
   const pathname = usePathname();
-  const logoUrl = appearance?.logoUrl;
-  const portalName = appearance?.portalName ?? "ProChauffeur";
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex h-10 items-center px-1 group-data-[collapsible=icon]:justify-center">
-          <Logo
-            logoUrl={logoUrl}
-            portalName={portalName}
-            className="group-data-[collapsible=icon]:hidden"
-          />
-          <Logo
-            logoUrl={logoUrl}
-            portalName={portalName}
-            className="hidden group-data-[collapsible=icon]:flex [&>span]:hidden"
-          />
-        </div>
+        <BranchSwitcher appearance={appearance} />
       </SidebarHeader>
       <SidebarContent>
         {navGroups.map((group) => (

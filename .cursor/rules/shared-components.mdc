@@ -1,0 +1,11 @@
+---
+description: Prefer shared UI and layout components for consistency
+alwaysApply: true
+---
+
+# Shared components
+
+- Prefer existing primitives in `components/ui/` and layout pieces in `components/layout/`.
+- New reusable chrome (e.g. branch switcher) belongs in `components/layout/` as a named component, not inlined in a single page.
+- Do not duplicate sidebar, dropdown, or dialog patterns — extend shared building blocks.
+- Use the same UX labels across platforms where the same concept appears (e.g. **Branch** for city sub-accounts).

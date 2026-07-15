@@ -1,0 +1,9 @@
+---
+description: Dual-read / active branch helpers
+alwaysApply: false
+globs: lib/branch/**/*
+---
+
+# Branch data layer
+
+Use `branchCollection` / `branchSettingsDoc` path helpers. Writes go to nested paths under `branches/{branchId}/`. Dual-read may fall back to legacy top-level collections until cutover.

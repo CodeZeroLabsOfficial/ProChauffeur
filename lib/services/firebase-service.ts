@@ -70,6 +70,7 @@ import {
 } from "@/lib/models";
 import {
   mapActivityNotification,
+  mapBranch,
   mapCompanyProfile,
   mapOperatorLocale,
   mapFleetLocation,
@@ -84,6 +85,17 @@ import {
 } from "@/lib/services/mappers";
 import { ConfigError } from "@/lib/pricing/errors";
 import { validateOperatorLocale, validatePricingConfig, validateVehicleClass } from "@/lib/pricing/validate";
+import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { isBranchesDualReadEnabled } from "@/lib/branch/dual-read";
+import {
+  branchCollectionRef,
+  branchDocRef,
+  branchMetaDocRef,
+  branchSettingsDocRef,
+  branchesCollectionRef
+} from "@/lib/branch/firestore-paths";
+import { listenPreferNested } from "@/lib/branch/listen-prefer-nested";
+import { BranchSettingsDocs, type Branch } from "@/lib/models/branch";
 
 type Unsub = () => void;
 
@@ -159,33 +171,98 @@ export async function markAllNotificationsRead(ids: string[]): Promise<void> {
   await batch.commit();
 }
 
+// ─────────────────────────────── Branches ───────────────────────────────
+
+export function listenBranches(onUpdate: (branches: Branch[]) => void): Unsub {
+  return onSnapshot(
+    branchesCollectionRef(db()),
+    (snap) => onUpdate(snapToList(snap, mapBranch)),
+    onSnapshotError("branches", onUpdate)
+  );
+}
+
+export async function fetchBranches(): Promise<Branch[]> {
+  return snapToList(await getDocs(branchesCollectionRef(db())), mapBranch);
+}
+
+export async function fetchBranch(branchId: string): Promise<Branch | null> {
+  const snap = await getDoc(branchMetaDocRef(db(), branchId));
+  return snap.exists() ? mapBranch(snap.id, snap.data()) : null;
+}
+
+export async function upsertBranch(branch: Branch): Promise<void> {
+  await setDoc(
+    branchMetaDocRef(db(), branch.id),
+    stripUndefined({
+      ...branch,
+      updatedAt: serverTimestamp()
+    }),
+    { merge: true }
+  );
+}
+
 // ─────────────────────────────── Trips ───────────────────────────────
 
-/** Admin overview listener: recent trips across the fleet, newest first. */
+/** Admin overview listener: recent trips for the active branch, newest first. */
 export function listenTrips(onUpdate: (trips: Trip[]) => void, max = 800): Unsub {
-  const q = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
-  return onSnapshot(
-    q,
-    (snap) => onUpdate(snapToList(snap, mapTrip)),
+  const branchId = getActiveBranchId();
+  const nested = query(
+    branchCollectionRef(db(), "trips", branchId),
+    orderBy("createdAt", "desc"),
+    fsLimit(max)
+  );
+  const legacy = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
+  return listenPreferNested(
+    nested,
+    legacy,
+    (snap) => snapToList(snap, mapTrip),
+    onUpdate,
     onSnapshotError("trips", onUpdate)
   );
 }
 
 export async function fetchTrips(max = 800): Promise<Trip[]> {
-  const q = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
-  return snapToList(await getDocs(q), mapTrip);
+  const branchId = getActiveBranchId();
+  const nested = query(
+    branchCollectionRef(db(), "trips", branchId),
+    orderBy("createdAt", "desc"),
+    fsLimit(max)
+  );
+  const nestedSnap = await getDocs(nested);
+  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
+    return snapToList(nestedSnap, mapTrip);
+  }
+  const legacy = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
+  return snapToList(await getDocs(legacy), mapTrip);
 }
 
-export async function fetchTrip(id: string): Promise<Trip | null> {
-  const snap = await getDoc(doc(db(), Collections.trips, id));
-  return snap.exists() ? mapTrip(snap.id, snap.data()) : null;
+export async function fetchTrip(id: string, branchId: string = getActiveBranchId()): Promise<Trip | null> {
+  const nested = await getDoc(branchDocRef(db(), "trips", id, branchId));
+  if (nested.exists()) return mapTrip(nested.id, nested.data());
+  if (!isBranchesDualReadEnabled()) return null;
+  const legacy = await getDoc(doc(db(), Collections.trips, id));
+  return legacy.exists() ? mapTrip(legacy.id, legacy.data()) : null;
 }
 
 /** Realtime listener for a single trip document. */
 export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): Unsub {
+  const branchId = getActiveBranchId();
   return onSnapshot(
-    doc(db(), Collections.trips, id),
-    (snap) => onUpdate(snap.exists() ? mapTrip(snap.id, snap.data()) : null),
+    branchDocRef(db(), "trips", id, branchId),
+    (snap) => {
+      if (snap.exists()) {
+        onUpdate(mapTrip(snap.id, snap.data()));
+        return;
+      }
+      if (!isBranchesDualReadEnabled()) {
+        onUpdate(null);
+        return;
+      }
+      // One-shot legacy fallback when nested missing.
+      void getDoc(doc(db(), Collections.trips, id)).then((legacy) => {
+        onUpdate(legacy.exists() ? mapTrip(legacy.id, legacy.data()) : null);
+      });
+    },
     (error) => {
       console.error("Firestore trip listener failed:", error.code, error.message);
       onUpdate(null);
@@ -197,7 +274,7 @@ export async function updateTripStatus(id: string, status: TripStatus): Promise<
   const res = await fetch(`/api/trips/${encodeURIComponent(id)}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status, branchId: getActiveBranchId() })
   });
 
   if (!res.ok) {
@@ -219,7 +296,7 @@ export async function assignTripDriver(
   vehicleSnapshot?: Vehicle | null
 ): Promise<void> {
   await updateDoc(
-    doc(db(), Collections.trips, id),
+    branchDocRef(db(), "trips", id),
     stripUndefined({
       driverID,
       vehicleDocumentId: driverID ? vehicleDocumentId : null,
@@ -232,7 +309,7 @@ export async function assignTripDriver(
 
 export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void> {
   await updateDoc(
-    doc(db(), Collections.trips, id),
+    branchDocRef(db(), "trips", id),
     stripUndefined({
       ...patch,
       pickup: patch.pickup ? coordinateToFirestoreField(patch.pickup) : undefined,
@@ -255,13 +332,13 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
 }
 
 export async function createTrip(trip: Trip): Promise<void> {
-  await setDoc(doc(db(), Collections.trips, trip.id), tripFirestorePayload(trip));
+  await setDoc(branchDocRef(db(), "trips", trip.id), tripFirestorePayload(trip));
 }
 
 export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): Promise<void> {
   const batch = writeBatch(db());
-  batch.set(doc(db(), Collections.trips, outbound.id), tripFirestorePayload(outbound));
-  batch.set(doc(db(), Collections.trips, returnLeg.id), tripFirestorePayload(returnLeg));
+  batch.set(branchDocRef(db(), "trips", outbound.id), tripFirestorePayload(outbound));
+  batch.set(branchDocRef(db(), "trips", returnLeg.id), tripFirestorePayload(returnLeg));
   await batch.commit();
 }
 
@@ -412,48 +489,68 @@ export async function updateUserRole(uid: string, role: UserRole): Promise<void>
 
 /** Demotes a chauffeur to customer and removes their driver profile (and fleet vehicle if any). */
 export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
-  const vehicleRef = doc(db(), Collections.vehicles, uid);
+  const vehicleRef = branchDocRef(db(), "vehicles", uid);
   const vehicleSnap = await getDoc(vehicleRef);
   if (vehicleSnap.exists()) {
     await deleteVehicle(uid);
+  } else if (isBranchesDualReadEnabled()) {
+    const legacy = await getDoc(doc(db(), Collections.vehicles, uid));
+    if (legacy.exists()) await deleteDoc(legacy.ref);
   }
   await updateDoc(doc(db(), Collections.users, uid), {
     role: "customer",
-    driverProfile: deleteField()
+    driverProfile: deleteField(),
+    homeBranchId: deleteField()
   });
+  try {
+    await deleteDoc(branchDocRef(db(), "drivers", uid));
+  } catch {
+    /* roster entry may not exist yet */
+  }
   void createActivityNotification(driverNotification("deleted", driverTitle ?? "Chauffeur", uid));
 }
 
 // ────────────────────────────── Vehicles ─────────────────────────────
 
 export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
-  return onSnapshot(
-    collection(db(), Collections.vehicles),
+  const branchId = getActiveBranchId();
+  const nested = query(branchCollectionRef(db(), "vehicles", branchId));
+  const legacy = query(collection(db(), Collections.vehicles));
+  return listenPreferNested(
+    nested,
+    legacy,
     (snap) => {
       const rows = snapToList(snap, (_, d) => mapVehicle(d));
       rows.sort((a, b) =>
         `${a.color} ${a.make} ${a.model}`.localeCompare(`${b.color} ${b.make} ${b.model}`)
       );
-      onUpdate(rows);
+      return rows;
     },
+    onUpdate,
     onSnapshotError("vehicles", onUpdate)
   );
 }
 
 export async function fetchVehicles(): Promise<Vehicle[]> {
+  const branchId = getActiveBranchId();
+  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicles", branchId));
+  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
+    return nestedSnap.docs.map((dc) => mapVehicle(dc.data()));
+  }
   const snap = await getDocs(collection(db(), Collections.vehicles));
   return snap.docs.map((dc) => mapVehicle(dc.data()));
 }
 
-/** Vehicle doc id always equals driverID. */
 export async function fetchVehicle(vehicleDocumentId: string): Promise<Vehicle | null> {
+  const nested = await getDoc(branchDocRef(db(), "vehicles", vehicleDocumentId));
+  if (nested.exists()) return mapVehicle(nested.data());
+  if (!isBranchesDualReadEnabled()) return null;
   const snap = await getDoc(doc(db(), Collections.vehicles, vehicleDocumentId));
   return snap.exists() ? mapVehicle(snap.data()) : null;
 }
 
-/** Vehicle doc id always equals driverID (chauffeur uid). */
 export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
-  const ref = doc(db(), Collections.vehicles, vehicle.driverID);
+  const ref = branchDocRef(db(), "vehicles", vehicle.driverID);
   const existing = await getDoc(ref);
   const action = existing.exists() ? "updated" : "created";
   await setDoc(ref, stripUndefined({ ...vehicle }));
@@ -463,14 +560,14 @@ export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
 }
 
 export async function deleteVehicle(driverID: string): Promise<void> {
-  const ref = doc(db(), Collections.vehicles, driverID);
+  const ref = branchDocRef(db(), "vehicles", driverID);
   const snap = await getDoc(ref);
   const title = snap.exists() ? vehicleDisplayTitle(mapVehicle(snap.data())) : "Fleet vehicle";
   await deleteDoc(ref);
   void createActivityNotification(vehicleNotification("deleted", title, driverID));
 }
 
-/** Assign a fleet vehicle to a chauffeur, clearing prior links (mirrors iOS). */
+/** Assign a fleet vehicle to a chauffeur, clearing prior links. */
 export async function assignFleetVehicle(
   vehicles: Vehicle[],
   vehicleDocumentId: string,
@@ -482,11 +579,11 @@ export async function assignFleetVehicle(
     if (v.driverID === vehicleDocumentId) found = true;
     const linked = v.assignedChauffeurUserId == null ? v.driverID : v.assignedChauffeurUserId || null;
     if (linked === toChauffeurUserId && v.driverID !== vehicleDocumentId) {
-      batch.update(doc(db(), Collections.vehicles, v.driverID), { assignedChauffeurUserId: "" });
+      batch.update(branchDocRef(db(), "vehicles", v.driverID), { assignedChauffeurUserId: "" });
     }
   }
   if (!found) throw new Error("That fleet vehicle no longer exists. Refresh and try again.");
-  batch.update(doc(db(), Collections.vehicles, vehicleDocumentId), {
+  batch.update(branchDocRef(db(), "vehicles", vehicleDocumentId), {
     assignedChauffeurUserId: toChauffeurUserId
   });
   await batch.commit();
@@ -494,7 +591,7 @@ export async function assignFleetVehicle(
 
 /** Clears the chauffeur linked to a fleet vehicle. */
 export async function unassignFleetVehicle(vehicleDocumentId: string): Promise<void> {
-  await updateDoc(doc(db(), Collections.vehicles, vehicleDocumentId), {
+  await updateDoc(branchDocRef(db(), "vehicles", vehicleDocumentId), {
     assignedChauffeurUserId: ""
   });
 }
@@ -502,21 +599,37 @@ export async function unassignFleetVehicle(vehicleDocumentId: string): Promise<v
 // ───────────────────────────── Locations ─────────────────────────────
 
 export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => void): Unsub {
-  const q = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
-  return onSnapshot(
-    q,
-    (snap) => onUpdate(snapToList(snap, mapFleetLocation)),
+  const branchId = getActiveBranchId();
+  const nested = query(
+    branchCollectionRef(db(), "locations", branchId),
+    orderBy("createdAt", "desc")
+  );
+  const legacy = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
+  return listenPreferNested(
+    nested,
+    legacy,
+    (snap) => snapToList(snap, mapFleetLocation),
+    onUpdate,
     onSnapshotError("locations", onUpdate)
   );
 }
 
 export async function fetchFleetLocations(): Promise<FleetLocation[]> {
+  const branchId = getActiveBranchId();
+  const nested = query(
+    branchCollectionRef(db(), "locations", branchId),
+    orderBy("createdAt", "desc")
+  );
+  const nestedSnap = await getDocs(nested);
+  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
+    return snapToList(nestedSnap, mapFleetLocation);
+  }
   const q = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
   return snapToList(await getDocs(q), mapFleetLocation);
 }
 
 async function clearOtherDefaultFleetLocations(exceptId: string): Promise<void> {
-  const snap = await getDocs(collection(db(), Collections.locations));
+  const snap = await getDocs(branchCollectionRef(db(), "locations"));
   const batch = writeBatch(db());
   let hasUpdates = false;
 
@@ -545,7 +658,7 @@ export async function createFleetLocation(input: {
 
   if (isDefault) await clearOtherDefaultFleetLocations(id);
 
-  await setDoc(doc(db(), Collections.locations, id), {
+  await setDoc(branchDocRef(db(), "locations", id), {
     id,
     name,
     addressLine,
@@ -565,7 +678,7 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
 
   if (isDefault) await clearOtherDefaultFleetLocations(location.id);
 
-  await updateDoc(doc(db(), Collections.locations, location.id), {
+  await updateDoc(branchDocRef(db(), "locations", location.id), {
     name,
     addressLine,
     latitude: location.latitude,
@@ -576,7 +689,7 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
 }
 
 export async function deleteFleetLocation(id: string): Promise<void> {
-  const ref = doc(db(), Collections.locations, id);
+  const ref = branchDocRef(db(), "locations", id);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const location = mapFleetLocation(snap.id, snap.data());
@@ -592,6 +705,11 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 // ───────────────────────── App settings (config) ─────────────────────
 
 export async function fetchPricingConfiguration(): Promise<PricingConfig> {
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing));
+  if (nested.exists()) return mapPricingConfig(nested.data());
+  if (!isBranchesDualReadEnabled()) {
+    throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
+  }
   const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
   if (!snap.exists()) {
     throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
@@ -602,7 +720,7 @@ export async function fetchPricingConfiguration(): Promise<PricingConfig> {
 export async function savePricingConfiguration(config: PricingConfig): Promise<void> {
   validatePricingConfig(config);
   await setDoc(
-    doc(db(), Collections.operator, OperatorDocs.pricing),
+    branchSettingsDocRef(db(), BranchSettingsDocs.pricing),
     stripUndefined({ ...config }),
     { merge: true }
   );
@@ -613,6 +731,13 @@ export async function savePricingConfiguration(config: PricingConfig): Promise<v
 // ───────────────────────── Vehicle classes ─────────────────────────
 
 export async function fetchVehicleClasses(): Promise<VehicleClass[]> {
+  const branchId = getActiveBranchId();
+  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", branchId));
+  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
+    return nestedSnap.docs
+      .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
+  }
   const snap = await getDocs(collection(db(), Collections.vehicleClasses));
   return snap.docs
     .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
@@ -620,19 +745,25 @@ export async function fetchVehicleClasses(): Promise<VehicleClass[]> {
 }
 
 export async function fetchVehicleClass(id: string): Promise<VehicleClass | null> {
+  const nested = await getDoc(branchDocRef(db(), "vehicle_classes", id));
+  if (nested.exists()) return mapVehicleClass(nested.id, nested.data());
+  if (!isBranchesDualReadEnabled()) return null;
   const snap = await getDoc(doc(db(), Collections.vehicleClasses, id));
   return snap.exists() ? mapVehicleClass(snap.id, snap.data()) : null;
 }
 
 export function listenVehicleClasses(onUpdate: (classes: VehicleClass[]) => void): Unsub {
-  return onSnapshot(
-    collection(db(), Collections.vehicleClasses),
-    (snap) => {
-      const classes = snap.docs
+  const branchId = getActiveBranchId();
+  const nested = query(branchCollectionRef(db(), "vehicle_classes", branchId));
+  const legacy = query(collection(db(), Collections.vehicleClasses));
+  return listenPreferNested(
+    nested,
+    legacy,
+    (snap) =>
+      snap.docs
         .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
-      onUpdate(classes);
-    },
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName)),
+    onUpdate,
     onSnapshotError("vehicle_classes", onUpdate)
   );
 }
@@ -653,7 +784,7 @@ export async function saveVehicleClass(vehicleClass: VehicleClass): Promise<void
   const res = await fetch("/api/vehicle-classes", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(vehicleClass)
+    body: JSON.stringify({ ...vehicleClass, branchId: getActiveBranchId() })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not save vehicle class.");
@@ -662,7 +793,9 @@ export async function saveVehicleClass(vehicleClass: VehicleClass): Promise<void
 
 export async function deleteVehicleClass(id: string): Promise<void> {
   const res = await fetch(`/api/vehicle-classes/${encodeURIComponent(id)}`, {
-    method: "DELETE"
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ branchId: getActiveBranchId() })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not delete vehicle class.");
@@ -670,13 +803,16 @@ export async function deleteVehicleClass(id: string): Promise<void> {
 }
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours));
+  if (nested.exists()) return mapOperatingHours(nested.data());
+  if (!isBranchesDualReadEnabled()) return emptyOperatingHours;
   const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.operatingHours));
   return snap.exists() ? mapOperatingHours(snap.data()) : emptyOperatingHours;
 }
 
 export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise<void> {
   await setDoc(
-    doc(db(), Collections.operator, OperatorDocs.operatingHours),
+    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours),
     stripUndefined({ ...hours }),
     { merge: true }
   );
@@ -684,32 +820,38 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
 }
 
 export async function fetchOperatorLocale(): Promise<OperatorLocale> {
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.locale));
-  if (!snap.exists()) {
-    throw new ConfigError("Locale is not configured. Complete Settings → Locale first.");
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale));
+  if (nested.exists()) return mapOperatorLocale(nested.data());
+  if (!isBranchesDualReadEnabled()) {
+    throw new ConfigError("Locale is not configured.");
   }
+  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.locale));
+  if (!snap.exists()) throw new ConfigError("Locale is not configured.");
   return mapOperatorLocale(snap.data());
 }
 
 export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
   validateOperatorLocale(locale);
-  await setDoc(doc(db(), Collections.operator, OperatorDocs.locale), stripUndefined({ ...locale }));
+  await setDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale), stripUndefined({ ...locale }));
   invalidateOperatorLocaleCache();
   void createActivityNotification(localeNotification());
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.company));
+  if (nested.exists()) return mapCompanyProfile(nested.data());
+  if (!isBranchesDualReadEnabled()) return emptyCompanyProfile;
   const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.company));
   return snap.exists() ? mapCompanyProfile(snap.data()) : emptyCompanyProfile;
 }
 
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
   await setDoc(
-    doc(db(), Collections.operator, OperatorDocs.company),
+    branchSettingsDocRef(db(), BranchSettingsDocs.company),
     stripUndefined({ ...profile }),
     { merge: true }
   );
-  void createActivityNotification(companyNotification(profile.name?.trim() || "Company"));
+  void createActivityNotification(companyNotification());
 }
 
 export async function fetchGlobalLimits(): Promise<AppGlobalLimits> {
@@ -718,57 +860,65 @@ export async function fetchGlobalLimits(): Promise<AppGlobalLimits> {
 }
 
 export async function saveGlobalLimits(limits: AppGlobalLimits): Promise<void> {
-  await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.limits), limits);
+  await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.limits), stripUndefined({ ...limits }), {
+    merge: true
+  });
 }
 
-// ───────────────────────────── Invoices ──────────────────────────────
+// ─────────────────────────────── Invoices ───────────────────────────────
 
 export function listenInvoices(onUpdate: (invoices: Invoice[]) => void): Unsub {
-  const q = query(collection(db(), Collections.invoices), orderBy("issuedAt", "desc"));
-  return onSnapshot(
-    q,
-    (snap) => onUpdate(snapToList(snap, mapInvoice)),
+  const branchId = getActiveBranchId();
+  const nested = query(
+    branchCollectionRef(db(), "invoices", branchId),
+    orderBy("issuedAt", "desc")
+  );
+  const legacy = query(collection(db(), Collections.invoices), orderBy("issuedAt", "desc"));
+  return listenPreferNested(
+    nested,
+    legacy,
+    (snap) => snapToList(snap, mapInvoice),
+    onUpdate,
     onSnapshotError("invoices", onUpdate)
   );
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice | null> {
+  const nested = await getDoc(branchDocRef(db(), "invoices", id));
+  if (nested.exists()) return mapInvoice(nested.id, nested.data());
+  if (!isBranchesDualReadEnabled()) return null;
   const snap = await getDoc(doc(db(), Collections.invoices, id));
   return snap.exists() ? mapInvoice(snap.id, snap.data()) : null;
 }
 
 export async function createInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<string> {
-  const ref = await addDoc(collection(db(), Collections.invoices), {
-    ...stripUndefined({ ...invoice }),
+  const ref = await addDoc(branchCollectionRef(db(), "invoices"), {
+    ...stripUndefined(invoice),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
-  await updateDoc(ref, { id: ref.id });
-  const title = invoice.invoiceNumber?.trim() || "Invoice";
-  void createActivityNotification(invoiceNotification("created", title, ref.id));
+  void createActivityNotification(invoiceNotification("created", invoice.invoiceNumber, ref.id));
   return ref.id;
 }
 
 export async function updateInvoice(id: string, patch: Partial<Invoice>): Promise<void> {
-  await updateDoc(doc(db(), Collections.invoices, id), {
-    ...stripUndefined({ ...patch }),
+  await updateDoc(branchDocRef(db(), "invoices", id), {
+    ...stripUndefined(patch),
     updatedAt: serverTimestamp()
   });
-  const title = patch.invoiceNumber?.trim() || "Invoice";
-  void createActivityNotification(invoiceNotification("updated", title, id));
+  void createActivityNotification(
+    invoiceNotification("updated", patch.invoiceNumber ?? id, id)
+  );
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  const ref = doc(db(), Collections.invoices, id);
+  const ref = branchDocRef(db(), "invoices", id);
   const snap = await getDoc(ref);
-  const title = snap.exists() ? mapInvoice(snap.id, snap.data()).invoiceNumber || "Invoice" : "Invoice";
+  const number = snap.exists() ? String(snap.data().invoiceNumber ?? id) : id;
   await deleteDoc(ref);
-  void createActivityNotification(invoiceNotification("deleted", title, id));
+  void createActivityNotification(invoiceNotification("deleted", number, id));
 }
 
-// ─────────────────── Generic app_settings docs (web) ─────────────────
-
-/** Reads an arbitrary `app_settings/{docId}` document (branding, integrations, etc). */
 export async function fetchSettingDoc<T extends DocumentData>(docId: string): Promise<T | null> {
   const snap = await getDoc(doc(db(), Collections.appSettings, docId));
   return snap.exists() ? (snap.data() as T) : null;

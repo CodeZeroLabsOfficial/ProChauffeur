@@ -16,17 +16,24 @@ export * from "@/lib/models/notification";
 export * from "@/lib/models/vehicle-class";
 export * from "@/lib/models/saved-payment-method";
 export * from "@/lib/models/branding";
+export * from "@/lib/models/branch";
 
-/** Firestore collection names (mirror the iOS `collectionName` constants). */
+/** Firestore collection names. */
 export const Collections = {
   users: "users",
+  branches: "branches",
+  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/trips */
   trips: "trips",
+  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/vehicles */
   vehicles: "vehicles",
+  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/locations */
   locations: "locations",
+  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/invoices */
   invoices: "invoices",
   operator: "operator",
   appSettings: "app_settings",
   notifications: "notifications",
+  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/vehicle_classes */
   vehicleClasses: "vehicle_classes"
 } as const;
 
@@ -48,5 +55,10 @@ export const AppSettingsDocs = {
   integrations: "integrations"
 } as const;
 
-/** RTDB path for ephemeral live driver/vehicle positions. */
+/** RTDB root for live driver positions (`liveLocations/{branchId}/{driverId}`). */
 export const rtdbLiveLocationsPath = "liveLocations";
+
+/** RTDB path for one branch's live positions. */
+export function rtdbBranchLiveLocationsPath(branchId: string): string {
+  return `${rtdbLiveLocationsPath}/${branchId}`;
+}

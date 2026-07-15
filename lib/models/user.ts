@@ -53,17 +53,24 @@ export interface DriverProfile {
   acceptsDispatchAssignments: boolean;
 }
 
-/** User.swift — `users/{uid}` document. */
+/** `users/{uid}` document — Auth identity for all roles. */
 export interface User {
   id: string;
   role: UserRole;
   email: string;
   profile: UserProfile;
+  /** Legacy embedded chauffeur profile; prefer `branches/{id}/drivers/{uid}` after cutover. */
   driverProfile?: DriverProfile | null;
+  /** Driver's home branch roster. */
+  homeBranchId?: string | null;
+  /** Admin/dispatcher branches this user may access. */
+  branchIds?: string[] | null;
+  defaultBranchId?: string | null;
+  canAccessAllBranches?: boolean | null;
   createdAt: Date;
   /** Stripe Customer id for saved cards and payments. */
   stripeCustomerId?: string | null;
-  /** Live tracking fields written ad hoc by the driver app. */
+  /** Live tracking fields written by the driver app. */
   liveLocation?: { latitude: number; longitude: number } | null;
   liveLocationUpdatedAt?: Date | null;
 }

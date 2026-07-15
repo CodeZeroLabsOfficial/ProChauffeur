@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   listenFleetLocations,
   listenInvoices,
@@ -30,6 +31,7 @@ type CollectionsContextValue = {
 const CollectionsContext = createContext<CollectionsContextValue | null>(null);
 
 export function CollectionsProvider({ children }: { children: ReactNode }) {
+  const { branchId } = useActiveBranch();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -44,12 +46,13 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
   const [vehicleClassesLoading, setVehicleClassesLoading] = useState(true);
 
   useEffect(() => {
+    setTripsLoading(true);
     const unsub = listenTrips((rows) => {
       setTrips(rows);
       setTripsLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
     const unsub = listenUsers((rows) => {
@@ -60,36 +63,40 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setVehiclesLoading(true);
     const unsub = listenVehicles((rows) => {
       setVehicles(rows);
       setVehiclesLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
+    setLocationsLoading(true);
     const unsub = listenFleetLocations((rows) => {
       setLocations(rows);
       setLocationsLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
+    setInvoicesLoading(true);
     const unsub = listenInvoices((rows) => {
       setInvoices(rows);
       setInvoicesLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
+    setVehicleClassesLoading(true);
     const unsub = listenVehicleClasses((rows) => {
       setVehicleClasses(rows);
       setVehicleClassesLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [branchId]);
 
   return (
     <CollectionsContext.Provider

@@ -1,0 +1,15 @@
+---
+description: Canonical naming for branches, locations, and company entities
+alwaysApply: true
+---
+
+# Naming conventions
+
+| Term | Meaning | Prefer | Avoid for this concept |
+|------|---------|--------|------------------------|
+| **Branch** | City sub-account | `branch`, `branchId`, `BranchSwitcher`, `homeBranchId` | market, location (for cities) |
+| **Location** | Garage / depot | `locations` under a branch, `FleetLocation` | calling a city a location |
+| **Driver (branch)** | Chauffeur roster | `branches/{id}/drivers/{uid}` | top-level fleet driver docs after cutover |
+| **User** | Auth identity | top-level `users/{uid}` for all roles | nesting customers under a branch |
+
+Field names must stay consistent across platforms: `branchId`, `homeBranchId`, `branchIds`, `defaultBranchId`, `canAccessAllBranches`.

@@ -258,6 +258,76 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Branch sub-accounts: nested ops data under branches/{branchId}/…
+    match /branches/{branchId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /settings/{docId} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+      }
+
+      match /trips/{tripId} {
+        function isCustomerOfTrip() {
+          return resource.data.customerID == request.auth.uid;
+        }
+        function isDriverOfTrip() {
+          return resource.data.driverID == request.auth.uid;
+        }
+        function isOpenRequest() {
+          return resource.data.status == 'requested' && driverIdEmpty(resource.data);
+        }
+
+        allow read: if signedIn() && (
+          isAdmin()
+          || isCustomerOfTrip()
+          || isDriverOfTrip()
+          || (isDriver() && isOpenRequest())
+        );
+        allow create: if signedIn();
+        allow update: if signedIn() && (
+          isAdmin()
+          || isCustomerOfTrip()
+          || isDriverOfTrip()
+          || (isDriver() && isOpenRequest())
+        );
+        allow delete: if isAdmin();
+      }
+
+      match /vehicle_classes/{classId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /vehicles/{vehicleId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin()
+          || (signedIn() && request.auth.uid == vehicleId);
+      }
+
+      match /locations/{locId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /invoices/{invoiceId} {
+        allow read: if isAdmin()
+          || (signedIn() && resource.data.customerID == request.auth.uid);
+        allow write: if isAdmin();
+      }
+
+      match /drivers/{driverUid} {
+        allow read: if signedIn();
+        allow write: if isAdmin() || isSelf(driverUid);
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
