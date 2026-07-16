@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useFleetLocations } from "@/hooks/use-collections";
-import {
-  createFleetLocation,
-  deleteFleetLocation,
-  updateFleetLocation
-} from "@/lib/services/firebase-service";
-import { hasValidFleetLocationCoordinate, type FleetLocation } from "@/lib/models";
-import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,42 +28,78 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  buildBranch,
+  canCreateLocation,
+  capLabel,
+  isMultiLocationEnabled,
+  unlimitedLimits,
+  type AppGlobalLimits,
+  type Branch
+} from "@/lib/models";
+import {
+  createLocationWithScaffold,
+  fetchGlobalLimits,
+  upsertBranch
+} from "@/lib/services/firebase-service";
 
-function addressFromLocation(location: FleetLocation): AddressSuggestion | null {
-  if (!hasValidFleetLocationCoordinate(location)) return null;
-  return {
-    id: location.id,
-    addressLine: location.addressLine,
-    coordinate: { latitude: location.latitude, longitude: location.longitude }
-  };
+function parsePostcodes(raw: string): string[] {
+  return raw
+    .split(/[\n,]+/)
+    .map((p) => p.trim().toUpperCase())
+    .filter(Boolean);
 }
 
-export default function LocationsPage() {
-  const { locations, loading } = useFleetLocations();
-  const [editing, setEditing] = useState<FleetLocation | null>(null);
+function postcodesToText(branch: Branch | null): string {
+  const list = branch?.serviceArea?.type === "postcodes" ? branch.serviceArea.postcodes : null;
+  return (list ?? []).join("\n");
+}
+
+function slugifyLocationId(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64);
+}
+
+export default function SettingsLocationsPage() {
+  const { branches, branchesLoading } = useActiveBranch();
+  const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Branch | null>(null);
   const [saving, setSaving] = useState(false);
-  const [address, setAddress] = useState<AddressSuggestion | null>(null);
-  const [isDefault, setIsDefault] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+
+  useEffect(() => {
+    fetchGlobalLimits()
+      .then(setLimits)
+      .catch(() => setLimits(unlimitedLimits));
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    if (editing) {
-      setAddress(addressFromLocation(editing));
-      setIsDefault(editing.isDefault ?? false);
-    } else {
-      setAddress(null);
-      setIsDefault(false);
-    }
+    setIsActive(editing?.isActive !== false);
   }, [open, editing]);
+
+  const resolved = limits ?? unlimitedLimits;
+  const canAdd = canCreateLocation(branches.length, resolved.maxLocations);
+  const multiOn = isMultiLocationEnabled(resolved.maxLocations);
+
+  const sorted = useMemo(
+    () => [...branches].sort((a, b) => a.name.localeCompare(b.name)),
+    [branches]
+  );
 
   function openNew() {
     setEditing(null);
     setOpen(true);
   }
 
-  function openEdit(loc: FleetLocation) {
-    setEditing(loc);
+  function openEdit(branch: Branch) {
+    setEditing(branch);
     setOpen(true);
   }
 
@@ -77,161 +107,228 @@ export default function LocationsPage() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const name = String(form.get("name") ?? "").trim();
-
-    const resolvedAddress =
-      address ??
-      (editing && editing.addressLine && hasValidFleetLocationCoordinate(editing)
-        ? addressFromLocation(editing)
-        : null);
+    const rawId = String(form.get("id") ?? "").trim();
+    const timeZoneIdentifier = String(form.get("timeZoneIdentifier") ?? "").trim() || null;
+    const postcodes = parsePostcodes(String(form.get("postcodes") ?? ""));
 
     if (!name) {
-      toast.error("Enter a garage name.");
+      toast.error("Enter a location name.");
       return;
     }
-    if (!resolvedAddress) {
-      toast.error("Select an address from the suggestions.");
-      return;
-    }
+
+    const serviceArea =
+      postcodes.length > 0
+        ? { type: "postcodes" as const, postcodes }
+        : null;
 
     setSaving(true);
     try {
-      const payload = {
-        name,
-        addressLine: resolvedAddress.addressLine,
-        latitude: resolvedAddress.coordinate.latitude,
-        longitude: resolvedAddress.coordinate.longitude,
-        isDefault
-      };
-
       if (editing) {
-        await updateFleetLocation({ ...editing, ...payload });
-        toast.success("Garage updated.");
+        await upsertBranch({
+          ...editing,
+          name,
+          isActive,
+          timeZoneIdentifier,
+          serviceArea,
+          updatedAt: new Date()
+        });
+        toast.success("Location updated.");
       } else {
-        await createFleetLocation(payload);
-        toast.success("Garage added.");
+        const id = slugifyLocationId(rawId || name);
+        if (!id) {
+          toast.error("Enter a valid location id (letters and numbers).");
+          return;
+        }
+        if (!canAdd) {
+          toast.error(`Location limit reached (${capLabel(resolved.maxLocations)}).`);
+          return;
+        }
+        await createLocationWithScaffold(
+          buildBranch({
+            id,
+            name,
+            isActive,
+            timeZoneIdentifier,
+            serviceArea
+          })
+        );
+        toast.success("Location created.");
       }
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the garage.");
+      toast.error(err instanceof Error ? err.message : "Could not save the location.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function remove(loc: FleetLocation) {
-    try {
-      await deleteFleetLocation(loc.id);
-      toast.success("Garage removed.");
-    } catch {
-      toast.error("Could not remove the garage.");
-    }
+  if (branchesLoading || !limits) {
+    return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Garages</CardTitle>
-          <Button variant="outline" size="sm" onClick={openNew}>
-            <PlusIcon /> Add garage
+    <Card>
+      <CardHeader>
+        <CardTitle>Locations</CardTitle>
+        <CardDescription>
+          City markets for dispatch and bookings. License allows{" "}
+          {capLabel(resolved.maxLocations)} location
+          {resolved.maxLocations === 1 ? "" : "s"} ({branches.length} in use).
+          {!multiOn ? " Raise maxLocations above 1 to add another city." : null}
+        </CardDescription>
+        <CardAction>
+          <Button onClick={openNew} disabled={!canAdd}>
+            <PlusIcon data-icon="inline-start" />
+            Add location
           </Button>
-        </CardHeader>
-        <CardContent>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!canAdd ? (
+          <p className="text-muted-foreground text-sm">
+            Location limit reached. Update the cap under{" "}
+            <Link href="/dashboard/settings/license" className="underline">
+              License
+            </Link>{" "}
+            to add another city.
+          </p>
+        ) : null}
+
+        {sorted.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No locations yet.</p>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="w-20" />
+                <TableHead>Id</TableHead>
+                <TableHead>Postcodes</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
-                    Loading garages…
-                  </TableCell>
-                </TableRow>
-              ) : locations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
-                    No garages yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                locations.map((loc) => (
-                  <TableRow key={loc.id}>
-                    <TableCell className="font-medium">
-                      <span className="inline-flex items-center gap-2">
-                        {loc.name}
-                        {loc.isDefault ? (
-                          <Badge variant="secondary" className="text-xs">
-                            Default
-                          </Badge>
-                        ) : null}
-                      </span>
+              {sorted.map((branch) => {
+                const pc =
+                  branch.serviceArea?.type === "postcodes"
+                    ? (branch.serviceArea.postcodes ?? []).length
+                    : 0;
+                return (
+                  <TableRow key={branch.id}>
+                    <TableCell className="font-medium">{branch.name}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {branch.id}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{loc.addressLine}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {pc > 0 ? `${pc} listed` : "—"}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => remove(loc)}>
-                          <Trash2Icon className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(loc)}>
-                          <PencilIcon className="size-4" />
-                        </Button>
-                      </div>
+                      {branch.isActive ? (
+                        <Badge variant="secondary">Active</Badge>
+                      ) : (
+                        <Badge variant="outline">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(branch)}>
+                        <PencilIcon />
+                        <span className="sr-only">Edit</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                );
+              })}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </CardContent>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{editing ? "Edit garage" : "Add garage"}</SheetTitle>
-            <SheetDescription>Where vehicles are based for the active location.</SheetDescription>
-          </SheetHeader>
-          <form onSubmit={onSubmit} className="space-y-4 px-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" required defaultValue={editing?.name} key={editing?.id ?? "new-name"} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addressLine">Address</Label>
-              <AddressAutocomplete
-                id="addressLine"
-                value={address}
-                onChange={setAddress}
-                required
-                placeholder="Search for an address…"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="isDefault">Default garage</Label>
+        <SheetContent className="overflow-y-auto sm:max-w-md">
+          <form onSubmit={onSubmit} className="flex h-full flex-col gap-4">
+            <SheetHeader>
+              <SheetTitle>{editing ? "Edit location" : "New location"}</SheetTitle>
+              <SheetDescription>
+                {editing
+                  ? "Update name, service postcodes, and status."
+                  : "Creates the location and copies pricing, hours, and vehicle classes from Brisbane."}
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="space-y-4 px-1">
+              {!editing ? (
+                <div className="space-y-2">
+                  <Label htmlFor="location-id">Id</Label>
+                  <Input
+                    id="location-id"
+                    name="id"
+                    placeholder="e.g. gold-coast"
+                    className="font-mono"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Optional. Defaults from the name. Cannot be changed later.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <Label htmlFor="location-name">Name</Label>
+                <Input
+                  id="location-name"
+                  name="name"
+                  required
+                  defaultValue={editing?.name ?? ""}
+                  placeholder="e.g. Gold Coast"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-tz">Time zone</Label>
+                <Input
+                  id="location-tz"
+                  name="timeZoneIdentifier"
+                  defaultValue={editing?.timeZoneIdentifier ?? ""}
+                  placeholder="e.g. Australia/Brisbane"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-postcodes">Service postcodes</Label>
+                <Textarea
+                  id="location-postcodes"
+                  name="postcodes"
+                  rows={6}
+                  defaultValue={postcodesToText(editing)}
+                  placeholder={"One per line or comma-separated\n4000\n4001"}
+                />
                 <p className="text-muted-foreground text-xs">
-                  Used for dispatch map centering and pricing deadhead calculations.
+                  Used to route customer bookings when multi-location is enabled. Avoid overlapping
+                  lists across locations.
                 </p>
               </div>
-              <Switch id="isDefault" checked={isDefault} onCheckedChange={setIsDefault} />
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="location-active">Active</Label>
+                  <p className="text-muted-foreground text-xs">
+                    Inactive locations are hidden from the switcher and resolve.
+                  </p>
+                </div>
+                <Switch id="location-active" checked={isActive} onCheckedChange={setIsActive} />
+              </div>
             </div>
-            <SheetFooter className="px-0">
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save garage"}
+
+            <SheetFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving || (!editing && !canAdd)}>
+                {saving ? "Saving…" : editing ? "Save" : "Create"}
               </Button>
             </SheetFooter>
           </form>
         </SheetContent>
       </Sheet>
-    </div>
+    </Card>
   );
 }

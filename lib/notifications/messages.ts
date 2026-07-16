@@ -6,7 +6,7 @@ const HREF = {
   fleet: "/dashboard/fleet",
   profile: "/dashboard/settings/profile",
   company: "/dashboard/company",
-  locations: "/dashboard/company/locations",
+  locations: "/dashboard/company/garages",
   operatingHours: "/dashboard/company/operating-hours",
   locale: "/dashboard/settings/locale",
   pricing: "/dashboard/company/pricing",

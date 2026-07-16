@@ -53,8 +53,9 @@ export const navGroups: NavGroup[] = [
         icon: Building2Icon,
         items: [
           { title: "Overview", href: "/dashboard/company" },
+          { title: "Locations", href: "/dashboard/company/locations" },
           { title: "Operating Hours", href: "/dashboard/company/operating-hours" },
-          { title: "Garages", href: "/dashboard/company/locations" },
+          { title: "Garages", href: "/dashboard/company/garages" },
           { title: "Pricing", href: "/dashboard/company/pricing" },
           { title: "Vehicle Classes", href: "/dashboard/company/vehicle-classes" }
         ]
@@ -69,7 +70,6 @@ export const navGroups: NavGroup[] = [
           { title: "Appearance", href: "/dashboard/settings/appearance" },
           { title: "Locale", href: "/dashboard/settings/locale" },
           { title: "License", href: "/dashboard/settings/license" },
-          { title: "Locations", href: "/dashboard/settings/locations" },
           { title: "Admins", href: "/dashboard/settings/admins" },
           { title: "Integrations", href: "/dashboard/settings/integrations" }
         ]
