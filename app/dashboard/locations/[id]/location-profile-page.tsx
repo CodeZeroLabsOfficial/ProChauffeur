@@ -7,7 +7,9 @@ import { ChevronLeftIcon, PencilIcon } from "lucide-react";
 
 import { LocationDetailCard } from "@/app/dashboard/locations/components/location-detail-card";
 import { LocationOverviewPanel } from "@/app/dashboard/locations/components/location-overview-panel";
+import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
 import { LocationServiceAreaPanel } from "@/app/dashboard/locations/components/location-service-area-panel";
+import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import { locationHeroMetrics } from "@/app/dashboard/locations/lib/location-profile-metrics";
@@ -70,11 +72,6 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
     else params.set("tab", tab);
     const q = params.toString();
     router.replace(`/dashboard/locations/${locationId}${q ? `?${q}` : ""}`, { scroll: false });
-  }
-
-  function openScopedCompanyPage(href: string) {
-    setBranchId(locationId);
-    router.push(href);
   }
 
   if (loading || tripsLoading || invoicesLoading) {
@@ -144,24 +141,12 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
             />
           </TabsContent>
 
-          <TabsContent value="classes" className="mt-0 max-w-lg space-y-4">
-            <p className="text-muted-foreground text-sm">
-              Vehicle classes for this location are managed on the vehicle classes page.
-            </p>
-            <Button
-              type="button"
-              onClick={() => openScopedCompanyPage("/dashboard/company/vehicle-classes")}>
-              Open vehicle classes
-            </Button>
+          <TabsContent value="classes" className="mt-0 space-y-4">
+            <LocationVehicleClassesPanel />
           </TabsContent>
 
-          <TabsContent value="pricing" className="mt-0 max-w-lg space-y-4">
-            <p className="text-muted-foreground text-sm">
-              Pricing for this location is managed on the pricing page.
-            </p>
-            <Button type="button" onClick={() => openScopedCompanyPage("/dashboard/company/pricing")}>
-              Open pricing
-            </Button>
+          <TabsContent value="pricing" className="mt-0 space-y-4">
+            <LocationPricingPanel branchId={branch.id} />
           </TabsContent>
         </Tabs>
       </div>

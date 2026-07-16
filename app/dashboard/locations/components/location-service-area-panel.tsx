@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Branch } from "@/lib/models";
@@ -59,25 +60,32 @@ export function LocationServiceAreaPanel({
   }
 
   return (
-    <form onSubmit={saveServiceArea} className="max-w-lg space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="location-postcodes">Service postcodes</Label>
-        <Textarea
-          id="location-postcodes"
-          rows={8}
-          value={postcodesText}
-          onChange={(e) => setPostcodesText(e.target.value)}
-          placeholder={"One per line or comma-separated\n4000\n4001"}
-          disabled={saving}
-        />
-        <p className="text-muted-foreground text-xs">
-          Used to route customer bookings when multi-location is enabled. Avoid overlapping lists
-          across locations.
-        </p>
-      </div>
-      <Button type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save"}
-      </Button>
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Service area</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={saveServiceArea} className="max-w-lg space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="location-postcodes">Service postcodes</Label>
+            <Textarea
+              id="location-postcodes"
+              rows={8}
+              value={postcodesText}
+              onChange={(e) => setPostcodesText(e.target.value)}
+              placeholder={"One per line or comma-separated\n4000\n4001"}
+              disabled={saving}
+            />
+            <p className="text-muted-foreground text-xs">
+              Used to route customer bookings when multi-location is enabled. Avoid overlapping lists
+              across locations.
+            </p>
+          </div>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

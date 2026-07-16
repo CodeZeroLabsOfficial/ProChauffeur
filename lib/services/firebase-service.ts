@@ -802,18 +802,23 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 
 // ───────────────────────── App settings (config) ─────────────────────
 
-export async function fetchPricingConfiguration(): Promise<PricingConfig> {
-  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing));
+export async function fetchPricingConfiguration(
+  branchId: string = getActiveBranchId()
+): Promise<PricingConfig> {
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing, branchId));
   if (!nested.exists()) {
     throw new ConfigError("Pricing is not configured. Set pricing for this location first.");
   }
   return mapPricingConfig(nested.data());
 }
 
-export async function savePricingConfiguration(config: PricingConfig): Promise<void> {
+export async function savePricingConfiguration(
+  config: PricingConfig,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
   validatePricingConfig(config);
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.pricing),
+    branchSettingsDocRef(db(), BranchSettingsDocs.pricing, branchId),
     stripUndefined({ ...config }),
     { merge: true }
   );

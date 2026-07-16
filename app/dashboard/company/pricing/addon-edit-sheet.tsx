@@ -46,7 +46,8 @@ export function AddonEditSheet({
   open,
   onOpenChange,
   onSave,
-  onDelete
+  onDelete,
+  nested = false
 }: {
   addon: PricingAddon | null;
   vehicleClasses: VehicleClass[];
@@ -54,6 +55,7 @@ export function AddonEditSheet({
   onOpenChange: (open: boolean) => void;
   onSave: (addon: PricingAddon) => void;
   onDelete?: (id: string) => void;
+  nested?: boolean;
 }) {
   const isNew = !addon;
   const [draft, setDraft] = useState<PricingAddon>(() => addon ?? buildNewAddon());
@@ -99,7 +101,7 @@ export function AddonEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add add-on" : "Edit add-on"}</SheetTitle>
           <SheetDescription>

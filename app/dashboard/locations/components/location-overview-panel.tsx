@@ -85,7 +85,7 @@ export function LocationOverviewPanel({
       .then((hours) => setHoursConfigured(hours.schedules.length > 0))
       .catch(() => setHoursConfigured(false));
 
-    fetchPricingConfiguration()
+    fetchPricingConfiguration(branch.id)
       .then(() => setPricingConfigured(true))
       .catch(() => setPricingConfigured(false));
   }, [branch.id]);

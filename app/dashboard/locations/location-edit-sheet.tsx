@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
@@ -41,6 +40,8 @@ import {
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
+import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
+import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 
 const tabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
@@ -89,7 +90,6 @@ export function LocationEditSheet({
   canCreate: boolean;
   onSaved: (branch: Branch) => void;
 }) {
-  const router = useRouter();
   const { setBranchId } = useActiveBranch();
   const isNew = branch == null;
 
@@ -123,12 +123,10 @@ export function LocationEditSheet({
   const working = savedBranch ?? branch;
   const locationExists = working != null;
 
-  function openCompanyPage(href: string) {
-    if (!working) return;
+  useEffect(() => {
+    if (!open || !working) return;
     setBranchId(working.id);
-    onOpenChange(false);
-    router.push(href);
-  }
+  }, [open, working, setBranchId]);
 
   async function saveOverview(e: React.FormEvent) {
     e.preventDefault();
@@ -373,6 +371,7 @@ export function LocationEditSheet({
                 <LocationOperatingHoursTab
                   branchId={working.id}
                   timeZoneIdentifier={working.timeZoneIdentifier}
+                  nestedSheet
                 />
               ) : (
                 <p className="text-muted-foreground text-sm">
@@ -382,23 +381,23 @@ export function LocationEditSheet({
             </TabsContent>
 
             <TabsContent value="classes" className="mt-0 space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Vehicle classes for this location are managed on the Company vehicle classes page.
-              </p>
-              <Button
-                type="button"
-                onClick={() => openCompanyPage("/dashboard/company/vehicle-classes")}>
-                Open vehicle classes
-              </Button>
+              {working ? (
+                <LocationVehicleClassesPanel nestedSheet />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Save the location overview first to configure vehicle classes.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="pricing" className="mt-0 space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Pricing for this location is managed on the Company pricing page.
-              </p>
-              <Button type="button" onClick={() => openCompanyPage("/dashboard/company/pricing")}>
-                Open pricing
-              </Button>
+              {working ? (
+                <LocationPricingPanel branchId={working.id} nestedSheet />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Save the location overview first to configure pricing.
+                </p>
+              )}
             </TabsContent>
           </Tabs>
         </div>

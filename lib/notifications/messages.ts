@@ -9,7 +9,7 @@ const HREF = {
   locations: "/dashboard/locations",
   operatingHours: "/dashboard/locations",
   locale: "/dashboard/settings/locale",
-  pricing: "/dashboard/company/pricing",
+  pricing: "/dashboard/locations",
   billing: "/dashboard/billing",
   admins: "/dashboard/settings/admins"
 } as const;

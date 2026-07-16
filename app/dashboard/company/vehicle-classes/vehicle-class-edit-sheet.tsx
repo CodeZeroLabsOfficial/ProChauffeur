@@ -149,13 +149,15 @@ export function VehicleClassEditSheet({
   sheetMode = "create",
   open,
   onOpenChange,
-  onSaved
+  onSaved,
+  nested = false
 }: {
   vehicleClass: VehicleClass | null;
   sheetMode?: "create" | "edit" | "clone";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  nested?: boolean;
 }) {
   const isNew = sheetMode !== "edit";
   const sheetTitle =
@@ -257,7 +259,7 @@ export function VehicleClassEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{sheetTitle}</SheetTitle>
         </SheetHeader>
