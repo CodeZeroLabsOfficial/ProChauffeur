@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { clearLiveLocationTripId } from "@/lib/firebase/admin-live-location";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { Collections, DEFAULT_BRANCH_ID, TRIP_STATUSES, type TripStatus } from "@/lib/models";
+import { DEFAULT_BRANCH_ID, TRIP_STATUSES, type TripStatus } from "@/lib/models";
 import { tripStatusUpdateFields } from "@/lib/trip-status-update";
 
 function isTripStatus(value: unknown): value is TripStatus {
@@ -14,11 +14,6 @@ async function resolveTripRef(id: string, branchId: string) {
   const nested = adminFirestore().collection("branches").doc(branchId).collection("trips").doc(id);
   const nestedSnap = await nested.get();
   if (nestedSnap.exists) return { ref: nested, snap: nestedSnap };
-
-  const legacy = adminFirestore().collection(Collections.trips).doc(id);
-  const legacySnap = await legacy.get();
-  if (legacySnap.exists) return { ref: legacy, snap: legacySnap };
-
   return null;
 }
 

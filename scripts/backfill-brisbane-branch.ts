@@ -148,7 +148,7 @@ async function main() {
   if (ops > 0) await batch.commit();
 
   console.log(`Updated ${drivers} drivers and ${admins} admins for branch ${branchId}`);
-  console.log("Done. Dual-read remains enabled until NEXT_PUBLIC_BRANCHES_DUAL_READ=false.");
+  console.log("Done. Ops data is nested under branches/{branchId}/ only — no dual-read runtime mode.");
 }
 
 main().catch((err) => {

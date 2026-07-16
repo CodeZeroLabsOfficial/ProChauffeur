@@ -46,7 +46,6 @@ import {
 import {
   AppSettingsDocs,
   Collections,
-  OperatorDocs,
   emptyCompanyProfile,
   emptyOperatingHours,
   unlimitedLimits,
@@ -86,7 +85,6 @@ import {
 import { ConfigError } from "@/lib/pricing/errors";
 import { validateOperatorLocale, validatePricingConfig, validateVehicleClass } from "@/lib/pricing/validate";
 import { getActiveBranchId } from "@/lib/branch/active-branch-store";
-import { isBranchesDualReadEnabled } from "@/lib/branch/dual-read";
 import {
   branchCollectionRef,
   branchDocRef,
@@ -94,7 +92,7 @@ import {
   branchSettingsDocRef,
   branchesCollectionRef
 } from "@/lib/branch/firestore-paths";
-import { listenPreferNested } from "@/lib/branch/listen-prefer-nested";
+import { listenQuery } from "@/lib/branch/listen-query";
 import { BranchSettingsDocs, type Branch } from "@/lib/models/branch";
 
 type Unsub = () => void;
@@ -211,10 +209,8 @@ export function listenTrips(onUpdate: (trips: Trip[]) => void, max = 800): Unsub
     orderBy("createdAt", "desc"),
     fsLimit(max)
   );
-  const legacy = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
-  return listenPreferNested(
+  return listenQuery(
     nested,
-    legacy,
     (snap) => snapToList(snap, mapTrip),
     onUpdate,
     onSnapshotError("trips", onUpdate)
@@ -228,20 +224,12 @@ export async function fetchTrips(max = 800): Promise<Trip[]> {
     orderBy("createdAt", "desc"),
     fsLimit(max)
   );
-  const nestedSnap = await getDocs(nested);
-  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
-    return snapToList(nestedSnap, mapTrip);
-  }
-  const legacy = query(collection(db(), Collections.trips), orderBy("createdAt", "desc"), fsLimit(max));
-  return snapToList(await getDocs(legacy), mapTrip);
+  return snapToList(await getDocs(nested), mapTrip);
 }
 
 export async function fetchTrip(id: string, branchId: string = getActiveBranchId()): Promise<Trip | null> {
   const nested = await getDoc(branchDocRef(db(), "trips", id, branchId));
-  if (nested.exists()) return mapTrip(nested.id, nested.data());
-  if (!isBranchesDualReadEnabled()) return null;
-  const legacy = await getDoc(doc(db(), Collections.trips, id));
-  return legacy.exists() ? mapTrip(legacy.id, legacy.data()) : null;
+  return nested.exists() ? mapTrip(nested.id, nested.data()) : null;
 }
 
 /** Realtime listener for a single trip document. */
@@ -250,18 +238,7 @@ export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): U
   return onSnapshot(
     branchDocRef(db(), "trips", id, branchId),
     (snap) => {
-      if (snap.exists()) {
-        onUpdate(mapTrip(snap.id, snap.data()));
-        return;
-      }
-      if (!isBranchesDualReadEnabled()) {
-        onUpdate(null);
-        return;
-      }
-      // One-shot legacy fallback when nested missing.
-      void getDoc(doc(db(), Collections.trips, id)).then((legacy) => {
-        onUpdate(legacy.exists() ? mapTrip(legacy.id, legacy.data()) : null);
-      });
+      onUpdate(snap.exists() ? mapTrip(snap.id, snap.data()) : null);
     },
     (error) => {
       console.error("Firestore trip listener failed:", error.code, error.message);
@@ -493,9 +470,6 @@ export async function removeDriver(uid: string, driverTitle?: string): Promise<v
   const vehicleSnap = await getDoc(vehicleRef);
   if (vehicleSnap.exists()) {
     await deleteVehicle(uid);
-  } else if (isBranchesDualReadEnabled()) {
-    const legacy = await getDoc(doc(db(), Collections.vehicles, uid));
-    if (legacy.exists()) await deleteDoc(legacy.ref);
   }
   await updateDoc(doc(db(), Collections.users, uid), {
     role: "customer",
@@ -515,10 +489,8 @@ export async function removeDriver(uid: string, driverTitle?: string): Promise<v
 export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
   const branchId = getActiveBranchId();
   const nested = query(branchCollectionRef(db(), "vehicles", branchId));
-  const legacy = query(collection(db(), Collections.vehicles));
-  return listenPreferNested(
+  return listenQuery(
     nested,
-    legacy,
     (snap) => {
       const rows = snapToList(snap, (_, d) => mapVehicle(d));
       rows.sort((a, b) =>
@@ -534,19 +506,12 @@ export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
 export async function fetchVehicles(): Promise<Vehicle[]> {
   const branchId = getActiveBranchId();
   const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicles", branchId));
-  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
-    return nestedSnap.docs.map((dc) => mapVehicle(dc.data()));
-  }
-  const snap = await getDocs(collection(db(), Collections.vehicles));
-  return snap.docs.map((dc) => mapVehicle(dc.data()));
+  return nestedSnap.docs.map((dc) => mapVehicle(dc.data()));
 }
 
 export async function fetchVehicle(vehicleDocumentId: string): Promise<Vehicle | null> {
   const nested = await getDoc(branchDocRef(db(), "vehicles", vehicleDocumentId));
-  if (nested.exists()) return mapVehicle(nested.data());
-  if (!isBranchesDualReadEnabled()) return null;
-  const snap = await getDoc(doc(db(), Collections.vehicles, vehicleDocumentId));
-  return snap.exists() ? mapVehicle(snap.data()) : null;
+  return nested.exists() ? mapVehicle(nested.data()) : null;
 }
 
 export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
@@ -604,10 +569,8 @@ export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => v
     branchCollectionRef(db(), "locations", branchId),
     orderBy("createdAt", "desc")
   );
-  const legacy = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
-  return listenPreferNested(
+  return listenQuery(
     nested,
-    legacy,
     (snap) => snapToList(snap, mapFleetLocation),
     onUpdate,
     onSnapshotError("locations", onUpdate)
@@ -620,12 +583,7 @@ export async function fetchFleetLocations(): Promise<FleetLocation[]> {
     branchCollectionRef(db(), "locations", branchId),
     orderBy("createdAt", "desc")
   );
-  const nestedSnap = await getDocs(nested);
-  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
-    return snapToList(nestedSnap, mapFleetLocation);
-  }
-  const q = query(collection(db(), Collections.locations), orderBy("createdAt", "desc"));
-  return snapToList(await getDocs(q), mapFleetLocation);
+  return snapToList(await getDocs(nested), mapFleetLocation);
 }
 
 async function clearOtherDefaultFleetLocations(exceptId: string): Promise<void> {
@@ -706,15 +664,10 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 
 export async function fetchPricingConfiguration(): Promise<PricingConfig> {
   const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing));
-  if (nested.exists()) return mapPricingConfig(nested.data());
-  if (!isBranchesDualReadEnabled()) {
+  if (!nested.exists()) {
     throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
   }
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.pricing));
-  if (!snap.exists()) {
-    throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
-  }
-  return mapPricingConfig(snap.data());
+  return mapPricingConfig(nested.data());
 }
 
 export async function savePricingConfiguration(config: PricingConfig): Promise<void> {
@@ -733,32 +686,21 @@ export async function savePricingConfiguration(config: PricingConfig): Promise<v
 export async function fetchVehicleClasses(): Promise<VehicleClass[]> {
   const branchId = getActiveBranchId();
   const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", branchId));
-  if (nestedSnap.size > 0 || !isBranchesDualReadEnabled()) {
-    return nestedSnap.docs
-      .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
-  }
-  const snap = await getDocs(collection(db(), Collections.vehicleClasses));
-  return snap.docs
+  return nestedSnap.docs
     .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
     .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
 }
 
 export async function fetchVehicleClass(id: string): Promise<VehicleClass | null> {
   const nested = await getDoc(branchDocRef(db(), "vehicle_classes", id));
-  if (nested.exists()) return mapVehicleClass(nested.id, nested.data());
-  if (!isBranchesDualReadEnabled()) return null;
-  const snap = await getDoc(doc(db(), Collections.vehicleClasses, id));
-  return snap.exists() ? mapVehicleClass(snap.id, snap.data()) : null;
+  return nested.exists() ? mapVehicleClass(nested.id, nested.data()) : null;
 }
 
 export function listenVehicleClasses(onUpdate: (classes: VehicleClass[]) => void): Unsub {
   const branchId = getActiveBranchId();
   const nested = query(branchCollectionRef(db(), "vehicle_classes", branchId));
-  const legacy = query(collection(db(), Collections.vehicleClasses));
-  return listenPreferNested(
+  return listenQuery(
     nested,
-    legacy,
     (snap) =>
       snap.docs
         .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
@@ -804,10 +746,7 @@ export async function deleteVehicleClass(id: string): Promise<void> {
 
 export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
   const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours));
-  if (nested.exists()) return mapOperatingHours(nested.data());
-  if (!isBranchesDualReadEnabled()) return emptyOperatingHours;
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.operatingHours));
-  return snap.exists() ? mapOperatingHours(snap.data()) : emptyOperatingHours;
+  return nested.exists() ? mapOperatingHours(nested.data()) : emptyOperatingHours;
 }
 
 export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise<void> {
@@ -821,13 +760,8 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
 
 export async function fetchOperatorLocale(): Promise<OperatorLocale> {
   const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale));
-  if (nested.exists()) return mapOperatorLocale(nested.data());
-  if (!isBranchesDualReadEnabled()) {
-    throw new ConfigError("Locale is not configured.");
-  }
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.locale));
-  if (!snap.exists()) throw new ConfigError("Locale is not configured.");
-  return mapOperatorLocale(snap.data());
+  if (!nested.exists()) throw new ConfigError("Locale is not configured.");
+  return mapOperatorLocale(nested.data());
 }
 
 export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
@@ -839,10 +773,7 @@ export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> 
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
   const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.company));
-  if (nested.exists()) return mapCompanyProfile(nested.data());
-  if (!isBranchesDualReadEnabled()) return emptyCompanyProfile;
-  const snap = await getDoc(doc(db(), Collections.operator, OperatorDocs.company));
-  return snap.exists() ? mapCompanyProfile(snap.data()) : emptyCompanyProfile;
+  return nested.exists() ? mapCompanyProfile(nested.data()) : emptyCompanyProfile;
 }
 
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
@@ -873,10 +804,8 @@ export function listenInvoices(onUpdate: (invoices: Invoice[]) => void): Unsub {
     branchCollectionRef(db(), "invoices", branchId),
     orderBy("issuedAt", "desc")
   );
-  const legacy = query(collection(db(), Collections.invoices), orderBy("issuedAt", "desc"));
-  return listenPreferNested(
+  return listenQuery(
     nested,
-    legacy,
     (snap) => snapToList(snap, mapInvoice),
     onUpdate,
     onSnapshotError("invoices", onUpdate)
@@ -885,10 +814,7 @@ export function listenInvoices(onUpdate: (invoices: Invoice[]) => void): Unsub {
 
 export async function fetchInvoice(id: string): Promise<Invoice | null> {
   const nested = await getDoc(branchDocRef(db(), "invoices", id));
-  if (nested.exists()) return mapInvoice(nested.id, nested.data());
-  if (!isBranchesDualReadEnabled()) return null;
-  const snap = await getDoc(doc(db(), Collections.invoices, id));
-  return snap.exists() ? mapInvoice(snap.id, snap.data()) : null;
+  return nested.exists() ? mapInvoice(nested.id, nested.data()) : null;
 }
 
 export async function createInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<string> {

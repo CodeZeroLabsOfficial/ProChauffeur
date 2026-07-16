@@ -56,8 +56,7 @@ The portal is **admin-only**. Sign in requires a Firebase Auth account whose
 Auth users live at `users/{uid}`. Operational data is scoped under branches:
 
 `branches/{branchId}/` with nested `settings`, `trips`, `vehicles`, `locations`,
-`vehicle_classes`, `invoices`, and `drivers`. During migration, dual-read may
-fall back to legacy top-level collections when nested data is empty.
+`vehicle_classes`, `invoices`, and `drivers`.
 
 Company-wide: `app_settings` (`limits`, `branding`, `integrations`).
 
@@ -65,8 +64,7 @@ Default branch id: `brisbane`. Backfill with `npm run backfill:brisbane-branch`.
 
 ### Live locations
 
-The Dispatch map reads `liveLocations/{branchId}/{driverId}` from Realtime Database
-(with dual-read fallback to the legacy flat `liveLocations/{driverId}` path).
+The Dispatch map reads `liveLocations/{branchId}/{driverId}` from Realtime Database.
 Payload shape: `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 
 When a trip is **completed** or **cancelled**, `tripId` is cleared on that node

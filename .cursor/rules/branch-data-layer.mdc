@@ -1,9 +1,11 @@
 ---
-description: Dual-read / active branch helpers
+description: Nested branch data helpers
 alwaysApply: false
 globs: lib/branch/**/*
 ---
 
 # Branch data layer
 
-Use `branchCollection` / `branchSettingsDoc` path helpers. Writes go to nested paths under `branches/{branchId}/`. Dual-read may fall back to legacy top-level collections until cutover.
+Use `branchCollection` / `branchSettingsDoc` path helpers. Reads and writes use
+nested paths under `branches/{branchId}/` only — no dual-read or legacy
+top-level ops fallbacks.

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "backfill:brisbane-branch": "tsx --env-file=.env.local scripts/backfill-brisbane-branch.ts"
+    "backfill:brisbane-branch": "tsx --env-file=.env.local scripts/backfill-brisbane-branch.ts",
+    "inventory:legacy-ops": "tsx --env-file=.env.local scripts/delete-legacy-ops-collections.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

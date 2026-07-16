@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { onValue, ref } from "firebase/database";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
-import { isBranchesDualReadEnabled } from "@/lib/branch/dual-read";
 import { realtimeDb } from "@/lib/firebase/client";
-import { rtdbBranchLiveLocationsPath, rtdbLiveLocationsPath } from "@/lib/models";
+import { rtdbBranchLiveLocationsPath } from "@/lib/models";
 
 /** One live driver/vehicle position from RTDB. */
 export interface LiveLocation {
@@ -34,45 +33,24 @@ function parseLiveLocations(value: unknown): LiveLocation[] {
     .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
 }
 
-/**
- * Subscribes to live driver positions for the active branch.
- * Falls back to the legacy flat path when dual-read is enabled and nested is empty.
- */
+/** Subscribes to live driver positions for the active branch (nested RTDB path only). */
 export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean } {
   const { branchId } = useActiveBranch();
   const [locations, setLocations] = useState<LiveLocation[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let unsubLegacy = () => {};
-    let unsubNested = () => {};
+    let unsub = () => {};
     let cancelled = false;
 
     try {
-      const nestedNode = ref(realtimeDb(), rtdbBranchLiveLocationsPath(branchId));
-      unsubNested = onValue(
-        nestedNode,
+      const node = ref(realtimeDb(), rtdbBranchLiveLocationsPath(branchId));
+      unsub = onValue(
+        node,
         (snapshot) => {
           if (cancelled) return;
-          const rows = parseLiveLocations(snapshot.val());
-          if (rows.length > 0 || !isBranchesDualReadEnabled()) {
-            unsubLegacy();
-            unsubLegacy = () => {};
-            setLocations(rows);
-            setReady(true);
-            return;
-          }
-
-          const legacyNode = ref(realtimeDb(), rtdbLiveLocationsPath);
-          unsubLegacy = onValue(
-            legacyNode,
-            (legacySnap) => {
-              if (cancelled) return;
-              setLocations(parseLiveLocations(legacySnap.val()));
-              setReady(true);
-            },
-            () => setReady(true)
-          );
+          setLocations(parseLiveLocations(snapshot.val()));
+          setReady(true);
         },
         () => setReady(true)
       );
@@ -82,8 +60,7 @@ export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean 
 
     return () => {
       cancelled = true;
-      unsubNested();
-      unsubLegacy();
+      unsub();
     };
   }, [branchId]);
 
