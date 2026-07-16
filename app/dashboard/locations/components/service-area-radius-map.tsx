@@ -64,7 +64,7 @@ export function ServiceAreaRadiusMap({
   }, [mapRef, center, coordinatesValid, radiusKm]);
 
   return (
-    <div className="h-[220px] overflow-hidden rounded-lg border">
+    <div className="h-[400px] overflow-hidden rounded-lg border">
       {tokenError ? (
         <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-center text-sm">
           Set NEXT_PUBLIC_MAPBOX_TOKEN to preview the service area.
