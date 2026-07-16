@@ -8,7 +8,7 @@ import {
   AddonEditSheet,
   formatAddonTripTypes,
   formatAddonVehicleClasses
-} from "@/app/dashboard/company/pricing/addon-edit-sheet";
+} from "@/app/dashboard/locations/components/addon-edit-sheet";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import {
   fetchPricingConfiguration,

@@ -1,20 +1,5 @@
-import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models/trip";
 import { tripPickupReferenceDate } from "@/lib/models/trip";
-import { paidRevenueForInvoices } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
-
-export function locationOverviewMetrics(trips: Trip[], invoices: Invoice[]) {
-  const completed = trips.filter((t) => t.status === "completed").length;
-  const totalRevenue = paidRevenueForInvoices(invoices.filter((i) => i.status === "paid"));
-
-  return {
-    totalTrips: trips.length,
-    completed,
-    totalRevenue,
-    trips,
-    invoices
-  };
-}
 
 export function locationRecentTrips(trips: Trip[], limit = 6): Trip[] {
   const now = Date.now();

@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   ScheduleEditSheet,
   formatScheduleDays
-} from "@/app/dashboard/company/operating-hours/schedule-edit-sheet";
+} from "@/app/dashboard/locations/components/schedule-edit-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -135,7 +135,7 @@ export function LocationOperatingHoursTab({
                       {formatScheduleHours(s.startTime, s.endTime)}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end">
                         <Button
                           type="button"
                           variant="ghost"
@@ -143,9 +143,6 @@ export function LocationOperatingHoursTab({
                           className="hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => removeSchedule(s.id)}>
                           <Trash2Icon className="size-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => openEditSheet(s)}>
-                          <PencilIcon className="size-4" />
                         </Button>
                       </div>
                     </TableCell>

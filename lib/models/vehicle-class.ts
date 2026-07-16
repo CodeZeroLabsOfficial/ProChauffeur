@@ -1,7 +1,7 @@
 import type { TripType } from "@/lib/models/enums";
 import type { HourlyPricingRates, TransferPricingRates } from "@/lib/models/pricing";
 
-/** `vehicle_classes/{id}` — service class + rate card. */
+/** `branches/{branchId}/vehicle_classes/{id}` — service class + rate card. */
 export interface VehicleClass {
   id: string;
   slug: string;

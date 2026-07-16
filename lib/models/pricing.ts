@@ -72,7 +72,7 @@ export interface PricingRule {
 }
 
 /**
- * PricingConfig — `operator/pricing` document (schema v2).
+ * PricingConfig — `branches/{branchId}/settings/pricing` document (schema v2).
  * Quotes read transfer/hourly rates from vehicle classes only.
  * This document holds company-wide rules, add-ons, zones, and optional floors.
  */

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
@@ -49,6 +48,7 @@ import { generateAvatarFallback } from "@/lib/utils";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
+import { ContactRow } from "@/components/contact-row";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,21 +79,6 @@ const statusStepIcons: Record<(typeof ACTIVE_STATUSES)[number], ReactNode> = {
   in_progress: <CircleDotIcon className="size-4 lg:size-5" />,
   completed: <CheckCircle2Icon className="size-4 lg:size-5" />
 };
-
-function ContactRow({
-  icon: Icon,
-  children
-}: {
-  icon: LucideIcon;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <Icon className="text-muted-foreground size-4 shrink-0" />
-      {children}
-    </div>
-  );
-}
 
 function BookingCustomerCard({
   customer,

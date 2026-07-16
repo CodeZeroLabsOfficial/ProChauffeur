@@ -1,6 +1,5 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
 import { Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
 
 import type { User } from "@/lib/models";
@@ -13,21 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-function ContactRow({
-  icon: Icon,
-  children
-}: {
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <Icon className="text-muted-foreground size-4 shrink-0" />
-      {children}
-    </div>
-  );
-}
+import { ContactRow } from "@/components/contact-row";
 
 export function CustomerProfileSidebar({
   user,

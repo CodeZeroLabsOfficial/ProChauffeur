@@ -1,23 +1,8 @@
-import type { LucideIcon } from "lucide-react";
 import { Clock, MapPin, MapPinned, PhoneCall } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-function ContactRow({
-  icon: Icon,
-  children
-}: {
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <Icon className="text-muted-foreground size-4 shrink-0" />
-      {children}
-    </div>
-  );
-}
+import { ContactRow } from "@/components/contact-row";
 
 export function LocationDetailsCard({ branch }: { branch: Branch }) {
   const address = branch.officeAddressLine?.trim();

@@ -47,11 +47,11 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-
-const tabTriggerClassName =
-  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import {
+  ProfileV2TabTrigger,
+  profileV2TabsListClassName
+} from "@/components/layout/profile-tab-bar";
 
 const MIN_MANUFACTURE_YEAR = 1980;
 const maxManufactureYear = new Date().getFullYear() + 1;
@@ -367,25 +367,12 @@ export function VehicleDetailSheet({
           </div>
 
           <Tabs defaultValue="overview" className="gap-4">
-            <TabsList
-              className={cn(
-                "-mb-0.5 h-auto w-full justify-start gap-4 border-none bg-transparent p-0"
-              )}>
-              <TabsTrigger value="overview" className={tabTriggerClassName}>
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="features" className={tabTriggerClassName}>
-                Features
-              </TabsTrigger>
-              <TabsTrigger value="compliance" className={tabTriggerClassName}>
-                Compliance
-              </TabsTrigger>
-              <TabsTrigger value="maintenance" className={tabTriggerClassName}>
-                Maintenance
-              </TabsTrigger>
-              <TabsTrigger value="operations" className={tabTriggerClassName}>
-                Operations
-              </TabsTrigger>
+            <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
+              <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="features">Features</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="compliance">Compliance</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="maintenance">Maintenance</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="operations">Operations</ProfileV2TabTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">

@@ -21,7 +21,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import {
+  ProfileV2TabTrigger,
+  profileV2TabsListClassName
+} from "@/components/layout/profile-tab-bar";
 import { NumberStepper } from "@/components/number-stepper";
 import {
   Item,
@@ -31,12 +35,8 @@ import {
   ItemMedia,
   ItemTitle
 } from "@/components/ui/item";
-import { cn } from "@/lib/utils";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-const tabTriggerClassName =
-  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 function SectionHeading({ children }: { children: string }) {
   return <h4 className="text-sm font-medium">{children}</h4>;
@@ -263,19 +263,11 @@ export function VehicleClassEditSheet({
         <SheetHeader>
           <SheetTitle>{sheetTitle}</SheetTitle>
         </SheetHeader>
-        <Separator />
         <form className="space-y-4 px-4" onSubmit={onSubmit}>
           <Tabs key={sheetKey} defaultValue="overview" className="gap-4">
-            <TabsList
-              className={cn(
-                "-mb-0.5 h-auto w-full justify-start gap-4 border-none bg-transparent p-0"
-              )}>
-              <TabsTrigger value="overview" className={tabTriggerClassName}>
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="pricing" className={tabTriggerClassName}>
-                Pricing
-              </TabsTrigger>
+            <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
+              <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-0 space-y-4">

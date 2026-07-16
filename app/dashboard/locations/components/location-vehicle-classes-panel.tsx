@@ -5,7 +5,7 @@ import Image from "next/image";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { VehicleClassEditSheet } from "@/app/dashboard/company/vehicle-classes/vehicle-class-edit-sheet";
+import { VehicleClassEditSheet } from "@/app/dashboard/locations/components/vehicle-class-edit-sheet";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { deleteVehicleClass } from "@/lib/services/firebase-service";
 import {
