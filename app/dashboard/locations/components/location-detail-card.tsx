@@ -1,5 +1,5 @@
 import type { Branch } from "@/lib/models";
-import { Badge } from "@/components/ui/badge";
+import { LocationStatusBadge } from "@/components/location-status-badge";
 import {
   ProfileV2TabBar,
   ProfileV2TabTrigger
@@ -11,11 +11,7 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
       <div className="border-b px-4 py-5 sm:px-6 md:px-8 md:py-6">
         <div className="min-w-0 space-y-3">
           <h2 className="text-xl font-bold tracking-tight lg:text-2xl">{branch.name}</h2>
-          {branch.isActive ? (
-            <Badge variant="secondary">Active</Badge>
-          ) : (
-            <Badge variant="outline">Inactive</Badge>
-          )}
+          <LocationStatusBadge isActive={branch.isActive !== false} />
         </div>
       </div>
 

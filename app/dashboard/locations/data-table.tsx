@@ -21,7 +21,7 @@ import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
-import { Badge } from "@/components/ui/badge";
+import { LocationStatusBadge } from "@/components/location-status-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -164,12 +164,9 @@ export function LocationsDataTable({
         id: "status",
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) =>
-          row.original.isActive ? (
-            <Badge variant="secondary">Active</Badge>
-          ) : (
-            <Badge variant="outline">Inactive</Badge>
-          ),
+        cell: ({ row }) => (
+          <LocationStatusBadge isActive={row.original.isActive !== false} />
+        ),
         filterFn: multiSelectFilter
       },
       {
