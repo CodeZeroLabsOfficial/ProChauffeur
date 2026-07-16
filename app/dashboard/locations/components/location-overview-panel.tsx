@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
 
+import { LocationDetailsCard } from "@/app/dashboard/locations/components/location-details-card";
 import { LocationRecentTripsCard } from "@/app/dashboard/locations/components/location-recent-trips-card";
 import { DriverProfileRevenueStat } from "@/app/dashboard/drivers/components/driver-profile-revenue-stat";
 import { DriverProfileTrendChart } from "@/app/dashboard/drivers/components/driver-profile-trend-chart";
@@ -16,30 +17,6 @@ import {
   fetchPricingConfiguration
 } from "@/lib/services/firebase-service";
 import { useVehicleClasses } from "@/hooks/use-collections";
-
-function DetailSection({
-  label,
-  children
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <p className="text-muted-foreground mb-3 text-xs font-medium uppercase">{label}</p>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  );
-}
 
 function SetupRow({ done, label }: { done: boolean; label: string }) {
   return (
@@ -93,28 +70,7 @@ export function LocationOverviewPanel({
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Location details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <DetailSection label="Office">
-              <DetailRow
-                label="Address"
-                value={branch.officeAddressLine?.trim() || "—"}
-              />
-              <DetailRow label="Phone" value={branch.officePhone?.trim() || "—"} />
-              <DetailRow
-                label="Time zone"
-                value={branch.timeZoneIdentifier?.trim() || "—"}
-              />
-              <DetailRow
-                label="Postcodes"
-                value={postcodeCount > 0 ? `${postcodeCount} listed` : "—"}
-              />
-            </DetailSection>
-          </CardContent>
-        </Card>
+        <LocationDetailsCard branch={branch} />
 
         <Card>
           <CardHeader>

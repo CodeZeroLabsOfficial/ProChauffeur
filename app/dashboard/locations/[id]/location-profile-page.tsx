@@ -15,14 +15,6 @@ import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { Branch } from "@/lib/models";
@@ -35,36 +27,15 @@ function isLocationTab(value: string | null): value is LocationTab {
   return LOCATION_TABS.includes(value as LocationTab);
 }
 
-function LocationProfileHeader({
-  branch,
-  onEditClick
-}: {
-  branch: Branch;
-  onEditClick: () => void;
-}) {
+function LocationProfileHeader({ onEditClick }: { onEditClick: () => void }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-3">
-        <Button asChild variant="outline" size="icon" className="shrink-0">
-          <Link href="/dashboard/locations" aria-label="Back to locations">
-            <ChevronLeftIcon />
-          </Link>
-        </Button>
-        <Breadcrumb className="min-w-0">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/dashboard/locations">Locations</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="truncate">{branch.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-      <Button size="sm" className="self-end sm:self-auto" onClick={onEditClick}>
+    <div className="flex items-center justify-between">
+      <Button asChild variant="outline" size="icon">
+        <Link href="/dashboard/locations" aria-label="Back to locations">
+          <ChevronLeftIcon />
+        </Link>
+      </Button>
+      <Button size="sm" onClick={onEditClick}>
         <PencilIcon />
         Edit
       </Button>
@@ -133,7 +104,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   return (
     <>
       <div className="space-y-4">
-        <LocationProfileHeader branch={branch} onEditClick={() => setEditOpen(true)} />
+        <LocationProfileHeader onEditClick={() => setEditOpen(true)} />
 
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
           <LocationDetailCard branch={branch} />
