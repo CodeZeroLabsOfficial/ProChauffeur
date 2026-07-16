@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, PencilIcon } from "lucide-react";
 
 import { LocationDetailCard } from "@/app/dashboard/locations/components/location-detail-card";
@@ -12,10 +12,17 @@ import { LocationServiceAreaPanel } from "@/app/dashboard/locations/components/l
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
-import { locationHeroMetrics } from "@/app/dashboard/locations/lib/location-profile-metrics";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { Branch } from "@/lib/models";
@@ -28,12 +35,49 @@ function isLocationTab(value: string | null): value is LocationTab {
   return LOCATION_TABS.includes(value as LocationTab);
 }
 
+function LocationProfileHeader({
+  branch,
+  onEditClick
+}: {
+  branch: Branch;
+  onEditClick: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button asChild variant="outline" size="icon" className="shrink-0">
+          <Link href="/dashboard/locations" aria-label="Back to locations">
+            <ChevronLeftIcon />
+          </Link>
+        </Button>
+        <Breadcrumb className="min-w-0">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/dashboard/locations">Locations</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="truncate">{branch.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <Button size="sm" className="self-end sm:self-auto" onClick={onEditClick}>
+        <PencilIcon />
+        Edit
+      </Button>
+    </div>
+  );
+}
+
 export function LocationProfilePage({ locationId }: { locationId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setBranchId } = useActiveBranch();
-  const { trips, loading: tripsLoading } = useTrips();
-  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { trips } = useTrips();
+  const { invoices } = useInvoices();
 
   const tabParam = searchParams.get("tab");
   const activeTab: LocationTab = isLocationTab(tabParam) ? tabParam : "overview";
@@ -61,11 +105,6 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
     setBranchId(locationId);
   }, [locationId, setBranchId]);
 
-  const heroMetrics = useMemo(
-    () => (branch ? locationHeroMetrics(trips, invoices, "30d") : null),
-    [branch, trips, invoices]
-  );
-
   function setTab(tab: LocationTab) {
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") params.delete("tab");
@@ -74,20 +113,19 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
     router.replace(`/dashboard/locations/${locationId}${q ? `?${q}` : ""}`, { scroll: false });
   }
 
-  if (loading || tripsLoading || invoicesLoading) {
+  if (loading) {
     return <p className="text-muted-foreground text-sm">Loading location…</p>;
   }
 
-  if (!branch || !heroMetrics) {
+  if (!branch) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">Location not found.</p>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/locations">
+        <Button asChild variant="outline" size="icon">
+          <Link href="/dashboard/locations" aria-label="Back to locations">
             <ChevronLeftIcon />
-            Back to locations
           </Link>
         </Button>
+        <p className="text-muted-foreground text-sm">Location not found.</p>
       </div>
     );
   }
@@ -95,27 +133,10 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link href="/dashboard/locations">
-              <ChevronLeftIcon />
-              Locations
-            </Link>
-          </Button>
-          <Button size="sm" onClick={() => setEditOpen(true)}>
-            <PencilIcon />
-            Edit
-          </Button>
-        </div>
+        <LocationProfileHeader branch={branch} onEditClick={() => setEditOpen(true)} />
 
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
-          <LocationDetailCard
-            branch={branch}
-            statTrips={heroMetrics.trips}
-            statCompleted={heroMetrics.completed}
-            statRevenue={heroMetrics.revenue}
-            periodLabel={heroMetrics.periodLabel}
-          />
+          <LocationDetailCard branch={branch} />
 
           <TabsContent value="overview" className="mt-0 space-y-4">
             <LocationOverviewPanel

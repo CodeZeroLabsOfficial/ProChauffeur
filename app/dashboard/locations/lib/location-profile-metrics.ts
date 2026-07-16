@@ -1,37 +1,7 @@
 import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models/trip";
 import { tripPickupReferenceDate } from "@/lib/models/trip";
-import {
-  invoiceRevenueInRange,
-  tripsInRange
-} from "@/app/dashboard/lib/dashboard-metrics";
-import {
-  overviewPeriodOption,
-  overviewPeriodRanges,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { paidRevenueForInvoices } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
-
-export function locationHeroMetrics(
-  trips: Trip[],
-  invoices: Invoice[],
-  period: DriverOverviewPeriod = "30d",
-  now = new Date()
-) {
-  const { current } = overviewPeriodRanges(period, now);
-  const periodTrips = tripsInRange(trips, current.start, current.end);
-  const completed = periodTrips.filter((t) => t.status === "completed").length;
-  const tripIds = new Set(periodTrips.map((t) => t.id));
-  const periodInvoices = invoices.filter((inv) => inv.tripIDs.some((id) => tripIds.has(id)));
-  const revenue = invoiceRevenueInRange(periodInvoices, current.start, current.end);
-
-  return {
-    trips: periodTrips.length,
-    completed,
-    revenue,
-    periodLabel: overviewPeriodOption(period).label.toLowerCase()
-  };
-}
 
 export function locationOverviewMetrics(trips: Trip[], invoices: Invoice[]) {
   const completed = trips.filter((t) => t.status === "completed").length;
