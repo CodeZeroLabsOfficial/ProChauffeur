@@ -24,7 +24,7 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   allocateUniqueBranchId,
@@ -38,13 +38,13 @@ import {
   optionsWithCurrent,
   type Branch
 } from "@/lib/models";
-import { cn } from "@/lib/utils";
+import {
+  ProfileV2TabTrigger,
+  profileV2TabsListClassName
+} from "@/components/layout/profile-tab-bar";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
-
-const tabTriggerClassName =
-  "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
 
 function parsePostcodes(raw: string): string[] {
   return raw
@@ -231,37 +231,20 @@ export function LocationEditSheet({
 
         <div className="px-4 pb-4">
           <Tabs value={tab} onValueChange={setTab} className="gap-4">
-            <TabsList
-              className={cn(
-                "-mb-0.5 h-auto w-full justify-start gap-4 overflow-x-auto border-none bg-transparent p-0"
-              )}>
-              <TabsTrigger value="overview" className={tabTriggerClassName}>
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="service-area"
-                className={tabTriggerClassName}
-                disabled={!locationExists}>
+            <TabsList className={profileV2TabsListClassName}>
+              <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="service-area" disabled={!locationExists}>
                 Service area
-              </TabsTrigger>
-              <TabsTrigger
-                value="hours"
-                className={tabTriggerClassName}
-                disabled={!locationExists}>
+              </ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="hours" disabled={!locationExists}>
                 Operating hours
-              </TabsTrigger>
-              <TabsTrigger
-                value="classes"
-                className={tabTriggerClassName}
-                disabled={!locationExists}>
+              </ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="classes" disabled={!locationExists}>
                 Vehicle classes
-              </TabsTrigger>
-              <TabsTrigger
-                value="pricing"
-                className={tabTriggerClassName}
-                disabled={!locationExists}>
+              </ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="pricing" disabled={!locationExists}>
                 Pricing
-              </TabsTrigger>
+              </ProfileV2TabTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">

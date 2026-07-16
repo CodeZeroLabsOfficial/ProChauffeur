@@ -2,12 +2,7 @@ import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models/trip";
 import { tripPickupReferenceDate } from "@/lib/models/trip";
 import {
-  endOfDay,
-  getWeekRange,
   invoiceRevenueInRange,
-  isSameDay,
-  percentChange,
-  startOfDay,
   tripsInRange
 } from "@/app/dashboard/lib/dashboard-metrics";
 import {
@@ -16,63 +11,6 @@ import {
   type DriverOverviewPeriod
 } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { paidRevenueForInvoices } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
-
-const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
-
-export type LocationWeeklyHeroMetrics = {
-  weeklyRevenue: number;
-  previousWeekRevenue: number;
-  revenueChangePercent: number | null;
-  dailyRevenue: { label: string; revenue: number; isToday: boolean }[];
-  trips: number;
-  completed: number;
-  revenue: number;
-};
-
-function invoicesForTrips(invoices: Invoice[], trips: Trip[]) {
-  const tripIds = new Set(trips.map((trip) => trip.id));
-  return invoices.filter((invoice) => invoice.tripIDs.some((id) => tripIds.has(id)));
-}
-
-export function locationWeeklyHeroMetrics(
-  trips: Trip[],
-  invoices: Invoice[],
-  now = new Date()
-): LocationWeeklyHeroMetrics {
-  const thisWeek = getWeekRange(now, 0);
-  const lastWeek = getWeekRange(now, -1);
-  const weekTrips = tripsInRange(trips, thisWeek.start, thisWeek.end);
-  const scopedInvoices = invoicesForTrips(invoices, weekTrips);
-
-  const weeklyRevenue = invoiceRevenueInRange(scopedInvoices, thisWeek.start, thisWeek.end);
-  const previousWeekRevenue = invoiceRevenueInRange(
-    invoicesForTrips(invoices, tripsInRange(trips, lastWeek.start, lastWeek.end)),
-    lastWeek.start,
-    lastWeek.end
-  );
-  const completed = weekTrips.filter((trip) => trip.status === "completed").length;
-
-  const dailyRevenue = WEEKDAY_LABELS.map((label, index) => {
-    const day = startOfDay(new Date(thisWeek.start));
-    day.setDate(thisWeek.start.getDate() + index);
-    const dayEnd = endOfDay(day);
-    return {
-      label,
-      revenue: invoiceRevenueInRange(scopedInvoices, day, dayEnd),
-      isToday: isSameDay(day, now)
-    };
-  });
-
-  return {
-    weeklyRevenue,
-    previousWeekRevenue,
-    revenueChangePercent: percentChange(weeklyRevenue, previousWeekRevenue),
-    dailyRevenue,
-    trips: weekTrips.length,
-    completed,
-    revenue: weeklyRevenue
-  };
-}
 
 export function locationHeroMetrics(
   trips: Trip[],
