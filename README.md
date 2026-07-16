@@ -58,7 +58,8 @@ Auth users live at `users/{uid}`. Operational data is scoped under branches:
 `branches/{branchId}/` with nested `settings`, `trips`, `vehicles`, `locations`,
 `vehicle_classes`, `invoices`, and `drivers`.
 
-Company-wide: `app_settings` (`limits`, `branding`, `integrations`).
+Company-wide: `app_settings` (`limits`, `branding`, `integrations`, `company`, `locale`).
+Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`).
 
 Default branch id: `brisbane`. Backfill with `npm run backfill:brisbane-branch`.
 

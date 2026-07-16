@@ -37,12 +37,14 @@ export const Collections = {
   vehicleClasses: "vehicle_classes"
 } as const;
 
-/** `operator` collection document ids. */
+/**
+ * Legacy `operator` collection document ids.
+ * @deprecated Prefer `AppSettingsDocs` (company/locale) and `BranchSettingsDocs` (pricing/hours).
+ * Kept for migration scripts that still read `operator/{docId}`.
+ */
 export const OperatorDocs = {
   company: "company",
-  locale: "locale",
-  operatingHours: "operating_hours",
-  pricing: "pricing"
+  locale: "locale"
 } as const;
 
 /** `app_settings` document ids. */
@@ -52,7 +54,9 @@ export const AppSettingsDocs = {
   appearance: "branding",
   /** @deprecated Use `appearance` */
   branding: "branding",
-  integrations: "integrations"
+  integrations: "integrations",
+  company: "company",
+  locale: "locale"
 } as const;
 
 /** RTDB root for live driver positions (`liveLocations/{branchId}/{driverId}`). */

@@ -759,26 +759,29 @@ export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise
 }
 
 export async function fetchOperatorLocale(): Promise<OperatorLocale> {
-  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale));
-  if (!nested.exists()) throw new ConfigError("Locale is not configured.");
-  return mapOperatorLocale(nested.data());
+  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.locale));
+  if (!snap.exists()) throw new ConfigError("Locale is not configured.");
+  return mapOperatorLocale(snap.data());
 }
 
 export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
   validateOperatorLocale(locale);
-  await setDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale), stripUndefined({ ...locale }));
+  await setDoc(
+    doc(db(), Collections.appSettings, AppSettingsDocs.locale),
+    stripUndefined({ ...locale })
+  );
   invalidateOperatorLocaleCache();
   void createActivityNotification(localeNotification());
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
-  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.company));
-  return nested.exists() ? mapCompanyProfile(nested.data()) : emptyCompanyProfile;
+  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.company));
+  return snap.exists() ? mapCompanyProfile(snap.data()) : emptyCompanyProfile;
 }
 
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.company),
+    doc(db(), Collections.appSettings, AppSettingsDocs.company),
     stripUndefined({ ...profile }),
     { merge: true }
   );

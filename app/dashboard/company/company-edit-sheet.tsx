@@ -77,7 +77,7 @@ export function CompanyEditSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Edit company</SheetTitle>
-          <SheetDescription>Update your business profile stored in operator/company.</SheetDescription>
+          <SheetDescription>Update your business profile stored in app_settings/company.</SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-6 px-4" key={formKey}>
           <div className="space-y-4">

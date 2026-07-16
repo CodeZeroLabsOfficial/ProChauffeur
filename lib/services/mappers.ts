@@ -302,7 +302,7 @@ function companyString(d: DocumentData, camel: string, pascal: string): string |
   return typeof value === "string" ? value : null;
 }
 
-/** Maps `operator/company` — address fields are top-level on the document. */
+/** Maps `app_settings/company` — address fields are top-level on the document. */
 export function mapCompanyProfile(d: DocumentData): CompanyProfile {
   return {
     name: companyString(d, "name", "Name"),

@@ -221,9 +221,10 @@ service cloud.firestore {
     }
 
     match /app_settings/{docId} {
-      allow read: if docId in ['limits', 'branding']
+      allow read: if docId in ['limits', 'branding', 'company']
+        || (signedIn() && docId == 'locale')
         || (signedIn() && isAdmin() && docId == 'integrations');
-      allow write: if isAdmin() && docId in ['limits', 'branding', 'integrations'];
+      allow write: if isAdmin() && docId in ['limits', 'branding', 'integrations', 'company', 'locale'];
     }
 
     match /operator/{docId} {

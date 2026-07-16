@@ -11,7 +11,8 @@ import { getFirestore, type CollectionReference, type Firestore } from "firebase
 import {
   BranchSettingsDocs,
   Collections,
-  DEFAULT_BRANCH_ID
+  DEFAULT_BRANCH_ID,
+  OperatorDocs
 } from "../lib/models";
 
 function decodeServiceAccount(): Record<string, unknown> {
@@ -74,6 +75,18 @@ async function main() {
     { merge: true }
   );
   console.log(`Upserted branches/${branchId}`);
+
+  const globalSettings = [OperatorDocs.company, OperatorDocs.locale] as const;
+
+  for (const docId of globalSettings) {
+    const source = await firestore.collection(Collections.operator).doc(docId).get();
+    if (!source.exists) {
+      console.log(`Skip app_settings/${docId} (no operator/${docId})`);
+      continue;
+    }
+    await firestore.collection(Collections.appSettings).doc(docId).set(source.data()!, { merge: true });
+    console.log(`Copied operator/${docId} → app_settings/${docId}`);
+  }
 
   for (const docId of Object.values(BranchSettingsDocs)) {
     const source = await firestore.collection(Collections.operator).doc(docId).get();

@@ -1,6 +1,6 @@
 import type { DistanceUnit, TaxDisplayMode } from "@/lib/models/enums";
 
-/** `operator/locale` — fleet regional and presentation preferences. All fields required. */
+/** `app_settings/locale` — fleet regional and presentation preferences. All fields required. */
 export interface OperatorLocale {
   locale: string;
   currency: string;

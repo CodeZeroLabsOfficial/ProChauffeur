@@ -1,4 +1,4 @@
-/** `operator/company` document — legal entity details for the chauffeur business. */
+/** `app_settings/company` document — legal entity details for the chauffeur business. */
 export interface CompanyProfile {
   name?: string | null;
   phone?: string | null;
