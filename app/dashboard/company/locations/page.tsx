@@ -244,84 +244,87 @@ export default function SettingsLocationsPage() {
       </CardContent>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <form onSubmit={onSubmit} className="flex h-full flex-col gap-4">
-            <SheetHeader>
-              <SheetTitle>{editing ? "Edit location" : "New location"}</SheetTitle>
-              <SheetDescription>
-                {editing
-                  ? "Update name, service postcodes, and status."
-                  : "Creates the location and copies pricing, hours, and vehicle classes from Brisbane."}
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="space-y-4 px-1">
-              {!editing ? (
-                <div className="space-y-2">
-                  <Label htmlFor="location-id">Id</Label>
-                  <Input
-                    id="location-id"
-                    name="id"
-                    placeholder="e.g. gold-coast"
-                    className="font-mono"
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Optional. Defaults from the name. Cannot be changed later.
-                  </p>
-                </div>
-              ) : null}
-
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{editing ? "Edit location" : "New location"}</SheetTitle>
+            <SheetDescription>
+              {editing
+                ? "Update name, service postcodes, and status."
+                : "Creates the location and copies pricing, hours, and vehicle classes from Brisbane."}
+            </SheetDescription>
+          </SheetHeader>
+          <form onSubmit={onSubmit} className="space-y-4 px-4">
+            {!editing ? (
               <div className="space-y-2">
-                <Label htmlFor="location-name">Name</Label>
+                <Label htmlFor="location-id">Id</Label>
                 <Input
-                  id="location-name"
-                  name="name"
-                  required
-                  defaultValue={editing?.name ?? ""}
-                  placeholder="e.g. Gold Coast"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location-tz">Time zone</Label>
-                <Input
-                  id="location-tz"
-                  name="timeZoneIdentifier"
-                  defaultValue={editing?.timeZoneIdentifier ?? ""}
-                  placeholder="e.g. Australia/Brisbane"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location-postcodes">Service postcodes</Label>
-                <Textarea
-                  id="location-postcodes"
-                  name="postcodes"
-                  rows={6}
-                  defaultValue={postcodesToText(editing)}
-                  placeholder={"One per line or comma-separated\n4000\n4001"}
+                  id="location-id"
+                  name="id"
+                  placeholder="e.g. gold-coast"
+                  className="font-mono"
+                  disabled={saving}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Used to route customer bookings when multi-location is enabled. Avoid overlapping
-                  lists across locations.
+                  Optional. Defaults from the name. Cannot be changed later.
                 </p>
               </div>
+            ) : null}
 
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="location-active">Active</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Inactive locations are hidden from the switcher and resolve.
-                  </p>
-                </div>
-                <Switch id="location-active" checked={isActive} onCheckedChange={setIsActive} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="location-name">Name</Label>
+              <Input
+                id="location-name"
+                name="name"
+                required
+                defaultValue={editing?.name ?? ""}
+                placeholder="e.g. Gold Coast"
+                disabled={saving}
+              />
             </div>
 
-            <SheetFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="location-tz">Time zone</Label>
+              <Input
+                id="location-tz"
+                name="timeZoneIdentifier"
+                defaultValue={editing?.timeZoneIdentifier ?? ""}
+                placeholder="e.g. Australia/Brisbane"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location-postcodes">Service postcodes</Label>
+              <Textarea
+                id="location-postcodes"
+                name="postcodes"
+                rows={6}
+                defaultValue={postcodesToText(editing)}
+                placeholder={"One per line or comma-separated\n4000\n4001"}
+                disabled={saving}
+              />
+              <p className="text-muted-foreground text-xs">
+                Used to route customer bookings when multi-location is enabled. Avoid overlapping
+                lists across locations.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="location-active">Active</Label>
+                <p className="text-muted-foreground text-xs">
+                  Inactive locations are hidden from the switcher and resolve.
+                </p>
+              </div>
+              <Switch
+                id="location-active"
+                checked={isActive}
+                onCheckedChange={setIsActive}
+                disabled={saving}
+              />
+            </div>
+
+            <SheetFooter className="px-0">
               <Button type="submit" disabled={saving || (!editing && !canAdd)}>
                 {saving ? "Saving…" : editing ? "Save" : "Create"}
               </Button>
