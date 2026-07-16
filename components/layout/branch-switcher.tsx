@@ -112,7 +112,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
             <div className="border-border border-t p-2">
               {canAdd ? (
                 <Button asChild className="w-full" size="sm" onClick={() => setOpen(false)}>
-                  <Link href="/dashboard/company/locations">
+                  <Link href="/dashboard/locations">
                     <PlusIcon data-icon="inline-start" />
                     New location
                   </Link>

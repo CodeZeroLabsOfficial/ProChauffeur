@@ -77,7 +77,7 @@ export function CompanyEditSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Edit company</SheetTitle>
-          <SheetDescription>Update your business profile stored in app_settings/company.</SheetDescription>
+          <SheetDescription>Update your business profile.</SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-6 px-4" key={formKey}>
           <div className="space-y-4">
@@ -96,7 +96,13 @@ export function CompanyEditSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="website">Company website</Label>
-              <Input id="website" name="website" type="url" placeholder="https://…" defaultValue={company.website ?? ""} />
+              <Input
+                id="website"
+                name="website"
+                type="url"
+                placeholder="https://…"
+                defaultValue={company.website ?? ""}
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

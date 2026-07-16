@@ -48,15 +48,9 @@ export const navGroups: NavGroup[] = [
     title: "Configuration",
     items: [
       {
-        title: "Company",
-        href: "/dashboard/company",
-        icon: Building2Icon,
-        items: [
-          { title: "Overview", href: "/dashboard/company" },
-          { title: "Locations", href: "/dashboard/company/locations" },
-          { title: "Pricing", href: "/dashboard/company/pricing" },
-          { title: "Vehicle Classes", href: "/dashboard/company/vehicle-classes" }
-        ]
+        title: "Locations",
+        href: "/dashboard/locations",
+        icon: Building2Icon
       },
       {
         title: "Settings",
@@ -67,6 +61,7 @@ export const navGroups: NavGroup[] = [
           { title: "Account", href: "/dashboard/settings/account" },
           { title: "Appearance", href: "/dashboard/settings/appearance" },
           { title: "Locale", href: "/dashboard/settings/locale" },
+          { title: "Company details", href: "/dashboard/settings/company" },
           { title: "License", href: "/dashboard/settings/license" },
           { title: "Admins", href: "/dashboard/settings/admins" },
           { title: "Integrations", href: "/dashboard/settings/integrations" }

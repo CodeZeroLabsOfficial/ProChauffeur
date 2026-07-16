@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function OperatingHoursPage() {
-  redirect("/dashboard/company/locations");
+export default function OperatingHoursRedirect() {
+  redirect("/dashboard/locations");
 }

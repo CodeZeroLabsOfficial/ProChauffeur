@@ -23,7 +23,7 @@ export function requireDefaultGarageLocation(locations: FleetLocation[]): FleetL
     (l) => l.isDefault && hasValidFleetLocationCoordinate(l)
   );
   if (defaults.length === 0) {
-    throw new Error("No default office configured. Set the office address in Company → Locations.");
+    throw new Error("No default office configured. Set the office address in Locations.");
   }
   if (defaults.length > 1) {
     throw new Error("Multiple default offices configured. Only one is allowed.");

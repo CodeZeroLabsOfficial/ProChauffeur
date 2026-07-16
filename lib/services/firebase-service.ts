@@ -805,7 +805,7 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 export async function fetchPricingConfiguration(): Promise<PricingConfig> {
   const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing));
   if (!nested.exists()) {
-    throw new ConfigError("Pricing is not configured. Complete Company → Pricing first.");
+    throw new ConfigError("Pricing is not configured. Set pricing for this location first.");
   }
   return mapPricingConfig(nested.data());
 }
