@@ -40,11 +40,12 @@ import {
   TableRow
 } from "@/components/ui/table";
 import type { Branch } from "@/lib/models";
+import { formatServiceAreaSummary } from "@/lib/branch/service-area";
 import { listenBranches } from "@/lib/services/firebase-service";
 
 type LocationRow = Branch & {
   searchLabel: string;
-  postcodeCount: number;
+  serviceAreaSummary: string | null;
   status: "active" | "inactive";
 };
 
@@ -87,18 +88,12 @@ export function LocationsDataTable({
 
   const data = useMemo<LocationRow[]>(
     () =>
-      branches.map((branch) => {
-        const postcodeCount =
-          branch.serviceArea?.type === "postcodes"
-            ? (branch.serviceArea.postcodes ?? []).length
-            : 0;
-        return {
-          ...branch,
-          searchLabel: [branch.name, branch.officeAddressLine].filter(Boolean).join(" "),
-          postcodeCount,
-          status: branch.isActive ? "active" : "inactive"
-        };
-      }),
+      branches.map((branch) => ({
+        ...branch,
+        searchLabel: [branch.name, branch.officeAddressLine].filter(Boolean).join(" "),
+        serviceAreaSummary: formatServiceAreaSummary(branch.serviceArea),
+        status: branch.isActive ? "active" : "inactive"
+      })),
     [branches]
   );
 
@@ -151,12 +146,12 @@ export function LocationsDataTable({
         )
       },
       {
-        id: "postcodes",
-        accessorKey: "postcodeCount",
-        header: "Postcodes",
+        id: "serviceArea",
+        accessorFn: (row) => row.serviceAreaSummary ?? "",
+        header: "Service area",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {row.original.postcodeCount > 0 ? `${row.original.postcodeCount} listed` : "—"}
+            {row.original.serviceAreaSummary ?? "—"}
           </span>
         )
       },

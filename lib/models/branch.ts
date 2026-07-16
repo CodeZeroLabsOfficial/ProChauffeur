@@ -42,6 +42,7 @@ export interface Branch {
     postcodes?: string[];
     centerLatitude?: number;
     centerLongitude?: number;
+    centerAddressLine?: string | null;
     radiusMeters?: number;
     polygon?: { latitude: number; longitude: number }[];
   } | null;

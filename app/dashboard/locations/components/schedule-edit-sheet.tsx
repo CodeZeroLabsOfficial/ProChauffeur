@@ -185,19 +185,27 @@ export function ScheduleEditSheet({
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="isEnabled">Active</Label>
-              <p className="text-muted-foreground text-xs">
-                Inactive schedules are excluded when checking operating hours.
-              </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start</Label>
+              <Input
+                id="startTime"
+                name="startTime"
+                type="time"
+                defaultValue={schedule?.startTime ?? "08:00"}
+                required
+              />
             </div>
-            <Switch
-              id="isEnabled"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-              disabled={saving}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End</Label>
+              <Input
+                id="endTime"
+                name="endTime"
+                type="time"
+                defaultValue={schedule?.endTime ?? "18:00"}
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -220,27 +228,19 @@ export function ScheduleEditSheet({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start</Label>
-              <Input
-                id="startTime"
-                name="startTime"
-                type="time"
-                defaultValue={schedule?.startTime ?? "08:00"}
-                required
-              />
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="isEnabled">Active</Label>
+              <p className="text-muted-foreground text-xs">
+                Inactive schedules are excluded when checking operating hours.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End</Label>
-              <Input
-                id="endTime"
-                name="endTime"
-                type="time"
-                defaultValue={schedule?.endTime ?? "18:00"}
-                required
-              />
-            </div>
+            <Switch
+              id="isEnabled"
+              checked={enabled}
+              onCheckedChange={setEnabled}
+              disabled={saving}
+            />
           </div>
 
           <SheetFooter className="px-0">

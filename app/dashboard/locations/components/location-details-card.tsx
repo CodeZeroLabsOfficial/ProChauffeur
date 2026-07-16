@@ -3,17 +3,15 @@ import { Clock, MapPin, MapPinned, PhoneCall } from "lucide-react";
 import type { Branch } from "@/lib/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContactRow } from "@/components/contact-row";
+import { formatServiceAreaDetail } from "@/lib/branch/service-area";
 
 export function LocationDetailsCard({ branch }: { branch: Branch }) {
   const address = branch.officeAddressLine?.trim();
   const phone = branch.officePhone?.trim();
   const timezone = branch.timeZoneIdentifier?.trim();
-  const postcodeCount =
-    branch.serviceArea?.type === "postcodes"
-      ? (branch.serviceArea.postcodes ?? []).length
-      : 0;
+  const serviceAreaDetail = formatServiceAreaDetail(branch.serviceArea);
 
-  const hasContent = Boolean(address || phone || timezone || postcodeCount > 0);
+  const hasContent = Boolean(address || phone || timezone || serviceAreaDetail);
 
   return (
     <Card>
@@ -32,10 +30,8 @@ export function LocationDetailsCard({ branch }: { branch: Branch }) {
               </ContactRow>
             ) : null}
             {timezone ? <ContactRow icon={Clock}>{timezone}</ContactRow> : null}
-            {postcodeCount > 0 ? (
-              <ContactRow icon={MapPinned}>
-                {postcodeCount} {postcodeCount === 1 ? "postcode" : "postcodes"} in service area
-              </ContactRow>
+            {serviceAreaDetail ? (
+              <ContactRow icon={MapPinned}>{serviceAreaDetail}</ContactRow>
             ) : null}
           </div>
         ) : (

@@ -25,13 +25,13 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import {
   allocateUniqueBranchId,
   createLocationWithScaffold,
   syncOfficeFleetLocation,
   upsertBranch
 } from "@/lib/services/firebase-service";
+import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
 import {
   buildBranch,
   COMMON_TIMEZONES,
@@ -44,38 +44,8 @@ import {
 } from "@/components/layout/profile-tab-bar";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
+import { LocationServiceAreaForm } from "@/app/dashboard/locations/components/location-service-area-form";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
-
-function parsePostcodes(raw: string): string[] {
-  return raw
-    .split(/[\n,]+/)
-    .map((p) => p.trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function postcodesToText(branch: Branch | null): string {
-  const list = branch?.serviceArea?.type === "postcodes" ? branch.serviceArea.postcodes : null;
-  return (list ?? []).join("\n");
-}
-
-function officeSuggestionFromBranch(branch: Branch | null): AddressSuggestion | null {
-  if (!branch?.officeAddressLine?.trim()) return null;
-  if (
-    typeof branch.officeLatitude !== "number" ||
-    typeof branch.officeLongitude !== "number" ||
-    (branch.officeLatitude === 0 && branch.officeLongitude === 0)
-  ) {
-    return null;
-  }
-  return {
-    id: `${branch.id}-office`,
-    addressLine: branch.officeAddressLine,
-    coordinate: {
-      latitude: branch.officeLatitude,
-      longitude: branch.officeLongitude
-    }
-  };
-}
 
 export function LocationEditSheet({
   open,
@@ -100,7 +70,6 @@ export function LocationEditSheet({
   const [timezone, setTimezone] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [office, setOffice] = useState<AddressSuggestion | null>(null);
-  const [postcodesText, setPostcodesText] = useState("");
   const [savedBranch, setSavedBranch] = useState<Branch | null>(branch);
 
   useEffect(() => {
@@ -112,7 +81,6 @@ export function LocationEditSheet({
     setTimezone(branch?.timeZoneIdentifier?.trim() || "Australia/Brisbane");
     setIsActive(branch?.isActive !== false);
     setOffice(officeSuggestionFromBranch(branch));
-    setPostcodesText(postcodesToText(branch));
   }, [open, branch]);
 
   const timezoneOptions = useMemo(
@@ -196,12 +164,8 @@ export function LocationEditSheet({
     }
   }
 
-  async function saveServiceArea(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveServiceArea(serviceArea: Branch["serviceArea"]) {
     if (!working) return;
-    const postcodes = parsePostcodes(postcodesText);
-    const serviceArea =
-      postcodes.length > 0 ? { type: "postcodes" as const, postcodes } : null;
 
     setSaving(true);
     try {
@@ -325,28 +289,26 @@ export function LocationEditSheet({
             </TabsContent>
 
             <TabsContent value="service-area" className="mt-0">
-              <form onSubmit={saveServiceArea} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location-postcodes">Service postcodes</Label>
-                  <Textarea
-                    id="location-postcodes"
-                    rows={8}
-                    value={postcodesText}
-                    onChange={(e) => setPostcodesText(e.target.value)}
-                    placeholder={"One per line or comma-separated\n4000\n4001"}
-                    disabled={saving}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Used to route customer bookings when multi-location is enabled. Avoid overlapping
-                    lists across locations.
-                  </p>
-                </div>
-                <SheetFooter className="px-0">
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Saving…" : "Save"}
-                  </Button>
-                </SheetFooter>
-              </form>
+              {working ? (
+                <LocationServiceAreaForm
+                  branch={working}
+                  officeSuggestion={office}
+                  saving={saving}
+                  onSave={saveServiceArea}
+                  idPrefix="edit-location"
+                  footer={
+                    <SheetFooter className="px-0">
+                      <Button type="submit" disabled={saving}>
+                        {saving ? "Saving…" : "Save"}
+                      </Button>
+                    </SheetFooter>
+                  }
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Save the location overview first to configure the service area.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="hours" className="mt-0 space-y-4">
