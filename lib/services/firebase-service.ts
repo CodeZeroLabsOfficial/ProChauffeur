@@ -884,14 +884,21 @@ export async function deleteVehicleClass(id: string): Promise<void> {
   }
 }
 
-export async function fetchOperatingHours(): Promise<AppFleetOperatingHours> {
-  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours));
+export async function fetchOperatingHours(
+  branchId: string = getActiveBranchId()
+): Promise<AppFleetOperatingHours> {
+  const nested = await getDoc(
+    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, branchId)
+  );
   return nested.exists() ? mapOperatingHours(nested.data()) : emptyOperatingHours;
 }
 
-export async function saveOperatingHours(hours: AppFleetOperatingHours): Promise<void> {
+export async function saveOperatingHours(
+  hours: AppFleetOperatingHours,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours),
+    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, branchId),
     stripUndefined({ ...hours }),
     { merge: true }
   );

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { useFleetLocations } from "@/hooks/use-collections";
 import { saveOperatingHours } from "@/lib/services/firebase-service";
 import {
   BRANCH_OFFICE_FLEET_LOCATION_ID,
@@ -14,13 +13,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
@@ -81,7 +73,7 @@ export function newSchedule(): FleetWeeklyOperatingSchedule {
   return {
     id: crypto.randomUUID(),
     name: null,
-    locationId: null,
+    locationId: BRANCH_OFFICE_FLEET_LOCATION_ID,
     isEnabled: true,
     weekdayNumbers: [2, 3, 4, 5, 6],
     startTime: "08:00",
@@ -93,13 +85,12 @@ function scheduleFromForm(
   form: FormData,
   id: string,
   weekdayNumbers: number[],
-  isEnabled: boolean,
-  locationId: string
+  isEnabled: boolean
 ): FleetWeeklyOperatingSchedule {
   return {
     id,
     name: String(form.get("name") ?? "").trim() || null,
-    locationId,
+    locationId: BRANCH_OFFICE_FLEET_LOCATION_ID,
     isEnabled,
     weekdayNumbers,
     startTime: String(form.get("startTime") ?? "").trim() || null,
@@ -110,23 +101,25 @@ function scheduleFromForm(
 export function ScheduleEditSheet({
   schedule,
   operatingHours,
+  branchId,
   open,
   onOpenChange,
-  onSaved
+  onSaved,
+  nested = false
 }: {
   schedule: FleetWeeklyOperatingSchedule | null;
   operatingHours: AppFleetOperatingHours;
+  branchId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (schedules: FleetWeeklyOperatingSchedule[]) => void;
+  nested?: boolean;
 }) {
-  const { locations } = useFleetLocations();
   const isNew = schedule === null;
   const [saving, setSaving] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [enabled, setEnabled] = useState(true);
   const [selectedDays, setSelectedDays] = useState<number[]>([2, 3, 4, 5, 6]);
-  const [locationId, setLocationId] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -134,18 +127,12 @@ export function ScheduleEditSheet({
       if (schedule) {
         setEnabled(schedule.isEnabled);
         setSelectedDays(schedule.weekdayNumbers);
-        setLocationId(schedule.locationId ?? "");
       } else {
         setEnabled(true);
         setSelectedDays([2, 3, 4, 5, 6]);
-        setLocationId(
-          locations.some((l) => l.id === BRANCH_OFFICE_FLEET_LOCATION_ID)
-            ? BRANCH_OFFICE_FLEET_LOCATION_ID
-            : (locations[0]?.id ?? "")
-        );
       }
     }
-  }, [open, schedule, locations]);
+  }, [open, schedule]);
 
   function toggleDay(day: number) {
     setSelectedDays((days) =>
@@ -155,18 +142,17 @@ export function ScheduleEditSheet({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!locationId) return;
 
     const form = new FormData(e.currentTarget);
     const id = schedule?.id ?? crypto.randomUUID();
-    const updated = scheduleFromForm(form, id, selectedDays, enabled, locationId);
+    const updated = scheduleFromForm(form, id, selectedDays, enabled);
     const schedules = isNew
       ? [...operatingHours.schedules, updated]
       : operatingHours.schedules.map((s) => (s.id === id ? updated : s));
 
     setSaving(true);
     try {
-      await saveOperatingHours({ ...operatingHours, schedules });
+      await saveOperatingHours({ ...operatingHours, schedules }, branchId);
       onSaved(schedules);
       toast.success(isNew ? "Schedule added." : "Schedule updated.");
       onOpenChange(false);
@@ -179,12 +165,12 @@ export function ScheduleEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add schedule" : "Edit schedule"}</SheetTitle>
           <SheetDescription>
             {isNew
-              ? "Create a weekly operating window for your fleet."
+              ? "Create a weekly operating window for this location."
               : "Update this weekly operating window."}
           </SheetDescription>
         </SheetHeader>
@@ -197,28 +183,6 @@ export function ScheduleEditSheet({
               placeholder="e.g. Weekday hours"
               defaultValue={schedule?.name ?? ""}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Office</Label>
-            {locations.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Set the office address on Company → Locations before creating a schedule.
-              </p>
-            ) : (
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select office" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -270,9 +234,7 @@ export function ScheduleEditSheet({
           </div>
 
           <SheetFooter className="px-0">
-            <Button
-              type="submit"
-              disabled={saving || selectedDays.length === 0 || !locationId || locations.length === 0}>
+            <Button type="submit" disabled={saving || selectedDays.length === 0}>
               {saving ? "Saving…" : isNew ? "Add schedule" : "Save changes"}
             </Button>
           </SheetFooter>

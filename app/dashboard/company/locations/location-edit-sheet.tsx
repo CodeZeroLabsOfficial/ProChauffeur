@@ -40,6 +40,7 @@ import {
   type Branch
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
+import { LocationOperatingHoursTab } from "@/app/dashboard/company/locations/location-operating-hours-tab";
 
 const tabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-3 shadow-none!";
@@ -368,12 +369,16 @@ export function LocationEditSheet({
             </TabsContent>
 
             <TabsContent value="hours" className="mt-0 space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Operating hours for this location are managed on the Company operating hours page.
-              </p>
-              <Button type="button" onClick={() => openCompanyPage("/dashboard/company/operating-hours")}>
-                Open operating hours
-              </Button>
+              {working ? (
+                <LocationOperatingHoursTab
+                  branchId={working.id}
+                  timeZoneIdentifier={working.timeZoneIdentifier}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Save the location overview first to configure operating hours.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="classes" className="mt-0 space-y-4">

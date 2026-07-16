@@ -24,7 +24,7 @@ existing iOS app's Firestore schema.
 | `/dashboard/drivers` | Chauffeur management & compliance |
 | `/dashboard/fleet` | Vehicle management (keyed to chauffeurs) |
 | `/dashboard/billing` | Invoices (new `invoices` collection) |
-| `/dashboard/company` | Overview · Operating Hours · Locations · Pricing |
+| `/dashboard/company` | Overview · Locations · Pricing · Vehicle Classes |
 | `/dashboard/reports` | Client-side aggregation over trips & invoices |
 | `/dashboard/settings` | Branding · Locale · License · Admins · Integrations |
 
