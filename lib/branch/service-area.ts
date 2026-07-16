@@ -5,7 +5,7 @@ import type { Branch } from "@/lib/models/branch";
 export type ServiceAreaEditorType = "postcodes" | "radius";
 
 export const RADIUS_KM_MIN = 5;
-export const RADIUS_KM_MAX = 100;
+export const RADIUS_KM_MAX = 250;
 export const RADIUS_KM_DEFAULT = 25;
 
 export function parsePostcodes(raw: string): string[] {

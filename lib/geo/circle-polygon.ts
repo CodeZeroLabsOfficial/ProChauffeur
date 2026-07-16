@@ -40,5 +40,7 @@ export function zoomForRadiusKm(radiusKm: number): number {
   if (radiusKm <= 25) return 10;
   if (radiusKm <= 50) return 9;
   if (radiusKm <= 75) return 8;
-  return 7;
+  if (radiusKm <= 150) return 7;
+  if (radiusKm <= 250) return 6;
+  return 5;
 }
