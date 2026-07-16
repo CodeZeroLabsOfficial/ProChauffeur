@@ -85,7 +85,7 @@ export default function LocationsPage() {
         : null);
 
     if (!name) {
-      toast.error("Enter a location name.");
+      toast.error("Enter a garage name.");
       return;
     }
     if (!resolvedAddress) {
@@ -105,14 +105,14 @@ export default function LocationsPage() {
 
       if (editing) {
         await updateFleetLocation({ ...editing, ...payload });
-        toast.success("Location updated.");
+        toast.success("Garage updated.");
       } else {
         await createFleetLocation(payload);
-        toast.success("Location added.");
+        toast.success("Garage added.");
       }
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the location.");
+      toast.error(err instanceof Error ? err.message : "Could not save the garage.");
     } finally {
       setSaving(false);
     }
@@ -121,9 +121,9 @@ export default function LocationsPage() {
   async function remove(loc: FleetLocation) {
     try {
       await deleteFleetLocation(loc.id);
-      toast.success("Location removed.");
+      toast.success("Garage removed.");
     } catch {
-      toast.error("Could not remove the location.");
+      toast.error("Could not remove the garage.");
     }
   }
 
@@ -131,9 +131,9 @@ export default function LocationsPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Locations</CardTitle>
+          <CardTitle>Garages</CardTitle>
           <Button variant="outline" size="sm" onClick={openNew}>
-            <PlusIcon /> Add location
+            <PlusIcon /> Add garage
           </Button>
         </CardHeader>
         <CardContent>
@@ -149,13 +149,13 @@ export default function LocationsPage() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
-                    Loading locations…
+                    Loading garages…
                   </TableCell>
                 </TableRow>
               ) : locations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
-                    No locations yet.
+                    No garages yet.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -197,8 +197,8 @@ export default function LocationsPage() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>{editing ? "Edit location" : "Add location"}</SheetTitle>
-            <SheetDescription>Garages, depots and key service points.</SheetDescription>
+            <SheetTitle>{editing ? "Edit garage" : "Add garage"}</SheetTitle>
+            <SheetDescription>Where vehicles are based for the active location.</SheetDescription>
           </SheetHeader>
           <form onSubmit={onSubmit} className="space-y-4 px-4">
             <div className="space-y-2">
@@ -217,7 +217,7 @@ export default function LocationsPage() {
             </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="isDefault">Default garage / depot</Label>
+                <Label htmlFor="isDefault">Default garage</Label>
                 <p className="text-muted-foreground text-xs">
                   Used for dispatch map centering and pricing deadhead calculations.
                 </p>
@@ -226,7 +226,7 @@ export default function LocationsPage() {
             </div>
             <SheetFooter className="px-0">
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save location"}
+                {saving ? "Saving…" : "Save garage"}
               </Button>
             </SheetFooter>
           </form>

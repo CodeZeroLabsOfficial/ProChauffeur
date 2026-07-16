@@ -52,10 +52,10 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}>
-            <DropdownMenuLabel className="text-muted-foreground text-xs">Branches</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-muted-foreground text-xs">Locations</DropdownMenuLabel>
             {branches.length === 0 ? (
               <DropdownMenuItem disabled className="text-muted-foreground">
-                No branches yet — run the backfill script
+                No locations yet — run the backfill script
               </DropdownMenuItem>
             ) : (
               branches.map((branch) => (
@@ -75,7 +75,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-              Switch branch to change ops context
+              Switch location to change ops context
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

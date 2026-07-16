@@ -48,6 +48,7 @@ import {
   Collections,
   emptyCompanyProfile,
   emptyOperatingHours,
+  UNLIMITED,
   unlimitedLimits,
   type ActivityNotification,
   type CompanyProfile,
@@ -189,8 +190,21 @@ export async function fetchBranch(branchId: string): Promise<Branch | null> {
 }
 
 export async function upsertBranch(branch: Branch): Promise<void> {
+  const ref = branchMetaDocRef(db(), branch.id);
+  const existing = await getDoc(ref);
+  if (!existing.exists()) {
+    const limits = await fetchGlobalLimits();
+    if (limits.maxLocations < UNLIMITED) {
+      const current = await fetchBranches();
+      if (current.length >= limits.maxLocations) {
+        throw new Error(
+          `Location limit reached (${limits.maxLocations}). Raise maxLocations in License settings or remove a location.`
+        );
+      }
+    }
+  }
   await setDoc(
-    branchMetaDocRef(db(), branch.id),
+    ref,
     stripUndefined({
       ...branch,
       updatedAt: serverTimestamp()
@@ -610,7 +624,7 @@ export async function createFleetLocation(input: {
 }): Promise<void> {
   const name = input.name.trim();
   const addressLine = input.addressLine.trim();
-  if (!name || !addressLine) throw new Error("Enter a name and address before saving this location.");
+  if (!name || !addressLine) throw new Error("Enter a name and address before saving this garage.");
   const id = crypto.randomUUID();
   const isDefault = input.isDefault === true;
 
@@ -631,7 +645,7 @@ export async function createFleetLocation(input: {
 export async function updateFleetLocation(location: FleetLocation): Promise<void> {
   const name = location.name.trim();
   const addressLine = location.addressLine.trim();
-  if (!name || !addressLine) throw new Error("Enter a name and address before saving this location.");
+  if (!name || !addressLine) throw new Error("Enter a name and address before saving this garage.");
   const isDefault = location.isDefault === true;
 
   if (isDefault) await clearOtherDefaultFleetLocations(location.id);
@@ -653,7 +667,7 @@ export async function deleteFleetLocation(id: string): Promise<void> {
   const location = mapFleetLocation(snap.id, snap.data());
   if (location.isDefault) {
     throw new Error(
-      "Cannot delete the default garage location. Set another location as default first."
+      "Cannot delete the default garage. Set another garage as default first."
     );
   }
   await deleteDoc(ref);

@@ -1,15 +1,16 @@
 ---
-description: Canonical naming for branches, locations, and company entities
+description: Canonical naming for locations (cities), garages, and code identifiers
 alwaysApply: true
 ---
 
 # Naming conventions
 
-| Term | Meaning | Prefer | Avoid for this concept |
-|------|---------|--------|------------------------|
-| **Branch** | City sub-account | `branch`, `branchId`, `BranchSwitcher`, `homeBranchId` | market, location (for cities) |
-| **Location** | Garage / depot | `locations` under a branch, `FleetLocation` | calling a city a location |
-| **Driver (branch)** | Chauffeur roster | `branches/{id}/drivers/{uid}` | top-level fleet driver docs after cutover |
-| **User** | Auth identity | top-level `users/{uid}` for all roles | nesting customers under a branch |
+| UI term | Meaning | Code / Firestore (keep these identifiers) | Avoid |
+|---------|---------|---------------------------------------------|--------|
+| **Location** | City / market sub-account | `branch`, `branchId`, `BranchSwitcher`, `homeBranchId`, `branches/{id}` | Calling a garage a Location |
+| **Garage** | Where vehicles are based | `locations` under a branch, `FleetLocation` | Calling a city a garage; “depot” in new copy |
+| **Dispatch** | Live ops board / map | `/dashboard/dispatch` | Using “Dispatch” for buildings or cities |
 
 Field names must stay consistent across platforms: `branchId`, `homeBranchId`, `branchIds`, `defaultBranchId`, `canAccessAllBranches`.
+
+License limit `maxLocations` caps the number of **Locations** (branch documents), not garages.

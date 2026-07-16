@@ -54,7 +54,7 @@ export const navGroups: NavGroup[] = [
         items: [
           { title: "Overview", href: "/dashboard/company" },
           { title: "Operating Hours", href: "/dashboard/company/operating-hours" },
-          { title: "Locations", href: "/dashboard/company/locations" },
+          { title: "Garages", href: "/dashboard/company/locations" },
           { title: "Pricing", href: "/dashboard/company/pricing" },
           { title: "Vehicle Classes", href: "/dashboard/company/vehicle-classes" }
         ]

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { useFleetLocations, useUsers } from "@/hooks/use-collections";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
+import { useUsers } from "@/hooks/use-collections";
 import { fetchGlobalLimits } from "@/lib/services/firebase-service";
 import {
   capLabel,
@@ -53,7 +54,7 @@ function LimitUsageBar({ label, used, max }: LimitRow) {
 
 export default function LicensePage() {
   const { users, loading: usersLoading } = useUsers();
-  const { locations, loading: locationsLoading } = useFleetLocations();
+  const { branches, branchesLoading } = useActiveBranch();
   const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
   const [limitsLoading, setLimitsLoading] = useState(true);
 
@@ -64,7 +65,7 @@ export default function LicensePage() {
       .finally(() => setLimitsLoading(false));
   }, []);
 
-  const loading = usersLoading || locationsLoading || limitsLoading;
+  const loading = usersLoading || branchesLoading || limitsLoading;
   const resolved = limits ?? unlimitedLimits;
 
   const adminCount = users.filter((u) => u.role === "admin").length;
@@ -73,7 +74,7 @@ export default function LicensePage() {
   const rows: LimitRow[] = [
     { label: "Admin accounts", used: adminCount, max: resolved.maxAdmins },
     { label: "Drivers", used: driverCount, max: resolved.maxDrivers },
-    { label: "Dispatch locations", used: locations.length, max: resolved.maxLocations }
+    { label: "Locations", used: branches.length, max: resolved.maxLocations }
   ];
 
   const tier = resolved.subscriptionTier.trim();

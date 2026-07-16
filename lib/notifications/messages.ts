@@ -108,7 +108,7 @@ export function locationNotification(
   title: string,
   entityId?: string
 ): CreateActivityNotificationInput {
-  const entity = "Location";
+  const entity = "Garage";
   return {
     category: "location",
     action,
