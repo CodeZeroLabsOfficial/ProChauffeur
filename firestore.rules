@@ -65,175 +65,11 @@ service cloud.firestore {
       }
     }
 
-    match /locations/{locId} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /trips/{tripId} {
-      function isCustomerOfTrip() {
-        return resource.data.customerID == request.auth.uid;
-      }
-
-      function isDriverOfTrip() {
-        return resource.data.driverID == request.auth.uid;
-      }
-
-      function isOpenRequest() {
-        return resource.data.status == 'requested' && driverIdEmpty(resource.data);
-      }
-
-      function fleetVehicleData(fleetDocId) {
-        return get(/databases/$(database)/documents/vehicles/$(fleetDocId)).data;
-      }
-
-      function directedTripFleetAssignmentValid(fleetDocId, chauffeurUid) {
-        return exists(/databases/$(database)/documents/vehicles/$(fleetDocId))
-          && fleetVehicleData(fleetDocId).driverID == fleetDocId
-          && chauffeurUid is string
-          && chauffeurUid.size() > 0
-          && (
-            (
-              ('assignedChauffeurUserId' in fleetVehicleData(fleetDocId))
-              && fleetVehicleData(fleetDocId).assignedChauffeurUserId is string
-              && fleetVehicleData(fleetDocId).assignedChauffeurUserId.size() > 0
-              && fleetVehicleData(fleetDocId).assignedChauffeurUserId == chauffeurUid
-            )
-            || (
-              (
-                !('assignedChauffeurUserId' in fleetVehicleData(fleetDocId))
-                || fleetVehicleData(fleetDocId).assignedChauffeurUserId == null
-              )
-              && fleetVehicleData(fleetDocId).driverID == chauffeurUid
-            )
-          );
-      }
-
-      function tripFleetDocumentId(data) {
-        return ('vehicleDocumentId' in data && data.vehicleDocumentId is string && data.vehicleDocumentId.size() > 0)
-          ? data.vehicleDocumentId
-          : null;
-      }
-
-      function tripCreateOpenPool(data) {
-        return driverIdEmpty(data) && tripFleetDocumentId(data) == null;
-      }
-
-      function tripCreateDirectedToChauffeur(data) {
-        return !driverIdEmpty(data)
-          && data.driverID is string
-          && data.driverID.size() > 0
-          && tripFleetDocumentId(data) != null
-          && directedTripFleetAssignmentValid(tripFleetDocumentId(data), data.driverID);
-      }
-
-      function validTripLocation(coord) {
-        return coord is latlng
-          || (coord is map
-            && coord.keys().hasAll(['latitude', 'longitude'])
-            && coord.latitude is number
-            && coord.longitude is number);
-      }
-
-      function validTripCreatePayload(data) {
-        return data.status == 'requested'
-          && validTripLocation(data.pickup)
-          && validTripLocation(data.dropoff)
-          && (
-            tripCreateOpenPool(data)
-            || tripCreateDirectedToChauffeur(data)
-          )
-          && data.createdAt is timestamp
-          && data.updatedAt is timestamp;
-      }
-
-      function tripCreateCustomerIdValid(data) {
-        return data.customerID == request.auth.uid
-          || (isAdmin()
-            && data.customerID is string
-            && data.customerID.size() > 0);
-      }
-
-      allow read: if signedIn() && (
-        isAdmin()
-        || isCustomerOfTrip()
-        || isDriverOfTrip()
-        || (isDriver() && isOpenRequest())
-      );
-
-      allow create: if signedIn()
-        && tripCreateCustomerIdValid(request.resource.data)
-        && validTripCreatePayload(request.resource.data);
-
-      allow update: if signedIn() && (
-        isAdmin()
-        || (
-          isCustomerOfTrip()
-          && request.resource.data.customerID == resource.data.customerID
-          && request.resource.data.driverID == resource.data.driverID
-        )
-        || (
-          isDriverOfTrip()
-          && request.resource.data.customerID == resource.data.customerID
-          && request.resource.data.driverID == resource.data.driverID
-        )
-        || (
-          isDriver()
-          && isOpenRequest()
-          && request.resource.data.customerID == resource.data.customerID
-          && request.resource.data.driverID == request.auth.uid
-          && request.resource.data.status == 'accepted'
-        )
-        || (
-          isDriver()
-          && resource.data.status == 'requested'
-          && !driverIdEmpty(resource.data)
-          && resource.data.driverID == request.auth.uid
-          && request.resource.data.customerID == resource.data.customerID
-          && request.resource.data.driverID == resource.data.driverID
-          && request.resource.data.status == 'accepted'
-        )
-      );
-
-      allow delete: if isAdmin();
-    }
-
-    // Service classes + rate cards (schema v2 pricing).
-    match /vehicle_classes/{classId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /vehicles/{driverId} {
-      allow read: if signedIn();
-      allow create, update: if (signedIn()
-        && request.auth.uid == driverId
-        && request.resource.data.driverID == driverId)
-        || (isAdmin()
-          && request.resource.data.driverID == driverId);
-      allow delete: if isSelf(driverId) || isAdmin();
-    }
-
-    match /invoices/{invoiceId} {
-      allow read: if isAdmin()
-        || (signedIn() && resource.data.customerID == request.auth.uid);
-      allow write: if isAdmin();
-    }
-
     match /app_settings/{docId} {
       allow read: if docId in ['limits', 'branding', 'company']
         || (signedIn() && docId == 'locale')
         || (signedIn() && isAdmin() && docId == 'integrations');
       allow write: if isAdmin() && docId in ['limits', 'branding', 'integrations', 'company', 'locale'];
-    }
-
-    match /operator/{docId} {
-      allow read: if docId == 'company'
-        || docId == 'branding'
-        || docId == 'pricing'
-        || (signedIn() && docId == 'locale')
-        || (signedIn() && isAdmin() && docId in ['operating_hours', 'pricing']);
-      allow write: if isAdmin() && docId in ['locale', 'company', 'operating_hours', 'pricing'];
     }
 
     function validNotificationCategories() {
@@ -247,6 +83,7 @@ service cloud.firestore {
       return ['created', 'updated', 'deleted'];
     }
 
+    // Activity feed remains company-wide (not branch-scoped).
     match /notifications/{notificationId} {
       allow read: if isAdmin();
       allow create: if isAdmin()
