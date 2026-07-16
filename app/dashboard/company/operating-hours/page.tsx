@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useFleetLocations } from "@/hooks/use-collections";
 import { fetchOperatingHours, saveOperatingHours } from "@/lib/services/firebase-service";
 import {
+  BRANCH_OFFICE_FLEET_LOCATION_ID,
   emptyOperatingHours,
   type AppFleetOperatingHours,
   type FleetLocation,
@@ -57,6 +59,7 @@ function resolveLocation(
 }
 
 export default function OperatingHoursPage() {
+  const { activeBranch } = useActiveBranch();
   const { locations, loading: locationsLoading } = useFleetLocations();
   const [operatingHours, setOperatingHours] = useState<AppFleetOperatingHours>(emptyOperatingHours);
   const [loading, setLoading] = useState(true);
@@ -67,6 +70,8 @@ export default function OperatingHoursPage() {
     () => new Map(locations.map((loc) => [loc.id, loc])),
     [locations]
   );
+
+  const branchTimeZone = activeBranch?.timeZoneIdentifier?.trim() || null;
 
   const loadData = useCallback(() => {
     return fetchOperatingHours().then(setOperatingHours);
@@ -118,7 +123,7 @@ export default function OperatingHoursPage() {
                   <TableHead>Schedule name</TableHead>
                   <TableHead>Schedule days</TableHead>
                   <TableHead>Schedule hours</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Office</TableHead>
                   <TableHead>Time zone</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
@@ -148,8 +153,15 @@ export default function OperatingHoursPage() {
                         <TableCell className="tabular-nums">
                           {formatScheduleHours(s.startTime, s.endTime)}
                         </TableCell>
-                        <TableCell>{location?.name ?? "Not assigned"}</TableCell>
-                        <TableCell>{displayValue(location?.timeZoneIdentifier)}</TableCell>
+                        <TableCell>
+                          {location?.name ??
+                            (s.locationId === BRANCH_OFFICE_FLEET_LOCATION_ID
+                              ? "Office"
+                              : "Not assigned")}
+                        </TableCell>
+                        <TableCell>
+                          {displayValue(location?.timeZoneIdentifier ?? branchTimeZone)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
                             <Button

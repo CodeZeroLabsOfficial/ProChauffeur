@@ -5,7 +5,11 @@ import { toast } from "sonner";
 
 import { useFleetLocations } from "@/hooks/use-collections";
 import { saveOperatingHours } from "@/lib/services/firebase-service";
-import type { AppFleetOperatingHours, FleetWeeklyOperatingSchedule } from "@/lib/models";
+import {
+  BRANCH_OFFICE_FLEET_LOCATION_ID,
+  type AppFleetOperatingHours,
+  type FleetWeeklyOperatingSchedule
+} from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,10 +138,14 @@ export function ScheduleEditSheet({
       } else {
         setEnabled(true);
         setSelectedDays([2, 3, 4, 5, 6]);
-        setLocationId("");
+        setLocationId(
+          locations.some((l) => l.id === BRANCH_OFFICE_FLEET_LOCATION_ID)
+            ? BRANCH_OFFICE_FLEET_LOCATION_ID
+            : (locations[0]?.id ?? "")
+        );
       }
     }
-  }, [open, schedule]);
+  }, [open, schedule, locations]);
 
   function toggleDay(day: number) {
     setSelectedDays((days) =>
@@ -192,13 +200,15 @@ export function ScheduleEditSheet({
           </div>
 
           <div className="space-y-2">
-            <Label>Location</Label>
+            <Label>Office</Label>
             {locations.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Add a location before creating a schedule.</p>
+              <p className="text-muted-foreground text-sm">
+                Set the office address on Company → Locations before creating a schedule.
+              </p>
             ) : (
               <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select location" />
+                  <SelectValue placeholder="Select office" />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((loc) => (

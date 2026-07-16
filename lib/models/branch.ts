@@ -31,7 +31,12 @@ export interface Branch {
   name: string;
   isActive: boolean;
   timeZoneIdentifier?: string | null;
-  /** Optional service-area description for booking resolve (Phase 6). */
+  /** Office / operates-from address (replaces Garage in product UI). */
+  officeAddressLine?: string | null;
+  officeLatitude?: number | null;
+  officeLongitude?: number | null;
+  officePhone?: string | null;
+  /** Optional service-area description for booking resolve. */
   serviceArea?: {
     type: "postcodes" | "radius" | "polygon";
     postcodes?: string[];
@@ -43,6 +48,9 @@ export interface Branch {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** Synced default FleetLocation doc id for quoting deadhead. */
+export const BRANCH_OFFICE_FLEET_LOCATION_ID = "office";
 
 /** Chauffeur roster entry — `branches/{branchId}/drivers/{uid}`. */
 export interface BranchDriver extends DriverProfile {
@@ -75,6 +83,10 @@ export function buildBranch(
   return {
     isActive: true,
     timeZoneIdentifier: null,
+    officeAddressLine: null,
+    officeLatitude: null,
+    officeLongitude: null,
+    officePhone: null,
     serviceArea: null,
     createdAt: now,
     updatedAt: now,

@@ -1,11 +1,11 @@
-/** FleetLocation — garage document under `branches/{branchId}/locations/{id}`. */
+/** FleetLocation — site document under `branches/{branchId}/locations/{id}` (synced office uses id `office`). */
 export interface FleetLocation {
   id: string;
   name: string;
   addressLine: string;
   latitude: number;
   longitude: number;
-  /** Default garage — used for map centering and pricing deadhead. */
+  /** Default site — used for map centering and pricing deadhead (Location office). */
   isDefault: boolean;
   timeZoneIdentifier?: string | null;
   createdAt: Date;
@@ -17,21 +17,21 @@ export function hasValidFleetLocationCoordinate(
   return location.latitude !== 0 || location.longitude !== 0;
 }
 
-/** Requires exactly one default garage with valid coordinates. */
+/** Requires exactly one default office site with valid coordinates. */
 export function requireDefaultGarageLocation(locations: FleetLocation[]): FleetLocation {
   const defaults = locations.filter(
     (l) => l.isDefault && hasValidFleetLocationCoordinate(l)
   );
   if (defaults.length === 0) {
-    throw new Error("No default garage configured. Set one in Company → Garages.");
+    throw new Error("No default office configured. Set the office address in Company → Locations.");
   }
   if (defaults.length > 1) {
-    throw new Error("Multiple default garages configured. Only one is allowed.");
+    throw new Error("Multiple default offices configured. Only one is allowed.");
   }
   return defaults[0]!;
 }
 
-/** Preferred garage for map fallbacks — explicit default only. */
+/** Preferred site for map fallbacks — explicit default only. */
 export function resolveDefaultFleetLocation(locations: FleetLocation[]): FleetLocation | null {
   try {
     return requireDefaultGarageLocation(locations);

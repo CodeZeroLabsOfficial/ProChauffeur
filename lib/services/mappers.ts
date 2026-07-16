@@ -104,6 +104,10 @@ export function mapBranch(id: string, d: DocumentData): Branch {
     name: d.name ?? id,
     isActive: d.isActive !== false,
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
+    officeAddressLine: typeof d.officeAddressLine === "string" ? d.officeAddressLine : null,
+    officeLatitude: typeof d.officeLatitude === "number" ? d.officeLatitude : null,
+    officeLongitude: typeof d.officeLongitude === "number" ? d.officeLongitude : null,
+    officePhone: typeof d.officePhone === "string" ? d.officePhone : null,
     serviceArea: d.serviceArea ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()

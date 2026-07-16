@@ -93,7 +93,7 @@ import {
   branchesCollectionRef
 } from "@/lib/branch/firestore-paths";
 import { listenQuery } from "@/lib/branch/listen-query";
-import { BranchSettingsDocs, DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
+import { BranchSettingsDocs, DEFAULT_BRANCH_ID, BRANCH_OFFICE_FLEET_LOCATION_ID, type Branch } from "@/lib/models/branch";
 import { canCreateLocation } from "@/lib/models";
 
 type Unsub = () => void;
@@ -208,12 +208,79 @@ export async function upsertBranch(branch: Branch): Promise<void> {
       name: branch.name,
       isActive: branch.isActive,
       timeZoneIdentifier: branch.timeZoneIdentifier ?? null,
+      officeAddressLine: branch.officeAddressLine ?? null,
+      officeLatitude: branch.officeLatitude ?? null,
+      officeLongitude: branch.officeLongitude ?? null,
+      officePhone: branch.officePhone ?? null,
       serviceArea: branch.serviceArea ?? null,
       createdAt: existing.exists() ? branch.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp()
     }),
     { merge: true }
   );
+}
+
+export type OfficeFleetSyncInput = {
+  name: string;
+  addressLine: string;
+  latitude: number;
+  longitude: number;
+  timeZoneIdentifier?: string | null;
+};
+
+/**
+ * Upserts the default FleetLocation used for quoting from the Location office.
+ * Doc id is always `office` under the branch.
+ */
+export async function syncOfficeFleetLocation(
+  branchId: string,
+  office: OfficeFleetSyncInput
+): Promise<void> {
+  const addressLine = office.addressLine.trim();
+  if (!addressLine) return;
+  if (!Number.isFinite(office.latitude) || !Number.isFinite(office.longitude)) {
+    throw new Error("Select an office address from the suggestions.");
+  }
+
+  await clearOtherDefaultFleetLocationsInBranch(branchId, BRANCH_OFFICE_FLEET_LOCATION_ID);
+
+  const ref = branchDocRef(db(), "locations", BRANCH_OFFICE_FLEET_LOCATION_ID, branchId);
+  const existing = await getDoc(ref);
+  await setDoc(
+    ref,
+    stripUndefined({
+      id: BRANCH_OFFICE_FLEET_LOCATION_ID,
+      name: office.name.trim() || "Office",
+      addressLine,
+      latitude: office.latitude,
+      longitude: office.longitude,
+      isDefault: true,
+      timeZoneIdentifier: office.timeZoneIdentifier ?? null,
+      createdAt: existing.exists() ? existing.data()?.createdAt ?? serverTimestamp() : serverTimestamp()
+    }),
+    { merge: true }
+  );
+}
+
+/** Allocates a unique branch id from a display name (slug, then -2, -3, …). */
+export async function allocateUniqueBranchId(name: string): Promise<string> {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64);
+  if (!base) {
+    throw new Error("Enter a location name with letters or numbers.");
+  }
+  const existing = await fetchBranches();
+  const used = new Set(existing.map((b) => b.id));
+  if (!used.has(base)) return base;
+  for (let n = 2; n < 1000; n += 1) {
+    const candidate = `${base.slice(0, 60)}-${n}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  throw new Error("Could not allocate a unique location id.");
 }
 
 /**
@@ -230,6 +297,20 @@ export async function createLocationWithScaffold(
     throw new Error(`A location with id "${branch.id}" already exists.`);
   }
   await upsertBranch(branch);
+
+  if (
+    branch.officeAddressLine?.trim() &&
+    typeof branch.officeLatitude === "number" &&
+    typeof branch.officeLongitude === "number"
+  ) {
+    await syncOfficeFleetLocation(branch.id, {
+      name: branch.name,
+      addressLine: branch.officeAddressLine,
+      latitude: branch.officeLatitude,
+      longitude: branch.officeLongitude,
+      timeZoneIdentifier: branch.timeZoneIdentifier
+    });
+  }
 
   const settingsToCopy = [
     BranchSettingsDocs.pricing,
@@ -635,8 +716,18 @@ export async function fetchFleetLocations(): Promise<FleetLocation[]> {
   return snapToList(await getDocs(nested), mapFleetLocation);
 }
 
-async function clearOtherDefaultFleetLocations(exceptId: string): Promise<void> {
-  const snap = await getDocs(branchCollectionRef(db(), "locations"));
+async function clearOtherDefaultFleetLocations(
+  exceptId: string,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
+  await clearOtherDefaultFleetLocationsInBranch(branchId, exceptId);
+}
+
+async function clearOtherDefaultFleetLocationsInBranch(
+  branchId: string,
+  exceptId: string
+): Promise<void> {
+  const snap = await getDocs(branchCollectionRef(db(), "locations", branchId));
   const batch = writeBatch(db());
   let hasUpdates = false;
 
