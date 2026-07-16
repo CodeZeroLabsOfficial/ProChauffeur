@@ -370,20 +370,35 @@ export function VehicleClassEditSheet({
 
               <div className="space-y-4">
                 <SectionHeading>Booking</SectionHeading>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="vc-enabled">Enabled</Label>
+                      <p className="text-muted-foreground text-xs">
+                        Disabled classes are excluded from booking and quotes.
+                      </p>
+                    </div>
                     <Switch
+                      id="vc-enabled"
                       checked={draft.isEnabled}
                       onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
+                      disabled={saving}
                     />
-                    <Label>Enabled</Label>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="vc-visible">Visible</Label>
+                      <p className="text-muted-foreground text-xs">
+                        When off, this class is hidden from the customer booking flow but remains
+                        available to staff.
+                      </p>
+                    </div>
                     <Switch
+                      id="vc-visible"
                       checked={draft.isVisible}
                       onCheckedChange={(checked) => setDraft((c) => ({ ...c, isVisible: checked }))}
+                      disabled={saving}
                     />
-                    <Label>Visible in booking</Label>
                   </div>
                 </div>
               </div>

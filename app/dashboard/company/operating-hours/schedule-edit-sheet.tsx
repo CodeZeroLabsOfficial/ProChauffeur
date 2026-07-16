@@ -185,9 +185,19 @@ export function ScheduleEditSheet({
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Switch id="isEnabled" checked={enabled} onCheckedChange={setEnabled} />
-            <Label htmlFor="isEnabled">{enabled ? "Active" : "Disabled"}</Label>
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="isEnabled">Active</Label>
+              <p className="text-muted-foreground text-xs">
+                Inactive schedules are excluded when checking operating hours.
+              </p>
+            </div>
+            <Switch
+              id="isEnabled"
+              checked={enabled}
+              onCheckedChange={setEnabled}
+              disabled={saving}
+            />
           </div>
 
           <div className="space-y-2">

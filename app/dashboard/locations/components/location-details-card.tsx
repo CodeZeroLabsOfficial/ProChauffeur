@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Clock, MapPin, MapPinned, PhoneCall } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function ContactRow({
   icon: Icon,
@@ -32,7 +32,10 @@ export function LocationDetailsCard({ branch }: { branch: Branch }) {
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardHeader>
+        <CardTitle>Location details</CardTitle>
+      </CardHeader>
+      <CardContent>
         {hasContent ? (
           <div className="flex flex-col gap-y-4">
             {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
