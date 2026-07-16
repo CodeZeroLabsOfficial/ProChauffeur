@@ -12,7 +12,7 @@ import { LocationServiceAreaPanel } from "@/app/dashboard/locations/components/l
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
-import { locationHeroMetrics } from "@/app/dashboard/locations/lib/location-profile-metrics";
+import { locationWeeklyHeroMetrics } from "@/app/dashboard/locations/lib/location-profile-metrics";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
@@ -62,7 +62,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   }, [locationId, setBranchId]);
 
   const heroMetrics = useMemo(
-    () => (branch ? locationHeroMetrics(trips, invoices, "30d") : null),
+    () => (branch ? locationWeeklyHeroMetrics(trips, invoices) : null),
     [branch, trips, invoices]
   );
 
@@ -109,13 +109,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
-          <LocationDetailCard
-            branch={branch}
-            statTrips={heroMetrics.trips}
-            statCompleted={heroMetrics.completed}
-            statRevenue={heroMetrics.revenue}
-            periodLabel={heroMetrics.periodLabel}
-          />
+          <LocationDetailCard branch={branch} metrics={heroMetrics} />
 
           <TabsContent value="overview" className="mt-0 space-y-4">
             <LocationOverviewPanel
