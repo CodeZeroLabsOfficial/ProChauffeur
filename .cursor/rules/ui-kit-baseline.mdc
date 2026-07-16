@@ -1,0 +1,32 @@
+---
+description: Use the ProChauffeur shadcn UI kit as the design and layout baseline
+alwaysApply: true
+---
+
+# UI kit baseline
+
+When building or changing UI, use the shadcn dashboard kit as the primary reference before inventing new patterns.
+
+**Kit path:** `/Users/daniel/Documents/Company/App Development/ProChauffeur/UI Kit/shadcn-ui-kit-dashboard-main/`
+
+## Workflow
+
+1. **Search the kit first** for an existing page, component, or layout that matches the task (e.g. cards, tables, forms, dashboards, sidebar/header chrome).
+2. **Match structure and styling** — spacing, typography, card composition, table density, empty states, and interaction patterns should follow the kit.
+3. **Implement in this repo** using existing primitives in `components/ui/` and layout pieces in `components/layout/`. Adapt kit patterns; do not import from the kit at runtime.
+4. **Prefer kit examples** over one-off markup when both exist. Extend shared building blocks rather than duplicating sidebar, dropdown, or dialog patterns.
+
+## Where to look in the kit
+
+| Need | Kit location |
+|------|----------------|
+| Primitives (Button, Card, Dialog, …) | `components/ui/` |
+| App chrome (sidebar, header, nav) | `components/layout/` |
+| Full page / dashboard examples | `app/dashboard/(auth)/` |
+| Theme tokens and globals | `app/globals.css`, `app/themes.css`, `lib/themes.ts` |
+
+## Constraints
+
+- Do **not** add kit paths, “from UI kit”, or sibling-project references in source code or comments — see `no-cross-project-refs`.
+- The kit is for **agent and design reference only**; shipped code lives in this Web App repo.
+- When the kit and this repo differ, follow this repo’s data layer, naming conventions, and shared components; use the kit for visual and UX consistency.

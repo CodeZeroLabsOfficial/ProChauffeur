@@ -125,13 +125,16 @@ export function LocationOperatingHoursTab({
                 </TableRow>
               ) : (
                 operatingHours.schedules.map((s) => (
-                  <TableRow key={s.id} className={cn(!s.isEnabled && "text-muted-foreground")}>
+                  <TableRow
+                    key={s.id}
+                    className={cn("cursor-pointer", !s.isEnabled && "text-muted-foreground")}
+                    onClick={() => openEditSheet(s)}>
                     <TableCell className="font-medium">{formatScheduleName(s)}</TableCell>
                     <TableCell>{formatScheduleDays(s.weekdayNumbers)}</TableCell>
                     <TableCell className="tabular-nums">
                       {formatScheduleHours(s.startTime, s.endTime)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           type="button"

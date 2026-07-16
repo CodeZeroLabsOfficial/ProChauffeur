@@ -389,8 +389,7 @@ export function VehicleClassEditSheet({
                     <div className="space-y-0.5">
                       <Label htmlFor="vc-visible">Visible</Label>
                       <p className="text-muted-foreground text-xs">
-                        When off, this class is hidden from the customer booking flow but remains
-                        available to staff.
+                        When off, this class is hidden from the customer booking flow.
                       </p>
                     </div>
                     <Switch

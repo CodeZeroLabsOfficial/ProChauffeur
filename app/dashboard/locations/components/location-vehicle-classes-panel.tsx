@@ -123,7 +123,8 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
                 vehicleClasses.map((vehicleClass) => (
                   <TableRow
                     key={vehicleClass.id}
-                    className={cn(!vehicleClass.isEnabled && "text-muted-foreground")}>
+                    className={cn("cursor-pointer", !vehicleClass.isEnabled && "text-muted-foreground")}
+                    onClick={() => openEdit(vehicleClass)}>
                     <TableCell>
                       {vehicleClass.imageUrl ? (
                         <Image
@@ -157,7 +158,7 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
                       {vehicleClass.largeLuggageCount} large
                     </TableCell>
                     <TableCell>{formatTripTypes(vehicleClass)}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
