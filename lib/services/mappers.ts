@@ -289,10 +289,12 @@ export function mapOperatorLocale(d: DocumentData): OperatorLocale {
 
 export function mapLimits(d: DocumentData): AppGlobalLimits {
   const intOrUnlimited = (key: string) => (d[key] != null ? toInt(d[key], UNLIMITED) : UNLIMITED);
+  // Missing maxLocations → 1 so multi-Location stays gated off until raised.
+  const maxLocations = d.maxLocations != null ? toInt(d.maxLocations, 1) : 1;
   return {
     maxAdmins: intOrUnlimited("maxAdmins"),
     maxDrivers: intOrUnlimited("maxDrivers"),
-    maxLocations: intOrUnlimited("maxLocations"),
+    maxLocations,
     subscriptionTier: typeof d.subscriptionTier === "string" ? d.subscriptionTier.trim() : ""
   };
 }

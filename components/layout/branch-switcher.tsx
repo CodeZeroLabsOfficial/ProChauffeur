@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronsUpDown, MapPin } from "lucide-react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
@@ -18,7 +20,13 @@ import {
   useSidebar
 } from "@/components/ui/sidebar";
 import { LogoMark } from "@/components/layout/logo";
-import type { Appearance } from "@/lib/models";
+import {
+  isMultiLocationEnabled,
+  unlimitedLimits,
+  type Appearance,
+  type AppGlobalLimits
+} from "@/lib/models";
+import { fetchGlobalLimits } from "@/lib/services/firebase-service";
 
 type BranchSwitcherProps = {
   appearance?: Appearance | null;
@@ -27,8 +35,34 @@ type BranchSwitcherProps = {
 export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   const { isMobile } = useSidebar();
   const { branchId, branches, setBranchId, activeBranch, branchesLoading } = useActiveBranch();
+  const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
+
+  useEffect(() => {
+    fetchGlobalLimits()
+      .then(setLimits)
+      .catch(() => setLimits(unlimitedLimits));
+  }, []);
+
   const portalName = appearance?.portalName ?? "ProChauffeur";
   const label = activeBranch?.name ?? (branchesLoading ? "Loading…" : portalName);
+  const multiOn = isMultiLocationEnabled((limits ?? unlimitedLimits).maxLocations);
+  const showSwitcher = multiOn && branches.length > 1;
+
+  if (!showSwitcher) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" className="pointer-events-none" tooltip={label}>
+            <LogoMark logoUrl={appearance?.logoUrl} className="size-8 shrink-0" />
+            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+              <span className="truncate font-semibold">{label}</span>
+              <span className="text-muted-foreground truncate text-xs">{portalName}</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <SidebarMenu>
@@ -55,7 +89,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
             <DropdownMenuLabel className="text-muted-foreground text-xs">Locations</DropdownMenuLabel>
             {branches.length === 0 ? (
               <DropdownMenuItem disabled className="text-muted-foreground">
-                No locations yet — run the backfill script
+                No locations yet — add one in Settings → Locations
               </DropdownMenuItem>
             ) : (
               branches.map((branch) => (
@@ -74,8 +108,8 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
               ))
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-              Switch location to change ops context
+            <DropdownMenuItem asChild className="text-muted-foreground text-xs">
+              <Link href="/dashboard/settings/locations">Manage locations</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

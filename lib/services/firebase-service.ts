@@ -48,7 +48,6 @@ import {
   Collections,
   emptyCompanyProfile,
   emptyOperatingHours,
-  UNLIMITED,
   unlimitedLimits,
   type ActivityNotification,
   type CompanyProfile,
@@ -94,7 +93,8 @@ import {
   branchesCollectionRef
 } from "@/lib/branch/firestore-paths";
 import { listenQuery } from "@/lib/branch/listen-query";
-import { BranchSettingsDocs, type Branch } from "@/lib/models/branch";
+import { BranchSettingsDocs, DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
+import { canCreateLocation } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -194,23 +194,58 @@ export async function upsertBranch(branch: Branch): Promise<void> {
   const existing = await getDoc(ref);
   if (!existing.exists()) {
     const limits = await fetchGlobalLimits();
-    if (limits.maxLocations < UNLIMITED) {
-      const current = await fetchBranches();
-      if (current.length >= limits.maxLocations) {
-        throw new Error(
-          `Location limit reached (${limits.maxLocations}). Raise maxLocations in License settings or remove a location.`
-        );
-      }
+    const current = await fetchBranches();
+    if (!canCreateLocation(current.length, limits.maxLocations)) {
+      throw new Error(
+        `Location limit reached (${limits.maxLocations}). Raise maxLocations in License settings or remove a location.`
+      );
     }
   }
   await setDoc(
     ref,
     stripUndefined({
-      ...branch,
+      id: branch.id,
+      name: branch.name,
+      isActive: branch.isActive,
+      timeZoneIdentifier: branch.timeZoneIdentifier ?? null,
+      serviceArea: branch.serviceArea ?? null,
+      createdAt: existing.exists() ? branch.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp()
     }),
     { merge: true }
   );
+}
+
+/**
+ * Creates a Location (branch) and copies pricing, operating hours, and vehicle
+ * classes from `sourceBranchId` (default Brisbane).
+ */
+export async function createLocationWithScaffold(
+  branch: Branch,
+  options?: { sourceBranchId?: string }
+): Promise<void> {
+  const sourceBranchId = options?.sourceBranchId ?? DEFAULT_BRANCH_ID;
+  const existing = await getDoc(branchMetaDocRef(db(), branch.id));
+  if (existing.exists()) {
+    throw new Error(`A location with id "${branch.id}" already exists.`);
+  }
+  await upsertBranch(branch);
+
+  const settingsToCopy = [
+    BranchSettingsDocs.pricing,
+    BranchSettingsDocs.operatingHours
+  ] as const;
+  for (const docId of settingsToCopy) {
+    const source = await getDoc(branchSettingsDocRef(db(), docId, sourceBranchId));
+    if (source.exists()) {
+      await setDoc(branchSettingsDocRef(db(), docId, branch.id), source.data());
+    }
+  }
+
+  const classesSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", sourceBranchId));
+  for (const classDoc of classesSnap.docs) {
+    await setDoc(branchDocRef(db(), "vehicle_classes", classDoc.id, branch.id), classDoc.data());
+  }
 }
 
 // ─────────────────────────────── Trips ───────────────────────────────

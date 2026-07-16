@@ -6,15 +6,30 @@ export interface AppGlobalLimits {
   subscriptionTier: string;
 }
 
-/** Sentinel used when the document or fields are absent (caps decay to "unlimited"). */
+/** Sentinel used when a numeric cap field is absent (admins/drivers decay to unlimited). */
 export const UNLIMITED = Number.MAX_SAFE_INTEGER;
 
+/**
+ * Default when the limits document is missing or fetch fails.
+ * `maxLocations` defaults to 1 so multi-Location stays off until explicitly raised.
+ */
 export const unlimitedLimits: AppGlobalLimits = {
   maxAdmins: UNLIMITED,
   maxDrivers: UNLIMITED,
-  maxLocations: UNLIMITED,
+  maxLocations: 1,
   subscriptionTier: ""
 };
+
+/** Multi-Location UI / resolve is on when the license allows more than one Location. */
+export function isMultiLocationEnabled(maxLocations: number): boolean {
+  return maxLocations > 1;
+}
+
+/** Whether another Location (branch) may be created under the current cap. */
+export function canCreateLocation(used: number, maxLocations: number): boolean {
+  if (maxLocations >= UNLIMITED) return true;
+  return used < maxLocations;
+}
 
 export function capLabel(value: number): string {
   return value >= UNLIMITED ? "Unlimited" : String(value);

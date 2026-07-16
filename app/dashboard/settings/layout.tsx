@@ -6,6 +6,7 @@ const items = [
   { title: "Appearance", href: "/dashboard/settings/appearance" },
   { title: "Locale", href: "/dashboard/settings/locale" },
   { title: "License", href: "/dashboard/settings/license" },
+  { title: "Locations", href: "/dashboard/settings/locations" },
   { title: "Admins", href: "/dashboard/settings/admins" },
   { title: "Integrations", href: "/dashboard/settings/integrations" }
 ];
