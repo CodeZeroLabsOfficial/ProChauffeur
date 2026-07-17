@@ -1,16 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUsers } from "@/hooks/use-collections";
-import type { User } from "@/lib/models";
+import { userRoleTitle, type User } from "@/lib/models";
 import { useSessionUser } from "@/components/providers/session-provider";
+import { LocationStatusBadge } from "@/components/location-status-badge";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -92,7 +99,7 @@ export default function TeamPage() {
           <CardTitle>Team</CardTitle>
           <CardAction>
             <Button size="sm" onClick={() => setAddOpen(true)}>
-              <PlusIcon /> Add Admin
+              <PlusIcon /> Add New User
             </Button>
           </CardAction>
         </CardHeader>
@@ -100,15 +107,18 @@ export default function TeamPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Admin</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="w-32" />
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-12">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-muted-foreground py-10 text-center">
+                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
                     Loading…
                   </TableCell>
                 </TableRow>
@@ -117,24 +127,43 @@ export default function TeamPage() {
                   <TableRow key={u.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="size-8">
+                        <Avatar className="size-9">
                           <AvatarImage src={u.profile.photoURL ?? undefined} />
                           <AvatarFallback>
                             {generateAvatarFallback(u.profile.displayName || u.email)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{u.profile.displayName || "Admin"}</span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {u.profile.displayName || "Admin"}
+                          </p>
+                          <p className="text-muted-foreground truncate text-sm">{u.email}</p>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {userRoleTitle[u.role]}
+                    </TableCell>
+                    <TableCell>
+                      <LocationStatusBadge isActive />
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={u.id === me.uid || busy}
-                        onClick={() => revokeAdmin(u)}>
-                        {u.id === me.uid ? "You" : "Revoke"}
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontalIcon className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={u.id === me.uid || busy}
+                            onClick={() => revokeAdmin(u)}>
+                            {u.id === me.uid ? "Cannot revoke yourself" : "Revoke"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -147,7 +176,7 @@ export default function TeamPage() {
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Add Admin</SheetTitle>
+            <SheetTitle>Add New User</SheetTitle>
             <SheetDescription>
               Creates a Firebase Authentication account and an admin user document.
             </SheetDescription>
