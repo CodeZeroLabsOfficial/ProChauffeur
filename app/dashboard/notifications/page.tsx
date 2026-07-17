@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useNotifications } from "@/hooks/use-collections";
 import { markAllNotificationsRead } from "@/lib/services/firebase-service";
+import { ListPageHeader } from "@/components/list-page-header";
 import { Button } from "@/components/ui/button";
 import { NotificationsDataTable } from "@/app/dashboard/notifications/data-table";
 
@@ -33,22 +34,26 @@ export default function NotificationsPage() {
   }, [unreadIds]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 xl:mt-8">
-      <div className="flex items-start justify-between">
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Notifications</h1>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => void handleMarkAllRead()} disabled={markingAll || unreadIds.length === 0}>
-            <Check />
-            Mark All as Read
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/settings/appearance">
-              <Settings />
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <>
+      <ListPageHeader
+        title="Notifications"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => void handleMarkAllRead()}
+              disabled={markingAll || unreadIds.length === 0}>
+              <Check />
+              Mark All as Read
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/settings/appearance">
+                <Settings />
+              </Link>
+            </Button>
+          </div>
+        }
+      />
       <NotificationsDataTable />
-    </div>
+    </>
   );
 }
