@@ -17,8 +17,3 @@ export async function fetchAppSettingAdmin<T extends Record<string, unknown>>(
 export async function fetchAppearanceAdmin(): Promise<Appearance | null> {
   return fetchAppSettingAdmin<Appearance>(AppSettingsDocs.appearance);
 }
-
-/** @deprecated Use `fetchAppearanceAdmin` */
-export async function fetchBrandingAdmin(): Promise<Appearance | null> {
-  return fetchAppearanceAdmin();
-}

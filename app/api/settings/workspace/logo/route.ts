@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { uploadBrandingLogoAdmin } from "@/lib/firebase/admin-storage";
+import { uploadWorkspaceLogoAdmin } from "@/lib/firebase/admin-storage";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 
-/** POST: upload the portal branding logo to Firebase Storage. */
+/** POST: upload the workspace logo to Firebase Storage. */
 export async function POST(request: Request) {
   const session = await getAdminSessionUser();
   if (!session) {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const logoUrl = await uploadBrandingLogoAdmin(buffer, file.type, file.name);
+    const logoUrl = await uploadWorkspaceLogoAdmin(buffer, file.type, file.name);
     return NextResponse.json({ logoUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed.";

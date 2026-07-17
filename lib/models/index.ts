@@ -15,7 +15,7 @@ export * from "@/lib/models/locale-options";
 export * from "@/lib/models/notification";
 export * from "@/lib/models/vehicle-class";
 export * from "@/lib/models/saved-payment-method";
-export * from "@/lib/models/branding";
+export * from "@/lib/models/workspace";
 export * from "@/lib/models/branch";
 
 /** Firestore collection names. */
@@ -50,10 +50,8 @@ export const OperatorDocs = {
 /** `app_settings` document ids. */
 export const AppSettingsDocs = {
   limits: "limits",
-  /** Firestore doc id remains `branding` for backwards compatibility. */
-  appearance: "branding",
-  /** @deprecated Use `appearance` */
-  branding: "branding",
+  /** Appearance settings (workspace name, logo, fonts, primary colour). */
+  appearance: "workspace",
   integrations: "integrations",
   company: "company",
   locale: "locale"

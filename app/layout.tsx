@@ -15,11 +15,11 @@ import { fetchAppearanceAdmin } from "@/lib/firebase/admin-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const appearance = await fetchAppearanceAdmin();
-  const portalName = appearance?.portalName?.trim() || "ProChauffeur";
+  const workspaceName = appearance?.workspaceName?.trim() || "ProChauffeur";
   const iconUrl = appearance?.faviconUrl || appearance?.logoUrl;
 
   return {
-    title: `${portalName} — Operations Portal`,
+    title: `${workspaceName} — Operations Portal`,
     description: "Admin portal for managing chauffeur dispatch, bookings, fleet, drivers and billing.",
     ...(iconUrl ? { icons: { icon: iconUrl } } : {})
   };

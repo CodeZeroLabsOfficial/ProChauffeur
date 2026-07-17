@@ -43,7 +43,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
       .catch(() => setLimits(unlimitedLimits));
   }, []);
 
-  const portalName = appearance?.portalName ?? "ProChauffeur";
+  const workspaceName = appearance?.workspaceName ?? "ProChauffeur";
   const locationLabel = activeBranch?.name ?? (branchesLoading ? "Loading…" : "No location");
   const resolved = limits ?? unlimitedLimits;
   const canAdd = canCreateLocation(branches.length, resolved.maxLocations);
@@ -56,10 +56,10 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
             <SidebarMenuButton
               size="lg"
               className="hover:text-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              tooltip={portalName}>
+              tooltip={workspaceName}>
               <LogoMark logoUrl={appearance?.logoUrl} className="size-8 shrink-0" />
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-semibold">{portalName}</span>
+                <span className="truncate font-semibold">{workspaceName}</span>
                 <span className="text-muted-foreground truncate text-xs">{locationLabel}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />

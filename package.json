@@ -9,6 +9,7 @@
     "lint": "next lint",
     "backfill:brisbane-branch": "tsx --env-file=.env.local scripts/backfill-brisbane-branch.ts",
     "migrate:company-locale": "tsx --env-file=.env.local scripts/migrate-company-locale-to-app-settings.ts",
+    "migrate:workspace": "tsx --env-file=.env.local scripts/migrate-branding-to-workspace.ts",
     "cleanup:legacy-operator-settings": "tsx --env-file=.env.local scripts/cleanup-legacy-operator-settings.ts",
     "inventory:legacy-ops": "tsx --env-file=.env.local scripts/delete-legacy-ops-collections.ts"
   },

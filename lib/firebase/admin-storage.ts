@@ -27,10 +27,10 @@ export async function uploadProfilePhoto(
 }
 
 /**
- * Upload the portal branding logo via the Admin SDK (bypasses client Storage rules).
+ * Upload the workspace logo via the Admin SDK (bypasses client Storage rules).
  * Returns a Firebase download URL with a storage token.
  */
-export async function uploadBrandingLogoAdmin(
+export async function uploadWorkspaceLogoAdmin(
   buffer: Buffer,
   contentType: string,
   originalName: string
@@ -40,15 +40,15 @@ export async function uploadBrandingLogoAdmin(
   }
 
   const ext = originalName.split(".").pop()?.toLowerCase() || "png";
-  const path = `branding/logo.${ext}`;
+  const path = `workspace/logo.${ext}`;
   return saveStorageImage(path, buffer, contentType);
 }
 
 /**
- * Upload the portal favicon via the Admin SDK (bypasses client Storage rules).
+ * Upload the workspace favicon via the Admin SDK (bypasses client Storage rules).
  * Returns a Firebase download URL with a storage token.
  */
-export async function uploadBrandingFaviconAdmin(
+export async function uploadWorkspaceFaviconAdmin(
   buffer: Buffer,
   contentType: string,
   originalName: string
@@ -58,7 +58,7 @@ export async function uploadBrandingFaviconAdmin(
   }
 
   const ext = originalName.split(".").pop()?.toLowerCase() || "png";
-  const path = `branding/favicon.${ext}`;
+  const path = `workspace/favicon.${ext}`;
   return saveStorageImage(path, buffer, contentType);
 }
 

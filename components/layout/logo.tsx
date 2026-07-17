@@ -35,15 +35,15 @@ export function LogoMark({ logoUrl, className }: LogoMarkProps) {
 
 type LogoProps = {
   logoUrl?: string | null;
-  portalName?: string;
+  workspaceName?: string;
   className?: string;
 };
 
-export function Logo({ logoUrl, portalName = "ProChauffeur", className }: LogoProps) {
+export function Logo({ logoUrl, workspaceName = "ProChauffeur", className }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <LogoMark logoUrl={logoUrl} />
-      <span className="text-foreground text-lg font-semibold tracking-tight">{portalName}</span>
+      <span className="text-foreground text-lg font-semibold tracking-tight">{workspaceName}</span>
     </div>
   );
 }

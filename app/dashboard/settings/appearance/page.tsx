@@ -13,8 +13,8 @@ import { useFileUpload } from "@/hooks/use-file-upload";
 import {
   fetchSettingDoc,
   saveSettingDoc,
-  uploadBrandingFavicon,
-  uploadBrandingLogo
+  uploadWorkspaceFavicon,
+  uploadWorkspaceLogo
 } from "@/lib/services/firebase-service";
 import {
   BRANDING_FONTS,
@@ -112,7 +112,7 @@ function ImageUploadField({
 
 export default function AppearancePage() {
   const router = useRouter();
-  const [appearance, setAppearance] = useState<Appearance>({ portalName: "ProChauffeur" });
+  const [appearance, setAppearance] = useState<Appearance>({ workspaceName: "ProChauffeur" });
   const [fontFamily, setFontFamily] = useState<BrandingFontId>(DEFAULT_BRANDING_FONT);
   const [primaryColorHex, setPrimaryColorHex] = useState("");
   const [loading, setLoading] = useState(true);
@@ -169,7 +169,7 @@ export default function AppearancePage() {
     const uploadedLogo = logoFiles[0]?.file;
     if (uploadedLogo instanceof File) {
       try {
-        nextLogoUrl = await uploadBrandingLogo(uploadedLogo);
+        nextLogoUrl = await uploadWorkspaceLogo(uploadedLogo);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not upload logo.");
         return;
@@ -179,7 +179,7 @@ export default function AppearancePage() {
     const uploadedFavicon = faviconFiles[0]?.file;
     if (uploadedFavicon instanceof File) {
       try {
-        nextFaviconUrl = await uploadBrandingFavicon(uploadedFavicon);
+        nextFaviconUrl = await uploadWorkspaceFavicon(uploadedFavicon);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not upload favicon.");
         return;
@@ -188,7 +188,7 @@ export default function AppearancePage() {
 
     const nextPrimary = String(form.get("primaryColorHex") ?? "").trim();
     const data: DocumentData = {
-      portalName: String(form.get("portalName") ?? "").trim() || "ProChauffeur",
+      workspaceName: String(form.get("workspaceName") ?? "").trim() || "ProChauffeur",
       primaryColorHex: nextPrimary,
       fontFamily
     };
@@ -209,7 +209,7 @@ export default function AppearancePage() {
     try {
       await saveSettingDoc(AppSettingsDocs.appearance, data);
       const saved: Appearance = {
-        portalName: data.portalName as string,
+        workspaceName: data.workspaceName as string,
         primaryColorHex: nextPrimary || undefined,
         fontFamily,
         logoUrl: nextLogoUrl || undefined,
@@ -221,10 +221,10 @@ export default function AppearancePage() {
       clearLogoFiles();
       setFaviconUrl(nextFaviconUrl || null);
       clearFaviconFiles();
-      toast.success("Portal appearance saved.");
+      toast.success("Workspace appearance saved.");
       router.refresh();
     } catch {
-      toast.error("Could not save portal appearance.");
+      toast.error("Could not save workspace appearance.");
     } finally {
       setSaving(false);
     }
@@ -235,15 +235,19 @@ export default function AppearancePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Branding</CardTitle>
+        <CardTitle>Workspace</CardTitle>
       </CardHeader>
       <CardContent className="space-y-8">
         <section className="space-y-4">
-          <form onSubmit={onSubmitPortal} className="space-y-6" key={appearance.portalName}>
+          <form onSubmit={onSubmitPortal} className="space-y-6" key={appearance.workspaceName}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="portalName">Portal name</Label>
-                <Input id="portalName" name="portalName" defaultValue={appearance.portalName} />
+                <Label htmlFor="workspaceName">Workspace Name</Label>
+                <Input
+                  id="workspaceName"
+                  name="workspaceName"
+                  defaultValue={appearance.workspaceName}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fontFamily">Font</Label>

@@ -532,10 +532,10 @@ export async function uploadUserProfilePhoto(uid: string, file: File): Promise<s
   return body.photoURL;
 }
 
-export async function uploadBrandingLogo(file: File): Promise<string> {
+export async function uploadWorkspaceLogo(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch("/api/settings/branding/logo", { method: "POST", body: formData });
+  const res = await fetch("/api/settings/workspace/logo", { method: "POST", body: formData });
   const body = (await res.json().catch(() => ({}))) as { logoUrl?: string; error?: string };
   if (!res.ok) {
     throw new Error(body.error ?? "Could not upload logo.");
@@ -546,10 +546,10 @@ export async function uploadBrandingLogo(file: File): Promise<string> {
   return body.logoUrl;
 }
 
-export async function uploadBrandingFavicon(file: File): Promise<string> {
+export async function uploadWorkspaceFavicon(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch("/api/settings/branding/favicon", { method: "POST", body: formData });
+  const res = await fetch("/api/settings/workspace/favicon", { method: "POST", body: formData });
   const body = (await res.json().catch(() => ({}))) as { faviconUrl?: string; error?: string };
   if (!res.ok) {
     throw new Error(body.error ?? "Could not upload favicon.");

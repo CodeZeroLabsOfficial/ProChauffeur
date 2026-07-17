@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { uploadBrandingFaviconAdmin } from "@/lib/firebase/admin-storage";
+import { uploadWorkspaceFaviconAdmin } from "@/lib/firebase/admin-storage";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 
-/** POST: upload the portal favicon to Firebase Storage. */
+/** POST: upload the workspace favicon to Firebase Storage. */
 export async function POST(request: Request) {
   const session = await getAdminSessionUser();
   if (!session) {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const contentType = file.type || "image/x-icon";
-    const faviconUrl = await uploadBrandingFaviconAdmin(buffer, contentType, file.name);
+    const faviconUrl = await uploadWorkspaceFaviconAdmin(buffer, contentType, file.name);
     return NextResponse.json({ faviconUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed.";
