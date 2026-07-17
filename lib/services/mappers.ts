@@ -20,6 +20,7 @@ import type {
   Trip,
   TripQuoteSnapshot,
   User,
+  UserPreferences,
   UserProfile,
   Vehicle
 } from "@/lib/models";
@@ -80,6 +81,14 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
   };
 }
 
+function mapUserPreferences(d: DocumentData | undefined | null): UserPreferences | null {
+  if (!d || typeof d !== "object") return null;
+  return {
+    bookingsDefaultDateRange:
+      typeof d.bookingsDefaultDateRange === "string" ? d.bookingsDefaultDateRange : null
+  };
+}
+
 export function mapUser(id: string, d: DocumentData): User {
   return {
     id,
@@ -87,6 +96,7 @@ export function mapUser(id: string, d: DocumentData): User {
     email: d.email ?? "",
     profile: mapUserProfile(d.profile),
     driverProfile: mapDriverProfile(d.driverProfile ?? d.driverStaff),
+    preferences: mapUserPreferences(d.preferences),
     homeBranchId: d.homeBranchId ?? null,
     branchIds: Array.isArray(d.branchIds) ? d.branchIds : null,
     defaultBranchId: d.defaultBranchId ?? null,

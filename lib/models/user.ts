@@ -53,6 +53,12 @@ export interface DriverProfile {
   acceptsDispatchAssignments: boolean;
 }
 
+/** Dashboard UI preferences on `users/{uid}`. */
+export interface UserPreferences {
+  /** Bookings list date filter preset (`today`, `thisWeek`, `last7Days`, …). */
+  bookingsDefaultDateRange?: string | null;
+}
+
 /** `users/{uid}` document — Auth identity for all roles. */
 export interface User {
   id: string;
@@ -61,6 +67,8 @@ export interface User {
   profile: UserProfile;
   /** Legacy embedded chauffeur profile; prefer `branches/{id}/drivers/{uid}` after cutover. */
   driverProfile?: DriverProfile | null;
+  /** Admin/dispatcher dashboard preferences. */
+  preferences?: UserPreferences | null;
   /** Driver's home branch roster. */
   homeBranchId?: string | null;
   /** Admin/dispatcher branches this user may access. */

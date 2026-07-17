@@ -44,6 +44,10 @@ export const dateFilterPresets = [
 
 export type DateRangePreset = (typeof dateFilterPresets)[number]["value"];
 
+export function isDateRangePreset(value: unknown): value is DateRangePreset {
+  return typeof value === "string" && dateFilterPresets.some((item) => item.value === value);
+}
+
 export function last7DaysRange(reference = new Date()): DateRange {
   return {
     from: startOfDay(subDays(reference, 6)),
@@ -91,21 +95,31 @@ function formatRangeLabel(range: DateRange | undefined) {
   return format(range.from, "dd MMM yyyy");
 }
 
+function presetLabel(preset: DateRangePreset) {
+  return dateFilterPresets.find((item) => item.value === preset)?.name ?? preset;
+}
+
 export function DateRangePicker({
   value,
   onChange,
   defaultPreset = "last7Days",
+  savedDefaultPreset,
+  onSaveDefault,
   className
 }: {
   value: DateRange | undefined;
   onChange: (range: DateRange | undefined) => void;
   defaultPreset?: DateRangePreset;
+  /** Currently saved default; when set with `onSaveDefault`, shows save affordance. */
+  savedDefaultPreset?: DateRangePreset | null;
+  onSaveDefault?: (preset: DateRangePreset) => void | Promise<void>;
   className?: string;
 }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(value?.from ?? new Date());
   const [activePreset, setActivePreset] = React.useState<DateRangePreset | "custom">(defaultPreset);
+  const [savingDefault, setSavingDefault] = React.useState(false);
 
   React.useEffect(() => {
     if (value?.from) setCurrentMonth(value.from);
@@ -118,6 +132,16 @@ export function DateRangePicker({
     if (next.from) setCurrentMonth(next.from);
   };
 
+  const handleSaveDefault = async () => {
+    if (activePreset === "custom" || !onSaveDefault) return;
+    setSavingDefault(true);
+    try {
+      await onSaveDefault(activePreset);
+    } finally {
+      setSavingDefault(false);
+    }
+  };
+
   const triggerButton = (
     <Button
       id="date"
@@ -127,6 +151,9 @@ export function DateRangePicker({
       {isMobile ? null : <span>{formatRangeLabel(value)}</span>}
     </Button>
   );
+
+  const showSaveDefault = Boolean(onSaveDefault) && activePreset !== "custom";
+  const isSavedDefault = showSaveDefault && activePreset === savedDefaultPreset;
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -144,55 +171,76 @@ export function DateRangePicker({
           )}
         </PopoverTrigger>
         <PopoverContent className="w-auto" align="end">
-          <div className="flex flex-col lg:flex-row">
-            <div className="me-0 lg:me-4">
-              <ToggleGroup
-                type="single"
-                value={activePreset === "custom" ? undefined : activePreset}
-                onValueChange={(next) => {
-                  if (next) applyPreset(next as DateRangePreset);
-                }}
-                className="hidden w-28 flex-col lg:block">
-                {dateFilterPresets.map((item) => (
-                  <ToggleGroupItem
-                    key={item.value}
-                    className="text-muted-foreground w-full"
-                    value={item.value}
-                    asChild>
-                    <Button className="justify-start rounded-md">{item.name}</Button>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-              <Select
-                value={activePreset === "custom" ? undefined : activePreset}
-                onValueChange={(next) => applyPreset(next as DateRangePreset)}>
-                <SelectTrigger
-                  className="mb-4 flex w-full lg:hidden"
-                  size="sm"
-                  aria-label="Select a value">
-                  <SelectValue placeholder="Last 7 Days" />
-                </SelectTrigger>
-                <SelectContent>
+          <div className="flex flex-col">
+            <div className="flex flex-col lg:flex-row">
+              <div className="me-0 lg:me-4">
+                <ToggleGroup
+                  type="single"
+                  value={activePreset === "custom" ? undefined : activePreset}
+                  onValueChange={(next) => {
+                    if (next) applyPreset(next as DateRangePreset);
+                  }}
+                  className="hidden w-28 flex-col lg:block">
                   {dateFilterPresets.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.name}
-                    </SelectItem>
+                    <ToggleGroupItem
+                      key={item.value}
+                      className="text-muted-foreground w-full"
+                      value={item.value}
+                      asChild>
+                      <Button className="justify-start rounded-md">{item.name}</Button>
+                    </ToggleGroupItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </ToggleGroup>
+                <Select
+                  value={activePreset === "custom" ? undefined : activePreset}
+                  onValueChange={(next) => applyPreset(next as DateRangePreset)}>
+                  <SelectTrigger
+                    className="mb-4 flex w-full lg:hidden"
+                    size="sm"
+                    aria-label="Select a value">
+                    <SelectValue placeholder="Last 7 Days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dateFilterPresets.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Calendar
+                className="border-s-0 py-0! ps-0! pe-0! lg:border-s lg:ps-4!"
+                mode="range"
+                month={currentMonth}
+                selected={value}
+                onSelect={(next) => {
+                  onChange(next);
+                  setActivePreset("custom");
+                  if (next?.from) setCurrentMonth(next.from);
+                }}
+                onMonthChange={setCurrentMonth}
+              />
             </div>
-            <Calendar
-              className="border-s-0 py-0! ps-0! pe-0! lg:border-s lg:ps-4!"
-              mode="range"
-              month={currentMonth}
-              selected={value}
-              onSelect={(next) => {
-                onChange(next);
-                setActivePreset("custom");
-                if (next?.from) setCurrentMonth(next.from);
-              }}
-              onMonthChange={setCurrentMonth}
-            />
+            {showSaveDefault ? (
+              <div className="mt-3 border-t pt-3">
+                {isSavedDefault ? (
+                  <p className="text-muted-foreground text-sm">Saved as default</p>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-0 text-sm font-normal"
+                    disabled={savingDefault}
+                    onClick={() => void handleSaveDefault()}>
+                    {savingDefault
+                      ? "Saving…"
+                      : `Save “${presetLabel(activePreset)}” as my default`}
+                  </Button>
+                )}
+              </div>
+            ) : null}
           </div>
         </PopoverContent>
       </Popover>

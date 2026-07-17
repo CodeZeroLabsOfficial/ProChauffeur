@@ -62,6 +62,7 @@ import {
   type Trip,
   type TripStatus,
   type User,
+  type UserPreferences,
   type UserProfile,
   type UserRole,
   type Vehicle,
@@ -511,6 +512,18 @@ export async function updateUserProfile(uid: string, profile: UserProfile): Prom
   await updateDoc(doc(db(), Collections.users, uid), { profile: stripUndefined({ ...profile }) });
   const title = profile.displayName?.trim() || "Profile";
   void createActivityNotification(profileNotification(title, uid));
+}
+
+export async function updateUserPreferences(
+  uid: string,
+  preferences: Partial<UserPreferences>
+): Promise<void> {
+  const updates: Record<string, unknown> = {};
+  if (preferences.bookingsDefaultDateRange !== undefined) {
+    updates["preferences.bookingsDefaultDateRange"] = preferences.bookingsDefaultDateRange;
+  }
+  if (Object.keys(updates).length === 0) return;
+  await updateDoc(doc(db(), Collections.users, uid), updates);
 }
 
 export async function updateUserEmail(uid: string, email: string): Promise<void> {

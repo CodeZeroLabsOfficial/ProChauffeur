@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { DateRange } from "react-day-picker";
 import {
@@ -18,11 +18,17 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
 import { useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canEditBooking } from "@/app/dashboard/bookings/lib/booking-actions";
 import { vehiclesByChauffeurId } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
-import { assignTripDriver, updateTripStatus } from "@/lib/services/firebase-service";
+import {
+  assignTripDriver,
+  fetchUser,
+  updateTripStatus,
+  updateUserPreferences
+} from "@/lib/services/firebase-service";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
@@ -33,7 +39,13 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import { DateRangePicker, thisWeekRange } from "@/components/custom-date-range-picker";
+import {
+  DateRangePicker,
+  isDateRangePreset,
+  rangeForPreset,
+  thisWeekRange,
+  type DateRangePreset
+} from "@/components/custom-date-range-picker";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -60,6 +72,7 @@ import {
 
 const UNASSIGNED_CHAUFFEUR = "__unassigned__";
 const NO_VEHICLE = "__none__";
+const DEFAULT_BOOKINGS_DATE_PRESET: DateRangePreset = "thisWeek";
 
 const ROW_STATUS_ACTIONS = [
   { status: "accepted", label: "Accept" },
@@ -101,10 +114,13 @@ export function BookingsDataTable({
   onRebook: (trip: Trip) => void;
   onEdit: (trip: Trip) => void;
 }) {
+  const { user: authUser } = useFirebaseAuth();
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
+  const [defaultPreset, setDefaultPreset] = useState<DateRangePreset>(DEFAULT_BOOKINGS_DATE_PRESET);
   const [dateRange, setDateRange] = useState<DateRange>(() => thisWeekRange());
+  const [datePickerKey, setDatePickerKey] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -112,6 +128,34 @@ export function BookingsDataTable({
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [chauffeurFilter, setChauffeurFilter] = useState<string[]>([]);
   const [vehicleFilter, setVehicleFilter] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchUser(authUser.uid).then((user) => {
+      if (cancelled) return;
+      const raw = user?.preferences?.bookingsDefaultDateRange;
+      const preset = isDateRangePreset(raw) ? raw : DEFAULT_BOOKINGS_DATE_PRESET;
+      setDefaultPreset(preset);
+      setDateRange(rangeForPreset(preset));
+      setDatePickerKey((key) => key + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser.uid]);
+
+  const saveDefaultPreset = useCallback(
+    async (preset: DateRangePreset) => {
+      try {
+        await updateUserPreferences(authUser.uid, { bookingsDefaultDateRange: preset });
+        setDefaultPreset(preset);
+        toast.success("Default date range saved.");
+      } catch {
+        toast.error("Could not save default date range.");
+      }
+    },
+    [authUser.uid]
+  );
 
   const changeStatus = useCallback(async (id: string, status: RowStatusAction) => {
     try {
@@ -437,11 +481,14 @@ export function BookingsDataTable({
         }
         endActions={
           <DateRangePicker
+            key={datePickerKey}
             value={dateRange}
             onChange={(range) => {
               if (range?.from) setDateRange(range);
             }}
-            defaultPreset="thisWeek"
+            defaultPreset={defaultPreset}
+            savedDefaultPreset={defaultPreset}
+            onSaveDefault={saveDefaultPreset}
             className="shrink-0"
           />
         }
