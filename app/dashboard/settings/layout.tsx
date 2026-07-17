@@ -1,14 +1,14 @@
 import { SectionLayout } from "@/components/layout/sub-nav";
 
 const items = [
-  { title: "Profile", href: "/dashboard/settings/profile" },
   { title: "Account", href: "/dashboard/settings/account" },
   { title: "Appearance", href: "/dashboard/settings/appearance" },
-  { title: "Locale", href: "/dashboard/settings/locale" },
-  { title: "Company details", href: "/dashboard/settings/company" },
+  { title: "Company", href: "/dashboard/settings/company" },
+  { title: "Integrations", href: "/dashboard/settings/integrations" },
   { title: "License", href: "/dashboard/settings/license" },
-  { title: "Admins", href: "/dashboard/settings/admins" },
-  { title: "Integrations", href: "/dashboard/settings/integrations" }
+  { title: "Locale", href: "/dashboard/settings/locale" },
+  { title: "Profile", href: "/dashboard/settings/profile" },
+  { title: "Team", href: "/dashboard/settings/team" }
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

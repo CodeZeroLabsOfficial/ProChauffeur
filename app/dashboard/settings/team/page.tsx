@@ -30,7 +30,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-export default function AdminsPage() {
+export default function TeamPage() {
   const { users, loading } = useUsers();
   const me = useSessionUser();
   const [busy, setBusy] = useState(false);
@@ -89,7 +89,7 @@ export default function AdminsPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Administrators</CardTitle>
+          <CardTitle>Team</CardTitle>
           <CardAction>
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <PlusIcon /> Add Admin

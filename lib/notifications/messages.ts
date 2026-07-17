@@ -11,7 +11,7 @@ const HREF = {
   locale: "/dashboard/settings/locale",
   pricing: "/dashboard/locations",
   billing: "/dashboard/billing",
-  admins: "/dashboard/settings/admins"
+  team: "/dashboard/settings/team"
 } as const;
 
 function actionMessage(entity: string, action: NotificationAction): string {
@@ -176,7 +176,7 @@ export function adminNotification(
     action,
     title,
     message: actionMessage(entity, action),
-    href: HREF.admins,
+    href: HREF.team,
     entityId
   };
 }
