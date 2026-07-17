@@ -11,7 +11,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
  * Upload a profile photo via the Admin SDK (bypasses client Storage rules).
  * Returns a Firebase download URL with a storage token.
  */
-export async function uploadProfilePhotoAdmin(
+export async function uploadProfilePhoto(
   uid: string,
   buffer: Buffer,
   contentType: string,

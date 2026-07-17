@@ -11,6 +11,7 @@ import {
   Clock,
   ExternalLink,
   IdCard,
+  ImagePlusIcon,
   Landmark,
   ListChecks,
   Mail,
@@ -19,6 +20,7 @@ import {
   Tags,
   User as UserIcon
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import {
@@ -38,7 +40,8 @@ import {
   fetchUserLastSignIn,
   updateUserDriverProfile,
   updateUserEmail,
-  updateUserProfile
+  updateUserProfile,
+  uploadUserProfilePhoto
 } from "@/lib/services/firebase-service";
 import {
   chauffeurCategoryBadgeIcon,
@@ -46,9 +49,9 @@ import {
   visibilityBadgeIcon,
   visibilityStatusLabel
 } from "@/lib/chauffeur-badge-icons";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { generateAvatarFallback } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import {
@@ -426,6 +429,62 @@ function DriverTabPlaceholder({ label }: { label: string }) {
   );
 }
 
+function DriverProfileAvatarUpload({ user }: { user: User }) {
+  const [uploading, setUploading] = useState(false);
+  const [localPhotoURL, setLocalPhotoURL] = useState<string | null>(user.profile.photoURL ?? null);
+  const displayName = user.profile.displayName.trim() || user.email || "Driver";
+  const initials = generateAvatarFallback(displayName);
+
+  const [{ files }, { openFileDialog, getInputProps, clearFiles }] = useFileUpload({
+    accept: "image/*",
+    onFilesAdded: (added) => {
+      const file = added[0]?.file;
+      if (!(file instanceof File)) return;
+
+      void (async () => {
+        setUploading(true);
+        try {
+          const photoURL = await uploadUserProfilePhoto(user.id, file);
+          await updateUserProfile(user.id, { ...user.profile, photoURL });
+          setLocalPhotoURL(photoURL);
+          clearFiles();
+          toast.success("Profile photo updated.");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not upload photo.");
+        } finally {
+          setUploading(false);
+        }
+      })();
+    }
+  });
+
+  const previewUrl = files[0]?.preview ?? localPhotoURL;
+
+  useEffect(() => {
+    setLocalPhotoURL(user.profile.photoURL ?? null);
+  }, [user.profile.photoURL]);
+
+  return (
+    <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 shadow-xs shadow-black/10">
+      {previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- local blob / Storage download URL preview
+        <img alt="" className="size-full object-cover" height={80} src={previewUrl} width={80} />
+      ) : (
+        <span className="text-muted-foreground text-sm font-medium">{initials}</span>
+      )}
+      <button
+        type="button"
+        aria-label="Change profile picture"
+        disabled={uploading}
+        className="focus-visible:border-ring focus-visible:ring-ring/50 absolute flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+        onClick={openFileDialog}>
+        <ImagePlusIcon aria-hidden size={16} />
+      </button>
+      <input {...getInputProps()} aria-label="Upload profile picture" className="sr-only" />
+    </div>
+  );
+}
+
 export function DriverDetailSheet({
   user,
   open,
@@ -481,12 +540,7 @@ export function DriverDetailSheet({
 
         <div className="space-y-4 px-4">
           <div className="inline-flex items-center gap-4 align-top">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={displayUser.profile.photoURL ?? undefined} />
-              <AvatarFallback>
-                {generateAvatarFallback(displayName || displayUser.email)}
-              </AvatarFallback>
-            </Avatar>
+            <DriverProfileAvatarUpload key={displayUser.id} user={displayUser} />
             <div className="space-y-2">
               <p className="text-lg font-semibold">{displayName}</p>
               <div className="flex flex-wrap items-center gap-2">

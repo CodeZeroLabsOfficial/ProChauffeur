@@ -517,9 +517,10 @@ export async function updateUserEmail(uid: string, email: string): Promise<void>
   await updateDoc(doc(db(), Collections.users, uid), { email: email.trim() });
 }
 
-export async function uploadUserProfilePhoto(_uid: string, file: File): Promise<string> {
+export async function uploadUserProfilePhoto(uid: string, file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("uid", uid);
   const res = await fetch("/api/profile/photo", { method: "POST", body: formData });
   const body = (await res.json().catch(() => ({}))) as { photoURL?: string; error?: string };
   if (!res.ok) {

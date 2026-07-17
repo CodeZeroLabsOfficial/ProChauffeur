@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { uploadProfilePhotoAdmin } from "@/lib/firebase/admin-storage";
+import { adminFirestore } from "@/lib/firebase/admin";
+import { uploadProfilePhoto } from "@/lib/firebase/admin-storage";
 import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { profilePhotoNotification } from "@/lib/notifications/messages";
 
-/** POST: upload the signed-in admin's profile photo to Firebase Storage. */
+/** POST: upload a profile photo to Firebase Storage for the signed-in admin or a target user. */
 export async function POST(request: Request) {
   const session = await getAdminSessionUser();
   if (!session) {
@@ -28,16 +29,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "File must be an image." }, { status: 400 });
   }
 
+  const requestedUid = String(formData.get("uid") ?? "").trim();
+  const targetUid = requestedUid || session.uid;
+
+  let notificationTitle = session.displayName ?? session.email ?? "Profile";
+
+  if (targetUid !== session.uid) {
+    const snap = await adminFirestore().collection("users").doc(targetUid).get();
+    if (!snap.exists) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+    const data = snap.data();
+    const profile = data?.profile as { displayName?: string } | undefined;
+    notificationTitle =
+      profile?.displayName?.trim() ||
+      (typeof data?.email === "string" ? data.email.trim() : "") ||
+      "Profile";
+  }
+
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const photoURL = await uploadProfilePhotoAdmin(
-      session.uid,
-      buffer,
-      file.type,
-      file.name
-    );
+    const photoURL = await uploadProfilePhoto(targetUid, buffer, file.type, file.name);
     await createActivityNotificationAdmin(
-      profilePhotoNotification(session.displayName ?? session.email ?? "Profile", session.uid),
+      profilePhotoNotification(notificationTitle, targetUid),
       session
     );
     return NextResponse.json({ photoURL });
