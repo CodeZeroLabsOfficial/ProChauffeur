@@ -34,7 +34,7 @@ export default function NotificationsPage() {
   }, [unreadIds]);
 
   return (
-    <>
+    <div className="space-y-4">
       <ListPageHeader
         title="Notifications"
         actions={
@@ -54,6 +54,6 @@ export default function NotificationsPage() {
         }
       />
       <NotificationsDataTable />
-    </>
+    </div>
   );
 }
