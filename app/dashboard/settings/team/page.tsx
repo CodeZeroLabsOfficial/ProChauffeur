@@ -1,17 +1,34 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUsers } from "@/hooks/use-collections";
 import { userRoleTitle, type User } from "@/lib/models";
 import { useSessionUser } from "@/components/providers/session-provider";
-import { LocationStatusBadge } from "@/components/location-status-badge";
 import { generateAvatarFallback } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -28,14 +46,6 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 
 export default function TeamPage() {
   const { users, loading } = useUsers();
@@ -43,21 +53,32 @@ export default function TeamPage() {
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [roleOpenFor, setRoleOpenFor] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null);
 
   const admins = useMemo(() => users.filter((u) => u.role === "admin"), [users]);
 
-  async function revokeAdmin(u: User) {
+  function requestDelete(u: User) {
+    setRoleOpenFor(null);
+    setPendingDelete(u);
+  }
+
+  async function confirmDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!pendingDelete) return;
+    const u = pendingDelete;
     setBusy(true);
     try {
       const res = await fetch(`/api/admins/${u.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Could not revoke administrator.");
+        toast.error(typeof data.error === "string" ? data.error : "Could not delete member.");
         return;
       }
-      toast.success("Administrator revoked.");
+      setPendingDelete(null);
+      toast.success("Member deleted.");
     } catch {
-      toast.error("Could not revoke administrator.");
+      toast.error("Could not delete member.");
     } finally {
       setBusy(false);
     }
@@ -96,58 +117,82 @@ export default function TeamPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Team</CardTitle>
+          <CardTitle>Members</CardTitle>
+          <CardDescription>Manage your team members and their permissions.</CardDescription>
           <CardAction>
             <Button size="sm" onClick={() => setAddOpen(true)}>
-              <PlusIcon /> Add New User
+              <PlusIcon /> Invite Member
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
-                    Loading…
-                  </TableCell>
-                </TableRow>
-              ) : (
-                admins.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9">
-                          <AvatarImage src={u.profile.photoURL ?? undefined} />
-                          <AvatarFallback>
-                            {generateAvatarFallback(u.profile.displayName || u.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">
-                            {u.profile.displayName || "Admin"}
-                          </p>
-                          <p className="text-muted-foreground truncate text-sm">{u.email}</p>
-                        </div>
+          {loading ? (
+            <p className="text-muted-foreground py-10 text-center">Loading…</p>
+          ) : (
+            <div className="divide-y">
+              {admins.map((u) => {
+                const isSelf = u.id === me.uid;
+                return (
+                  <div key={u.id} className="flex min-w-0 items-center justify-between gap-4 py-4">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Avatar className="size-9 shrink-0">
+                        <AvatarImage src={u.profile.photoURL ?? undefined} />
+                        <AvatarFallback>
+                          {generateAvatarFallback(u.profile.displayName || u.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p className="truncate text-sm font-medium">
+                          {u.profile.displayName || "Admin"}
+                          {isSelf ? <span className="text-muted-foreground"> (you)</span> : null}
+                        </p>
+                        <p className="text-muted-foreground truncate text-sm">{u.email}</p>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {userRoleTitle[u.role]}
-                    </TableCell>
-                    <TableCell>
-                      <LocationStatusBadge isActive />
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Popover
+                        open={roleOpenFor === u.id}
+                        onOpenChange={(isOpen) => setRoleOpenFor(isOpen ? u.id : null)}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isSelf || busy}
+                            className="w-32 justify-between font-normal">
+                            {userRoleTitle[u.role]}
+                            <ChevronDownIcon className="text-muted-foreground size-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0" align="end">
+                          <Command>
+                            <CommandList>
+                              <CommandGroup>
+                                <CommandItem
+                                  onSelect={() => setRoleOpenFor(null)}
+                                  className="items-start px-4 py-2">
+                                  <div>
+                                    <p>Admin</p>
+                                    <p className="text-muted-foreground text-sm">
+                                      Full access to the dashboard.
+                                    </p>
+                                  </div>
+                                  <CheckIcon className="text-primary ml-auto size-4" />
+                                </CommandItem>
+                                <CommandItem
+                                  onSelect={() => requestDelete(u)}
+                                  className="items-start px-4 py-2">
+                                  <div>
+                                    <p className="text-destructive">Delete</p>
+                                    <p className="text-muted-foreground text-sm">
+                                      Deletes this member&apos;s account and dashboard access.
+                                    </p>
+                                  </div>
+                                </CommandItem>
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -158,25 +203,51 @@ export default function TeamPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             variant="destructive"
-                            disabled={u.id === me.uid || busy}
-                            onClick={() => revokeAdmin(u)}>
-                            {u.id === me.uid ? "Cannot revoke yourself" : "Revoke"}
+                            disabled={isSelf || busy}
+                            onClick={() => requestDelete(u)}>
+                            {isSelf ? "Cannot delete yourself" : "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setPendingDelete(null);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              {pendingDelete?.profile.displayName || pendingDelete?.email || "this member"}
+              &apos;s account and remove their dashboard access. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={busy}
+              onClick={(e) => void confirmDelete(e)}>
+              {busy ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Add New User</SheetTitle>
+            <SheetTitle>Invite Member</SheetTitle>
             <SheetDescription>
               Creates a Firebase Authentication account and an admin user document.
             </SheetDescription>

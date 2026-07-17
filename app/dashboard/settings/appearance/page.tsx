@@ -312,7 +312,7 @@ export default function AppearancePage() {
             </div>
 
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save portal settings"}
+              {saving ? "Saving…" : "Save Settings"}
             </Button>
           </form>
         </section>
