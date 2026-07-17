@@ -520,7 +520,10 @@ export async function updateUserPreferences(
 ): Promise<void> {
   const updates: Record<string, unknown> = {};
   if (preferences.bookingsDefaultDateRange !== undefined) {
-    updates["preferences.bookingsDefaultDateRange"] = preferences.bookingsDefaultDateRange;
+    updates["preferences.bookingsDefaultDateRange"] =
+      preferences.bookingsDefaultDateRange === null
+        ? deleteField()
+        : preferences.bookingsDefaultDateRange;
   }
   if (Object.keys(updates).length === 0) return;
   await updateDoc(doc(db(), Collections.users, uid), updates);

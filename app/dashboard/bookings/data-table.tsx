@@ -118,7 +118,10 @@ export function BookingsDataTable({
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
-  const [defaultPreset, setDefaultPreset] = useState<DateRangePreset>(DEFAULT_BOOKINGS_DATE_PRESET);
+  const [savedDefaultPreset, setSavedDefaultPreset] = useState<DateRangePreset | null>(null);
+  const [activeDefaultPreset, setActiveDefaultPreset] = useState<DateRangePreset>(
+    DEFAULT_BOOKINGS_DATE_PRESET
+  );
   const [dateRange, setDateRange] = useState<DateRange>(() => thisWeekRange());
   const [datePickerKey, setDatePickerKey] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -134,8 +137,10 @@ export function BookingsDataTable({
     fetchUser(authUser.uid).then((user) => {
       if (cancelled) return;
       const raw = user?.preferences?.bookingsDefaultDateRange;
-      const preset = isDateRangePreset(raw) ? raw : DEFAULT_BOOKINGS_DATE_PRESET;
-      setDefaultPreset(preset);
+      const saved = isDateRangePreset(raw) ? raw : null;
+      const preset = saved ?? DEFAULT_BOOKINGS_DATE_PRESET;
+      setSavedDefaultPreset(saved);
+      setActiveDefaultPreset(preset);
       setDateRange(rangeForPreset(preset));
       setDatePickerKey((key) => key + 1);
     });
@@ -144,14 +149,14 @@ export function BookingsDataTable({
     };
   }, [authUser.uid]);
 
-  const saveDefaultPreset = useCallback(
-    async (preset: DateRangePreset) => {
+  const changeDefaultPreset = useCallback(
+    async (preset: DateRangePreset | null) => {
       try {
         await updateUserPreferences(authUser.uid, { bookingsDefaultDateRange: preset });
-        setDefaultPreset(preset);
-        toast.success("Default date range saved.");
+        setSavedDefaultPreset(preset);
+        toast.success(preset ? "Default date range saved." : "Default date range cleared.");
       } catch {
-        toast.error("Could not save default date range.");
+        toast.error("Could not update default date range.");
       }
     },
     [authUser.uid]
@@ -486,9 +491,9 @@ export function BookingsDataTable({
             onChange={(range) => {
               if (range?.from) setDateRange(range);
             }}
-            defaultPreset={defaultPreset}
-            savedDefaultPreset={defaultPreset}
-            onSaveDefault={saveDefaultPreset}
+            defaultPreset={activeDefaultPreset}
+            savedDefaultPreset={savedDefaultPreset}
+            onDefaultChange={changeDefaultPreset}
             className="shrink-0"
           />
         }

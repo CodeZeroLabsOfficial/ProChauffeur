@@ -20,6 +20,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -95,24 +97,20 @@ function formatRangeLabel(range: DateRange | undefined) {
   return format(range.from, "dd MMM yyyy");
 }
 
-function presetLabel(preset: DateRangePreset) {
-  return dateFilterPresets.find((item) => item.value === preset)?.name ?? preset;
-}
-
 export function DateRangePicker({
   value,
   onChange,
   defaultPreset = "last7Days",
   savedDefaultPreset,
-  onSaveDefault,
+  onDefaultChange,
   className
 }: {
   value: DateRange | undefined;
   onChange: (range: DateRange | undefined) => void;
   defaultPreset?: DateRangePreset;
-  /** Currently saved default; when set with `onSaveDefault`, shows save affordance. */
+  /** Currently saved default; with `onDefaultChange`, shows the default checkbox. */
   savedDefaultPreset?: DateRangePreset | null;
-  onSaveDefault?: (preset: DateRangePreset) => void | Promise<void>;
+  onDefaultChange?: (preset: DateRangePreset | null) => void | Promise<void>;
   className?: string;
 }) {
   const isMobile = useIsMobile();
@@ -132,11 +130,11 @@ export function DateRangePicker({
     if (next.from) setCurrentMonth(next.from);
   };
 
-  const handleSaveDefault = async () => {
-    if (activePreset === "custom" || !onSaveDefault) return;
+  const handleDefaultCheckedChange = async (checked: boolean | "indeterminate") => {
+    if (activePreset === "custom" || !onDefaultChange) return;
     setSavingDefault(true);
     try {
-      await onSaveDefault(activePreset);
+      await onDefaultChange(checked === true ? activePreset : null);
     } finally {
       setSavingDefault(false);
     }
@@ -152,8 +150,8 @@ export function DateRangePicker({
     </Button>
   );
 
-  const showSaveDefault = Boolean(onSaveDefault) && activePreset !== "custom";
-  const isSavedDefault = showSaveDefault && activePreset === savedDefaultPreset;
+  const showDefaultControl = Boolean(onDefaultChange) && activePreset !== "custom";
+  const isSavedDefault = Boolean(savedDefaultPreset) && activePreset === savedDefaultPreset;
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -222,23 +220,19 @@ export function DateRangePicker({
                 onMonthChange={setCurrentMonth}
               />
             </div>
-            {showSaveDefault ? (
-              <div className="mt-3 border-t pt-3">
-                {isSavedDefault ? (
-                  <p className="text-muted-foreground text-sm">Saved as default</p>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto px-0 text-sm font-normal"
-                    disabled={savingDefault}
-                    onClick={() => void handleSaveDefault()}>
-                    {savingDefault
-                      ? "Saving…"
-                      : `Save “${presetLabel(activePreset)}” as my default`}
-                  </Button>
-                )}
+            {showDefaultControl ? (
+              <div className="mt-3 flex items-center gap-2 border-t pt-3">
+                <Checkbox
+                  id="date-range-use-as-default"
+                  checked={isSavedDefault}
+                  disabled={savingDefault}
+                  onCheckedChange={(checked) => void handleDefaultCheckedChange(checked)}
+                />
+                <Label
+                  htmlFor="date-range-use-as-default"
+                  className="text-sm font-normal">
+                  Use as my default
+                </Label>
               </div>
             ) : null}
           </div>
