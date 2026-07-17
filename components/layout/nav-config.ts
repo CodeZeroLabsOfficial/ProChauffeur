@@ -37,21 +37,21 @@ export const navGroups: NavGroup[] = [
   {
     title: "Operations",
     items: [
+      { title: "Billing", href: "/dashboard/billing", icon: ReceiptIcon },
       { title: "Bookings", href: "/dashboard/bookings", icon: CalendarCheckIcon },
       { title: "Customers", href: "/dashboard/customers", icon: ContactIcon },
       { title: "Drivers", href: "/dashboard/drivers", icon: UsersIcon },
       { title: "Fleet", href: "/dashboard/fleet", icon: CarFrontIcon },
-      { title: "Billing", href: "/dashboard/billing", icon: ReceiptIcon }
+      {
+        title: "Locations",
+        href: "/dashboard/locations",
+        icon: Building2Icon
+      }
     ]
   },
   {
     title: "Configuration",
     items: [
-      {
-        title: "Locations",
-        href: "/dashboard/locations",
-        icon: Building2Icon
-      },
       {
         title: "Settings",
         href: "/dashboard/settings/appearance",
