@@ -234,7 +234,7 @@ export function FleetDataTable({
             <IconBadge
               icon={vehicleTierBadgeIcon}
               variant="outline"
-              className="gap-0 rounded-md px-2 py-1">
+              className="rounded-md px-2 py-1">
               {label}
             </IconBadge>
           ) : (

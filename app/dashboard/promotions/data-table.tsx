@@ -161,7 +161,7 @@ export function PromotionsDataTable({
         accessorKey: "code",
         header: "Code",
         cell: ({ row }) => (
-          <Badge variant="secondary" className="font-mono">
+          <Badge variant="outline" className="rounded-md px-2 py-1 font-mono">
             {row.original.code}
           </Badge>
         )
