@@ -48,7 +48,6 @@ export function AddonEditSheet({
   open,
   onOpenChange,
   onSave,
-  onDelete,
   nested = false
 }: {
   addon: PricingAddon | null;
@@ -56,7 +55,6 @@ export function AddonEditSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (addon: PricingAddon) => void;
-  onDelete?: (id: string) => void;
   nested?: boolean;
 }) {
   const isNew = !addon;
@@ -94,18 +92,11 @@ export function AddonEditSheet({
     onOpenChange(false);
   }
 
-  function handleDelete() {
-    if (!addon || !onDelete) return;
-    onDelete(addon.id);
-    toast.success("Add-on removed.");
-    onOpenChange(false);
-  }
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{isNew ? "Add add-on" : "Edit add-on"}</SheetTitle>
+          <SheetTitle>{isNew ? "Add add-on" : "Add-on details"}</SheetTitle>
           <SheetDescription>
             Optional extras offered during booking. Save pricing on the page to persist changes.
           </SheetDescription>
@@ -185,13 +176,8 @@ export function AddonEditSheet({
             />
           </div>
 
-          <SheetFooter className="flex-col gap-2 px-0 sm:flex-col sm:items-stretch">
-            {!isNew && onDelete ? (
-              <Button type="button" variant="destructive" onClick={handleDelete}>
-                Delete add-on
-              </Button>
-            ) : null}
-            <Button type="submit">{isNew ? "Add add-on" : "Save add-on"}</Button>
+          <SheetFooter className="px-0">
+            <Button type="submit">{isNew ? "Add add-on" : "Save"}</Button>
           </SheetFooter>
         </form>
       </SheetContent>

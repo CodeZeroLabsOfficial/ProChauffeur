@@ -12,6 +12,7 @@ import {
   buildInitialVehicleClass,
   slugFromDisplayName,
   tripTypeTitle,
+  type TripType,
   type VehicleClass
 } from "@/lib/models";
 import { cn } from "@/lib/utils";
@@ -33,8 +34,13 @@ import {
   TableRow
 } from "@/components/ui/table";
 
+const VEHICLE_CLASS_TRIP_TYPES: TripType[] = ["transfer", "hourly"];
+
 function formatTripTypes(vehicleClass: VehicleClass): string {
   if (vehicleClass.supportedTripTypes.length === 0) return "Not set";
+  if (VEHICLE_CLASS_TRIP_TYPES.every((t) => vehicleClass.supportedTripTypes.includes(t))) {
+    return "All trip types";
+  }
   return vehicleClass.supportedTripTypes.map((type) => tripTypeTitle[type]).join(", ");
 }
 

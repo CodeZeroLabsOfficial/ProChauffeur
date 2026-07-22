@@ -8,6 +8,16 @@ import {
   ScheduleEditSheet,
   formatScheduleDays
 } from "@/app/dashboard/locations/components/schedule-edit-sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -53,6 +63,8 @@ export function LocationOperatingHoursTab({
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<FleetWeeklyOperatingSchedule | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(() => {
     return fetchOperatingHours(branchId).then(setOperatingHours);
@@ -75,14 +87,24 @@ export function LocationOperatingHoursTab({
     setSheetOpen(true);
   }
 
-  async function removeSchedule(id: string) {
-    const schedules = operatingHours.schedules.filter((s) => s.id !== id);
+  async function confirmDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const schedules = operatingHours.schedules.filter((s) => s.id !== pendingDelete.id);
     try {
       await saveOperatingHours({ ...operatingHours, schedules }, branchId);
       setOperatingHours((prev) => ({ ...prev, schedules }));
+      if (editingSchedule?.id === pendingDelete.id) {
+        setSheetOpen(false);
+        setEditingSchedule(null);
+      }
+      setPendingDelete(null);
       toast.success("Schedule removed.");
     } catch {
       toast.error("Could not remove schedule.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -141,8 +163,9 @@ export function LocationOperatingHoursTab({
                           variant="ghost"
                           size="icon"
                           className="hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => removeSchedule(s.id)}>
+                          onClick={() => setPendingDelete(s)}>
                           <Trash2Icon className="size-4" />
+                          <span className="sr-only">Delete</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -153,6 +176,32 @@ export function LocationOperatingHoursTab({
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deleting) setPendingDelete(null);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              {pendingDelete ? formatScheduleName(pendingDelete) : "this schedule"}. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(e) => void confirmDelete(e)}>
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ScheduleEditSheet
         schedule={editingSchedule}

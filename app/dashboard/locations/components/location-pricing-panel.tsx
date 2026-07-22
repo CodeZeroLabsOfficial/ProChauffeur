@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PencilIcon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -25,6 +25,16 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { ConfigError } from "@/lib/pricing/errors";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +75,7 @@ export function LocationPricingPanel({
   const [configured, setConfigured] = useState(false);
   const [editingAddon, setEditingAddon] = useState<PricingAddon | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PricingAddon | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -122,6 +133,18 @@ export function LocationPricingPanel({
       ...current,
       addons: current.addons.filter((addon) => addon.id !== id)
     }));
+  }
+
+  function confirmDeleteAddon(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!pendingDelete) return;
+    removeAddon(pendingDelete.id);
+    if (editingAddon?.id === pendingDelete.id) {
+      setSheetOpen(false);
+      setEditingAddon(null);
+    }
+    setPendingDelete(null);
+    toast.success("Add-on removed.");
   }
 
   async function save() {
@@ -242,14 +265,18 @@ export function LocationPricingPanel({
                   <TableHead>Trip types</TableHead>
                   <TableHead>Vehicle classes</TableHead>
                   <TableHead>Enabled</TableHead>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {config.addons.map((addon) => (
                   <TableRow
                     key={addon.id}
-                    className={cn(!addon.isEnabled && "text-muted-foreground")}>
+                    className={cn(
+                      "cursor-pointer",
+                      !addon.isEnabled && "text-muted-foreground"
+                    )}
+                    onClick={() => openEditAddon(addon)}>
                     <TableCell className="font-medium">
                       <span className="inline-flex items-center gap-2">
                         {addon.title}
@@ -264,14 +291,16 @@ export function LocationPricingPanel({
                     <TableCell>{formatAddonTripTypes(addon)}</TableCell>
                     <TableCell>{formatAddonVehicleClasses(addon, vehicleClasses)}</TableCell>
                     <TableCell>{addon.isEnabled ? "Yes" : "No"}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => openEditAddon(addon)}>
-                          <PencilIcon className="size-4" />
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setPendingDelete(addon)}>
+                          <Trash2Icon className="size-4" />
+                          <span className="sr-only">Delete</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -283,13 +312,34 @@ export function LocationPricingPanel({
         </CardContent>
       </Card>
 
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setPendingDelete(null);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete add-on?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove {pendingDelete?.title || "this add-on"} from the pricing draft. Save
+              pricing to persist the change.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={(e) => confirmDeleteAddon(e)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AddonEditSheet
         addon={editingAddon}
         vehicleClasses={vehicleClasses}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         onSave={upsertAddon}
-        onDelete={removeAddon}
         nested={nestedSheet}
       />
 
