@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
-import { PencilIcon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { PromotionEditSheet } from "@/app/dashboard/promotions/promotion-edit-sheet";
 import { ListPageHeader } from "@/components/list-page-header";
@@ -22,7 +23,11 @@ import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
 import type { Branch, Promotion } from "@/lib/models";
-import { listenBranches, listenPromotions } from "@/lib/services/firebase-service";
+import {
+  deletePromotion,
+  listenBranches,
+  listenPromotions
+} from "@/lib/services/firebase-service";
 
 function formatDiscount(promo: Promotion): string {
   if (promo.type === "percent") {
@@ -65,6 +70,19 @@ export default function PromotionsPage() {
   function openEdit(promo: Promotion) {
     setEditing(promo);
     setSheetOpen(true);
+  }
+
+  async function removePromotion(promo: Promotion) {
+    try {
+      await deletePromotion(promo.id);
+      toast.success("Promotion deleted.");
+      if (editing?.id === promo.id) {
+        setSheetOpen(false);
+        setEditing(null);
+      }
+    } catch {
+      toast.error("Could not delete promotion.");
+    }
   }
 
   if (!ready) {
@@ -124,7 +142,7 @@ export default function PromotionsPage() {
                   <TableHead>Code</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Uses</TableHead>
-                  <TableHead>Enabled</TableHead>
+                  <TableHead>Active</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
@@ -132,7 +150,11 @@ export default function PromotionsPage() {
                 {promotions.map((promo) => (
                   <TableRow
                     key={promo.id}
-                    className={cn(!promo.isEnabled && "text-muted-foreground")}>
+                    className={cn(
+                      "cursor-pointer",
+                      !promo.isEnabled && "text-muted-foreground"
+                    )}
+                    onClick={() => openEdit(promo)}>
                     <TableCell className="font-medium">{promo.title}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-mono">
@@ -147,15 +169,18 @@ export default function PromotionsPage() {
                         : ""}
                     </TableCell>
                     <TableCell>{promo.isEnabled ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => openEdit(promo)}>
-                        <PencilIcon className="size-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => void removePromotion(promo)}>
+                          <Trash2Icon className="size-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

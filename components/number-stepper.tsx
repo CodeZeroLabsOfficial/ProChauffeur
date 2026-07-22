@@ -27,7 +27,8 @@ export function NumberStepper({
   max = 99,
   step = 1,
   decimals,
-  disabled
+  disabled,
+  formatValue
 }: {
   id: string;
   label: string;
@@ -38,6 +39,8 @@ export function NumberStepper({
   step?: number;
   decimals?: number;
   disabled?: boolean;
+  /** Optional display override when not editing (e.g. 0 → "Unlimited"). */
+  formatValue?: (value: number) => string;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(String(value));
@@ -45,6 +48,7 @@ export function NumberStepper({
 
   const atMin = value <= min;
   const atMax = value >= max;
+  const display = formatValue ? formatValue(value) : formatDisplay(value, decimals);
 
   useEffect(() => {
     if (!editing) {
@@ -128,7 +132,7 @@ export function NumberStepper({
             aria-live="polite"
             aria-atomic="true"
             onClick={startEditing}>
-            {formatDisplay(value, decimals)}
+            {display}
           </button>
         )}
         <Button

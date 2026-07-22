@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 import { MultiSelectField } from "@/components/multi-select-field";
+import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -34,30 +39,98 @@ import {
   type VehicleClass
 } from "@/lib/models";
 import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
+import { cn } from "@/lib/utils";
 
 const TRIP_TYPE_OPTIONS = [
   { value: "transfer", label: tripTypeTitle.transfer },
   { value: "hourly", label: tripTypeTitle.hourly }
 ];
 
-function toDateInputValue(date: Date | null | undefined): string {
-  if (!date || Number.isNaN(date.getTime())) return "";
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+const LIMIT_STEPPER_MAX = 9999;
+
+function percentPointsFromPromo(promo: Promotion): number {
+  if (promo.type !== "percent") return 10;
+  return Math.max(0, Math.min(100, Math.round(promo.value * 100)));
 }
 
-function fromDateInputValue(value: string, endOfDay: boolean): Date | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const date = new Date(`${trimmed}T${endOfDay ? "23:59:59" : "00:00:00"}`);
-  return Number.isNaN(date.getTime()) ? null : date;
+function limitStepperValue(limit: number | null | undefined): number {
+  if (limit == null || limit < 1) return 0;
+  return Math.min(LIMIT_STEPPER_MAX, Math.floor(limit));
 }
 
-function percentDisplay(promo: Promotion): string {
-  if (promo.type !== "percent") return String(promo.value);
-  return String(Math.round(promo.value * 10000) / 100);
+function limitFromStepper(value: number): number | null {
+  if (value < 1) return null;
+  return Math.floor(value);
+}
+
+function formatLimitStepper(value: number): string {
+  return value < 1 ? "Unlimited" : String(value);
+}
+
+function startOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+  endOfDaySelect = false
+}: {
+  label: string;
+  value: Date | null | undefined;
+  onChange: (date: Date | null) => void;
+  endOfDaySelect?: boolean;
+}) {
+  const selected = value ?? undefined;
+
+  return (
+    <div className="flex flex-col space-y-2">
+      <Label>{label}</Label>
+      <Popover modal>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full pl-3 text-left font-normal",
+              !selected && "text-muted-foreground"
+            )}>
+            {selected ? format(selected, "PPP") : <span>Pick a date</span>}
+            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0"
+          align="start">
+          <Calendar
+            mode="single"
+            captionLayout="dropdown"
+            fromYear={new Date().getFullYear() - 2}
+            toYear={new Date().getFullYear() + 10}
+            selected={selected}
+            onSelect={(date) => {
+              if (!date) {
+                onChange(null);
+                return;
+              }
+              onChange(endOfDaySelect ? endOfDay(date) : startOfDay(date));
+            }}
+            defaultMonth={selected}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export function PromotionEditSheet({
@@ -76,7 +149,7 @@ export function PromotionEditSheet({
   const isNew = !promotion;
   const [draft, setDraft] = useState<Promotion>(() => promotion ?? buildNewPromotion());
   const [percentPoints, setPercentPoints] = useState(() =>
-    percentDisplay(promotion ?? buildNewPromotion())
+    percentPointsFromPromo(promotion ?? buildNewPromotion())
   );
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState("");
@@ -86,7 +159,7 @@ export function PromotionEditSheet({
     setSeedKey(sheetKey);
     const next = promotion ?? buildNewPromotion();
     setDraft(next);
-    setPercentPoints(percentDisplay(next));
+    setPercentPoints(percentPointsFromPromo(next));
   }
 
   const branchOptions = branches.map((branch) => ({
@@ -120,12 +193,11 @@ export function PromotionEditSheet({
 
     let value = draft.value;
     if (draft.type === "percent") {
-      const points = Number(percentPoints);
-      if (!Number.isFinite(points) || points < 0 || points > 100) {
+      if (!Number.isFinite(percentPoints) || percentPoints < 0 || percentPoints > 100) {
         toast.error("Percent must be between 0 and 100.");
         return;
       }
-      value = points / 100;
+      value = percentPoints / 100;
     } else if (!Number.isFinite(value) || value < 0) {
       toast.error("Fixed discount cannot be negative.");
       return;
@@ -174,15 +246,6 @@ export function PromotionEditSheet({
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4">
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="promo-enabled">Enabled</Label>
-            <Switch
-              id="promo-enabled"
-              checked={draft.isEnabled}
-              onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="promo-title">Title</Label>
             <Input
@@ -224,21 +287,18 @@ export function PromotionEditSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="promo-value">
-                {draft.type === "percent" ? "Percent" : "Amount"}
-              </Label>
-              {draft.type === "percent" ? (
-                <Input
-                  id="promo-value"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  value={percentPoints}
-                  onChange={(e) => setPercentPoints(e.target.value)}
-                />
-              ) : (
+            {draft.type === "percent" ? (
+              <NumberStepper
+                id="promo-value"
+                label="Percent"
+                value={percentPoints}
+                onChange={setPercentPoints}
+                min={0}
+                max={100}
+              />
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="promo-value">Amount</Label>
                 <Input
                   id="promo-value"
                   type="number"
@@ -249,8 +309,8 @@ export function PromotionEditSheet({
                     setDraft((c) => ({ ...c, value: Number(e.target.value) || 0 }))
                   }
                 />
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -269,28 +329,17 @@ export function PromotionEditSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="promo-starts">Starts</Label>
-              <Input
-                id="promo-starts"
-                type="date"
-                value={toDateInputValue(draft.conditions.startsAt)}
-                onChange={(e) =>
-                  patchConditions({ startsAt: fromDateInputValue(e.target.value, false) })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="promo-ends">Ends</Label>
-              <Input
-                id="promo-ends"
-                type="date"
-                value={toDateInputValue(draft.conditions.endsAt)}
-                onChange={(e) =>
-                  patchConditions({ endsAt: fromDateInputValue(e.target.value, true) })
-                }
-              />
-            </div>
+            <DatePickerField
+              label="Starts"
+              value={draft.conditions.startsAt}
+              onChange={(date) => patchConditions({ startsAt: date })}
+            />
+            <DatePickerField
+              label="Ends"
+              value={draft.conditions.endsAt}
+              onChange={(date) => patchConditions({ endsAt: date })}
+              endOfDaySelect
+            />
           </div>
 
           <div className="space-y-2">
@@ -324,39 +373,24 @@ export function PromotionEditSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="promo-max">Max redemptions</Label>
-              <Input
-                id="promo-max"
-                type="number"
-                min={1}
-                placeholder="Unlimited"
-                value={draft.conditions.maxRedemptions ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value.trim();
-                  patchConditions({
-                    maxRedemptions: raw === "" ? null : Math.max(1, Math.floor(Number(raw)) || 1)
-                  });
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="promo-per-customer">Per customer</Label>
-              <Input
-                id="promo-per-customer"
-                type="number"
-                min={1}
-                placeholder="Unlimited"
-                value={draft.conditions.perCustomerLimit ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value.trim();
-                  patchConditions({
-                    perCustomerLimit:
-                      raw === "" ? null : Math.max(1, Math.floor(Number(raw)) || 1)
-                  });
-                }}
-              />
-            </div>
+            <NumberStepper
+              id="promo-max"
+              label="Max redemptions"
+              value={limitStepperValue(draft.conditions.maxRedemptions)}
+              onChange={(value) => patchConditions({ maxRedemptions: limitFromStepper(value) })}
+              min={0}
+              max={LIMIT_STEPPER_MAX}
+              formatValue={formatLimitStepper}
+            />
+            <NumberStepper
+              id="promo-per-customer"
+              label="Per customer"
+              value={limitStepperValue(draft.conditions.perCustomerLimit)}
+              onChange={(value) => patchConditions({ perCustomerLimit: limitFromStepper(value) })}
+              min={0}
+              max={LIMIT_STEPPER_MAX}
+              formatValue={formatLimitStepper}
+            />
           </div>
 
           <div className="space-y-2">
@@ -377,20 +411,40 @@ export function PromotionEditSheet({
             />
           </div>
 
-          <SheetFooter className="mt-auto gap-2 sm:flex-col">
-            <Button type="submit" disabled={saving} className="w-full">
-              {saving ? "Saving…" : isNew ? "Create promotion" : "Save changes"}
-            </Button>
-            {!isNew ? (
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={saving}
-                className="w-full"
-                onClick={handleDelete}>
-                Delete
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="promo-active">Active</Label>
+              <p className="text-muted-foreground text-xs">
+                Inactive promos cannot be applied to bookings.
+              </p>
+            </div>
+            <Switch
+              id="promo-active"
+              checked={draft.isEnabled}
+              onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
+              disabled={saving}
+            />
+          </div>
+
+          <SheetFooter className="mt-auto px-0">
+            {isNew ? (
+              <Button type="submit" disabled={saving} className="w-full">
+                {saving ? "Saving…" : "Create promotion"}
               </Button>
-            ) : null}
+            ) : (
+              <div className="grid w-full grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={saving}
+                  onClick={handleDelete}>
+                  Delete
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </div>
+            )}
           </SheetFooter>
         </form>
       </SheetContent>
