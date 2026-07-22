@@ -17,7 +17,7 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
           className="bg-muted relative aspect-3/1 w-full md:max-h-[240px]"
           aria-hidden
         />
-        <div className="relative -mt-10 flex items-end gap-4 px-4 pb-5 sm:px-6 md:-mt-12 md:px-8 md:pb-6">
+        <div className="relative -mt-10 flex items-center gap-4 px-4 pb-5 sm:px-6 md:-mt-12 md:px-8 md:pb-6">
           <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10 lg:size-28">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- Storage download URL
@@ -32,7 +32,7 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
               <Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />
             )}
           </div>
-          <div className="min-w-0 flex-1 space-y-2 pb-1">
+          <div className="min-w-0 flex-1 space-y-2">
             <h2 className="text-xl font-bold tracking-tight lg:text-2xl">{branch.name}</h2>
             <LocationStatusBadge isActive={branch.isActive !== false} />
           </div>
