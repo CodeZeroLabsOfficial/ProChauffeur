@@ -8,7 +8,7 @@ export const profileV2TabTriggerClassName =
   "data-[state=active]:border-b-primary data-[state=active]:text-foreground text-muted-foreground rounded-none border-0 border-b-2 border-transparent bg-transparent! px-0 py-4 shadow-none!";
 
 export const profileV2TabsListClassName =
-  "-mb-0.5 h-auto! gap-6 overflow-x-auto border-none bg-transparent p-0 [&_[data-slot=tabs-trigger]]:flex-none";
+  "-mb-0.5 h-auto! flex-wrap gap-6 overflow-x-visible border-none bg-transparent p-0 [&_[data-slot=tabs-trigger]]:flex-none";
 
 export function ProfileV2TabBar({
   children,

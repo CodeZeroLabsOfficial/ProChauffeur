@@ -17,7 +17,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -96,10 +95,7 @@ export function AddonEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{isNew ? "Add add-on" : "Add-on details"}</SheetTitle>
-          <SheetDescription>
-            Optional extras offered during booking. Save pricing on the page to persist changes.
-          </SheetDescription>
+          <SheetTitle>{isNew ? "New add-on" : "Add-on details"}</SheetTitle>
         </SheetHeader>
         <Separator />
         <form className="space-y-4 px-4" onSubmit={onSubmit}>
@@ -177,7 +173,7 @@ export function AddonEditSheet({
           </div>
 
           <SheetFooter className="px-0">
-            <Button type="submit">{isNew ? "Add add-on" : "Save"}</Button>
+            <Button type="submit">Save</Button>
           </SheetFooter>
         </form>
       </SheetContent>
