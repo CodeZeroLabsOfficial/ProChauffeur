@@ -6,7 +6,7 @@ export * from "@/lib/models/location";
 export * from "@/lib/models/pricing";
 export * from "@/lib/models/quote";
 export * from "@/lib/models/operating-hours";
-export * from "@/lib/models/limits";
+export * from "@/lib/models/license";
 export * from "@/lib/models/invoice";
 export * from "@/lib/models/company";
 export * from "@/lib/models/postal-address";
@@ -49,7 +49,10 @@ export const OperatorDocs = {
 
 /** `app_settings` document ids. */
 export const AppSettingsDocs = {
-  limits: "limits",
+  /** Plan, feature overrides, and capacity caps. */
+  license: "license",
+  /** Plan catalog (planId → included features). */
+  plans: "plans",
   /** Appearance settings (workspace name, logo, fonts, primary colour). */
   appearance: "workspace",
   integrations: "integrations",

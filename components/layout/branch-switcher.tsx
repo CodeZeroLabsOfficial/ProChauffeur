@@ -20,11 +20,11 @@ import { LogoMark } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import {
   canCreateLocation,
-  unlimitedLimits,
+  defaultLicense,
   type Appearance,
-  type AppGlobalLimits
+  type AppLicense
 } from "@/lib/models";
-import { fetchGlobalLimits } from "@/lib/services/firebase-service";
+import { fetchLicense } from "@/lib/services/firebase-service";
 import { cn } from "@/lib/utils";
 
 type BranchSwitcherProps = {
@@ -34,18 +34,18 @@ type BranchSwitcherProps = {
 export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   const { isMobile } = useSidebar();
   const { branchId, branches, setBranchId, activeBranch, branchesLoading } = useActiveBranch();
-  const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
+  const [license, setLicense] = useState<AppLicense | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetchGlobalLimits()
-      .then(setLimits)
-      .catch(() => setLimits(unlimitedLimits));
+    fetchLicense()
+      .then(setLicense)
+      .catch(() => setLicense(defaultLicense));
   }, []);
 
   const workspaceName = appearance?.workspaceName ?? "ProChauffeur";
   const locationLabel = activeBranch?.name ?? (branchesLoading ? "Loading…" : "No location");
-  const resolved = limits ?? unlimitedLimits;
+  const resolved = license ?? defaultLicense;
   const canAdd = canCreateLocation(branches.length, resolved.maxLocations);
 
   return (

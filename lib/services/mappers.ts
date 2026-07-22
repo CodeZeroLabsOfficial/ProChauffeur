@@ -4,16 +4,20 @@ import { toCoordinate, toDate, toInt } from "@/lib/firebase/converters";
 import type {
   ActivityNotification,
   AppFleetOperatingHours,
-  AppGlobalLimits,
+  AppLicense,
+  AppPlansCatalog,
   Branch,
   BranchDriver,
   CompanyProfile,
   OperatorLocale,
   DriverProfile,
+  FeatureFlagValue,
+  FeatureId,
   FleetLocation,
   Invoice,
   NotificationAction,
   NotificationCategory,
+  PlanDefinition,
   PricingAddon,
   PricingConfig,
   QuoteLineItem,
@@ -24,7 +28,12 @@ import type {
   UserProfile,
   Vehicle
 } from "@/lib/models";
-import { UNLIMITED } from "@/lib/models/limits";
+import {
+  UNLIMITED,
+  defaultPlansCatalog,
+  isFeatureFlagValue,
+  isFeatureId
+} from "@/lib/models/license";
 import { parseOperatorLocale, parsePricingConfig, parseVehicleClass } from "@/lib/pricing/validate";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
 
@@ -301,16 +310,65 @@ export function mapOperatorLocale(d: DocumentData): OperatorLocale {
   return parseOperatorLocale(d);
 }
 
-export function mapLimits(d: DocumentData): AppGlobalLimits {
+export function mapLicense(d: DocumentData): AppLicense {
   const intOrUnlimited = (key: string) => (d[key] != null ? toInt(d[key], UNLIMITED) : UNLIMITED);
   // Missing maxLocations → 1 so multi-Location stays gated off until raised.
   const maxLocations = d.maxLocations != null ? toInt(d.maxLocations, 1) : 1;
+  const featureFlags: Partial<Record<FeatureId, FeatureFlagValue>> = {};
+  const rawFlags = d.featureFlags;
+  if (rawFlags && typeof rawFlags === "object" && !Array.isArray(rawFlags)) {
+    for (const [key, value] of Object.entries(rawFlags as Record<string, unknown>)) {
+      if (isFeatureId(key) && isFeatureFlagValue(value)) {
+        featureFlags[key] = value;
+      }
+    }
+  }
   return {
+    planId: typeof d.planId === "string" ? d.planId.trim() : "",
     maxAdmins: intOrUnlimited("maxAdmins"),
     maxDrivers: intOrUnlimited("maxDrivers"),
     maxLocations,
-    subscriptionTier: typeof d.subscriptionTier === "string" ? d.subscriptionTier.trim() : ""
+    subscriptionTier: typeof d.subscriptionTier === "string" ? d.subscriptionTier.trim() : "",
+    featureFlags
   };
+}
+
+function mapPlanFeatures(raw: unknown): FeatureId[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FeatureId[] = [];
+  for (const item of raw) {
+    if (typeof item === "string" && isFeatureId(item) && !out.includes(item)) {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+export function mapPlansCatalog(d: DocumentData): AppPlansCatalog {
+  const plans: Record<string, PlanDefinition> = {};
+  const rawPlans = d.plans;
+  if (rawPlans && typeof rawPlans === "object" && !Array.isArray(rawPlans)) {
+    for (const [planId, value] of Object.entries(rawPlans as Record<string, unknown>)) {
+      if (!planId.trim() || !value || typeof value !== "object" || Array.isArray(value)) continue;
+      const entry = value as Record<string, unknown>;
+      const label =
+        typeof entry.label === "string" && entry.label.trim()
+          ? entry.label.trim()
+          : planId;
+      plans[planId] = {
+        label,
+        features: mapPlanFeatures(entry.features)
+      };
+    }
+  }
+  const defaultPlanId =
+    typeof d.defaultPlanId === "string" && d.defaultPlanId.trim()
+      ? d.defaultPlanId.trim()
+      : defaultPlansCatalog.defaultPlanId;
+  if (Object.keys(plans).length === 0) {
+    return defaultPlansCatalog;
+  }
+  return { defaultPlanId, plans };
 }
 
 function companyString(d: DocumentData, camel: string, pascal: string): string | null {

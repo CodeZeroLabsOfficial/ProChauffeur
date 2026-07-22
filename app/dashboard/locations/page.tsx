@@ -6,25 +6,25 @@ import { PlusCircledIcon } from "@radix-ui/react-icons";
 import { LocationsDataTable } from "@/app/dashboard/locations/data-table";
 import { ListPageHeader } from "@/components/list-page-header";
 import { Button } from "@/components/ui/button";
-import { canCreateLocation, unlimitedLimits, type AppGlobalLimits } from "@/lib/models";
-import { fetchGlobalLimits, listenBranches } from "@/lib/services/firebase-service";
+import { canCreateLocation, defaultLicense, type AppLicense } from "@/lib/models";
+import { fetchLicense, listenBranches } from "@/lib/services/firebase-service";
 
 export default function LocationsPage() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
+  const [license, setLicense] = useState<AppLicense | null>(null);
   const [branchCount, setBranchCount] = useState(0);
 
   useEffect(() => {
-    fetchGlobalLimits()
-      .then(setLimits)
-      .catch(() => setLimits(unlimitedLimits));
+    fetchLicense()
+      .then(setLicense)
+      .catch(() => setLicense(defaultLicense));
   }, []);
 
   useEffect(() => {
     return listenBranches((rows) => setBranchCount(rows.length));
   }, []);
 
-  const resolved = limits ?? unlimitedLimits;
+  const resolved = license ?? defaultLicense;
   const canAdd = canCreateLocation(branchCount, resolved.maxLocations);
 
   return (

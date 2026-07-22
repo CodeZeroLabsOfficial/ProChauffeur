@@ -2,8 +2,8 @@ import { haversineMeters } from "@/lib/geo/haversine";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
   isMultiLocationEnabled,
-  type AppGlobalLimits
-} from "@/lib/models/limits";
+  type AppLicense
+} from "@/lib/models/license";
 import { DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
 
 export class BranchResolveError extends Error {
@@ -54,7 +54,7 @@ export type ResolveBranchInput = {
   latitude?: number;
   longitude?: number;
   branches: Branch[];
-  limits: Pick<AppGlobalLimits, "maxLocations">;
+  license: Pick<AppLicense, "maxLocations">;
   defaultBranchId?: string;
 };
 
@@ -80,7 +80,7 @@ function firstMatch(branches: Branch[]): string | null {
 export function resolveBranchId(input: ResolveBranchInput): string {
   const defaultBranchId = input.defaultBranchId ?? DEFAULT_BRANCH_ID;
 
-  if (!isMultiLocationEnabled(input.limits.maxLocations)) {
+  if (!isMultiLocationEnabled(input.license.maxLocations)) {
     return defaultBranchId;
   }
 

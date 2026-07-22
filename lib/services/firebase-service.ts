@@ -48,13 +48,15 @@ import {
   Collections,
   emptyCompanyProfile,
   emptyOperatingHours,
-  unlimitedLimits,
+  defaultLicense,
+  defaultPlansCatalog,
   type ActivityNotification,
   type CompanyProfile,
   type CreateActivityNotificationInput,
   type OperatorLocale,
   type AppFleetOperatingHours,
-  type AppGlobalLimits,
+  type AppLicense,
+  type AppPlansCatalog,
   type DriverProfile,
   type FleetLocation,
   type Invoice,
@@ -75,8 +77,9 @@ import {
   mapOperatorLocale,
   mapFleetLocation,
   mapInvoice,
-  mapLimits,
+  mapLicense,
   mapOperatingHours,
+  mapPlansCatalog,
   mapPricingConfig,
   mapTrip,
   mapUser,
@@ -194,11 +197,11 @@ export async function upsertBranch(branch: Branch): Promise<void> {
   const ref = branchMetaDocRef(db(), branch.id);
   const existing = await getDoc(ref);
   if (!existing.exists()) {
-    const limits = await fetchGlobalLimits();
+    const license = await fetchLicense();
     const current = await fetchBranches();
-    if (!canCreateLocation(current.length, limits.maxLocations)) {
+    if (!canCreateLocation(current.length, license.maxLocations)) {
       throw new Error(
-        `Location limit reached (${limits.maxLocations}). Raise maxLocations in License settings or remove a location.`
+        `Location limit reached (${license.maxLocations}). Raise maxLocations in License settings or remove a location.`
       );
     }
   }
@@ -957,15 +960,22 @@ export async function saveCompanyProfile(profile: CompanyProfile): Promise<void>
   void createActivityNotification(companyNotification());
 }
 
-export async function fetchGlobalLimits(): Promise<AppGlobalLimits> {
-  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.limits));
-  return snap.exists() ? mapLimits(snap.data()) : unlimitedLimits;
+export async function fetchLicense(): Promise<AppLicense> {
+  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.license));
+  return snap.exists() ? mapLicense(snap.data()) : defaultLicense;
 }
 
-export async function saveGlobalLimits(limits: AppGlobalLimits): Promise<void> {
-  await setDoc(doc(db(), Collections.appSettings, AppSettingsDocs.limits), stripUndefined({ ...limits }), {
-    merge: true
-  });
+export async function saveLicense(license: AppLicense): Promise<void> {
+  await setDoc(
+    doc(db(), Collections.appSettings, AppSettingsDocs.license),
+    stripUndefined({ ...license }),
+    { merge: true }
+  );
+}
+
+export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
+  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.plans));
+  return snap.exists() ? mapPlansCatalog(snap.data()) : defaultPlansCatalog;
 }
 
 // ─────────────────────────────── Invoices ───────────────────────────────

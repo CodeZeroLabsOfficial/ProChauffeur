@@ -4,13 +4,21 @@ import { useEffect, useState } from "react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useUsers } from "@/hooks/use-collections";
-import { fetchGlobalLimits } from "@/lib/services/firebase-service";
+import { fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service";
 import {
+  FEATURE_IDS,
+  FEATURE_LABELS,
   capLabel,
+  defaultLicense,
+  defaultPlansCatalog,
+  featureSource,
+  isFeatureEnabled,
+  planLabel,
   UNLIMITED,
-  unlimitedLimits,
   usagePercent,
-  type AppGlobalLimits
+  type AppLicense,
+  type AppPlansCatalog,
+  type FeatureSource
 } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +35,13 @@ type LimitRow = {
   label: string;
   used: number;
   max: number;
+};
+
+const SOURCE_LABEL: Record<FeatureSource, string> = {
+  plan: "Included in plan",
+  addon: "Add-on",
+  not_included: "Not included",
+  disabled: "Disabled"
 };
 
 function LimitUsageBar({ label, used, max }: LimitRow) {
@@ -55,18 +70,34 @@ function LimitUsageBar({ label, used, max }: LimitRow) {
 export default function LicensePage() {
   const { users, loading: usersLoading } = useUsers();
   const { branches, branchesLoading } = useActiveBranch();
-  const [limits, setLimits] = useState<AppGlobalLimits | null>(null);
-  const [limitsLoading, setLimitsLoading] = useState(true);
+  const [license, setLicense] = useState<AppLicense | null>(null);
+  const [catalog, setCatalog] = useState<AppPlansCatalog | null>(null);
+  const [licenseLoading, setLicenseLoading] = useState(true);
 
   useEffect(() => {
-    fetchGlobalLimits()
-      .then(setLimits)
-      .catch(() => setLimits(unlimitedLimits))
-      .finally(() => setLimitsLoading(false));
+    let cancelled = false;
+    Promise.all([fetchLicense(), fetchPlansCatalog()])
+      .then(([nextLicense, nextCatalog]) => {
+        if (cancelled) return;
+        setLicense(nextLicense);
+        setCatalog(nextCatalog);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLicense(defaultLicense);
+        setCatalog(defaultPlansCatalog);
+      })
+      .finally(() => {
+        if (!cancelled) setLicenseLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loading = usersLoading || branchesLoading || limitsLoading;
-  const resolved = limits ?? unlimitedLimits;
+  const loading = usersLoading || branchesLoading || licenseLoading;
+  const resolved = license ?? defaultLicense;
+  const plans = catalog ?? defaultPlansCatalog;
 
   const adminCount = users.filter((u) => u.role === "admin").length;
   const driverCount = users.filter((u) => u.role === "driver").length;
@@ -77,8 +108,8 @@ export default function LicensePage() {
     { label: "Locations", used: branches.length, max: resolved.maxLocations }
   ];
 
-  const tier = resolved.subscriptionTier.trim();
-  const planTitle = tier ? `You're on ${tier} plan` : "Your subscription";
+  const label = planLabel(resolved, plans);
+  const planTitle = label ? `You're on ${label} plan` : "Your subscription";
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -89,13 +120,13 @@ export default function LicensePage() {
       <CardHeader>
         <CardTitle>{planTitle}</CardTitle>
         <CardDescription>
-          License usage and account capacity for your current subscription.
+          License usage, plan features, and account capacity for your current subscription.
         </CardDescription>
         <CardAction>
           <Button variant="outline">Manage plan</Button>
         </CardAction>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <div className="bg-muted/50 space-y-4 rounded-lg border p-6">
           <p className="font-semibold">License limits</p>
           <div className="space-y-4">
@@ -103,6 +134,28 @@ export default function LicensePage() {
               <LimitUsageBar key={row.label} {...row} />
             ))}
           </div>
+        </div>
+
+        <div className="bg-muted/50 space-y-4 rounded-lg border p-6">
+          <p className="font-semibold">Features</p>
+          <ul className="space-y-3">
+            {FEATURE_IDS.map((feature) => {
+              const enabled = isFeatureEnabled(resolved, plans, feature);
+              const source = featureSource(resolved, plans, feature);
+              return (
+                <li
+                  key={feature}
+                  className="flex items-center justify-between gap-4 text-sm"
+                >
+                  <span>{FEATURE_LABELS[feature]}</span>
+                  <span className="text-muted-foreground shrink-0 text-right">
+                    {enabled ? "On" : "Off"}
+                    <span className="text-muted-foreground/80"> · {SOURCE_LABEL[source]}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </CardContent>
     </Card>
