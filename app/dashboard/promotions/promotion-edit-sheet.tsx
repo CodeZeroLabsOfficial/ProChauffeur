@@ -23,7 +23,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -274,10 +273,7 @@ export function PromotionEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isNew ? "New promotion" : "Edit promotion"}</SheetTitle>
-          <SheetDescription>
-            Set a code, discount, and optional conditions. Empty conditions apply to all bookings.
-          </SheetDescription>
+          <SheetTitle>{isNew ? "New promotion" : "Promotion details"}</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
@@ -337,7 +333,7 @@ export function PromotionEditSheet({
                   setDraft((c) => ({ ...c, type: nextType }));
                   clearFieldError("value");
                 }}>
-                <SelectTrigger id="promo-type">
+                <SelectTrigger id="promo-type" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

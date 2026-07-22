@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ExternalLink, Globe2, MapPin, Phone, Power } from "lucide-react";
+import { Building2, ExternalLink, Globe2, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
-import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
 import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
 import {
   ProfileV2TabTrigger,
@@ -29,7 +28,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -165,7 +163,7 @@ function LocationOverviewFields({
               />
             </dd>
           </div>
-          <div className="space-y-1">
+          <div className="col-span-2 space-y-1">
             <DetailLabel icon={Globe2}>Time zone</DetailLabel>
             <dd>
               <InlineEditableSelectField
@@ -179,21 +177,24 @@ function LocationOverviewFields({
               />
             </dd>
           </div>
-          <div className="space-y-1">
-            <DetailLabel icon={Power}>Active</DetailLabel>
-            <dd>
-              <InlineEditableToggleField
-                fieldId="active"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={branch.isActive !== false}
-                formatValue={(v) => (v ? "Active" : "Inactive")}
-                editLabel="active status"
-                onSave={async (next) => saveBranch({ isActive: next })}
-              />
-            </dd>
-          </div>
         </dl>
+        <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="location-overview-active">Active</Label>
+            <p className="text-muted-foreground text-xs">
+              Inactive locations are hidden from the switcher and resolve.
+            </p>
+          </div>
+          <Switch
+            id="location-overview-active"
+            checked={branch.isActive !== false}
+            onCheckedChange={(checked) => {
+              void saveBranch({ isActive: checked }).then((res) => {
+                if (!res.ok) toast.error(res.message ?? "Could not save.");
+              });
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -373,8 +374,6 @@ export function LocationEditSheet({
   const working = savedBranch ?? branch;
   const displayBranch = useSheetDisplayItem(working, open);
   const locationExists = working != null;
-  const sheetTitle =
-    displayBranch?.name?.trim() || working?.name?.trim() || (isNew ? "New location" : "Location");
 
   useEffect(() => {
     if (!open || !working) return;
@@ -417,10 +416,7 @@ export function LocationEditSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
-            <div className="space-y-1">
-              <SheetTitle>{sheetTitle}</SheetTitle>
-              <SheetDescription>Location</SheetDescription>
-            </div>
+            <SheetTitle>{isNew && !working ? "New location" : "Location details"}</SheetTitle>
             {displayBranch ? (
               <Button variant="outline" asChild>
                 <Link
