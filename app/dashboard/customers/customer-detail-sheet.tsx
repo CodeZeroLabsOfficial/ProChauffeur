@@ -224,7 +224,9 @@ export function CustomerDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg">
+      <SheetContent
+        className="overflow-y-auto sm:max-w-lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}>
         <SheetHeader>
           <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
             <SheetTitle>Customer profile</SheetTitle>

@@ -29,6 +29,8 @@ const TRIP_TYPE_OPTIONS = [
   { value: "hourly", label: tripTypeTitle.hourly }
 ];
 
+const ADDON_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
+
 function buildNewAddon(): PricingAddon {
   return {
     id: crypto.randomUUID(),
@@ -199,6 +201,9 @@ export function AddonEditSheet({
 
 export function formatAddonTripTypes(addon: PricingAddon): string {
   if (addon.tripTypes.length === 0) return "Not set";
+  if (ADDON_TRIP_TYPES.every((t) => addon.tripTypes.includes(t))) {
+    return "All trip types";
+  }
   return addon.tripTypes.map((t) => tripTypeTitle[t]).join(", ");
 }
 
@@ -206,7 +211,13 @@ export function formatAddonVehicleClasses(
   addon: PricingAddon,
   vehicleClasses: VehicleClass[]
 ): string {
-  if (addon.vehicleClassIds.length === 0) return "All classes";
+  if (
+    addon.vehicleClassIds.length === 0 ||
+    (vehicleClasses.length > 0 &&
+      vehicleClasses.every((vehicleClass) => addon.vehicleClassIds.includes(vehicleClass.id)))
+  ) {
+    return "All classes";
+  }
   const names = addon.vehicleClassIds
     .map((id) => vehicleClasses.find((vehicleClass) => vehicleClass.id === id)?.displayName)
     .filter(Boolean);
