@@ -8,6 +8,16 @@ import { toast } from "sonner";
 
 import { PromotionEditSheet } from "@/app/dashboard/promotions/promotion-edit-sheet";
 import { ListPageHeader } from "@/components/list-page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +54,8 @@ export default function PromotionsPage() {
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!enabled) {
@@ -72,16 +84,22 @@ export default function PromotionsPage() {
     setSheetOpen(true);
   }
 
-  async function removePromotion(promo: Promotion) {
+  async function confirmDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deletePromotion(promo.id);
+      await deletePromotion(pendingDelete.id);
       toast.success("Promotion deleted.");
-      if (editing?.id === promo.id) {
+      if (editing?.id === pendingDelete.id) {
         setSheetOpen(false);
         setEditing(null);
       }
+      setPendingDelete(null);
     } catch {
       toast.error("Could not delete promotion.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -176,7 +194,7 @@ export default function PromotionsPage() {
                           size="icon"
                           variant="ghost"
                           className="hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => void removePromotion(promo)}>
+                          onClick={() => setPendingDelete(promo)}>
                           <Trash2Icon className="size-4" />
                           <span className="sr-only">Delete</span>
                         </Button>
@@ -189,6 +207,32 @@ export default function PromotionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deleting) setPendingDelete(null);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete promotion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              {pendingDelete?.title || pendingDelete?.code || "this promotion"}. This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(e) => void confirmDelete(e)}>
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PromotionEditSheet
         promotion={editing}

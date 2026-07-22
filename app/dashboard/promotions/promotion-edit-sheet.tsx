@@ -47,10 +47,22 @@ const TRIP_TYPE_OPTIONS = [
 ];
 
 const LIMIT_STEPPER_MAX = 9999;
+const FARE_STEPPER_MAX = 100_000;
+
+type FieldErrors = {
+  title?: boolean;
+  code?: boolean;
+  value?: boolean;
+};
 
 function percentPointsFromPromo(promo: Promotion): number {
   if (promo.type !== "percent") return 10;
   return Math.max(0, Math.min(100, Math.round(promo.value * 100)));
+}
+
+function fixedAmountFromPromo(promo: Promotion): number {
+  if (promo.type === "fixed") return Math.max(0, promo.value);
+  return Math.max(0, Math.round(promo.value * 100));
 }
 
 function limitStepperValue(limit: number | null | undefined): number {
@@ -65,6 +77,20 @@ function limitFromStepper(value: number): number | null {
 
 function formatLimitStepper(value: number): string {
   return value < 1 ? "Unlimited" : String(value);
+}
+
+function minFareStepperValue(amount: number | null | undefined): number {
+  if (amount == null || amount < 0) return 0;
+  return Math.min(FARE_STEPPER_MAX, amount);
+}
+
+function minFareFromStepper(value: number): number | null {
+  if (value <= 0) return null;
+  return value;
+}
+
+function formatMinFareStepper(value: number): string {
+  return value <= 0 ? "None" : value.toFixed(value % 1 === 0 ? 0 : 2);
 }
 
 function startOfDay(date: Date): Date {
@@ -151,6 +177,10 @@ export function PromotionEditSheet({
   const [percentPoints, setPercentPoints] = useState(() =>
     percentPointsFromPromo(promotion ?? buildNewPromotion())
   );
+  const [fixedAmount, setFixedAmount] = useState(() =>
+    fixedAmountFromPromo(promotion ?? buildNewPromotion())
+  );
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState("");
 
@@ -160,6 +190,8 @@ export function PromotionEditSheet({
     const next = promotion ?? buildNewPromotion();
     setDraft(next);
     setPercentPoints(percentPointsFromPromo(next));
+    setFixedAmount(fixedAmountFromPromo(next));
+    setFieldErrors({});
   }
 
   const branchOptions = branches.map((branch) => ({
@@ -178,30 +210,24 @@ export function PromotionEditSheet({
     }));
   }
 
+  function clearFieldError(field: keyof FieldErrors) {
+    setFieldErrors((prev) => ({ ...prev, [field]: false }));
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const title = draft.title.trim();
     const code = normalizePromoCode(draft.code);
-    if (!title) {
-      toast.error("Title is required.");
-      return;
-    }
-    if (!code) {
-      toast.error("Promo code is required.");
-      return;
-    }
+    const discountValue = draft.type === "percent" ? percentPoints : fixedAmount;
+    const errors: FieldErrors = {
+      title: !title,
+      code: !code,
+      value: !Number.isFinite(discountValue) || discountValue <= 0
+    };
+    setFieldErrors(errors);
+    if (errors.title || errors.code || errors.value) return;
 
-    let value = draft.value;
-    if (draft.type === "percent") {
-      if (!Number.isFinite(percentPoints) || percentPoints < 0 || percentPoints > 100) {
-        toast.error("Percent must be between 0 and 100.");
-        return;
-      }
-      value = percentPoints / 100;
-    } else if (!Number.isFinite(value) || value < 0) {
-      toast.error("Fixed discount cannot be negative.");
-      return;
-    }
+    const value = draft.type === "percent" ? percentPoints / 100 : fixedAmount;
 
     setSaving(true);
     try {
@@ -245,26 +271,51 @@ export function PromotionEditSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4">
-          <div className="space-y-2">
+        <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
+          <div className="*:not-first:mt-2">
             <Label htmlFor="promo-title">Title</Label>
             <Input
               id="promo-title"
               value={draft.title}
-              onChange={(e) => setDraft((c) => ({ ...c, title: e.target.value }))}
+              onChange={(e) => {
+                setDraft((c) => ({ ...c, title: e.target.value }));
+                clearFieldError("title");
+              }}
               placeholder="First booking 25% off"
+              aria-invalid={fieldErrors.title || undefined}
+              className="peer"
             />
+            {fieldErrors.title ? (
+              <p
+                aria-live="polite"
+                className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                role="alert">
+                Title is required
+              </p>
+            ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div className="*:not-first:mt-2">
             <Label htmlFor="promo-code">Code</Label>
             <Input
               id="promo-code"
               value={draft.code}
-              onChange={(e) => setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }))}
+              onChange={(e) => {
+                setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }));
+                clearFieldError("code");
+              }}
               placeholder="WELCOME25"
-              className="font-mono uppercase"
+              className="peer font-mono uppercase"
+              aria-invalid={fieldErrors.code || undefined}
             />
+            {fieldErrors.code ? (
+              <p
+                aria-live="polite"
+                className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                role="alert">
+                Code is required
+              </p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -272,12 +323,11 @@ export function PromotionEditSheet({
               <Label htmlFor="promo-type">Discount type</Label>
               <Select
                 value={draft.type}
-                onValueChange={(value) =>
-                  setDraft((c) => ({
-                    ...c,
-                    type: value === "fixed" ? "fixed" : "percent"
-                  }))
-                }>
+                onValueChange={(value) => {
+                  const nextType = value === "fixed" ? "fixed" : "percent";
+                  setDraft((c) => ({ ...c, type: nextType }));
+                  clearFieldError("value");
+                }}>
                 <SelectTrigger id="promo-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -287,30 +337,41 @@ export function PromotionEditSheet({
                 </SelectContent>
               </Select>
             </div>
-            {draft.type === "percent" ? (
-              <NumberStepper
-                id="promo-value"
-                label="Percent"
-                value={percentPoints}
-                onChange={setPercentPoints}
-                min={0}
-                max={100}
-              />
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="promo-value">Amount</Label>
-                <Input
+            <div className="*:not-first:mt-2">
+              {draft.type === "percent" ? (
+                <NumberStepper
                   id="promo-value"
-                  type="number"
+                  label="Percent"
+                  value={percentPoints}
+                  onChange={(value) => {
+                    setPercentPoints(value);
+                    clearFieldError("value");
+                  }}
                   min={0}
-                  step="0.01"
-                  value={Number.isFinite(draft.value) ? draft.value : ""}
-                  onChange={(e) =>
-                    setDraft((c) => ({ ...c, value: Number(e.target.value) || 0 }))
-                  }
+                  max={100}
                 />
-              </div>
-            )}
+              ) : (
+                <NumberStepper
+                  id="promo-value"
+                  label="Amount"
+                  value={fixedAmount}
+                  onChange={(value) => {
+                    setFixedAmount(value);
+                    clearFieldError("value");
+                  }}
+                  min={0}
+                  max={FARE_STEPPER_MAX}
+                  step={1}
+                />
+              )}
+              {fieldErrors.value ? (
+                <p aria-live="polite" className="text-destructive text-xs" role="alert">
+                  {draft.type === "percent"
+                    ? "Percent must be greater than 0"
+                    : "Amount must be greater than 0"}
+                </p>
+              ) : null}
+            </div>
           </div>
 
           <Separator />
@@ -393,23 +454,16 @@ export function PromotionEditSheet({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="promo-min-fare">Minimum fare</Label>
-            <Input
-              id="promo-min-fare"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="No minimum"
-              value={draft.conditions.minimumSubtotal ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value.trim();
-                patchConditions({
-                  minimumSubtotal: raw === "" ? null : Math.max(0, Number(raw) || 0)
-                });
-              }}
-            />
-          </div>
+          <NumberStepper
+            id="promo-min-fare"
+            label="Minimum fare"
+            value={minFareStepperValue(draft.conditions.minimumSubtotal)}
+            onChange={(value) => patchConditions({ minimumSubtotal: minFareFromStepper(value) })}
+            min={0}
+            max={FARE_STEPPER_MAX}
+            step={1}
+            formatValue={formatMinFareStepper}
+          />
 
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-0.5">
