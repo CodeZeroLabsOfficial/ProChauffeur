@@ -7,15 +7,20 @@ import {
   LayoutDashboardIcon,
   ReceiptIcon,
   SettingsIcon,
+  TicketPercentIcon,
   UsersIcon,
   WaypointsIcon,
   type LucideIcon
 } from "lucide-react";
 
+import type { FeatureId } from "@/lib/models/license";
+
 export type NavItem = {
   title: string;
   href: string;
   icon?: LucideIcon;
+  /** When set, sidebar hides this item unless the feature is enabled. */
+  featureId?: FeatureId;
   items?: { title: string; href: string }[];
 };
 
@@ -41,17 +46,23 @@ export const navGroups: NavGroup[] = [
       { title: "Bookings", href: "/dashboard/bookings", icon: CalendarCheckIcon },
       { title: "Customers", href: "/dashboard/customers", icon: ContactIcon },
       { title: "Drivers", href: "/dashboard/drivers", icon: UsersIcon },
-      { title: "Fleet", href: "/dashboard/fleet", icon: CarFrontIcon },
-      {
-        title: "Locations",
-        href: "/dashboard/locations",
-        icon: Building2Icon
-      }
+      { title: "Fleet", href: "/dashboard/fleet", icon: CarFrontIcon }
     ]
   },
   {
     title: "Configuration",
     items: [
+      {
+        title: "Locations",
+        href: "/dashboard/locations",
+        icon: Building2Icon
+      },
+      {
+        title: "Promotions",
+        href: "/dashboard/promotions",
+        icon: TicketPercentIcon,
+        featureId: "loyaltyPromos"
+      },
       {
         title: "Settings",
         href: "/dashboard/settings/appearance",

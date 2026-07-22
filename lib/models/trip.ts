@@ -59,6 +59,8 @@ export interface Trip {
   quoteBreakdown?: QuoteLineItem[] | null;
   quoteComputedAt?: Date | null;
   quoteSnapshot?: TripQuoteSnapshot | null;
+  appliedPromoId?: string | null;
+  promoCode?: string | null;
   paymentStatus?: PaymentStatus | null;
   paymentSource?: PaymentSource | null;
   stripePaymentIntentId?: string | null;

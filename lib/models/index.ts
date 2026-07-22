@@ -17,6 +17,7 @@ export * from "@/lib/models/vehicle-class";
 export * from "@/lib/models/saved-payment-method";
 export * from "@/lib/models/workspace";
 export * from "@/lib/models/branch";
+export * from "@/lib/models/promotion";
 
 /** Firestore collection names. */
 export const Collections = {
@@ -34,7 +35,8 @@ export const Collections = {
   appSettings: "app_settings",
   notifications: "notifications",
   /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/vehicle_classes */
-  vehicleClasses: "vehicle_classes"
+  vehicleClasses: "vehicle_classes",
+  promotions: "promotions"
 } as const;
 
 /**

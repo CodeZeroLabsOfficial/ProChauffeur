@@ -24,9 +24,20 @@ export interface TripQuoteSnapshot {
   appliedZoneSurchargeIds: string[];
   appliedRuleId: string | null;
   addonIds: string[];
+  appliedPromoId: string | null;
+  promoCode: string | null;
   pickupPostcode: string;
   dropoffPostcode: string;
   scheduledPickupAt: Date;
+}
+
+/** Resolved promo already validated for this quote (engine stays pure). */
+export interface QuotePromoApplication {
+  id: string;
+  title: string;
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
 }
 
 export interface QuoteRequest {
@@ -41,6 +52,8 @@ export interface QuoteRequest {
   scheduledPickupAt: Date;
   bookedHours: number | null;
   addonIds: string[];
+  /** Optional validated promo to apply after add-ons. */
+  appliedPromo?: QuotePromoApplication | null;
 }
 
 export interface QuoteResult {

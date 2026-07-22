@@ -20,6 +20,8 @@ import type {
   PlanDefinition,
   PricingAddon,
   PricingConfig,
+  Promotion,
+  PromotionConditions,
   QuoteLineItem,
   Trip,
   TripQuoteSnapshot,
@@ -203,6 +205,8 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
     appliedZoneSurchargeIds: d.appliedZoneSurchargeIds ?? [],
     appliedRuleId: d.appliedRuleId ?? null,
     addonIds: d.addonIds ?? [],
+    appliedPromoId: d.appliedPromoId ?? null,
+    promoCode: d.promoCode ?? null,
     pickupPostcode: d.pickupPostcode ?? "",
     dropoffPostcode: d.dropoffPostcode ?? "",
     scheduledPickupAt: toDate(d.scheduledPickupAt) ?? new Date()
@@ -260,6 +264,8 @@ export function mapTrip(id: string, d: DocumentData): Trip {
       : null,
     quoteComputedAt: toDate(d.quoteComputedAt),
     quoteSnapshot: d.quoteSnapshot ? mapTripQuoteSnapshot(d.quoteSnapshot as DocumentData) : null,
+    appliedPromoId: d.appliedPromoId ?? null,
+    promoCode: d.promoCode ?? null,
     paymentStatus: d.paymentStatus ?? null,
     paymentSource: d.paymentSource ?? null,
     stripePaymentIntentId: d.stripePaymentIntentId ?? null,
@@ -433,6 +439,38 @@ export function mapInvoice(id: string, d: DocumentData): Invoice {
     stripeInvoiceId: d.stripeInvoiceId ?? null,
     stripeHostedInvoiceUrl: d.stripeHostedInvoiceUrl ?? null,
     stripePaymentIntentId: d.stripePaymentIntentId ?? null,
+    createdAt: toDate(d.createdAt) ?? new Date(),
+    updatedAt: toDate(d.updatedAt) ?? new Date()
+  };
+}
+
+function mapPromotionConditions(d: DocumentData): PromotionConditions {
+  return {
+    branchIds: Array.isArray(d.branchIds) ? (d.branchIds as string[]) : null,
+    startsAt: toDate(d.startsAt),
+    endsAt: toDate(d.endsAt),
+    tripTypes: Array.isArray(d.tripTypes) ? (d.tripTypes as PromotionConditions["tripTypes"]) : null,
+    vehicleClassIds: Array.isArray(d.vehicleClassIds) ? (d.vehicleClassIds as string[]) : null,
+    maxRedemptions: typeof d.maxRedemptions === "number" ? d.maxRedemptions : null,
+    perCustomerLimit: typeof d.perCustomerLimit === "number" ? d.perCustomerLimit : null,
+    minimumSubtotal: typeof d.minimumSubtotal === "number" ? d.minimumSubtotal : null
+  };
+}
+
+export function mapPromotion(id: string, d: DocumentData): Promotion {
+  const conditionsRaw =
+    d.conditions && typeof d.conditions === "object"
+      ? (d.conditions as DocumentData)
+      : d;
+  return {
+    id,
+    title: typeof d.title === "string" ? d.title : "",
+    code: typeof d.code === "string" ? d.code : "",
+    isEnabled: d.isEnabled !== false,
+    type: d.type === "fixed" ? "fixed" : "percent",
+    value: typeof d.value === "number" ? d.value : 0,
+    conditions: mapPromotionConditions(conditionsRaw),
+    redemptionCount: typeof d.redemptionCount === "number" ? d.redemptionCount : 0,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

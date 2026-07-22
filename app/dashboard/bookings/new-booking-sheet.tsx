@@ -12,8 +12,10 @@ import {
   vehicleClassesById
 } from "@/lib/bookings/booking-eligibility";
 import {
+  countCustomerPromoRedemptions,
   createRoundTripBookings,
   createTrip,
+  fetchPromotionByCode,
   updateTrip
 } from "@/lib/services/firebase-service";
 import {
@@ -35,15 +37,20 @@ import {
   quoteTripTypeForBookingMode,
   type BookingTripMode
 } from "@/lib/models";
-import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
+import type { QuotePromoApplication, QuoteRequest, QuoteResult } from "@/lib/models/quote";
+import { resolvePromoApplication } from "@/lib/pricing/apply-promo";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
+import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
 import { DateTimePicker } from "@/components/datetime-picker";
 import { NumberStepper } from "@/components/number-stepper";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -86,7 +93,8 @@ function quoteInputFingerprint(request: QuoteRequest): string {
     dropoffPostcode: request.dropoffPostcode,
     scheduledPickupAt: request.scheduledPickupAt.toISOString(),
     bookedHours: request.bookedHours,
-    addonIds: [...request.addonIds].sort()
+    addonIds: [...request.addonIds].sort(),
+    appliedPromoId: request.appliedPromo?.id ?? null
   });
 }
 
@@ -104,7 +112,8 @@ function buildQuoteRequestInput(
   dropoff: AddressSuggestion,
   scheduledPickupAt: Date,
   selectedAddonIds: string[],
-  bookedHours: number | null
+  bookedHours: number | null,
+  appliedPromo: QuotePromoApplication | null = null
 ): QuoteRequest {
   return {
     tripType,
@@ -117,7 +126,8 @@ function buildQuoteRequestInput(
     dropoffPostcode: postcodeFromAddress(dropoff),
     scheduledPickupAt,
     bookedHours,
-    addonIds: selectedAddonIds
+    addonIds: selectedAddonIds,
+    appliedPromo
   };
 }
 
@@ -141,8 +151,16 @@ function quoteFieldsFromResult(
     quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
     quoteBreakdown: quote.breakdown,
     quoteComputedAt: new Date(),
-    quoteSnapshot: quote.snapshot
+    quoteSnapshot: quote.snapshot,
+    appliedPromoId: quote.snapshot.appliedPromoId,
+    promoCode: quote.snapshot.promoCode
   };
+}
+
+function preTaxAmountFromQuote(quote: QuoteResult): number {
+  return quote.breakdown
+    .filter((line) => line.category !== "tax" && line.category !== "discount")
+    .reduce((sum, line) => sum + line.amount, 0);
 }
 
 function buildTripCustomerFields(customer: User) {
@@ -230,6 +248,10 @@ function resetFormFields(
     setNotes: (notes: string) => void;
     setVehicleClassId: (id: string | null) => void;
     setQuotedTotal: (total: number | null) => void;
+    setAppliedPromo: (promo: QuotePromoApplication | null) => void;
+    setPromoCodeInput: (code: string) => void;
+    setPromoError: (error: string | null) => void;
+    setPromoExpanded: (expanded: boolean) => void;
   }
 ) {
   setters.setFieldErrors({});
@@ -247,6 +269,10 @@ function resetFormFields(
   setters.setNotes("");
   setters.setVehicleClassId(null);
   setters.setQuotedTotal(null);
+  setters.setAppliedPromo(null);
+  setters.setPromoCodeInput("");
+  setters.setPromoError(null);
+  setters.setPromoExpanded(false);
 }
 
 export function NewBookingSheet({
@@ -266,6 +292,7 @@ export function NewBookingSheet({
   const { vehicles } = useVehicles();
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
+  const { enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
@@ -285,6 +312,11 @@ export function NewBookingSheet({
   const [vehicleClassId, setVehicleClassId] = useState<string | null>(null);
   const [quotedTotal, setQuotedTotal] = useState<number | null>(null);
   const [quoting, setQuoting] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<QuotePromoApplication | null>(null);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  const [applyingPromo, setApplyingPromo] = useState(false);
   const lastQuoteRef = useRef<
     { fingerprint: string; quote: QuoteResult } | { fingerprint: string; outbound: QuoteResult; returnLeg: QuoteResult }
   | null>(null);
@@ -341,6 +373,88 @@ export function NewBookingSheet({
 
   const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
 
+  async function applyPromoCode() {
+    if (!loyaltyPromosEnabled) return;
+    const code = promoCodeInput.trim();
+    if (!code) {
+      setPromoError("Enter a promo code.");
+      return;
+    }
+    if (!isValidCustomer(customer)) {
+      setPromoError("Select a customer before applying a promo.");
+      return;
+    }
+    if (
+      !pricingConfig ||
+      !operatorLocale ||
+      !isValidAddressSelection(pickup) ||
+      !isValidAddressSelection(dropoff) ||
+      !isValidScheduledPickup(scheduledPickupAt) ||
+      !vehicleClassId ||
+      !selectedVehicleClass
+    ) {
+      setPromoError("Complete trip details before applying a promo.");
+      return;
+    }
+
+    setApplyingPromo(true);
+    setPromoError(null);
+    try {
+      const promo = await fetchPromotionByCode(code);
+      if (!promo) {
+        setPromoError("Promo code not found.");
+        return;
+      }
+
+      const baseRequest = buildQuoteRequestInput(
+        quoteTripType,
+        vehicleClassId,
+        pickup,
+        dropoff,
+        scheduledPickupAt,
+        selectedAddonIds,
+        quoteTripType === "hourly" ? bookedHours : null,
+        null
+      );
+      const baseQuote = await buildQuoteForRequest(
+        baseRequest,
+        pricingConfig,
+        operatorLocale,
+        locations,
+        selectedVehicleClass
+      );
+      const customerUses = await countCustomerPromoRedemptions(customer.id, promo.id);
+      const resolved = resolvePromoApplication(promo, {
+        branchId: getActiveBranchId(),
+        tripType: quoteTripType,
+        vehicleClassId,
+        at: scheduledPickupAt,
+        subtotalBeforeDiscount: preTaxAmountFromQuote(baseQuote),
+        globalRedemptionCount: promo.redemptionCount,
+        customerRedemptionCount: customerUses
+      });
+      if (!resolved.ok) {
+        setPromoError(resolved.reason);
+        setAppliedPromo(null);
+        return;
+      }
+      setAppliedPromo(resolved.promo);
+      setPromoCodeInput(resolved.promo.code);
+      toast.success(`Promo ${resolved.promo.code} applied.`);
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "Could not apply promo.");
+      setAppliedPromo(null);
+    } finally {
+      setApplyingPromo(false);
+    }
+  }
+
+  function clearPromo() {
+    setAppliedPromo(null);
+    setPromoCodeInput("");
+    setPromoError(null);
+  }
+
   useEffect(() => {
     if (!open) {
       wasOpenRef.current = false;
@@ -360,7 +474,11 @@ export function NewBookingSheet({
         setBookedHours,
         setNotes,
         setVehicleClassId,
-        setQuotedTotal
+        setQuotedTotal,
+        setAppliedPromo,
+        setPromoCodeInput,
+        setPromoError,
+        setPromoExpanded
       });
     }
   }, [open]);
@@ -407,6 +525,29 @@ export function NewBookingSheet({
       setNotes(trip.notes ?? "");
       setVehicleClassId(trip.vehicleClassId ?? trip.vehicleSnapshot?.vehicleClassId ?? null);
       setQuotedTotal(trip.quotedTotal ?? null);
+      setPromoError(null);
+      const existingCode = trip.promoCode?.trim() ?? "";
+      if (existingCode) {
+        setPromoCodeInput(existingCode);
+        setPromoExpanded(true);
+        void fetchPromotionByCode(existingCode).then((promo) => {
+          if (!promo) {
+            setAppliedPromo(null);
+            return;
+          }
+          setAppliedPromo({
+            id: promo.id,
+            title: promo.title,
+            code: promo.code,
+            type: promo.type,
+            value: promo.value
+          });
+        });
+      } else {
+        setAppliedPromo(null);
+        setPromoCodeInput("");
+        setPromoExpanded(false);
+      }
       return;
     }
 
@@ -426,7 +567,11 @@ export function NewBookingSheet({
         setBookedHours,
         setNotes,
         setVehicleClassId,
-        setQuotedTotal
+        setQuotedTotal,
+        setAppliedPromo,
+        setPromoCodeInput,
+        setPromoError,
+        setPromoExpanded
       });
     }
   }, [open, editTrip, sourceTrip, users]);
@@ -469,7 +614,8 @@ export function NewBookingSheet({
             dropoff,
             scheduledPickupAt,
             selectedAddonIds,
-            null
+            null,
+            appliedPromo
           );
           const returnRequest = buildQuoteRequestInput(
             "transfer",
@@ -478,7 +624,8 @@ export function NewBookingSheet({
             pickup,
             scheduledReturnAt!,
             selectedAddonIds,
-            null
+            null,
+            appliedPromo
           );
           const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
           const cached = lastQuoteRef.current;
@@ -522,7 +669,8 @@ export function NewBookingSheet({
           dropoff,
           scheduledPickupAt,
           selectedAddonIds,
-          quoteTripType === "hourly" ? hourlyBookedHours : null
+          quoteTripType === "hourly" ? hourlyBookedHours : null,
+          appliedPromo
         );
         const fingerprint = quoteInputFingerprint(request);
         const cached = lastQuoteRef.current;
@@ -575,7 +723,8 @@ export function NewBookingSheet({
     bookedHours,
     vehicleClassId,
     selectedVehicleClass,
-    selectedAddonIds
+    selectedAddonIds,
+    appliedPromo
   ]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -655,7 +804,8 @@ export function NewBookingSheet({
           dropoff,
           scheduledPickupAt,
           selectedAddonIds,
-          null
+          null,
+          appliedPromo
         );
         const returnRequest = buildQuoteRequestInput(
           "transfer",
@@ -664,7 +814,8 @@ export function NewBookingSheet({
           pickup,
           scheduledReturnAt!,
           selectedAddonIds,
-          null
+          null,
+          appliedPromo
         );
         const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
         const cached = lastQuoteRef.current;
@@ -760,7 +911,8 @@ export function NewBookingSheet({
         dropoff,
         scheduledPickupAt,
         selectedAddonIds,
-        submitBookedHours
+        submitBookedHours,
+        appliedPromo
       );
       const fingerprint = quoteInputFingerprint(request);
       const cached = lastQuoteRef.current;
@@ -1013,6 +1165,60 @@ export function NewBookingSheet({
               />
             </div>
           </div>
+
+          {loyaltyPromosEnabled ? (
+            <div className="space-y-2">
+              <Label>Promo code</Label>
+              {appliedPromo ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="font-mono">
+                    {appliedPromo.code}
+                  </Badge>
+                  <span className="text-muted-foreground text-sm truncate">{appliedPromo.title}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    disabled={saving}
+                    onClick={clearPromo}>
+                    Remove
+                  </Button>
+                </div>
+              ) : promoExpanded ? (
+                <div className="flex gap-2">
+                  <Input
+                    id="bookingPromoCode"
+                    value={promoCodeInput}
+                    onChange={(e) => {
+                      setPromoCodeInput(e.target.value.toUpperCase());
+                      setPromoError(null);
+                    }}
+                    placeholder="Enter code"
+                    className="font-mono uppercase"
+                    disabled={saving || applyingPromo}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={saving || applyingPromo}
+                    onClick={() => void applyPromoCode()}>
+                    {applyingPromo ? "…" : "Apply"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto px-0"
+                  disabled={saving}
+                  onClick={() => setPromoExpanded(true)}>
+                  Add promo code
+                </Button>
+              )}
+              {promoError ? <p className="text-destructive text-sm">{promoError}</p> : null}
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-3 gap-3">
             <NumberStepper

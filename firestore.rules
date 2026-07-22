@@ -96,6 +96,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /promotions/{promoId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     // Branch sub-accounts: nested ops data under branches/{branchId}/…
     match /branches/{branchId} {
       allow read: if signedIn();

@@ -21,12 +21,38 @@ import {
   SidebarMenuSubItem
 } from "@/components/ui/sidebar";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { navGroups, type NavItem } from "@/components/layout/nav-config";
-import type { Appearance } from "@/lib/models";
+import { navGroups, type NavGroup, type NavItem } from "@/components/layout/nav-config";
+import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
+import type { Appearance, FeatureId } from "@/lib/models";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function featureAllowed(
+  featureId: FeatureId | undefined,
+  loyaltyPromosEnabled: boolean,
+  loyaltyReady: boolean
+): boolean {
+  if (!featureId) return true;
+  if (featureId === "loyaltyPromos") return !loyaltyReady || loyaltyPromosEnabled;
+  return true;
+}
+
+function filterNavGroups(
+  groups: NavGroup[],
+  loyaltyPromosEnabled: boolean,
+  loyaltyReady: boolean
+): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        featureAllowed(item.featureId, loyaltyPromosEnabled, loyaltyReady)
+      )
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 function NavMenuItem({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -81,6 +107,11 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { appearance?: Appearance | null }) {
   const pathname = usePathname();
+  const { ready: loyaltyReady, enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
+  const groups = React.useMemo(
+    () => filterNavGroups(navGroups, loyaltyPromosEnabled, loyaltyReady),
+    [loyaltyPromosEnabled, loyaltyReady]
+  );
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -88,7 +119,7 @@ export function AppSidebar({
         <BranchSwitcher appearance={appearance} />
       </SidebarHeader>
       <SidebarContent>
-        {navGroups.map((group) => (
+        {groups.map((group) => (
           <SidebarGroup key={group.title}>
             <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>

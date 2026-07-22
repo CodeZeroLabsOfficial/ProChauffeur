@@ -8,6 +8,7 @@ import {
   deleteField,
   getDoc,
   getDocs,
+  increment,
   limit as fsLimit,
   onSnapshot,
   orderBy,
@@ -61,6 +62,7 @@ import {
   type FleetLocation,
   type Invoice,
   type PricingConfig,
+  type Promotion,
   type Trip,
   type TripStatus,
   type User,
@@ -81,6 +83,7 @@ import {
   mapOperatingHours,
   mapPlansCatalog,
   mapPricingConfig,
+  mapPromotion,
   mapTrip,
   mapUser,
   mapVehicle,
@@ -98,7 +101,7 @@ import {
 } from "@/lib/branch/firestore-paths";
 import { listenQuery } from "@/lib/branch/listen-query";
 import { BranchSettingsDocs, DEFAULT_BRANCH_ID, BRANCH_OFFICE_FLEET_LOCATION_ID, type Branch } from "@/lib/models/branch";
-import { canCreateLocation } from "@/lib/models";
+import { canCreateLocation, normalizePromoCode } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -444,6 +447,9 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
 
 export async function createTrip(trip: Trip): Promise<void> {
   await setDoc(branchDocRef(db(), "trips", trip.id), tripFirestorePayload(trip));
+  if (trip.appliedPromoId) {
+    void incrementPromoRedemption(trip.appliedPromoId);
+  }
 }
 
 export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): Promise<void> {
@@ -451,6 +457,113 @@ export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): 
   batch.set(branchDocRef(db(), "trips", outbound.id), tripFirestorePayload(outbound));
   batch.set(branchDocRef(db(), "trips", returnLeg.id), tripFirestorePayload(returnLeg));
   await batch.commit();
+  const promoId = outbound.appliedPromoId || returnLeg.appliedPromoId;
+  if (promoId) {
+    void incrementPromoRedemption(promoId);
+  }
+}
+
+// ─────────────────────────────── Promotions ───────────────────────────────
+
+export function listenPromotions(onUpdate: (rows: Promotion[]) => void): Unsub {
+  return onSnapshot(
+    collection(db(), Collections.promotions),
+    (snap) => {
+      const rows = snapToList(snap, mapPromotion).sort((a, b) =>
+        a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
+      );
+      onUpdate(rows);
+    },
+    onSnapshotError("promotions", onUpdate)
+  );
+}
+
+export async function fetchPromotions(): Promise<Promotion[]> {
+  const snap = await getDocs(collection(db(), Collections.promotions));
+  return snapToList(snap, mapPromotion).sort((a, b) =>
+    a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
+  );
+}
+
+export async function fetchPromotionByCode(code: string): Promise<Promotion | null> {
+  const normalized = normalizePromoCode(code);
+  if (!normalized) return null;
+  const snap = await getDocs(
+    query(collection(db(), Collections.promotions), where("code", "==", normalized), fsLimit(1))
+  );
+  if (snap.empty) return null;
+  const docSnap = snap.docs[0];
+  return mapPromotion(docSnap.id, docSnap.data());
+}
+
+export async function countCustomerPromoRedemptions(
+  customerId: string,
+  promoId: string,
+  branchId: string = getActiveBranchId()
+): Promise<number> {
+  if (!customerId.trim() || !promoId.trim()) return 0;
+  const snap = await getDocs(
+    query(branchCollectionRef(db(), "trips", branchId), where("customerID", "==", customerId))
+  );
+  return snap.docs.filter((docSnap) => docSnap.data().appliedPromoId === promoId).length;
+}
+
+export async function savePromotion(promo: Promotion): Promise<void> {
+  const code = normalizePromoCode(promo.code);
+  if (!code) throw new Error("Promo code is required.");
+  if (!promo.title.trim()) throw new Error("Title is required.");
+  if (promo.value < 0) throw new Error("Discount value cannot be negative.");
+  if (promo.type === "percent" && promo.value > 1) {
+    throw new Error("Percent discount must be between 0 and 1 (e.g. 0.25 for 25%).");
+  }
+
+  const existing = await fetchPromotions();
+  const clash = existing.find((row) => row.id !== promo.id && normalizePromoCode(row.code) === code);
+  if (clash) throw new Error(`Promo code "${code}" is already in use.`);
+
+  const now = new Date();
+  await setDoc(
+    doc(db(), Collections.promotions, promo.id),
+    stripUndefined({
+      id: promo.id,
+      title: promo.title.trim(),
+      code,
+      isEnabled: promo.isEnabled,
+      type: promo.type,
+      value: promo.value,
+      conditions: {
+        branchIds: promo.conditions.branchIds?.length ? promo.conditions.branchIds : null,
+        startsAt: promo.conditions.startsAt ?? null,
+        endsAt: promo.conditions.endsAt ?? null,
+        tripTypes: promo.conditions.tripTypes?.length ? promo.conditions.tripTypes : null,
+        vehicleClassIds: promo.conditions.vehicleClassIds?.length
+          ? promo.conditions.vehicleClassIds
+          : null,
+        maxRedemptions: promo.conditions.maxRedemptions ?? null,
+        perCustomerLimit: promo.conditions.perCustomerLimit ?? null,
+        minimumSubtotal: promo.conditions.minimumSubtotal ?? null
+      },
+      redemptionCount: promo.redemptionCount ?? 0,
+      createdAt: promo.createdAt ?? now,
+      updatedAt: now
+    }),
+    { merge: true }
+  );
+}
+
+export async function deletePromotion(id: string): Promise<void> {
+  await deleteDoc(doc(db(), Collections.promotions, id));
+}
+
+async function incrementPromoRedemption(promoId: string): Promise<void> {
+  try {
+    await updateDoc(doc(db(), Collections.promotions, promoId), {
+      redemptionCount: increment(1),
+      updatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.error("Failed to increment promo redemption:", err);
+  }
 }
 
 // ─────────────────────────────── Users ───────────────────────────────

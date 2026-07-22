@@ -10,6 +10,7 @@ import type {
 import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult, QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { WeekdayNumber } from "@/lib/models/enums";
+import { applyPromoDiscountLayer } from "@/lib/pricing/apply-promo";
 import { metersToDistanceUnit } from "@/lib/pricing/distance";
 import { QuoteError } from "@/lib/pricing/errors";
 
@@ -490,9 +491,19 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   amount = addonResult.amount;
   lines = addonResult.lines;
 
+  const promoResult = applyPromoDiscountLayer(
+    amount,
+    lines,
+    request.appliedPromo ?? null,
+    lineId
+  );
+  amount = promoResult.amount;
+  lines = promoResult.lines;
+
   const taxed = applyTax(amount, lines, context.locale);
   const roundedTotal = roundTotal(taxed.total, context.pricing.quoteRounding);
 
+  const appliedPromo = request.appliedPromo ?? null;
   const snapshot: TripQuoteSnapshot = {
     schemaVersion: context.pricing.schemaVersion,
     tripType: request.tripType,
@@ -508,6 +519,8 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     appliedZoneSurchargeIds: zoneResult.appliedZoneSurchargeIds,
     appliedRuleId: timeResult.appliedRuleId,
     addonIds: request.addonIds,
+    appliedPromoId: appliedPromo?.id ?? null,
+    promoCode: appliedPromo?.code ?? null,
     pickupPostcode: request.pickupPostcode,
     dropoffPostcode: request.dropoffPostcode,
     scheduledPickupAt: request.scheduledPickupAt
