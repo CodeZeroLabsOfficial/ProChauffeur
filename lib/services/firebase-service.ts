@@ -22,7 +22,9 @@ import {
   type FirestoreError,
   type QuerySnapshot
 } from "firebase/firestore";
-import { firestore, firebaseAuth } from "@/lib/firebase/client";
+import { remove, ref as rtdbRef } from "firebase/database";
+
+import { firestore, firebaseAuth, realtimeDb } from "@/lib/firebase/client";
 import {
   coordinateToFirestoreField,
   coordinateToGeoPoint,
@@ -91,7 +93,7 @@ import {
 } from "@/lib/services/mappers";
 import { ConfigError } from "@/lib/pricing/errors";
 import { validateOperatorLocale, validatePricingConfig, validateVehicleClass } from "@/lib/pricing/validate";
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { getActiveBranchId, setActiveBranchId } from "@/lib/branch/active-branch-store";
 import {
   branchCollectionRef,
   branchDocRef,
@@ -100,8 +102,14 @@ import {
   branchesCollectionRef
 } from "@/lib/branch/firestore-paths";
 import { listenQuery } from "@/lib/branch/listen-query";
-import { BranchSettingsDocs, DEFAULT_BRANCH_ID, BRANCH_OFFICE_FLEET_LOCATION_ID, type Branch } from "@/lib/models/branch";
-import { canCreateLocation, normalizePromoCode } from "@/lib/models";
+import {
+  BRANCH_SUBCOLLECTIONS,
+  BranchSettingsDocs,
+  DEFAULT_BRANCH_ID,
+  BRANCH_OFFICE_FLEET_LOCATION_ID,
+  type Branch
+} from "@/lib/models/branch";
+import { canCreateLocation, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -334,6 +342,100 @@ export async function createLocationWithScaffold(
   for (const classDoc of classesSnap.docs) {
     await setDoc(branchDocRef(db(), "vehicle_classes", classDoc.id, branch.id), classDoc.data());
   }
+}
+
+async function deleteCollectionInBatches(colRef: ReturnType<typeof collection>): Promise<void> {
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const snap = await getDocs(query(colRef, fsLimit(400)));
+    if (snap.empty) break;
+    const batch = writeBatch(db());
+    for (const docSnap of snap.docs) {
+      batch.delete(docSnap.ref);
+    }
+    await batch.commit();
+  }
+}
+
+/**
+ * Deletes a Location (branch) and all nested ops data under `branches/{id}/`,
+ * clears RTDB live positions for that branch, and removes cross-references
+ * on users and promotions.
+ */
+export async function deleteBranch(branchId: string): Promise<void> {
+  const id = branchId.trim();
+  if (!id) throw new Error("Location id is required.");
+
+  const existing = await getDoc(branchMetaDocRef(db(), id));
+  if (!existing.exists()) return;
+
+  const siblings = await fetchBranches();
+  if (siblings.length <= 1) {
+    throw new Error("Cannot delete the only location.");
+  }
+
+  for (const sub of BRANCH_SUBCOLLECTIONS) {
+    await deleteCollectionInBatches(collection(db(), "branches", id, sub));
+  }
+
+  await deleteDoc(branchMetaDocRef(db(), id));
+
+  try {
+    await remove(rtdbRef(realtimeDb(), rtdbBranchLiveLocationsPath(id)));
+  } catch (err) {
+    console.error("Failed to clear live locations for deleted branch:", err);
+  }
+
+  const remaining = siblings.filter((b) => b.id !== id);
+  const fallbackId = remaining[0]?.id ?? DEFAULT_BRANCH_ID;
+  if (getActiveBranchId() === id) {
+    setActiveBranchId(fallbackId);
+  }
+
+  const usersSnap = await getDocs(collection(db(), Collections.users));
+  for (const userDoc of usersSnap.docs) {
+    const data = userDoc.data();
+    const homeBranchId = typeof data.homeBranchId === "string" ? data.homeBranchId : null;
+    const defaultBranchId = typeof data.defaultBranchId === "string" ? data.defaultBranchId : null;
+    const branchIds = Array.isArray(data.branchIds)
+      ? (data.branchIds as unknown[]).filter((v): v is string => typeof v === "string")
+      : null;
+
+    const nextBranchIds = branchIds?.includes(id)
+      ? branchIds.filter((bid) => bid !== id)
+      : branchIds;
+    const patch: Record<string, unknown> = {};
+
+    if (homeBranchId === id) {
+      patch.homeBranchId = nextBranchIds?.[0] ?? fallbackId;
+    }
+    if (defaultBranchId === id) {
+      patch.defaultBranchId = nextBranchIds?.[0] ?? fallbackId;
+    }
+    if (branchIds?.includes(id)) {
+      patch.branchIds = nextBranchIds?.length ? nextBranchIds : null;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await updateDoc(userDoc.ref, patch);
+    }
+  }
+
+  const promotions = await fetchPromotions();
+  for (const promo of promotions) {
+    const ids = promo.conditions.branchIds;
+    if (!ids?.includes(id)) continue;
+    const nextIds = ids.filter((bid) => bid !== id);
+    await savePromotion({
+      ...promo,
+      conditions: {
+        ...promo.conditions,
+        branchIds: nextIds.length ? nextIds : null
+      }
+    });
+  }
+
+  invalidatePricingConfigurationCache();
 }
 
 // ─────────────────────────────── Trips ───────────────────────────────

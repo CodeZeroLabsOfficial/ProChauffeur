@@ -1,9 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Building2, ExternalLink, Globe2, MapPin, Phone, Power } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
+import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
+import { InlineEditableField } from "@/components/inline-editable-field";
+import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
+import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
+import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
+import {
+  ProfileV2TabTrigger,
+  profileV2TabsListClassName
+} from "@/components/layout/profile-tab-bar";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +36,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
-import {
-  allocateUniqueBranchId,
-  createLocationWithScaffold,
-  syncOfficeFleetLocation,
-  upsertBranch
-} from "@/lib/services/firebase-service";
+import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
 import {
   buildBranch,
@@ -39,13 +45,300 @@ import {
   type Branch
 } from "@/lib/models";
 import {
-  ProfileV2TabTrigger,
-  profileV2TabsListClassName
-} from "@/components/layout/profile-tab-bar";
+  allocateUniqueBranchId,
+  createLocationWithScaffold,
+  syncOfficeFleetLocation,
+  upsertBranch
+} from "@/lib/services/firebase-service";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
 import { LocationServiceAreaForm } from "@/app/dashboard/locations/components/location-service-area-form";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
+
+function LocationOverviewFields({
+  branch,
+  onSaved
+}: {
+  branch: Branch;
+  onSaved: (branch: Branch) => void;
+}) {
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const office = officeSuggestionFromBranch(branch);
+  const timezone = branch.timeZoneIdentifier?.trim() || "Australia/Brisbane";
+  const timezoneOptions = useMemo(
+    () => optionsWithCurrent(COMMON_TIMEZONES, timezone),
+    [timezone]
+  );
+
+  async function saveBranch(
+    patch: Partial<Branch>,
+    officeSuggestion?: AddressSuggestion | null
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const updated: Branch = {
+        ...branch,
+        ...patch,
+        updatedAt: new Date()
+      };
+      await upsertBranch(updated);
+
+      const nextOffice = officeSuggestion ?? officeSuggestionFromBranch(updated);
+      if (nextOffice) {
+        await syncOfficeFleetLocation(updated.id, {
+          name: updated.name,
+          addressLine: nextOffice.addressLine,
+          latitude: nextOffice.coordinate.latitude,
+          longitude: nextOffice.coordinate.longitude,
+          timeZoneIdentifier: updated.timeZoneIdentifier
+        });
+      }
+
+      onSaved(updated);
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        message: err instanceof Error ? err.message : "Could not save."
+      };
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <SectionHeading>Details</SectionHeading>
+        <dl className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <DetailLabel icon={Building2}>Name</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="name"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={branch.name}
+                editLabel="name"
+                placeholder="e.g. Brisbane"
+                onSave={async (next) => {
+                  const trimmed = next.trim();
+                  if (!trimmed) {
+                    return { ok: false, message: "Name is required." };
+                  }
+                  return saveBranch({ name: trimmed });
+                }}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Phone}>Phone</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="phone"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={branch.officePhone?.trim() ?? ""}
+                inputType="tel"
+                editLabel="phone"
+                placeholder="Optional"
+                onSave={async (next) => saveBranch({ officePhone: next.trim() || null })}
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <DetailLabel icon={MapPin}>Office address</DetailLabel>
+            <dd>
+              <InlineOfficeAddressField
+                fieldId="office"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={office}
+                editLabel="office address"
+                onSave={async (suggestion) =>
+                  saveBranch(
+                    {
+                      officeAddressLine: suggestion.addressLine,
+                      officeLatitude: suggestion.coordinate.latitude,
+                      officeLongitude: suggestion.coordinate.longitude
+                    },
+                    suggestion
+                  )
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Globe2}>Time zone</DetailLabel>
+            <dd>
+              <InlineEditableSelectField
+                fieldId="timezone"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={timezone}
+                options={timezoneOptions}
+                editLabel="time zone"
+                onSave={async (next) => saveBranch({ timeZoneIdentifier: next.trim() || null })}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Power}>Active</DetailLabel>
+            <dd>
+              <InlineEditableToggleField
+                fieldId="active"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={branch.isActive !== false}
+                formatValue={(v) => (v ? "Active" : "Inactive")}
+                editLabel="active status"
+                onSave={async (next) => saveBranch({ isActive: next })}
+              />
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+function LocationCreateOverviewForm({
+  canCreate,
+  saving,
+  onCreated
+}: {
+  canCreate: boolean;
+  saving: boolean;
+  onCreated: (branch: Branch) => void;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [timezone, setTimezone] = useState("Australia/Brisbane");
+  const [isActive, setIsActive] = useState(true);
+  const [office, setOffice] = useState<AddressSuggestion | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const timezoneOptions = useMemo(
+    () => optionsWithCurrent(COMMON_TIMEZONES, timezone),
+    [timezone]
+  );
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      toast.error("Enter a location name.");
+      return;
+    }
+    if (!office) {
+      toast.error("Select an office address from the suggestions.");
+      return;
+    }
+    if (!canCreate) {
+      toast.error("Location limit reached.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const id = await allocateUniqueBranchId(trimmedName);
+      const created = buildBranch({
+        id,
+        name: trimmedName,
+        isActive,
+        timeZoneIdentifier: timezone.trim() || null,
+        officeAddressLine: office.addressLine,
+        officeLatitude: office.coordinate.latitude,
+        officeLongitude: office.coordinate.longitude,
+        officePhone: phone.trim() || null,
+        serviceArea: null
+      });
+      await createLocationWithScaffold(created);
+      onCreated(created);
+      toast.success("Location created.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save the location.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const busy = saving || submitting;
+
+  return (
+    <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="location-name">Name</Label>
+        <Input
+          id="location-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          placeholder="e.g. Brisbane"
+          disabled={busy}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-office">Office address</Label>
+        <AddressAutocomplete
+          id="location-office"
+          value={office}
+          onChange={setOffice}
+          required
+          disabled={busy}
+          placeholder="Search for the office address…"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-phone">Phone</Label>
+        <Input
+          id="location-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Optional"
+          disabled={busy}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-tz">Time zone</Label>
+        <Select value={timezone} onValueChange={setTimezone} disabled={busy}>
+          <SelectTrigger id="location-tz" className="w-full">
+            <SelectValue placeholder="Select time zone" />
+          </SelectTrigger>
+          <SelectContent>
+            {timezoneOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="location-active">Active</Label>
+          <p className="text-muted-foreground text-xs">
+            Inactive locations are hidden from the switcher and resolve.
+          </p>
+        </div>
+        <Switch
+          id="location-active"
+          checked={isActive}
+          onCheckedChange={setIsActive}
+          disabled={busy}
+        />
+      </div>
+
+      <SheetFooter className="px-0">
+        <Button type="submit" disabled={busy || !canCreate}>
+          {busy ? "Saving…" : "Create"}
+        </Button>
+      </SheetFooter>
+    </form>
+  );
+}
 
 export function LocationEditSheet({
   open,
@@ -65,103 +358,38 @@ export function LocationEditSheet({
 
   const [tab, setTab] = useState("overview");
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [timezone, setTimezone] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [office, setOffice] = useState<AddressSuggestion | null>(null);
   const [savedBranch, setSavedBranch] = useState<Branch | null>(branch);
 
   useEffect(() => {
     if (!open) return;
     setTab("overview");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     setSavedBranch(branch);
-    setName(branch?.name ?? "");
-    setPhone(branch?.officePhone ?? "");
-    setTimezone(branch?.timeZoneIdentifier?.trim() || "Australia/Brisbane");
-    setIsActive(branch?.isActive !== false);
-    setOffice(officeSuggestionFromBranch(branch));
   }, [open, branch]);
 
-  const timezoneOptions = useMemo(
-    () => optionsWithCurrent(COMMON_TIMEZONES, timezone),
-    [timezone]
-  );
-
   const working = savedBranch ?? branch;
+  const displayBranch = useSheetDisplayItem(working, open);
   const locationExists = working != null;
+  const sheetTitle =
+    displayBranch?.name?.trim() || working?.name?.trim() || (isNew ? "New location" : "Location");
 
   useEffect(() => {
     if (!open || !working) return;
     setBranchId(working.id);
   }, [open, working, setBranchId]);
 
-  async function saveOverview(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      toast.error("Enter a location name.");
-      return;
-    }
-    if (!office) {
-      toast.error("Select an office address from the suggestions.");
-      return;
-    }
+  function handleCreated(created: Branch) {
+    setSavedBranch(created);
+    onSaved(created);
+    setTab("service-area");
+  }
 
-    setSaving(true);
-    try {
-      if (isNew && !savedBranch) {
-        if (!canCreate) {
-          toast.error("Location limit reached.");
-          return;
-        }
-        const id = await allocateUniqueBranchId(trimmedName);
-        const created = buildBranch({
-          id,
-          name: trimmedName,
-          isActive,
-          timeZoneIdentifier: timezone.trim() || null,
-          officeAddressLine: office.addressLine,
-          officeLatitude: office.coordinate.latitude,
-          officeLongitude: office.coordinate.longitude,
-          officePhone: phone.trim() || null,
-          serviceArea: null
-        });
-        await createLocationWithScaffold(created);
-        setSavedBranch(created);
-        onSaved(created);
-        toast.success("Location created.");
-        setTab("service-area");
-      } else {
-        const current = working!;
-        const updated: Branch = {
-          ...current,
-          name: trimmedName,
-          isActive,
-          timeZoneIdentifier: timezone.trim() || null,
-          officeAddressLine: office.addressLine,
-          officeLatitude: office.coordinate.latitude,
-          officeLongitude: office.coordinate.longitude,
-          officePhone: phone.trim() || null,
-          updatedAt: new Date()
-        };
-        await upsertBranch(updated);
-        await syncOfficeFleetLocation(updated.id, {
-          name: updated.name,
-          addressLine: office.addressLine,
-          latitude: office.coordinate.latitude,
-          longitude: office.coordinate.longitude,
-          timeZoneIdentifier: updated.timeZoneIdentifier
-        });
-        setSavedBranch(updated);
-        onSaved(updated);
-        toast.success("Location updated.");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the location.");
-    } finally {
-      setSaving(false);
-    }
+  function handleSaved(updated: Branch) {
+    setSavedBranch(updated);
+    onSaved(updated);
   }
 
   async function saveServiceArea(serviceArea: Branch["serviceArea"]) {
@@ -175,8 +403,7 @@ export function LocationEditSheet({
         updatedAt: new Date()
       };
       await upsertBranch(updated);
-      setSavedBranch(updated);
-      onSaved(updated);
+      handleSaved(updated);
       toast.success("Service area saved.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save the service area.");
@@ -189,8 +416,22 @@ export function LocationEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{working?.name?.trim() || (isNew ? "New location" : "Location")}</SheetTitle>
-          <SheetDescription>Location</SheetDescription>
+          <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
+            <div className="space-y-1">
+              <SheetTitle>{sheetTitle}</SheetTitle>
+              <SheetDescription>Location</SheetDescription>
+            </div>
+            {displayBranch ? (
+              <Button variant="outline" asChild>
+                <Link
+                  href={`/dashboard/locations/${displayBranch.id}`}
+                  onClick={() => onOpenChange(false)}>
+                  <ExternalLink />
+                  View profile
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </SheetHeader>
 
         <div className="px-4 pb-4">
@@ -212,87 +453,22 @@ export function LocationEditSheet({
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
-              <form onSubmit={saveOverview} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location-name">Name</Label>
-                  <Input
-                    id="location-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    placeholder="e.g. Brisbane"
-                    disabled={saving}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location-office">Office address</Label>
-                  <AddressAutocomplete
-                    id="location-office"
-                    value={office}
-                    onChange={setOffice}
-                    required
-                    disabled={saving}
-                    placeholder="Search for the office address…"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location-phone">Phone</Label>
-                  <Input
-                    id="location-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Optional"
-                    disabled={saving}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location-tz">Time zone</Label>
-                  <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
-                    <SelectTrigger id="location-tz" className="w-full">
-                      <SelectValue placeholder="Select time zone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timezoneOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="location-active">Active</Label>
-                    <p className="text-muted-foreground text-xs">
-                      Inactive locations are hidden from the switcher and resolve.
-                    </p>
-                  </div>
-                  <Switch
-                    id="location-active"
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
-                    disabled={saving}
-                  />
-                </div>
-
-                <SheetFooter className="px-0">
-                  <Button type="submit" disabled={saving || (isNew && !savedBranch && !canCreate)}>
-                    {saving ? "Saving…" : isNew && !savedBranch ? "Create" : "Save"}
-                  </Button>
-                </SheetFooter>
-              </form>
+              {working ? (
+                <LocationOverviewFields branch={working} onSaved={handleSaved} />
+              ) : (
+                <LocationCreateOverviewForm
+                  canCreate={canCreate}
+                  saving={saving}
+                  onCreated={handleCreated}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="service-area" className="mt-0">
               {working ? (
                 <LocationServiceAreaForm
                   branch={working}
-                  officeSuggestion={office}
+                  officeSuggestion={officeSuggestionFromBranch(working)}
                   saving={saving}
                   onSave={saveServiceArea}
                   idPrefix="edit-location"
