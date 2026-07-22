@@ -19,7 +19,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -52,11 +52,9 @@ function formatScheduleHours(
 
 export function LocationOperatingHoursTab({
   branchId,
-  timeZoneIdentifier,
   nestedSheet = false
 }: {
   branchId: string;
-  timeZoneIdentifier: string | null | undefined;
   nestedSheet?: boolean;
 }) {
   const [operatingHours, setOperatingHours] = useState<AppFleetOperatingHours>(emptyOperatingHours);
@@ -108,16 +106,11 @@ export function LocationOperatingHoursTab({
     }
   }
 
-  const tz = timeZoneIdentifier?.trim() || "Not set";
-
   return (
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle>Operating hours</CardTitle>
-            <CardDescription>Weekly operating windows ({tz})</CardDescription>
-          </div>
+          <CardTitle>Operating hours</CardTitle>
           <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
             <PlusIcon /> Add schedule
           </Button>

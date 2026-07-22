@@ -31,6 +31,8 @@ export interface Branch {
   name: string;
   isActive: boolean;
   timeZoneIdentifier?: string | null;
+  /** Optional square image for location profile / sheet hero. */
+  imageUrl?: string | null;
   /** Office / operates-from address (replaces Garage in product UI). */
   officeAddressLine?: string | null;
   officeLatitude?: number | null;
@@ -84,6 +86,7 @@ export function buildBranch(
   return {
     isActive: true,
     timeZoneIdentifier: null,
+    imageUrl: null,
     officeAddressLine: null,
     officeLatitude: null,
     officeLongitude: null,

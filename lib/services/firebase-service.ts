@@ -223,6 +223,7 @@ export async function upsertBranch(branch: Branch): Promise<void> {
       name: branch.name,
       isActive: branch.isActive,
       timeZoneIdentifier: branch.timeZoneIdentifier ?? null,
+      imageUrl: branch.imageUrl ?? null,
       officeAddressLine: branch.officeAddressLine ?? null,
       officeLatitude: branch.officeLatitude ?? null,
       officeLongitude: branch.officeLongitude ?? null,
@@ -807,6 +808,23 @@ export async function uploadVehicleClassImage(classId: string, file: File): Prom
   }
   if (!body.imageUrl) {
     throw new Error("Could not upload vehicle class image.");
+  }
+  return body.imageUrl;
+}
+
+export async function uploadBranchImage(branchId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/locations/${encodeURIComponent(branchId)}/image`, {
+    method: "POST",
+    body: formData
+  });
+  const body = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload location image.");
+  }
+  if (!body.imageUrl) {
+    throw new Error("Could not upload location image.");
   }
   return body.imageUrl;
 }

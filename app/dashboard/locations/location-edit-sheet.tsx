@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ExternalLink, Globe2, MapPin, Phone } from "lucide-react";
+import { Building2, ExternalLink, Globe2, ImagePlusIcon, MapPin, Phone, Power } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
@@ -16,6 +16,7 @@ import {
 } from "@/components/layout/profile-tab-bar";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
 import {
@@ -46,6 +48,7 @@ import {
   allocateUniqueBranchId,
   createLocationWithScaffold,
   syncOfficeFleetLocation,
+  uploadBranchImage,
   upsertBranch
 } from "@/lib/services/firebase-service";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
@@ -53,6 +56,67 @@ import { LocationPricingPanel } from "@/app/dashboard/locations/components/locat
 import { LocationServiceAreaForm } from "@/app/dashboard/locations/components/location-service-area-form";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 
+function LocationImageUpload({
+  branch,
+  onSaved
+}: {
+  branch: Branch;
+  onSaved: (branch: Branch) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(branch.imageUrl ?? null);
+
+  const [{ files }, { openFileDialog, getInputProps, clearFiles }] = useFileUpload({
+    accept: "image/*",
+    onFilesAdded: (added) => {
+      const file = added[0]?.file;
+      if (!(file instanceof File)) return;
+
+      void (async () => {
+        setUploading(true);
+        try {
+          const imageUrl = await uploadBranchImage(branch.id, file);
+          const updated: Branch = { ...branch, imageUrl, updatedAt: new Date() };
+          await upsertBranch(updated);
+          setLocalImageUrl(imageUrl);
+          onSaved(updated);
+          clearFiles();
+          toast.success("Location image updated.");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not upload image.");
+        } finally {
+          setUploading(false);
+        }
+      })();
+    }
+  });
+
+  const previewUrl = files[0]?.preview ?? localImageUrl;
+
+  useEffect(() => {
+    setLocalImageUrl(branch.imageUrl ?? null);
+  }, [branch.imageUrl]);
+
+  return (
+    <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
+      {previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- local blob / Storage download URL preview
+        <img alt="" className="size-full object-cover" height={80} src={previewUrl} width={80} />
+      ) : (
+        <Building2 className="text-muted-foreground size-8" aria-hidden />
+      )}
+      <button
+        type="button"
+        aria-label="Change location image"
+        disabled={uploading}
+        className="focus-visible:border-ring focus-visible:ring-ring/50 absolute flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+        onClick={openFileDialog}>
+        <ImagePlusIcon aria-hidden size={16} />
+      </button>
+      <input {...getInputProps()} aria-label="Upload location image" className="sr-only" />
+    </div>
+  );
+}
 function LocationOverviewFields({
   branch,
   onSaved
@@ -430,7 +494,19 @@ export function LocationEditSheet({
           </div>
         </SheetHeader>
 
-        <div className="px-4 pb-4">
+        <div className="space-y-4 px-4 pb-4">
+          {working ? (
+            <div className="inline-flex items-center gap-4 align-top">
+              <LocationImageUpload key={working.id} branch={working} onSaved={handleSaved} />
+              <div className="space-y-2">
+                <p className="text-lg font-semibold">{working.name.trim() || "Location"}</p>
+                <DetailSheetIconBadge icon={Power}>
+                  {working.isActive !== false ? "Active" : "Inactive"}
+                </DetailSheetIconBadge>
+              </div>
+            </div>
+          ) : null}
+
           <Tabs value={tab} onValueChange={setTab} className="gap-4">
             <TabsList className={profileV2TabsListClassName}>
               <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
@@ -485,11 +561,7 @@ export function LocationEditSheet({
 
             <TabsContent value="hours" className="mt-0 space-y-4">
               {working ? (
-                <LocationOperatingHoursTab
-                  branchId={working.id}
-                  timeZoneIdentifier={working.timeZoneIdentifier}
-                  nestedSheet
-                />
+                <LocationOperatingHoursTab branchId={working.id} nestedSheet />
               ) : (
                 <p className="text-muted-foreground text-sm">
                   Save the location overview first to configure operating hours.

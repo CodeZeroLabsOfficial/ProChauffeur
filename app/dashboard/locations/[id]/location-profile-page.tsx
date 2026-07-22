@@ -127,10 +127,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
           </TabsContent>
 
           <TabsContent value="hours" className="mt-0 space-y-4">
-            <LocationOperatingHoursTab
-              branchId={branch.id}
-              timeZoneIdentifier={branch.timeZoneIdentifier}
-            />
+            <LocationOperatingHoursTab branchId={branch.id} />
           </TabsContent>
 
           <TabsContent value="classes" className="mt-0 space-y-4">
