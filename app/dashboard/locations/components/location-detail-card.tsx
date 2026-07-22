@@ -14,7 +14,8 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="relative">
         <div
-          className="bg-muted relative aspect-3/1 w-full md:max-h-[240px]"
+          className="bg-muted relative aspect-3/1 w-full bg-cover bg-center md:max-h-[240px]"
+          style={{ backgroundImage: "url('/images/location-header-world-map.png')" }}
           aria-hidden
         />
         <div className="relative -mt-10 flex items-end gap-4 px-4 pb-5 sm:px-6 md:-mt-12 md:px-8 md:pb-6">
