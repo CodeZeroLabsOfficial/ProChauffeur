@@ -1,107 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
-import { Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 
-import { PromotionEditSheet } from "@/app/dashboard/promotions/promotion-edit-sheet";
+import { PromotionsDataTable } from "@/app/dashboard/promotions/data-table";
 import { ListPageHeader } from "@/components/list-page-header";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
-import { useVehicleClasses } from "@/hooks/use-collections";
-import { cn } from "@/lib/utils";
-import type { Branch, Promotion } from "@/lib/models";
-import {
-  deletePromotion,
-  listenBranches,
-  listenPromotions
-} from "@/lib/services/firebase-service";
-
-function formatDiscount(promo: Promotion): string {
-  if (promo.type === "percent") {
-    return `${Math.round(promo.value * 10000) / 100}%`;
-  }
-  return promo.value.toFixed(2);
-}
 
 export default function PromotionsPage() {
   const { ready, enabled } = useLoyaltyPromosEnabled();
-  const { vehicleClasses } = useVehicleClasses();
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editing, setEditing] = useState<Promotion | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const unsubPromo = listenPromotions((rows) => {
-      setPromotions(rows);
-      setLoading(false);
-    });
-    const unsubBranches = listenBranches(setBranches);
-    return () => {
-      unsubPromo();
-      unsubBranches();
-    };
-  }, [enabled]);
-
-  function openNew() {
-    setEditing(null);
-    setSheetOpen(true);
-  }
-
-  function openEdit(promo: Promotion) {
-    setEditing(promo);
-    setSheetOpen(true);
-  }
-
-  async function confirmDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await deletePromotion(pendingDelete.id);
-      toast.success("Promotion deleted.");
-      if (editing?.id === pendingDelete.id) {
-        setSheetOpen(false);
-        setEditing(null);
-      }
-      setPendingDelete(null);
-    } catch {
-      toast.error("Could not delete promotion.");
-    } finally {
-      setDeleting(false);
-    }
-  }
+  const [createOpen, setCreateOpen] = useState(false);
 
   if (!ready) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -111,7 +22,7 @@ export default function PromotionsPage() {
     return (
       <>
         <ListPageHeader title="Promotions" />
-        <Card>
+        <Card className="mt-4">
           <CardHeader>
             <CardTitle>Promotions not included</CardTitle>
             <CardDescription>
@@ -134,113 +45,12 @@ export default function PromotionsPage() {
       <ListPageHeader
         title="Promotions"
         actions={
-          <Button onClick={openNew}>
+          <Button onClick={() => setCreateOpen(true)}>
             <PlusCircledIcon /> Add promotion
           </Button>
         }
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Promo codes</CardTitle>
-          <CardDescription>
-            Company-wide offers with optional Location, schedule, and usage conditions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground text-sm">Loading…</p>
-          ) : promotions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No promotions yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Uses</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {promotions.map((promo) => (
-                  <TableRow
-                    key={promo.id}
-                    className={cn(
-                      "cursor-pointer",
-                      !promo.isEnabled && "text-muted-foreground"
-                    )}
-                    onClick={() => openEdit(promo)}>
-                    <TableCell className="font-medium">{promo.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-mono">
-                        {promo.code}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDiscount(promo)}</TableCell>
-                    <TableCell>
-                      {promo.redemptionCount}
-                      {promo.conditions.maxRedemptions != null
-                        ? ` / ${promo.conditions.maxRedemptions}`
-                        : ""}
-                    </TableCell>
-                    <TableCell>{promo.isEnabled ? "Yes" : "No"}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setPendingDelete(promo)}>
-                          <Trash2Icon className="size-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <AlertDialog
-        open={pendingDelete !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !deleting) setPendingDelete(null);
-        }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete promotion?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete{" "}
-              {pendingDelete?.title || pendingDelete?.code || "this promotion"}. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleting}
-              onClick={(e) => void confirmDelete(e)}>
-              {deleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <PromotionEditSheet
-        promotion={editing}
-        branches={branches}
-        vehicleClasses={vehicleClasses}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
+      <PromotionsDataTable createOpen={createOpen} onCreateOpenChange={setCreateOpen} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ import {
   type VehicleClass
 } from "@/lib/models";
 import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
 
 const TRIP_TYPE_OPTIONS = [
@@ -182,6 +183,7 @@ export function PromotionEditSheet({
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
+  const [currency, setCurrency] = useState("AUD");
   const [seedKey, setSeedKey] = useState("");
 
   const sheetKey = promotion?.id ?? "__new__";
@@ -193,6 +195,13 @@ export function PromotionEditSheet({
     setFixedAmount(fixedAmountFromPromo(next));
     setFieldErrors({});
   }
+
+  useEffect(() => {
+    if (!open) return;
+    getCachedOperatorLocale()
+      .then((locale) => setCurrency(locale.currency || "AUD"))
+      .catch(() => setCurrency("AUD"));
+  }, [open]);
 
   const branchOptions = branches.map((branch) => ({
     value: branch.id,
@@ -353,7 +362,7 @@ export function PromotionEditSheet({
               ) : (
                 <NumberStepper
                   id="promo-value"
-                  label="Amount"
+                  label={`Amount (${currency})`}
                   value={fixedAmount}
                   onChange={(value) => {
                     setFixedAmount(value);
@@ -361,7 +370,8 @@ export function PromotionEditSheet({
                   }}
                   min={0}
                   max={FARE_STEPPER_MAX}
-                  step={1}
+                  step={0.01}
+                  decimals={2}
                 />
               )}
               {fieldErrors.value ? (
