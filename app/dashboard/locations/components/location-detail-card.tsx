@@ -33,7 +33,7 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
               <Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />
             )}
           </div>
-          <div className="min-w-0 flex-1 space-y-2 pb-1">
+          <div className="flex min-w-0 flex-1 flex-col justify-end gap-1 self-stretch pb-1">
             <h2 className="text-xl font-bold tracking-tight lg:text-2xl">{branch.name}</h2>
             <LocationStatusBadge isActive={branch.isActive !== false} />
           </div>
