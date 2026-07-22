@@ -409,34 +409,35 @@ export function PromotionEditSheet({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Trip types</Label>
-            <MultiSelectField
-              id="promo-trip-types"
-              options={TRIP_TYPE_OPTIONS}
-              selected={(draft.conditions.tripTypes as string[]) ?? []}
-              onSelectedChange={(ids) =>
-                patchConditions({
-                  tripTypes: ids.length ? (ids as TripType[]) : null
-                })
-              }
-              placeholder="All trip types"
-              emptyMessage="No trip types."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Vehicle classes</Label>
-            <MultiSelectField
-              id="promo-classes"
-              options={vehicleClassOptions}
-              selected={draft.conditions.vehicleClassIds ?? []}
-              onSelectedChange={(ids) =>
-                patchConditions({ vehicleClassIds: ids.length ? ids : null })
-              }
-              placeholder="All classes"
-              emptyMessage="No vehicle classes."
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Trip types</Label>
+              <MultiSelectField
+                id="promo-trip-types"
+                options={TRIP_TYPE_OPTIONS}
+                selected={(draft.conditions.tripTypes as string[]) ?? []}
+                onSelectedChange={(ids) =>
+                  patchConditions({
+                    tripTypes: ids.length ? (ids as TripType[]) : null
+                  })
+                }
+                placeholder="All trip types"
+                emptyMessage="No trip types."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vehicle classes</Label>
+              <MultiSelectField
+                id="promo-classes"
+                options={vehicleClassOptions}
+                selected={draft.conditions.vehicleClassIds ?? []}
+                onSelectedChange={(ids) =>
+                  patchConditions({ vehicleClassIds: ids.length ? ids : null })
+                }
+                placeholder="All classes"
+                emptyMessage="No vehicle classes."
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

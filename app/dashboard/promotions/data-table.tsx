@@ -30,8 +30,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { LocationStatusBadge } from "@/components/location-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -119,6 +121,29 @@ export function PromotionsDataTable({
   const columns = useMemo<ColumnDef<PromotionRow>[]>(
     () => [
       {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false
+      },
+      {
         id: "title",
         accessorKey: "title",
         header: "Title",
@@ -166,8 +191,8 @@ export function PromotionsDataTable({
       {
         id: "status",
         accessorKey: "status",
-        header: "Active",
-        cell: ({ row }) => (row.original.isEnabled ? "Yes" : "No"),
+        header: "Status",
+        cell: ({ row }) => <LocationStatusBadge isActive={row.original.isEnabled} />,
         filterFn: multiSelectFilter
       },
       {
@@ -305,6 +330,7 @@ export function PromotionsDataTable({
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
                     className={cn(
                       "cursor-pointer",
                       !row.original.isEnabled && "text-muted-foreground"
@@ -314,7 +340,7 @@ export function PromotionsDataTable({
                       <TableCell
                         key={cell.id}
                         onClick={
-                          cell.column.id === "actions"
+                          cell.column.id === "actions" || cell.column.id === "select"
                             ? (e) => e.stopPropagation()
                             : undefined
                         }>
