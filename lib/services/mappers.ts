@@ -334,7 +334,6 @@ export function mapLicense(d: DocumentData): AppLicense {
     maxAdmins: intOrUnlimited("maxAdmins"),
     maxDrivers: intOrUnlimited("maxDrivers"),
     maxLocations,
-    subscriptionTier: typeof d.subscriptionTier === "string" ? d.subscriptionTier.trim() : "",
     featureFlags
   };
 }

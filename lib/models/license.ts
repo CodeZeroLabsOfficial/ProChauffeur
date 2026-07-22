@@ -39,7 +39,6 @@ export interface AppLicense {
   maxAdmins: number;
   maxDrivers: number;
   maxLocations: number;
-  subscriptionTier: string;
   featureFlags: Partial<Record<FeatureId, FeatureFlagValue>>;
 }
 
@@ -56,7 +55,6 @@ export const defaultLicense: AppLicense = {
   maxAdmins: UNLIMITED,
   maxDrivers: UNLIMITED,
   maxLocations: 1,
-  subscriptionTier: "",
   featureFlags: {}
 };
 
@@ -124,8 +122,6 @@ export function featureSource(
 export function planLabel(license: AppLicense, catalog: AppPlansCatalog): string {
   const id = license.planId.trim();
   if (id && catalog.plans[id]?.label) return catalog.plans[id].label;
-  const tier = license.subscriptionTier.trim();
-  if (tier) return tier;
   if (catalog.defaultPlanId && catalog.plans[catalog.defaultPlanId]?.label) {
     return catalog.plans[catalog.defaultPlanId].label;
   }
