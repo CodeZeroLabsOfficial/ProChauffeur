@@ -14,7 +14,6 @@ import {
   ProfileV2TabTrigger,
   profileV2TabsListClassName
 } from "@/components/layout/profile-tab-bar";
-import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
@@ -418,7 +417,6 @@ export function LocationEditSheet({
   canCreate: boolean;
   onSaved: (branch: Branch) => void;
 }) {
-  const { setBranchId } = useActiveBranch();
   const isNew = branch == null;
 
   const [tab, setTab] = useState("overview");
@@ -438,11 +436,6 @@ export function LocationEditSheet({
   const working = savedBranch ?? branch;
   const displayBranch = useSheetDisplayItem(working, open);
   const locationExists = working != null;
-
-  useEffect(() => {
-    if (!open || !working) return;
-    setBranchId(working.id);
-  }, [open, working, setBranchId]);
 
   function handleCreated(created: Branch) {
     setSavedBranch(created);

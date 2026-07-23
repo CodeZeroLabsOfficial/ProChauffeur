@@ -13,7 +13,6 @@ import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/component
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -30,7 +29,6 @@ function isLocationTab(value: string | null): value is LocationTab {
 export function LocationProfilePage({ locationId }: { locationId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setBranchId } = useActiveBranch();
   const { trips } = useTrips();
   const { invoices } = useInvoices();
 
@@ -55,10 +53,6 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
       .catch(() => setBranch(null))
       .finally(() => setLoading(false));
   }, [loadBranch]);
-
-  useEffect(() => {
-    setBranchId(locationId);
-  }, [locationId, setBranchId]);
 
   function setTab(tab: LocationTab) {
     const params = new URLSearchParams(searchParams.toString());

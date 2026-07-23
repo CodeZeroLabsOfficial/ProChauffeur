@@ -27,6 +27,7 @@ export function VehicleDetailCard({
   return (
     <ProfileHeroCard
       bannerImageUrl="/images/vehicle-header-car.png"
+      bannerClassName="bg-cover bg-center"
       backHref="/dashboard/fleet"
       backAriaLabel="Back to fleet"
       onEditClick={onEditClick}

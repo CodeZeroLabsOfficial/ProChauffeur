@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 export function ProfileHeroCard({
   bannerImageUrl,
+  bannerClassName,
   backHref,
   backAriaLabel,
   onEditClick,
@@ -21,6 +22,7 @@ export function ProfileHeroCard({
   className
 }: {
   bannerImageUrl: string;
+  bannerClassName?: string;
   backHref: string;
   backAriaLabel: string;
   onEditClick: () => void;
@@ -35,7 +37,10 @@ export function ProfileHeroCard({
     <div className={cn("overflow-hidden rounded-2xl border bg-card shadow-sm", className)}>
       <div className="relative">
         <div
-          className="bg-muted relative aspect-3/1 w-full bg-cover bg-center md:max-h-[160px]"
+          className={cn(
+            "bg-muted relative aspect-3/1 w-full bg-cover bg-center md:max-h-[160px]",
+            bannerClassName
+          )}
           style={{ backgroundImage: `url('${bannerImageUrl}')` }}
           aria-hidden
         />
