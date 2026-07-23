@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ChevronLeftIcon, PencilIcon } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 
 import { LocationDetailCard } from "@/app/dashboard/locations/components/location-detail-card";
 import { LocationOverviewPanel } from "@/app/dashboard/locations/components/location-overview-panel";
@@ -25,22 +25,6 @@ type LocationTab = (typeof LOCATION_TABS)[number];
 
 function isLocationTab(value: string | null): value is LocationTab {
   return LOCATION_TABS.includes(value as LocationTab);
-}
-
-function LocationProfileHeader({ onEditClick }: { onEditClick: () => void }) {
-  return (
-    <div className="flex items-center justify-between">
-      <Button asChild variant="outline" size="icon">
-        <Link href="/dashboard/locations" aria-label="Back to locations">
-          <ChevronLeftIcon />
-        </Link>
-      </Button>
-      <Button size="sm" onClick={onEditClick}>
-        <PencilIcon />
-        Edit
-      </Button>
-    </div>
-  );
 }
 
 export function LocationProfilePage({ locationId }: { locationId: string }) {
@@ -91,7 +75,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   if (!branch) {
     return (
       <div className="space-y-4">
-        <Button asChild variant="outline" size="icon">
+        <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/locations" aria-label="Back to locations">
             <ChevronLeftIcon />
           </Link>
@@ -104,10 +88,8 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   return (
     <>
       <div className="space-y-4">
-        <LocationProfileHeader onEditClick={() => setEditOpen(true)} />
-
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
-          <LocationDetailCard branch={branch} />
+          <LocationDetailCard branch={branch} onEditClick={() => setEditOpen(true)} />
 
           <TabsContent value="overview" className="mt-0 space-y-4">
             <LocationOverviewPanel

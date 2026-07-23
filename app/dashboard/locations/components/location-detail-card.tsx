@@ -1,4 +1,7 @@
-import { Building2 } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { Building2, ChevronLeftIcon, PencilIcon } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
 import { LocationStatusBadge } from "@/components/location-status-badge";
@@ -6,8 +9,15 @@ import {
   ProfileV2TabBar,
   ProfileV2TabTrigger
 } from "@/components/layout/profile-tab-bar";
+import { Button } from "@/components/ui/button";
 
-export function LocationDetailCard({ branch }: { branch: Branch }) {
+export function LocationDetailCard({
+  branch,
+  onEditClick
+}: {
+  branch: Branch;
+  onEditClick: () => void;
+}) {
   const imageUrl = branch.imageUrl?.trim() || null;
 
   return (
@@ -18,6 +28,28 @@ export function LocationDetailCard({ branch }: { branch: Branch }) {
           style={{ backgroundImage: "url('/images/location-header-world-map.png')" }}
           aria-hidden
         />
+        <div className="absolute start-4 top-4 z-10">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-sm"
+            className="bg-background/50 rounded-full">
+            <Link href="/dashboard/locations" aria-label="Back to locations">
+              <ChevronLeftIcon />
+            </Link>
+          </Button>
+        </div>
+        <div className="absolute end-4 top-4 z-10">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="bg-background/50 rounded-full"
+            aria-label="Edit location"
+            onClick={onEditClick}>
+            <PencilIcon />
+          </Button>
+        </div>
         <div className="relative -mt-10 flex items-end gap-4 px-4 pb-5 sm:px-6 md:-mt-12 md:px-8 md:pb-6">
           <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10 lg:size-28">
             {imageUrl ? (
