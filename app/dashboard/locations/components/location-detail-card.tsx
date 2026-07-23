@@ -1,15 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { Building2, ChevronLeftIcon, PencilIcon } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
 import { LocationStatusBadge } from "@/components/location-status-badge";
-import {
-  ProfileV2TabBar,
-  ProfileV2TabTrigger
-} from "@/components/layout/profile-tab-bar";
-import { Button } from "@/components/ui/button";
+import { ProfileHeroCard } from "@/components/layout/profile-hero-card";
+import { ProfileV2TabTrigger } from "@/components/layout/profile-tab-bar";
 
 export function LocationDetailCard({
   branch,
@@ -21,64 +17,37 @@ export function LocationDetailCard({
   const imageUrl = branch.imageUrl?.trim() || null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="relative">
-        <div
-          className="bg-muted relative aspect-3/1 w-full bg-cover bg-center md:max-h-[240px]"
-          style={{ backgroundImage: "url('/images/location-header-world-map.png')" }}
-          aria-hidden
-        />
-        <div className="absolute start-4 top-4 z-10">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon-sm"
-            className="bg-background/50 rounded-full">
-            <Link href="/dashboard/locations" aria-label="Back to locations">
-              <ChevronLeftIcon />
-            </Link>
-          </Button>
-        </div>
-        <div className="absolute end-4 top-4 z-10">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="bg-background/50 rounded-full"
-            aria-label="Edit location"
-            onClick={onEditClick}>
-            <PencilIcon />
-          </Button>
-        </div>
-        <div className="relative -mt-10 flex items-end gap-4 px-4 pb-5 sm:px-6 md:-mt-12 md:px-8 md:pb-6">
-          <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10 lg:size-28">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Storage download URL
-              <img
-                alt=""
-                src={imageUrl}
-                className="size-full object-cover"
-                width={112}
-                height={112}
-              />
-            ) : (
-              <Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />
-            )}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col justify-end gap-1 self-stretch pb-1">
-            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">{branch.name}</h2>
-            <LocationStatusBadge isActive={branch.isActive !== false} />
-          </div>
-        </div>
-      </div>
-
-      <ProfileV2TabBar>
-        <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
-        <ProfileV2TabTrigger value="service-area">Service area</ProfileV2TabTrigger>
-        <ProfileV2TabTrigger value="hours">Operating hours</ProfileV2TabTrigger>
-        <ProfileV2TabTrigger value="classes">Vehicle classes</ProfileV2TabTrigger>
-        <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
-      </ProfileV2TabBar>
-    </div>
+    <ProfileHeroCard
+      bannerImageUrl="/images/location-header-world-map.png"
+      backHref="/dashboard/locations"
+      backAriaLabel="Back to locations"
+      onEditClick={onEditClick}
+      editAriaLabel="Edit location"
+      avatar={
+        imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Storage download URL
+          <img
+            alt=""
+            src={imageUrl}
+            className="size-full object-cover"
+            width={112}
+            height={112}
+          />
+        ) : (
+          <Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />
+        )
+      }
+      title={branch.name}
+      meta={<LocationStatusBadge isActive={branch.isActive !== false} />}
+      tabs={
+        <>
+          <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="service-area">Service area</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="hours">Operating hours</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="classes">Vehicle classes</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
+        </>
+      }
+    />
   );
 }

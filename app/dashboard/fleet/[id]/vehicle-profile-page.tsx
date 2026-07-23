@@ -7,18 +7,17 @@ import { ChevronLeftIcon } from "lucide-react";
 
 import { useInvoices, useTrips, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import { effectiveChauffeurUserId } from "@/lib/models";
-import { formatCurrency } from "@/lib/format";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
-import { VehicleProfileSidebar } from "@/app/dashboard/fleet/components/vehicle-profile-sidebar";
+import { VehicleDetailCard } from "@/app/dashboard/fleet/components/vehicle-detail-card";
 import { VehicleProfileOverviewTab } from "@/app/dashboard/fleet/components/vehicle-profile-overview-tab";
 import { VehicleProfileFinancialsTab } from "@/app/dashboard/fleet/components/vehicle-profile-financials-tab";
 import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
 import { VehicleProfileOperationsTab } from "@/app/dashboard/fleet/components/vehicle-profile-operations-tab";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 const PROFILE_TABS = [
   "overview",
@@ -87,79 +86,59 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   if (!vehicle || !metrics) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">Vehicle not found.</p>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/fleet">
+        <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
+          <Link href="/dashboard/fleet" aria-label="Back to fleet">
             <ChevronLeftIcon />
-            Back to fleet
           </Link>
         </Button>
+        <p className="text-muted-foreground text-sm">Vehicle not found.</p>
       </div>
     );
   }
 
-  const revenueLabel =
-    metrics.totalRevenue >= 1000
-      ? formatCurrency(metrics.totalRevenue).replace(/\.\d{2}$/, "")
-      : formatCurrency(metrics.totalRevenue);
-
   return (
     <>
       <div className="space-y-4">
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Vehicle profile</h1>
-
         <Tabs
           value={activeTab}
           onValueChange={(v) => setTab(v as ProfileTab)}
           className="gap-4">
-          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="trips">Trips</TabsTrigger>
-            <TabsTrigger value="financials">Financials</TabsTrigger>
-            <TabsTrigger value="compliance">Compliance</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-          </TabsList>
+          <VehicleDetailCard
+            vehicle={vehicle}
+            vehicleClassLabel={vehicleClassLabel}
+            onEditClick={() => setEditOpen(true)}
+          />
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
-              <VehicleProfileSidebar
-                vehicle={vehicle}
-                assignedChauffeur={assignedChauffeur}
-                statTrips={metrics.totalTrips}
-                statCompleted={metrics.completed}
-                statRevenueLabel={revenueLabel}
-                vehicleClassLabel={vehicleClassLabel}
-                onEditClick={() => setEditOpen(true)}
-              />
-            </div>
+          <TabsContent value="overview" className="mt-0 space-y-4">
+            <VehicleProfileOverviewTab
+              vehicle={vehicle}
+              assignedChauffeur={assignedChauffeur}
+              trips={metrics.vehicleTrips}
+              invoices={metrics.vehicleInvoices}
+              vehicleDocumentId={vehicleDocumentId}
+              period={overviewPeriod}
+              onPeriodChange={setOverviewPeriod}
+            />
+          </TabsContent>
 
-            <div className="space-y-4 xl:col-span-2">
-              <TabsContent value="overview" className="mt-0">
-                <VehicleProfileOverviewTab
-                  trips={metrics.vehicleTrips}
-                  invoices={metrics.vehicleInvoices}
-                  vehicleDocumentId={vehicleDocumentId}
-                  period={overviewPeriod}
-                  onPeriodChange={setOverviewPeriod}
-                />
-              </TabsContent>
-              <TabsContent value="trips" className="mt-0">
-                <DriverProfileTripsTab trips={metrics.vehicleTrips} />
-              </TabsContent>
-              <TabsContent value="financials" className="mt-0">
-                <VehicleProfileFinancialsTab />
-              </TabsContent>
-              <TabsContent value="compliance" className="mt-0">
-                <VehicleProfileComplianceTab vehicle={vehicle} />
-              </TabsContent>
-              <TabsContent value="operations" className="mt-0">
-                <VehicleProfileOperationsTab
-                  vehicle={vehicle}
-                  assignedChauffeur={assignedChauffeur}
-                />
-              </TabsContent>
-            </div>
-          </div>
+          <TabsContent value="trips" className="mt-0 space-y-4">
+            <DriverProfileTripsTab trips={metrics.vehicleTrips} />
+          </TabsContent>
+
+          <TabsContent value="financials" className="mt-0 space-y-4">
+            <VehicleProfileFinancialsTab />
+          </TabsContent>
+
+          <TabsContent value="compliance" className="mt-0 space-y-4">
+            <VehicleProfileComplianceTab vehicle={vehicle} />
+          </TabsContent>
+
+          <TabsContent value="operations" className="mt-0 space-y-4">
+            <VehicleProfileOperationsTab
+              vehicle={vehicle}
+              assignedChauffeur={assignedChauffeur}
+            />
+          </TabsContent>
         </Tabs>
       </div>
 
