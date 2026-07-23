@@ -297,7 +297,7 @@ export function FleetDataTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/fleet/${vehicle.driverID}`}>View profile</Link>
+                  <Link href={`/dashboard/fleet/${vehicle.driverID}`}>View details</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => openVehicleEdit(vehicle)}>Edit</DropdownMenuItem>

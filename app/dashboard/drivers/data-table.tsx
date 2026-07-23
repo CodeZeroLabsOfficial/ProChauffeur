@@ -298,7 +298,7 @@ export function DriversDataTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/drivers/${row.original.id}`}>View profile</Link>
+                  <Link href={`/dashboard/drivers/${row.original.id}`}>View details</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>

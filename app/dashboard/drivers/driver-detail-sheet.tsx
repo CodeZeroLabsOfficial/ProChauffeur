@@ -531,7 +531,7 @@ export function DriverDetailSheet({
                   href={`/dashboard/drivers/${displayUser.id}`}
                   onClick={() => onOpenChange(false)}>
                   <ExternalLink />
-                  View profile
+                  View details
                 </Link>
               </Button>
             </div>

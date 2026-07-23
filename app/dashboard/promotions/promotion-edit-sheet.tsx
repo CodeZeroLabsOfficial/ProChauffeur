@@ -53,7 +53,33 @@ type FieldErrors = {
   title?: boolean;
   code?: boolean;
   value?: boolean;
+  branchIds?: boolean;
+  tripTypes?: boolean;
+  vehicleClassIds?: boolean;
 };
+
+const ALL_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
+
+/** Empty/null means unrestricted in storage; for editing expand to every option. New promos stay empty. */
+function resolveConditionIds(
+  stored: string[] | null | undefined,
+  allIds: string[],
+  isNewPromo: boolean
+): string[] {
+  if (isNewPromo) return [];
+  const ids = stored?.filter(Boolean) ?? [];
+  return ids.length === 0 ? allIds : ids;
+}
+
+function isAllSelected(selected: string[], allIds: string[]): boolean {
+  return allIds.length > 0 && allIds.every((id) => selected.includes(id));
+}
+
+/** Persist null when every option is selected (unrestricted); otherwise the explicit list. */
+function persistConditionIds(selected: string[], allIds: string[]): string[] | null {
+  if (isAllSelected(selected, allIds)) return null;
+  return selected;
+}
 
 function percentPointsFromPromo(promo: Promotion): number {
   if (promo.type !== "percent") return 10;
@@ -189,7 +215,31 @@ export function PromotionEditSheet({
   if (sheetKey !== seedKey) {
     setSeedKey(sheetKey);
     const next = promotion ?? buildNewPromotion();
-    setDraft(next);
+    const nextIsNew = !promotion;
+    const branchIds = resolveConditionIds(
+      next.conditions.branchIds,
+      branches.map((branch) => branch.id),
+      nextIsNew
+    );
+    const tripTypes = resolveConditionIds(
+      next.conditions.tripTypes,
+      ALL_TRIP_TYPES,
+      nextIsNew
+    ) as TripType[];
+    const vehicleClassIds = resolveConditionIds(
+      next.conditions.vehicleClassIds,
+      vehicleClasses.map((vehicleClass) => vehicleClass.id),
+      nextIsNew
+    );
+    setDraft({
+      ...next,
+      conditions: {
+        ...next.conditions,
+        branchIds,
+        tripTypes,
+        vehicleClassIds
+      }
+    });
     setPercentPoints(percentPointsFromPromo(next));
     setFixedAmount(fixedAmountFromPromo(next));
     setFieldErrors({});
@@ -210,6 +260,8 @@ export function PromotionEditSheet({
     value: vehicleClass.id,
     label: vehicleClass.displayName
   }));
+  const branchIdsAll = branchOptions.map((option) => option.value);
+  const vehicleClassIdsAll = vehicleClassOptions.map((option) => option.value);
 
   function patchConditions(patch: Partial<Promotion["conditions"]>) {
     setDraft((current) => ({
@@ -227,13 +279,28 @@ export function PromotionEditSheet({
     const title = draft.title.trim();
     const code = normalizePromoCode(draft.code);
     const discountValue = draft.type === "percent" ? percentPoints : fixedAmount;
+    const branchIds = draft.conditions.branchIds?.filter(Boolean) ?? [];
+    const tripTypes = draft.conditions.tripTypes?.filter(Boolean) ?? [];
+    const vehicleClassIds = draft.conditions.vehicleClassIds?.filter(Boolean) ?? [];
     const errors: FieldErrors = {
       title: !title,
       code: !code,
-      value: !Number.isFinite(discountValue) || discountValue <= 0
+      value: !Number.isFinite(discountValue) || discountValue <= 0,
+      branchIds: branchIds.length === 0,
+      tripTypes: tripTypes.length === 0,
+      vehicleClassIds: vehicleClassIds.length === 0
     };
     setFieldErrors(errors);
-    if (errors.title || errors.code || errors.value) return;
+    if (
+      errors.title ||
+      errors.code ||
+      errors.value ||
+      errors.branchIds ||
+      errors.tripTypes ||
+      errors.vehicleClassIds
+    ) {
+      return;
+    }
 
     const value = draft.type === "percent" ? percentPoints / 100 : fixedAmount;
 
@@ -244,6 +311,12 @@ export function PromotionEditSheet({
         title,
         code,
         value,
+        conditions: {
+          ...draft.conditions,
+          branchIds: persistConditionIds(branchIds, branchIdsAll),
+          tripTypes: persistConditionIds(tripTypes, ALL_TRIP_TYPES) as TripType[] | null,
+          vehicleClassIds: persistConditionIds(vehicleClassIds, vehicleClassIdsAll)
+        },
         updatedAt: new Date()
       });
       toast.success(isNew ? "Promotion created." : "Promotion saved.");
@@ -383,16 +456,28 @@ export function PromotionEditSheet({
           <Separator />
           <p className="text-sm font-medium">Conditions</p>
 
-          <div className="space-y-2">
+          <div className="*:not-first:mt-2">
             <Label>Locations</Label>
             <MultiSelectField
               id="promo-branches"
               options={branchOptions}
               selected={draft.conditions.branchIds ?? []}
-              onSelectedChange={(ids) => patchConditions({ branchIds: ids.length ? ids : null })}
-              placeholder="All Locations"
+              onSelectedChange={(ids) => {
+                patchConditions({ branchIds: ids });
+                clearFieldError("branchIds");
+              }}
+              placeholder="Select locations"
               emptyMessage="No Locations."
+              invalid={fieldErrors.branchIds}
             />
+            {fieldErrors.branchIds ? (
+              <p
+                aria-live="polite"
+                className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                role="alert">
+                Locations are required
+              </p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -410,33 +495,51 @@ export function PromotionEditSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label>Trip types</Label>
               <MultiSelectField
                 id="promo-trip-types"
                 options={TRIP_TYPE_OPTIONS}
                 selected={(draft.conditions.tripTypes as string[]) ?? []}
-                onSelectedChange={(ids) =>
-                  patchConditions({
-                    tripTypes: ids.length ? (ids as TripType[]) : null
-                  })
-                }
-                placeholder="All trip types"
+                onSelectedChange={(ids) => {
+                  patchConditions({ tripTypes: ids as TripType[] });
+                  clearFieldError("tripTypes");
+                }}
+                placeholder="Select trip types"
                 emptyMessage="No trip types."
+                invalid={fieldErrors.tripTypes}
               />
+              {fieldErrors.tripTypes ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Trip types are required
+                </p>
+              ) : null}
             </div>
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label>Vehicle classes</Label>
               <MultiSelectField
                 id="promo-classes"
                 options={vehicleClassOptions}
                 selected={draft.conditions.vehicleClassIds ?? []}
-                onSelectedChange={(ids) =>
-                  patchConditions({ vehicleClassIds: ids.length ? ids : null })
-                }
-                placeholder="All classes"
+                onSelectedChange={(ids) => {
+                  patchConditions({ vehicleClassIds: ids });
+                  clearFieldError("vehicleClassIds");
+                }}
+                placeholder="Select vehicle classes"
                 emptyMessage="No vehicle classes."
+                invalid={fieldErrors.vehicleClassIds}
               />
+              {fieldErrors.vehicleClassIds ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Vehicle classes are required
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -461,16 +564,18 @@ export function PromotionEditSheet({
             />
           </div>
 
-          <NumberStepper
-            id="promo-min-fare"
-            label="Minimum fare"
-            value={minFareStepperValue(draft.conditions.minimumSubtotal)}
-            onChange={(value) => patchConditions({ minimumSubtotal: minFareFromStepper(value) })}
-            min={0}
-            max={FARE_STEPPER_MAX}
-            step={1}
-            formatValue={formatMinFareStepper}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <NumberStepper
+              id="promo-min-fare"
+              label="Minimum fare"
+              value={minFareStepperValue(draft.conditions.minimumSubtotal)}
+              onChange={(value) => patchConditions({ minimumSubtotal: minFareFromStepper(value) })}
+              min={0}
+              max={FARE_STEPPER_MAX}
+              step={1}
+              formatValue={formatMinFareStepper}
+            />
+          </div>
 
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-0.5">

@@ -28,6 +28,7 @@ export function MultiSelectField({
   placeholder = "Select…",
   emptyMessage = "No options available.",
   disabled,
+  invalid,
   className
 }: {
   id?: string;
@@ -37,6 +38,7 @@ export function MultiSelectField({
   placeholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  invalid?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -66,9 +68,10 @@ export function MultiSelectField({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={invalid || undefined}
           disabled={disabled}
           className={cn(
-            "border-input bg-background hover:bg-background flex h-9 w-full justify-between px-3 font-normal shadow-xs",
+            "peer border-input bg-background hover:bg-background flex h-9 w-full justify-between px-3 font-normal shadow-xs",
             !summary && "text-muted-foreground",
             className
           )}>

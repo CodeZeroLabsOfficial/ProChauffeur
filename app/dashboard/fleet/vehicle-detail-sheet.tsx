@@ -347,7 +347,7 @@ export function VehicleDetailSheet({
                 href={`/dashboard/fleet/${displayVehicle.driverID}`}
                 onClick={() => onOpenChange(false)}>
                 <ExternalLink />
-                View profile
+                View details
               </Link>
             </Button>
           </div>

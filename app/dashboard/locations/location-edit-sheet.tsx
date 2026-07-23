@@ -480,7 +480,7 @@ export function LocationEditSheet({
                   href={`/dashboard/locations/${displayBranch.id}`}
                   onClick={() => onOpenChange(false)}>
                   <ExternalLink />
-                  View profile
+                  View details
                 </Link>
               </Button>
             ) : null}

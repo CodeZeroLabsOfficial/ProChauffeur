@@ -251,7 +251,7 @@ export function CustomersDataTable({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/dashboard/customers/${row.original.id}`}>View profile</Link>
+                <Link href={`/dashboard/customers/${row.original.id}`}>View details</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openEdit(row.original)}>Edit</DropdownMenuItem>
               <DropdownMenuSeparator />
