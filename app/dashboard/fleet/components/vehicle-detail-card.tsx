@@ -36,18 +36,13 @@ export function VehicleDetailCard({
       }
       title={displayName}
       meta={
-        <div className="flex flex-col gap-1">
-          {vehicle.manufactureYear ? (
-            <div className="text-muted-foreground text-sm">{vehicle.manufactureYear}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          {classLabel ? (
+            <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>{classLabel}</DetailSheetIconBadge>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            {classLabel ? (
-              <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>{classLabel}</DetailSheetIconBadge>
-            ) : null}
-            <DetailSheetIconBadge icon={assignmentBadgeIcon(assigned)}>
-              {assigned ? "Assigned" : "Unassigned"}
-            </DetailSheetIconBadge>
-          </div>
+          <DetailSheetIconBadge icon={assignmentBadgeIcon(assigned)}>
+            {assigned ? "Assigned" : "Unassigned"}
+          </DetailSheetIconBadge>
         </div>
       }
       tabs={
