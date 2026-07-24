@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import {
-  updateUserDriverProfile,
+  saveDriverProfile,
   updateUserEmail,
   updateUserProfile,
   updateUserRole
@@ -180,7 +180,7 @@ export function DriverEditSheet({
     setSaving(true);
     try {
       if (isNew) await updateUserRole(uid, "driver");
-      await updateUserDriverProfile(uid, nextDriverProfile, {
+      await saveDriverProfile(uid, nextDriverProfile, {
         driverTitle: displayName,
         isNew
       });
@@ -208,7 +208,7 @@ export function DriverEditSheet({
         <SheetHeader>
           <SheetTitle>{isNew ? "Add driver" : "Edit driver"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={currentKey}>
           {isNew && (
             <div className="space-y-2">
               <Label>Account</Label>
@@ -393,7 +393,7 @@ export function DriverEditSheet({
             ) : null}
           </div>
 
-          <SheetFooter className="px-0">
+          <SheetFooter className="mt-auto px-0">
             <Button type="submit" disabled={saving || (isNew && candidates.length === 0)}>
               {saving ? "Saving…" : isNew ? "Add driver" : "Save changes"}
             </Button>

@@ -20,7 +20,7 @@ import {
 import {
   assignFleetVehicle,
   unassignFleetVehicle,
-  updateUserDriverProfile
+  saveDriverProfile
 } from "@/lib/services/firebase-service";
 import { visibilityStatusLabel } from "@/lib/chauffeur-badge-icons";
 import { useVehicleClasses } from "@/hooks/use-collections";
@@ -126,7 +126,7 @@ export function DriverProfileOperationsTab({
 
   const persistSchedules = useCallback(
     async (schedules: FleetWeeklyOperatingSchedule[]) => {
-      await updateUserDriverProfile(user.id, {
+      await saveDriverProfile(user.id, {
         ...profile,
         availabilitySchedules: schedules
       });

@@ -38,7 +38,7 @@ import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   fetchUserLastSignIn,
-  updateUserDriverProfile,
+  saveDriverProfile,
   updateUserEmail,
   updateUserProfile,
   uploadUserProfilePhoto
@@ -96,7 +96,7 @@ function DriverOverviewFields({
     patch: Partial<DriverProfile>
   ): Promise<{ ok: boolean; message?: string }> {
     try {
-      await updateUserDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      await saveDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
       return { ok: true };
     } catch {
       return { ok: false, message: "Could not save." };
@@ -262,7 +262,7 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
     patch: Partial<DriverProfile>
   ): Promise<{ ok: boolean; message?: string }> {
     try {
-      await updateUserDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      await saveDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
       return { ok: true };
     } catch {
       return { ok: false, message: "Could not save." };

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
+  listenBranchDrivers,
   listenFleetLocations,
   listenInvoices,
   listenTrips,
@@ -12,12 +13,15 @@ import {
   listenVehicles
 } from "@/lib/services/firebase-service";
 import type { FleetLocation, Invoice, Trip, User, Vehicle, VehicleClass } from "@/lib/models";
+import type { BranchDriver } from "@/lib/models/branch";
 
 type CollectionsContextValue = {
   trips: Trip[];
   tripsLoading: boolean;
   users: User[];
   usersLoading: boolean;
+  branchDrivers: BranchDriver[];
+  branchDriversLoading: boolean;
   vehicles: Vehicle[];
   vehiclesLoading: boolean;
   locations: FleetLocation[];
@@ -36,6 +40,8 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [branchDrivers, setBranchDrivers] = useState<BranchDriver[]>([]);
+  const [branchDriversLoading, setBranchDriversLoading] = useState(true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [locations, setLocations] = useState<FleetLocation[]>([]);
@@ -61,6 +67,15 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    setBranchDriversLoading(true);
+    const unsub = listenBranchDrivers((rows) => {
+      setBranchDrivers(rows);
+      setBranchDriversLoading(false);
+    });
+    return () => unsub();
+  }, [branchId]);
 
   useEffect(() => {
     setVehiclesLoading(true);
@@ -105,6 +120,8 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
         tripsLoading,
         users,
         usersLoading,
+        branchDrivers,
+        branchDriversLoading,
         vehicles,
         vehiclesLoading,
         locations,

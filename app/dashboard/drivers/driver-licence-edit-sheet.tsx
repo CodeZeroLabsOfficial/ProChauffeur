@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { updateUserDriverProfile } from "@/lib/services/firebase-service";
+import { saveDriverProfile } from "@/lib/services/firebase-service";
 import { defaultDriverProfile, type User } from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export function DriverLicenceEditSheet({
     setSaving(true);
     try {
       const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
-      await updateUserDriverProfile(user.id, driverProfile, { driverTitle });
+      await saveDriverProfile(user.id, driverProfile, { driverTitle });
       toast.success("Driver licence saved.");
       onOpenChange(false);
       onSaved?.();
@@ -86,7 +86,7 @@ export function DriverLicenceEditSheet({
             Licence and compliance details for {user.profile.displayName?.trim() || user.email}
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4" key={user.id}>
+        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="licence-driversLicenseNumber">Licence no.</Label>
@@ -173,7 +173,7 @@ export function DriverLicenceEditSheet({
             />
           </div>
 
-          <SheetFooter className="px-0">
+          <SheetFooter className="mt-auto px-0">
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>

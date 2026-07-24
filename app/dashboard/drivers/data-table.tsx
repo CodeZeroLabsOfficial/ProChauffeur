@@ -17,10 +17,10 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useUsers } from "@/hooks/use-collections";
+import { useUsers, useRosterChauffeurs } from "@/hooks/use-collections";
 import {
   removeDriver,
-  updateUserDriverProfile
+  saveDriverProfile
 } from "@/lib/services/firebase-service";
 import {
   CHAUFFEUR_CATEGORIES,
@@ -85,7 +85,8 @@ export function DriversDataTable({
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
 }) {
-  const { users, loading } = useUsers();
+  const { users } = useUsers();
+  const { chauffeurs, loading } = useRosterChauffeurs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -104,26 +105,23 @@ export function DriversDataTable({
 
   const data = useMemo<DriverRow[]>(
     () =>
-      users
-        .filter((u) => u.role === "driver")
-        .map((u) => {
-          const profile = u.driverProfile ?? defaultDriverProfile();
-          return {
-            ...u,
-            searchLabel: [u.profile.displayName, u.email, u.profile.phoneNumber]
-              .filter(Boolean)
-              .join(" "),
-            category: chauffeurCategoryTitle[profile.chauffeurCategory],
-            dispatchStatus: (profile.acceptsDispatchAssignments ? "accepting" : "paused") as
-              | "accepting"
-              | "paused",
-            visibilityStatus: (profile.visibleOnCustomerApp ? "active" : "inactive") as
-              | "active"
-              | "inactive"
-          };
-        })
-        .sort((a, b) => a.profile.displayName.localeCompare(b.profile.displayName)),
-    [users]
+      chauffeurs.map((u) => {
+        const profile = u.driverProfile ?? defaultDriverProfile();
+        return {
+          ...u,
+          searchLabel: [u.profile.displayName, u.email, u.profile.phoneNumber]
+            .filter(Boolean)
+            .join(" "),
+          category: chauffeurCategoryTitle[profile.chauffeurCategory],
+          dispatchStatus: (profile.acceptsDispatchAssignments ? "accepting" : "paused") as
+            | "accepting"
+            | "paused",
+          visibilityStatus: (profile.visibleOnCustomerApp ? "active" : "inactive") as
+            | "active"
+            | "inactive"
+        };
+      }),
+    [chauffeurs]
   );
 
   const driverTitle = useCallback(
@@ -136,7 +134,7 @@ export function DriversDataTable({
       const profile = user.driverProfile ?? defaultDriverProfile();
       if (profile.visibleOnCustomerApp === active) return;
       try {
-        await updateUserDriverProfile(
+        await saveDriverProfile(
           user.id,
           { ...profile, visibleOnCustomerApp: active },
           { driverTitle: driverTitle(user) }
@@ -156,7 +154,7 @@ export function DriversDataTable({
       const profile = user.driverProfile ?? defaultDriverProfile();
       if (profile.acceptsDispatchAssignments === accepting) return;
       try {
-        await updateUserDriverProfile(
+        await saveDriverProfile(
           user.id,
           { ...profile, acceptsDispatchAssignments: accepting },
           { driverTitle: driverTitle(user) }

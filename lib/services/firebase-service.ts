@@ -78,6 +78,7 @@ import {
 import {
   mapActivityNotification,
   mapBranch,
+  mapBranchDriver,
   mapCompanyProfile,
   mapOperatorLocale,
   mapFleetLocation,
@@ -109,7 +110,8 @@ import {
   BranchSettingsDocs,
   DEFAULT_BRANCH_ID,
   BRANCH_OFFICE_FLEET_LOCATION_ID,
-  type Branch
+  type Branch,
+  type BranchDriver
 } from "@/lib/models/branch";
 import { canCreateLocation, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
 
@@ -846,9 +848,26 @@ export async function updateUserDriverProfile(
   driverProfile: DriverProfile,
   options?: { driverTitle?: string; isNew?: boolean }
 ): Promise<void> {
-  await updateDoc(doc(db(), Collections.users, uid), {
+  return saveDriverProfile(uid, driverProfile, options);
+}
+
+/** Dual-writes ops profile to `users/{uid}` and active Location roster. */
+export async function saveDriverProfile(
+  uid: string,
+  driverProfile: DriverProfile,
+  options?: { driverTitle?: string; isNew?: boolean }
+): Promise<void> {
+  const branchId = getActiveBranchId();
+  const userRef = doc(db(), Collections.users, uid);
+  const userSnap = await getDoc(userRef);
+  const patch: Record<string, unknown> = {
     driverProfile: stripUndefined({ ...driverProfile })
-  });
+  };
+  if (options?.isNew || !userSnap.data()?.homeBranchId) {
+    patch.homeBranchId = branchId;
+  }
+  await updateDoc(userRef, patch);
+  await upsertBranchDriver(uid, driverProfile, branchId);
   if (options?.driverTitle) {
     const action = options.isNew ? "created" : "updated";
     void createActivityNotification(driverNotification(action, options.driverTitle, uid));
@@ -861,22 +880,79 @@ export async function updateUserRole(uid: string, role: UserRole): Promise<void>
 
 /** Demotes a chauffeur to customer and removes their driver profile (and fleet vehicle if any). */
 export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
+  const branchId = getActiveBranchId();
   const vehicleRef = branchDocRef(db(), "vehicles", uid);
   const vehicleSnap = await getDoc(vehicleRef);
   if (vehicleSnap.exists()) {
     await deleteVehicle(uid);
   }
-  await updateDoc(doc(db(), Collections.users, uid), {
+  const userRef = doc(db(), Collections.users, uid);
+  const userSnap = await getDoc(userRef);
+  const homeBranchId =
+    typeof userSnap.data()?.homeBranchId === "string" ? userSnap.data()?.homeBranchId : null;
+  const patch: Record<string, unknown> = {
     role: "customer",
-    driverProfile: deleteField(),
-    homeBranchId: deleteField()
-  });
+    driverProfile: deleteField()
+  };
+  if (!homeBranchId || homeBranchId === branchId) {
+    patch.homeBranchId = deleteField();
+  }
+  await updateDoc(userRef, patch);
   try {
     await deleteDoc(branchDocRef(db(), "drivers", uid));
   } catch {
     /* roster entry may not exist yet */
   }
   void createActivityNotification(driverNotification("deleted", driverTitle ?? "Chauffeur", uid));
+}
+
+// ────────────────────────── Branch drivers (roster) ──────────────────────────
+
+export function listenBranchDrivers(onUpdate: (drivers: BranchDriver[]) => void): Unsub {
+  const branchId = getActiveBranchId();
+  const nested = query(branchCollectionRef(db(), "drivers", branchId));
+  return listenQuery(
+    nested,
+    (snap) => snapToList(snap, mapBranchDriver),
+    onUpdate,
+    onSnapshotError("branch drivers", onUpdate)
+  );
+}
+
+export async function fetchBranchDrivers(
+  branchId: string = getActiveBranchId()
+): Promise<BranchDriver[]> {
+  const snap = await getDocs(branchCollectionRef(db(), "drivers", branchId));
+  return snap.docs.map((dc) => mapBranchDriver(dc.id, dc.data()));
+}
+
+export async function fetchBranchDriver(
+  uid: string,
+  branchId: string = getActiveBranchId()
+): Promise<BranchDriver | null> {
+  const snap = await getDoc(branchDocRef(db(), "drivers", uid, branchId));
+  return snap.exists() ? mapBranchDriver(snap.id, snap.data()) : null;
+}
+
+export async function upsertBranchDriver(
+  uid: string,
+  profile: DriverProfile,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
+  const ref = branchDocRef(db(), "drivers", uid, branchId);
+  const existing = await getDoc(ref);
+  const now = serverTimestamp();
+  await setDoc(
+    ref,
+    stripUndefined({
+      id: uid,
+      userId: uid,
+      ...profile,
+      createdAt: existing.exists() ? (existing.data()?.createdAt ?? now) : now,
+      updatedAt: now
+    }),
+    { merge: true }
+  );
 }
 
 // ────────────────────────────── Vehicles ─────────────────────────────

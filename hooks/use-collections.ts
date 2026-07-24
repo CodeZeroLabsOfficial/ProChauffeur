@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCollectionsContext } from "@/components/providers/collections-provider";
 import {
+  listenBranchDrivers,
   listenFleetLocations,
   listenInvoices,
   listenNotifications,
@@ -13,6 +14,7 @@ import {
   listenVehicleClasses,
   listenVehicles
 } from "@/lib/services/firebase-service";
+import { mergeRosterChauffeurs } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import type {
   ActivityNotification,
   FleetLocation,
@@ -22,6 +24,7 @@ import type {
   Vehicle,
   VehicleClass
 } from "@/lib/models";
+import type { BranchDriver } from "@/lib/models/branch";
 
 export function useTrips() {
   const ctx = useCollectionsContext();
@@ -61,6 +64,37 @@ export function useUsers() {
     return { users: ctx.users, loading: ctx.usersLoading };
   }
   return { users, loading };
+}
+
+export function useBranchDrivers() {
+  const ctx = useCollectionsContext();
+  const [branchDrivers, setBranchDrivers] = useState<BranchDriver[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (ctx) return;
+    const unsub = listenBranchDrivers((rows) => {
+      setBranchDrivers(rows);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [ctx]);
+
+  if (ctx) {
+    return { branchDrivers: ctx.branchDrivers, loading: ctx.branchDriversLoading };
+  }
+  return { branchDrivers, loading };
+}
+
+/** Active Location chauffeurs (roster ∩ users), with roster ops profile. */
+export function useRosterChauffeurs() {
+  const { users, loading: usersLoading } = useUsers();
+  const { branchDrivers, loading: rosterLoading } = useBranchDrivers();
+  const chauffeurs = useMemo(
+    () => mergeRosterChauffeurs(users, branchDrivers),
+    [users, branchDrivers]
+  );
+  return { chauffeurs, loading: usersLoading || rosterLoading, branchDrivers };
 }
 
 export function useVehicles() {
