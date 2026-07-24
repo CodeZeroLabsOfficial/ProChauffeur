@@ -154,7 +154,11 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                 />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
-                <DriverProfileOperationsTab user={user} vehicles={vehicles} />
+                <DriverProfileOperationsTab
+                  user={user}
+                  vehicles={vehicles}
+                  onUserUpdated={() => void loadUser()}
+                />
               </TabsContent>
             </div>
           </div>

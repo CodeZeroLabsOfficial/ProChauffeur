@@ -198,11 +198,13 @@ export function LocationOperatingHoursTab({
 
       <ScheduleEditSheet
         schedule={editingSchedule}
-        operatingHours={operatingHours}
-        branchId={branchId}
+        schedules={operatingHours.schedules}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         nested={nestedSheet}
+        onPersist={async (schedules) => {
+          await saveOperatingHours({ ...operatingHours, schedules }, branchId);
+        }}
         onSaved={(schedules) => setOperatingHours((prev) => ({ ...prev, schedules }))}
       />
     </>

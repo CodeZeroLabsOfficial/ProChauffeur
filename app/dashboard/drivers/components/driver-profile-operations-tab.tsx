@@ -1,17 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { assignedVehicle } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import {
+  formatScheduleDays,
+  ScheduleEditSheet
+} from "@/app/dashboard/locations/components/schedule-edit-sheet";
+import {
   defaultDriverProfile,
   effectiveChauffeurUserId,
+  type FleetWeeklyOperatingSchedule,
   type User,
   type Vehicle
 } from "@/lib/models";
-import { assignFleetVehicle, unassignFleetVehicle } from "@/lib/services/firebase-service";
+import {
+  assignFleetVehicle,
+  unassignFleetVehicle,
+  updateUserDriverProfile
+} from "@/lib/services/firebase-service";
 import { visibilityStatusLabel } from "@/lib/chauffeur-badge-icons";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
@@ -22,11 +32,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -41,16 +48,35 @@ function vehicleMakeModel(vehicle: Vehicle): string {
   return `${vehicle.make} ${vehicle.model}`.trim() || "Vehicle";
 }
 
+function formatScheduleHours(
+  startTime: string | null | undefined,
+  endTime: string | null | undefined
+): string {
+  const start = startTime?.trim();
+  const end = endTime?.trim();
+  if (start && end) return `${start}–${end}`;
+  if (start) return start;
+  if (end) return end;
+  return "";
+}
+
 export function DriverProfileOperationsTab({
   user,
-  vehicles
+  vehicles,
+  onUserUpdated
 }: {
   user: User;
   vehicles: Vehicle[];
+  onUserUpdated?: () => void;
 }) {
   const profile = user.driverProfile ?? defaultDriverProfile();
   const { vehicleClasses } = useVehicleClasses();
   const vehicle = assignedVehicle(vehicles, user.id);
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(
+    null
+  );
 
   const classesById = useMemo(
     () => new Map(vehicleClasses.map((c) => [c.id, c.displayName])),
@@ -60,6 +86,11 @@ export function DriverProfileOperationsTab({
   const classLabel = vehicle?.vehicleClassId
     ? (classesById.get(vehicle.vehicleClassId) ?? vehicle.vehicleClassId)
     : null;
+
+  const availableVehicles = useMemo(
+    () => vehicles.filter((v) => !effectiveChauffeurUserId(v)),
+    [vehicles]
+  );
 
   const handleAssign = useCallback(
     async (vehicleDocumentId: string) => {
@@ -83,123 +114,167 @@ export function DriverProfileOperationsTab({
     }
   }, [vehicle]);
 
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Dispatch & visibility</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DetailRow
-            label="Accepts dispatch"
-            value={profile.acceptsDispatchAssignments ? "Yes" : "No"}
-          />
-          <DetailRow
-            label="Customer app"
-            value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
-          />
-          <DetailRow label="Time zone" value={profile.timeZoneIdentifier?.trim() || "—"} />
-          <DetailRow
-            label="Preferred garage"
-            value={profile.preferredGarageLocationId?.trim() || "—"}
-          />
-        </CardContent>
-      </Card>
+  function openAddSheet() {
+    setEditingSchedule(null);
+    setSheetOpen(true);
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Fleet vehicle</CardTitle>
-          <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+  function openEditSheet(schedule: FleetWeeklyOperatingSchedule) {
+    setEditingSchedule(schedule);
+    setSheetOpen(true);
+  }
+
+  const persistSchedules = useCallback(
+    async (schedules: FleetWeeklyOperatingSchedule[]) => {
+      await updateUserDriverProfile(user.id, {
+        ...profile,
+        availabilitySchedules: schedules
+      });
+    },
+    [profile, user.id]
+  );
+
+  return (
+    <>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dispatch & visibility</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DetailRow
+              label="Accepts dispatch"
+              value={profile.acceptsDispatchAssignments ? "Yes" : "No"}
+            />
+            <DetailRow
+              label="Customer app"
+              value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
+            />
+            <DetailRow label="Time zone" value={profile.timeZoneIdentifier?.trim() || "—"} />
+            <DetailRow
+              label="Preferred garage"
+              value={profile.preferredGarageLocationId?.trim() || "—"}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fleet vehicle</CardTitle>
+            <CardAction>
+              {vehicle ? (
                 <Button
                   size="sm"
-                  variant={vehicle ? "secondary" : "outline"}
-                  className={vehicle ? "text-muted-foreground" : undefined}>
-                  Assign
+                  variant="secondary"
+                  className="text-muted-foreground"
+                  onClick={() => void handleUnassign()}>
+                  Unassign
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {vehicles.length ? (
-                  vehicles.map((v) => {
-                    const assignedToThis = effectiveChauffeurUserId(v) === user.id;
-                    return (
-                      <DropdownMenuItem
-                        key={v.driverID}
-                        disabled={assignedToThis}
-                        onClick={() => handleAssign(v.driverID)}>
-                        {vehicleMakeModel(v)}
-                        {v.licensePlate?.trim() ? (
-                          <span className="text-muted-foreground ml-2">{v.licensePlate}</span>
-                        ) : null}
-                      </DropdownMenuItem>
-                    );
-                  })
-                ) : (
-                  <DropdownMenuItem disabled>No fleet vehicles available</DropdownMenuItem>
-                )}
-                {vehicle ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => void handleUnassign()}>
-                      Unassign vehicle
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {vehicle ? (
-            <Link
-              href={`/dashboard/fleet/${vehicle.driverID}`}
-              className="hover:bg-muted/50 -mx-2 flex items-center gap-4 rounded-lg px-2 py-1 transition-colors">
-              <VehicleMakeAvatar make={vehicle.make} className="size-12 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{vehicleMakeModel(vehicle)}</p>
-                <p className="text-muted-foreground truncate text-sm">{classLabel ?? "—"}</p>
-              </div>
-            </Link>
-          ) : (
-            <p className="text-muted-foreground text-sm">No fleet vehicle assigned.</p>
-          )}
-        </CardContent>
-      </Card>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      Assign
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {availableVehicles.length ? (
+                      availableVehicles.map((v) => (
+                        <DropdownMenuItem
+                          key={v.driverID}
+                          onClick={() => handleAssign(v.driverID)}>
+                          {vehicleMakeModel(v)}
+                          {v.licensePlate?.trim() ? (
+                            <span className="text-muted-foreground ml-2">{v.licensePlate}</span>
+                          ) : null}
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>No fleet vehicles available</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {vehicle ? (
+              <Link
+                href={`/dashboard/fleet/${vehicle.driverID}`}
+                className="hover:bg-muted/50 -mx-2 flex items-center gap-4 rounded-lg px-2 py-1 transition-colors">
+                <VehicleMakeAvatar make={vehicle.make} className="size-12 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold">{vehicleMakeModel(vehicle)}</p>
+                  <p className="text-muted-foreground truncate text-sm">{classLabel ?? "—"}</p>
+                </div>
+              </Link>
+            ) : (
+              <p className="text-muted-foreground text-sm">No fleet vehicle assigned.</p>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Availability schedules</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {profile.availabilitySchedules.length ? (
-            <ul className="space-y-3">
-              {profile.availabilitySchedules.map((schedule) => (
-                <li
-                  key={schedule.id}
-                  className="rounded-md border p-3 text-sm">
-                  <div className="flex flex-wrap items-center gap-2 font-medium">
-                    {schedule.name?.trim() || "Schedule"}
-                    {!schedule.isEnabled ? (
-                      <Badge variant="outline">Disabled</Badge>
-                    ) : null}
-                  </div>
-                  <p className="text-muted-foreground mt-1">
-                    {schedule.weekdayNumbers
-                      .map((n) => WEEKDAYS[n === 7 ? 0 : n] ?? n)
-                      .join(", ") || "—"}
-                    {schedule.startTime && schedule.endTime
-                      ? ` · ${schedule.startTime}–${schedule.endTime}`
-                      : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No availability schedules configured.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Availability schedules</CardTitle>
+            <CardAction>
+              <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
+                <PlusIcon /> Add schedule
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {profile.availabilitySchedules.length ? (
+              <ul className="space-y-3">
+                {profile.availabilitySchedules.map((schedule) => {
+                  const hours = formatScheduleHours(schedule.startTime, schedule.endTime);
+                  return (
+                    <li
+                      key={schedule.id}
+                      className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 font-medium">
+                          {schedule.name?.trim() || "Schedule"}
+                          {!schedule.isEnabled ? (
+                            <Badge variant="outline">Disabled</Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                          {formatScheduleDays(schedule.weekdayNumbers)}
+                          {hours ? ` · ${hours}` : ""}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => openEditSheet(schedule)}
+                        aria-label="Edit schedule">
+                        <PencilIcon />
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">No availability schedules configured.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <ScheduleEditSheet
+        schedule={editingSchedule}
+        schedules={profile.availabilitySchedules}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        allowDelete
+        defaultLocationId={profile.preferredGarageLocationId ?? null}
+        activeHelpText="Inactive schedules are excluded when checking chauffeur availability."
+        onPersist={persistSchedules}
+        onSaved={() => onUserUpdated?.()}
+      />
+    </>
   );
 }

@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { saveOperatingHours } from "@/lib/services/firebase-service";
-import {
-  BRANCH_OFFICE_FLEET_LOCATION_ID,
-  type AppFleetOperatingHours,
-  type FleetWeeklyOperatingSchedule
-} from "@/lib/models";
+import { BRANCH_OFFICE_FLEET_LOCATION_ID, type FleetWeeklyOperatingSchedule } from "@/lib/models";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +22,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -69,11 +73,13 @@ export function formatScheduleDays(weekdayNumbers: number[]): string {
   return parts.join(", ");
 }
 
-export function newSchedule(): FleetWeeklyOperatingSchedule {
+export function newSchedule(
+  locationId: string | null = BRANCH_OFFICE_FLEET_LOCATION_ID
+): FleetWeeklyOperatingSchedule {
   return {
     id: crypto.randomUUID(),
     name: null,
-    locationId: BRANCH_OFFICE_FLEET_LOCATION_ID,
+    locationId,
     isEnabled: true,
     weekdayNumbers: [2, 3, 4, 5, 6],
     startTime: "08:00",
@@ -85,12 +91,13 @@ function scheduleFromForm(
   form: FormData,
   id: string,
   weekdayNumbers: number[],
-  isEnabled: boolean
+  isEnabled: boolean,
+  locationId: string | null
 ): FleetWeeklyOperatingSchedule {
   return {
     id,
     name: String(form.get("name") ?? "").trim() || null,
-    locationId: BRANCH_OFFICE_FLEET_LOCATION_ID,
+    locationId,
     isEnabled,
     weekdayNumbers,
     startTime: String(form.get("startTime") ?? "").trim() || null,
@@ -100,23 +107,31 @@ function scheduleFromForm(
 
 export function ScheduleEditSheet({
   schedule,
-  operatingHours,
-  branchId,
+  schedules,
   open,
   onOpenChange,
+  onPersist,
   onSaved,
+  allowDelete = false,
+  defaultLocationId = BRANCH_OFFICE_FLEET_LOCATION_ID,
+  activeHelpText = "Inactive schedules are excluded when checking operating hours.",
   nested = false
 }: {
   schedule: FleetWeeklyOperatingSchedule | null;
-  operatingHours: AppFleetOperatingHours;
-  branchId: string;
+  schedules: FleetWeeklyOperatingSchedule[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPersist: (schedules: FleetWeeklyOperatingSchedule[]) => Promise<void>;
   onSaved: (schedules: FleetWeeklyOperatingSchedule[]) => void;
+  allowDelete?: boolean;
+  defaultLocationId?: string | null;
+  activeHelpText?: string;
   nested?: boolean;
 }) {
   const isNew = schedule === null;
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [enabled, setEnabled] = useState(true);
   const [selectedDays, setSelectedDays] = useState<number[]>([2, 3, 4, 5, 6]);
@@ -124,6 +139,7 @@ export function ScheduleEditSheet({
   useEffect(() => {
     if (open) {
       setFormKey((n) => n + 1);
+      setConfirmDeleteOpen(false);
       if (schedule) {
         setEnabled(schedule.isEnabled);
         setSelectedDays(schedule.weekdayNumbers);
@@ -145,15 +161,16 @@ export function ScheduleEditSheet({
 
     const form = new FormData(e.currentTarget);
     const id = schedule?.id ?? crypto.randomUUID();
-    const updated = scheduleFromForm(form, id, selectedDays, enabled);
-    const schedules = isNew
-      ? [...operatingHours.schedules, updated]
-      : operatingHours.schedules.map((s) => (s.id === id ? updated : s));
+    const locationId = schedule?.locationId ?? defaultLocationId;
+    const updated = scheduleFromForm(form, id, selectedDays, enabled, locationId ?? null);
+    const next = isNew
+      ? [...schedules, updated]
+      : schedules.map((s) => (s.id === id ? updated : s));
 
     setSaving(true);
     try {
-      await saveOperatingHours({ ...operatingHours, schedules }, branchId);
-      onSaved(schedules);
+      await onPersist(next);
+      onSaved(next);
       toast.success(isNew ? "Schedule added." : "Schedule updated.");
       onOpenChange(false);
     } catch {
@@ -163,93 +180,145 @@ export function ScheduleEditSheet({
     }
   }
 
+  async function confirmDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!schedule) return;
+    setDeleting(true);
+    const next = schedules.filter((s) => s.id !== schedule.id);
+    try {
+      await onPersist(next);
+      onSaved(next);
+      setConfirmDeleteOpen(false);
+      toast.success("Schedule removed.");
+      onOpenChange(false);
+    } catch {
+      toast.error("Could not remove schedule.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const busy = saving || deleting;
+  const scheduleLabel = schedule?.name?.trim() || "this schedule";
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{isNew ? "Add schedule" : "Edit schedule"}</SheetTitle>
-          <SheetDescription>
-            {isNew
-              ? "Create a weekly operating window for this location."
-              : "Update this weekly operating window."}
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-6 px-4" key={formKey}>
-          <div className="space-y-2">
-            <Label htmlFor="name">Schedule name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="e.g. Weekday hours"
-              defaultValue={schedule?.name ?? ""}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{isNew ? "Add schedule" : "Edit schedule"}</SheetTitle>
+          </SheetHeader>
+          <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-6 px-4" key={formKey}>
             <div className="space-y-2">
-              <Label htmlFor="startTime">Start</Label>
+              <Label htmlFor="name">Schedule name</Label>
               <Input
-                id="startTime"
-                name="startTime"
-                type="time"
-                defaultValue={schedule?.startTime ?? "08:00"}
-                required
+                id="name"
+                name="name"
+                placeholder="e.g. Weekday hours"
+                defaultValue={schedule?.name ?? ""}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Start</Label>
+                <Input
+                  id="startTime"
+                  name="startTime"
+                  type="time"
+                  defaultValue={schedule?.startTime ?? "08:00"}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End</Label>
+                <Input
+                  id="endTime"
+                  name="endTime"
+                  type="time"
+                  defaultValue={schedule?.endTime ?? "18:00"}
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="endTime">End</Label>
-              <Input
-                id="endTime"
-                name="endTime"
-                type="time"
-                defaultValue={schedule?.endTime ?? "18:00"}
-                required
+              <Label>Days</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAYS.map((d) => (
+                  <button
+                    key={d.num}
+                    type="button"
+                    onClick={() => toggleDay(d.num)}
+                    className={cn(
+                      "h-8 w-11 rounded-md border text-sm transition-colors",
+                      selectedDays.includes(d.num)
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    )}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="isEnabled">Active</Label>
+                <p className="text-muted-foreground text-xs">{activeHelpText}</p>
+              </div>
+              <Switch
+                id="isEnabled"
+                checked={enabled}
+                onCheckedChange={setEnabled}
+                disabled={busy}
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Days</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {WEEKDAYS.map((d) => (
-                <button
-                  key={d.num}
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+              {!isNew && allowDelete ? (
+                <Button
                   type="button"
-                  onClick={() => toggleDay(d.num)}
-                  className={cn(
-                    "h-8 w-11 rounded-md border text-sm transition-colors",
-                    selectedDays.includes(d.num)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  )}>
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={busy}
+                  onClick={() => setConfirmDeleteOpen(true)}>
+                  Delete
+                </Button>
+              ) : (
+                <span />
+              )}
+              <Button type="submit" disabled={busy || selectedDays.length === 0}>
+                {saving ? "Saving…" : isNew ? "Add schedule" : "Save"}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="isEnabled">Active</Label>
-              <p className="text-muted-foreground text-xs">
-                Inactive schedules are excluded when checking operating hours.
-              </p>
-            </div>
-            <Switch
-              id="isEnabled"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-              disabled={saving}
-            />
-          </div>
-
-          <SheetFooter className="px-0">
-            <Button type="submit" disabled={saving || selectedDays.length === 0}>
-              {saving ? "Saving…" : isNew ? "Add schedule" : "Save changes"}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+      <AlertDialog
+        open={confirmDeleteOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deleting) setConfirmDeleteOpen(false);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {scheduleLabel}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(e) => void confirmDelete(e)}>
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
