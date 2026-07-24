@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 
 import {
-  formatPostalAddress,
+  formatPostalAddressLines,
   postalAddressFromProfile,
   postalAddressFromTripSnapshot
 } from "@/lib/models/postal-address";
@@ -80,10 +80,11 @@ function InvoiceDetailBody({
   const email = invoice.customerEmail?.trim() || customer?.email?.trim() || null;
   const phone =
     invoice.customerPhone?.trim() || customer?.profile.phoneNumber?.trim() || null;
-  const address =
-    formatPostalAddress(trip ? postalAddressFromTripSnapshot(trip) : null) ||
-    formatPostalAddress(customer ? postalAddressFromProfile(customer.profile) : null) ||
-    null;
+  const tripLines = formatPostalAddressLines(trip ? postalAddressFromTripSnapshot(trip) : null);
+  const customerLines = formatPostalAddressLines(
+    customer ? postalAddressFromProfile(customer.profile) : null
+  );
+  const addressLines = tripLines.length > 0 ? tripLines : customerLines;
 
   const lineItems = invoice.lineItems?.filter((l) => l.label.trim() || l.amount) ?? [];
 
@@ -121,7 +122,13 @@ function InvoiceDetailBody({
         <SectionHeading>Bill to</SectionHeading>
         <div className="space-y-2 text-sm">
           <p className="text-foreground font-medium">{name}</p>
-          {address ? <p className="text-foreground">{address}</p> : null}
+          {addressLines.length > 0 ? (
+            <div className="text-foreground space-y-0.5">
+              {addressLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
           {phone ? (
             <p className="text-foreground">
               <a href={`tel:${phone}`} className="hover:underline">

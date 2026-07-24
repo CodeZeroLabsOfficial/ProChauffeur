@@ -29,6 +29,24 @@ export function formatPostalAddress(address: PostalAddress | null | undefined): 
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
+/**
+ * Multi-line postal layout:
+ * street
+ * suburb, postcode, state
+ * country
+ */
+export function formatPostalAddressLines(
+  address: PostalAddress | null | undefined
+): string[] {
+  if (!address) return [];
+  const street = address.street?.trim();
+  const locality = [address.city?.trim(), address.postcode?.trim(), address.state?.trim()]
+    .filter(Boolean)
+    .join(", ");
+  const country = address.country?.trim();
+  return [street, locality || null, country].filter((line): line is string => Boolean(line));
+}
+
 export function hasPostalAddress(address: PostalAddress | null | undefined): boolean {
   if (!address) return false;
   return Boolean(
