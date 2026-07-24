@@ -60,7 +60,7 @@ export function MultiSelectField({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -79,7 +79,9 @@ export function MultiSelectField({
           <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="z-[100] max-h-[--radix-popover-content-available-height] w-[var(--radix-popover-trigger-width)] overflow-y-auto p-0"
+        align="start">
         <Command>
           <CommandList>
             {options.length === 0 ? (

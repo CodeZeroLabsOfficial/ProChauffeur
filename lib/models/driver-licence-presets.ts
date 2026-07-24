@@ -1,6 +1,11 @@
-/** Country presets that supply driver licence class options for the operator. */
+/** Country presets that supply driver licence class and jurisdiction options. */
 
 export type DriverLicenceClassOption = {
+  value: string;
+  label: string;
+};
+
+export type DriverLicenceJurisdictionOption = {
   value: string;
   label: string;
 };
@@ -9,6 +14,7 @@ export type DriverLicenceCountryPreset = {
   id: string;
   label: string;
   classes: DriverLicenceClassOption[];
+  jurisdictions: DriverLicenceJurisdictionOption[];
 };
 
 export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
@@ -24,6 +30,16 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
       { value: "MC", label: "MC — Multi Combination" },
       { value: "R", label: "R — Motorcycle" },
       { value: "RE", label: "RE — Motorcycle (restricted)" }
+    ],
+    jurisdictions: [
+      { value: "NSW", label: "NSW — New South Wales" },
+      { value: "VIC", label: "VIC — Victoria" },
+      { value: "QLD", label: "QLD — Queensland" },
+      { value: "SA", label: "SA — South Australia" },
+      { value: "WA", label: "WA — Western Australia" },
+      { value: "TAS", label: "TAS — Tasmania" },
+      { value: "ACT", label: "ACT — Australian Capital Territory" },
+      { value: "NT", label: "NT — Northern Territory" }
     ]
   },
   {
@@ -36,6 +52,24 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
       { value: "4", label: "4 — Heavy rigid" },
       { value: "5", label: "5 — Heavy combination" },
       { value: "6", label: "6 — Motorcycle" }
+    ],
+    jurisdictions: [
+      { value: "AUK", label: "Auckland" },
+      { value: "BOP", label: "Bay of Plenty" },
+      { value: "CAN", label: "Canterbury" },
+      { value: "GIS", label: "Gisborne" },
+      { value: "HKB", label: "Hawke's Bay" },
+      { value: "MWT", label: "Manawatū-Whanganui" },
+      { value: "MBH", label: "Marlborough" },
+      { value: "NSN", label: "Nelson" },
+      { value: "NTL", label: "Northland" },
+      { value: "OTA", label: "Otago" },
+      { value: "STL", label: "Southland" },
+      { value: "TKI", label: "Taranaki" },
+      { value: "TAS", label: "Tasman" },
+      { value: "WKO", label: "Waikato" },
+      { value: "WGN", label: "Wellington" },
+      { value: "WTC", label: "West Coast" }
     ]
   },
   {
@@ -51,6 +85,12 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
       { value: "D1", label: "D1 — Minibus" },
       { value: "D", label: "D — Bus" },
       { value: "A", label: "A — Motorcycle" }
+    ],
+    jurisdictions: [
+      { value: "ENG", label: "England" },
+      { value: "SCT", label: "Scotland" },
+      { value: "WLS", label: "Wales" },
+      { value: "NIR", label: "Northern Ireland" }
     ]
   },
   {
@@ -62,6 +102,59 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
       { value: "C", label: "C — Small vehicle (CDL)" },
       { value: "D", label: "D — Passenger car" },
       { value: "M", label: "M — Motorcycle" }
+    ],
+    jurisdictions: [
+      { value: "AL", label: "AL — Alabama" },
+      { value: "AK", label: "AK — Alaska" },
+      { value: "AZ", label: "AZ — Arizona" },
+      { value: "AR", label: "AR — Arkansas" },
+      { value: "CA", label: "CA — California" },
+      { value: "CO", label: "CO — Colorado" },
+      { value: "CT", label: "CT — Connecticut" },
+      { value: "DE", label: "DE — Delaware" },
+      { value: "DC", label: "DC — District of Columbia" },
+      { value: "FL", label: "FL — Florida" },
+      { value: "GA", label: "GA — Georgia" },
+      { value: "HI", label: "HI — Hawaii" },
+      { value: "ID", label: "ID — Idaho" },
+      { value: "IL", label: "IL — Illinois" },
+      { value: "IN", label: "IN — Indiana" },
+      { value: "IA", label: "IA — Iowa" },
+      { value: "KS", label: "KS — Kansas" },
+      { value: "KY", label: "KY — Kentucky" },
+      { value: "LA", label: "LA — Louisiana" },
+      { value: "ME", label: "ME — Maine" },
+      { value: "MD", label: "MD — Maryland" },
+      { value: "MA", label: "MA — Massachusetts" },
+      { value: "MI", label: "MI — Michigan" },
+      { value: "MN", label: "MN — Minnesota" },
+      { value: "MS", label: "MS — Mississippi" },
+      { value: "MO", label: "MO — Missouri" },
+      { value: "MT", label: "MT — Montana" },
+      { value: "NE", label: "NE — Nebraska" },
+      { value: "NV", label: "NV — Nevada" },
+      { value: "NH", label: "NH — New Hampshire" },
+      { value: "NJ", label: "NJ — New Jersey" },
+      { value: "NM", label: "NM — New Mexico" },
+      { value: "NY", label: "NY — New York" },
+      { value: "NC", label: "NC — North Carolina" },
+      { value: "ND", label: "ND — North Dakota" },
+      { value: "OH", label: "OH — Ohio" },
+      { value: "OK", label: "OK — Oklahoma" },
+      { value: "OR", label: "OR — Oregon" },
+      { value: "PA", label: "PA — Pennsylvania" },
+      { value: "RI", label: "RI — Rhode Island" },
+      { value: "SC", label: "SC — South Carolina" },
+      { value: "SD", label: "SD — South Dakota" },
+      { value: "TN", label: "TN — Tennessee" },
+      { value: "TX", label: "TX — Texas" },
+      { value: "UT", label: "UT — Utah" },
+      { value: "VT", label: "VT — Vermont" },
+      { value: "VA", label: "VA — Virginia" },
+      { value: "WA", label: "WA — Washington" },
+      { value: "WV", label: "WV — West Virginia" },
+      { value: "WI", label: "WI — Wisconsin" },
+      { value: "WY", label: "WY — Wyoming" }
     ]
   }
 ];
@@ -87,11 +180,21 @@ export function driverLicenceCountryLabel(countryId: string): string {
   );
 }
 
-export function licenceClassesForCountry(countryId: string): DriverLicenceClassOption[] {
-  const preset =
+function presetForCountry(countryId: string): DriverLicenceCountryPreset {
+  return (
     DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === countryId) ??
-    DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === DEFAULT_DRIVER_LICENCE_COUNTRY)!;
-  return preset.classes;
+    DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === DEFAULT_DRIVER_LICENCE_COUNTRY)!
+  );
+}
+
+export function licenceClassesForCountry(countryId: string): DriverLicenceClassOption[] {
+  return presetForCountry(countryId).classes;
+}
+
+export function licenceJurisdictionsForCountry(
+  countryId: string
+): DriverLicenceJurisdictionOption[] {
+  return presetForCountry(countryId).jurisdictions;
 }
 
 /** Parse stored free-text / joined class codes into multi-select values. */

@@ -13,6 +13,7 @@ import {
   defaultDriverProfile,
   formatLicenceClasses,
   licenceClassesForCountry,
+  licenceJurisdictionsForCountry,
   parseLicenceClasses,
   type User
 } from "@/lib/models";
@@ -22,6 +23,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -51,6 +59,9 @@ export function DriverLicenceEditSheet({
   const [licenceClasses, setLicenceClasses] = useState<string[]>(() =>
     parseLicenceClasses(profile.driversLicenseClassOrType)
   );
+  const [jurisdictionCode, setJurisdictionCode] = useState(
+    () => profile.driversLicenseJurisdictionCode?.trim() ?? ""
+  );
   const [licenceCountry, setLicenceCountry] = useState(DEFAULT_DRIVER_LICENCE_COUNTRY);
   const [saving, setSaving] = useState(false);
 
@@ -59,6 +70,7 @@ export function DriverLicenceEditSheet({
     setSeededId(user.id);
     setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
     setLicenceClasses(parseLicenceClasses(profile.driversLicenseClassOrType));
+    setJurisdictionCode(profile.driversLicenseJurisdictionCode?.trim() ?? "");
   }
 
   useEffect(() => {
@@ -85,6 +97,16 @@ export function DriverLicenceEditSheet({
     return [...preset, ...extras];
   }, [licenceCountry, licenceClasses]);
 
+  const jurisdictionOptions = useMemo(() => {
+    const preset = licenceJurisdictionsForCountry(licenceCountry);
+    const known = new Set(preset.map((option) => option.value.toUpperCase()));
+    const current = jurisdictionCode.trim();
+    if (current && !known.has(current.toUpperCase())) {
+      return [{ value: current, label: current }, ...preset];
+    }
+    return preset;
+  }, [licenceCountry, jurisdictionCode]);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -94,7 +116,7 @@ export function DriverLicenceEditSheet({
       ...profile,
       driversLicenseNumber: get("driversLicenseNumber") || null,
       driversLicenseClassOrType: formatLicenceClasses(licenceClasses),
-      driversLicenseJurisdictionCode: get("driversLicenseJurisdictionCode") || null,
+      driversLicenseJurisdictionCode: jurisdictionCode.trim() || null,
       driversLicenseConditions: get("driversLicenseConditions") || null,
       driversLicenseSummary: get("driversLicenseSummary") || null,
       driversLicenseExpiry: driversLicenseExpiry ?? null
@@ -143,12 +165,25 @@ export function DriverLicenceEditSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="licence-driversLicenseJurisdictionCode">State</Label>
-              <Input
-                id="licence-driversLicenseJurisdictionCode"
-                name="driversLicenseJurisdictionCode"
-                placeholder="NSW"
-                defaultValue={profile.driversLicenseJurisdictionCode ?? ""}
-              />
+              <Select
+                value={jurisdictionCode || undefined}
+                onValueChange={setJurisdictionCode}
+                disabled={saving}>
+                <SelectTrigger id="licence-driversLicenseJurisdictionCode" className="w-full">
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent
+                  className={cn(
+                    "z-[100]",
+                    nested && "z-[110]"
+                  )}>
+                  {jurisdictionOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col space-y-2">
               <Label>Expiry</Label>
