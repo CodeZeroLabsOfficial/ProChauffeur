@@ -8,7 +8,9 @@ import { INVOICE_STATUSES, invoiceStatusTitle, type Invoice, type InvoiceStatus 
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
+import { InvoiceDetailSheet } from "@/app/dashboard/billing/invoice-detail-sheet";
 import { InvoiceEditSheet } from "@/app/dashboard/billing/invoice-edit-sheet";
+import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,20 +31,13 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-const statusStyle: Record<InvoiceStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "border-blue-300 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
-  paid: "border-green-300 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300",
-  void: "border-zinc-300 bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400",
-  overdue: "border-red-300 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-};
-
 export default function BillingPage() {
   const { invoices, loading } = useInvoices();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">("all");
   const [selected, setSelected] = useState<Invoice | null>(null);
-  const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -63,9 +58,9 @@ export default function BillingPage() {
     [invoices]
   );
 
-  function openInvoice(inv: Invoice | null) {
+  function openInvoice(inv: Invoice) {
     setSelected(inv);
-    setOpen(true);
+    setDetailOpen(true);
   }
 
   return (
@@ -74,7 +69,7 @@ export default function BillingPage() {
         title="Billing"
         description="Manage invoices and track outstanding revenue."
         actions={
-          <Button onClick={() => openInvoice(null)}>
+          <Button onClick={() => setCreateOpen(true)}>
             <PlusIcon /> New invoice
           </Button>
         }
@@ -165,7 +160,9 @@ export default function BillingPage() {
                     <TableCell className="text-muted-foreground">{formatDate(i.dueAt ?? null)}</TableCell>
                     <TableCell>{formatCurrency(i.total, i.currencyCode)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn("font-medium", statusStyle[i.status])}>
+                      <Badge
+                        variant="outline"
+                        className={cn("font-medium", invoiceStatusStyle[i.status])}>
                         {invoiceStatusTitle[i.status]}
                       </Badge>
                     </TableCell>
@@ -177,7 +174,8 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
-      <InvoiceEditSheet invoice={selected} open={open} onOpenChange={setOpen} />
+      <InvoiceDetailSheet invoice={selected} open={detailOpen} onOpenChange={setDetailOpen} />
+      <InvoiceEditSheet invoice={null} open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import type {
   Promotion,
   PromotionConditions,
   QuoteLineItem,
+  SavedPaymentMethod,
   Trip,
   TripQuoteSnapshot,
   User,
@@ -97,6 +98,22 @@ function mapUserPreferences(d: DocumentData | undefined | null): UserPreferences
   return {
     bookingsDefaultDateRange:
       typeof d.bookingsDefaultDateRange === "string" ? d.bookingsDefaultDateRange : null
+  };
+}
+
+export function mapSavedPaymentMethod(id: string, d: DocumentData): SavedPaymentMethod {
+  return {
+    id,
+    stripePaymentMethodId: d.stripePaymentMethodId ?? "",
+    type: "card",
+    brand: d.brand ?? "",
+    last4: d.last4 ?? "",
+    expMonth: typeof d.expMonth === "number" ? d.expMonth : 0,
+    expYear: typeof d.expYear === "number" ? d.expYear : 0,
+    isDefault: d.isDefault === true,
+    displayLabel: d.displayLabel ?? "",
+    createdAt: toDate(d.createdAt) ?? new Date(),
+    updatedAt: toDate(d.updatedAt) ?? new Date()
   };
 }
 

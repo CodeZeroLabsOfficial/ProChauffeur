@@ -65,6 +65,7 @@ import {
   type Invoice,
   type PricingConfig,
   type Promotion,
+  type SavedPaymentMethod,
   type Trip,
   type TripStatus,
   type User,
@@ -86,6 +87,7 @@ import {
   mapPlansCatalog,
   mapPricingConfig,
   mapPromotion,
+  mapSavedPaymentMethod,
   mapTrip,
   mapUser,
   mapVehicle,
@@ -686,6 +688,16 @@ export async function fetchUsers(): Promise<User[]> {
 export async function fetchUser(uid: string): Promise<User | null> {
   const snap = await getDoc(doc(db(), Collections.users, uid));
   return snap.exists() ? mapUser(snap.id, snap.data()) : null;
+}
+
+/** Saved cards under `users/{uid}/payment_methods`. Prefer default, else first. */
+export async function fetchDefaultSavedPaymentMethod(
+  uid: string
+): Promise<SavedPaymentMethod | null> {
+  if (!uid.trim()) return null;
+  const snap = await getDocs(collection(db(), Collections.users, uid, "payment_methods"));
+  const methods = snap.docs.map((d) => mapSavedPaymentMethod(d.id, d.data()));
+  return methods.find((m) => m.isDefault) ?? methods[0] ?? null;
 }
 
 /** Firebase Auth last sign-in; null if never signed in or no Auth user. */
