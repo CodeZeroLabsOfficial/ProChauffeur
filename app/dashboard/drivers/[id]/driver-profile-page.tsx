@@ -72,11 +72,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     [trips, invoices, driverId]
   );
 
-  const vehicle = useMemo(
-    () => vehicles.find((v) => v.driverID === driverId),
-    [vehicles, driverId]
-  );
-
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") params.delete("tab");
@@ -159,7 +154,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
                 />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
-                <DriverProfileOperationsTab user={user} vehicle={vehicle} />
+                <DriverProfileOperationsTab user={user} vehicles={vehicles} />
               </TabsContent>
             </div>
           </div>

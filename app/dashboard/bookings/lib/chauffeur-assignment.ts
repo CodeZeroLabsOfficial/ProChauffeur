@@ -11,7 +11,7 @@ export function vehiclesByChauffeurId(vehicles: Vehicle[]): Map<string, Vehicle>
   return map;
 }
 
-export function vehicleForChauffeur(
+export function assignedVehicle(
   vehicles: Vehicle[],
   chauffeurUserId: string
 ): Vehicle | undefined {

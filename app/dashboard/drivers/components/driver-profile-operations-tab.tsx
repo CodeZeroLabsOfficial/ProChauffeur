@@ -1,17 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
 
+import { assignedVehicle } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import {
   defaultDriverProfile,
-  vehicleDisplayName,
+  effectiveChauffeurUserId,
   type User,
   type Vehicle
 } from "@/lib/models";
-import { formatDate } from "@/lib/format";
+import { assignFleetVehicle, unassignFleetVehicle } from "@/lib/services/firebase-service";
 import { visibilityStatusLabel } from "@/lib/chauffeur-badge-icons";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useVehicleClasses } from "@/hooks/use-collections";
+import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -24,14 +37,51 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
+function vehicleMakeModel(vehicle: Vehicle): string {
+  return `${vehicle.make} ${vehicle.model}`.trim() || "Vehicle";
+}
+
 export function DriverProfileOperationsTab({
   user,
-  vehicle
+  vehicles
 }: {
   user: User;
-  vehicle: Vehicle | undefined;
+  vehicles: Vehicle[];
 }) {
   const profile = user.driverProfile ?? defaultDriverProfile();
+  const { vehicleClasses } = useVehicleClasses();
+  const vehicle = assignedVehicle(vehicles, user.id);
+
+  const classesById = useMemo(
+    () => new Map(vehicleClasses.map((c) => [c.id, c.displayName])),
+    [vehicleClasses]
+  );
+
+  const classLabel = vehicle?.vehicleClassId
+    ? (classesById.get(vehicle.vehicleClassId) ?? vehicle.vehicleClassId)
+    : null;
+
+  const handleAssign = useCallback(
+    async (vehicleDocumentId: string) => {
+      try {
+        await assignFleetVehicle(vehicles, vehicleDocumentId, user.id);
+        toast.success("Vehicle assigned.");
+      } catch {
+        toast.error("Could not assign the vehicle.");
+      }
+    },
+    [user.id, vehicles]
+  );
+
+  const handleUnassign = useCallback(async () => {
+    if (!vehicle) return;
+    try {
+      await unassignFleetVehicle(vehicle.driverID);
+      toast.success("Vehicle unassigned.");
+    } catch {
+      toast.error("Could not unassign the vehicle.");
+    }
+  }, [vehicle]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -59,27 +109,58 @@ export function DriverProfileOperationsTab({
       <Card>
         <CardHeader>
           <CardTitle>Fleet vehicle</CardTitle>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant={vehicle ? "secondary" : "outline"}
+                  className={vehicle ? "text-muted-foreground" : undefined}>
+                  Assign
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {vehicles.length ? (
+                  vehicles.map((v) => {
+                    const assignedToThis = effectiveChauffeurUserId(v) === user.id;
+                    return (
+                      <DropdownMenuItem
+                        key={v.driverID}
+                        disabled={assignedToThis}
+                        onClick={() => handleAssign(v.driverID)}>
+                        {vehicleMakeModel(v)}
+                        {v.licensePlate?.trim() ? (
+                          <span className="text-muted-foreground ml-2">{v.licensePlate}</span>
+                        ) : null}
+                      </DropdownMenuItem>
+                    );
+                  })
+                ) : (
+                  <DropdownMenuItem disabled>No fleet vehicles available</DropdownMenuItem>
+                )}
+                {vehicle ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => void handleUnassign()}>
+                      Unassign vehicle
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {vehicle ? (
-            <>
-              <DetailRow
-                label="Vehicle"
-                value={
-                  <Link
-                    href={`/dashboard/fleet/${vehicle.driverID}`}
-                    className="hover:text-primary hover:underline">
-                    {vehicleDisplayName(vehicle)}
-                  </Link>
-                }
-              />
-              <DetailRow label="Plate" value={vehicle.licensePlate || "—"} />
-              <DetailRow label="Capacity" value={String(vehicle.passengerCapacity)} />
-              <DetailRow
-                label="Registration expiry"
-                value={formatDate(vehicle.registrationExpiry)}
-              />
-            </>
+            <Link
+              href={`/dashboard/fleet/${vehicle.driverID}`}
+              className="hover:bg-muted/50 -mx-2 flex items-center gap-4 rounded-lg px-2 py-1 transition-colors">
+              <VehicleMakeAvatar make={vehicle.make} className="size-12 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{vehicleMakeModel(vehicle)}</p>
+                <p className="text-muted-foreground truncate text-sm">{classLabel ?? "—"}</p>
+              </div>
+            </Link>
           ) : (
             <p className="text-muted-foreground text-sm">No fleet vehicle assigned.</p>
           )}
