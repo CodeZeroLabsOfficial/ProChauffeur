@@ -1,17 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   Calendar,
+  CalendarCheck,
   CalendarClock,
   CreditCard,
   ExternalLink,
-  ListChecks,
   Mail,
   MapPin,
-  Phone,
-  User as UserIcon
+  Phone
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +26,7 @@ import {
   type User
 } from "@/lib/models";
 import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions";
-import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
+import { LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { fetchDefaultSavedPaymentMethod } from "@/lib/services/firebase-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
@@ -52,19 +50,35 @@ function cardPaymentLabel(method: SavedPaymentMethod): string {
   return method.last4 ? `${brand} ending in ${method.last4}` : brand;
 }
 
+function SummaryRow({
+  label,
+  value,
+  className
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex justify-between gap-4 text-sm", className)}>
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-right">{value}</span>
+    </div>
+  );
+}
+
 function InvoiceDetailBody({
   invoice,
   trip,
   customer,
-  paymentMethod,
-  onOpenChange
+  paymentMethod
 }: {
   invoice: Invoice;
   trip: Trip | undefined;
   customer: User | undefined;
   paymentMethod: SavedPaymentMethod | null | undefined;
-  onOpenChange: (open: boolean) => void;
 }) {
+  const isPaid = invoice.status === "paid";
   const name = invoice.customerName.trim() || customer?.profile.displayName.trim() || "—";
   const email = invoice.customerEmail?.trim() || customer?.email?.trim() || null;
   const phone =
@@ -74,8 +88,7 @@ function InvoiceDetailBody({
     formatPostalAddress(customer ? postalAddressFromProfile(customer.profile) : null) ||
     null;
 
-  const bookingCount = invoice.tripIDs?.length ?? 0;
-  const singleTripId = bookingCount === 1 ? invoice.tripIDs[0] : null;
+  const lineItems = invoice.lineItems?.filter((l) => l.label.trim() || l.amount) ?? [];
 
   const paymentLabel =
     paymentMethod === undefined
@@ -86,69 +99,84 @@ function InvoiceDetailBody({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <SectionHeading>Customer details</SectionHeading>
-        <dl className="grid grid-cols-2 gap-4">
-          <LabeledDetailValue icon={UserIcon} label="Name" value={name} />
-          <LabeledDetailValue icon={MapPin} label="Address" value={address} />
+      <dl className="grid grid-cols-2 gap-4">
+        <LabeledDetailValue
+          icon={Calendar}
+          label="Date issued"
+          value={formatDate(invoice.issuedAt)}
+        />
+        {isPaid ? (
           <LabeledDetailValue
-            icon={Mail}
-            label="Email"
-            value={email}
-            href={email ? `mailto:${email}` : undefined}
+            icon={CalendarCheck}
+            label="Date paid"
+            value={formatDate(invoice.paidAt ?? null)}
           />
+        ) : (
           <LabeledDetailValue
-            icon={Phone}
-            label="Phone"
-            value={phone}
-            href={phone ? `tel:${phone}` : undefined}
+            icon={CalendarClock}
+            label="Date due"
+            value={formatDate(invoice.dueAt ?? null)}
           />
-        </dl>
+        )}
+      </dl>
+
+      <div className="space-y-3">
+        <SectionHeading>Bill to</SectionHeading>
+        <div className="space-y-2 text-sm">
+          <p className="text-foreground font-medium">{name}</p>
+          {address ? (
+            <div className="text-foreground flex items-start gap-2">
+              <MapPin className="text-muted-foreground mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>{address}</span>
+            </div>
+          ) : null}
+          {phone ? (
+            <div className="text-foreground flex items-center gap-2">
+              <Phone className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+              <a href={`tel:${phone}`} className="hover:underline">
+                {phone}
+              </a>
+            </div>
+          ) : null}
+          {email ? (
+            <div className="text-foreground flex items-center gap-2">
+              <Mail className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+              <a href={`mailto:${email}`} className="hover:underline">
+                {email}
+              </a>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-4">
         <SectionHeading>Invoice summary</SectionHeading>
-        <dl className="grid grid-cols-2 gap-4">
-          <LabeledDetailValue
-            icon={Calendar}
-            label="Issued"
-            value={formatDate(invoice.issuedAt)}
-          />
-          <LabeledDetailValue
-            icon={CalendarClock}
-            label="Due"
-            value={formatDate(invoice.dueAt ?? null)}
-          />
-          <div className="space-y-1">
-            <DetailLabel icon={ListChecks}>Bookings</DetailLabel>
-            <dd>
-              {singleTripId ? (
-                <Link
-                  href={`/dashboard/bookings/${singleTripId}`}
-                  className="text-foreground text-sm underline-offset-4 hover:underline"
-                  onClick={() => onOpenChange(false)}>
-                  1 booking
-                </Link>
-              ) : (
-                <p className="text-foreground text-sm">{bookingCount}</p>
-              )}
-            </dd>
+        {lineItems.length > 0 ? (
+          <div className="space-y-3">
+            {lineItems.map((line) => (
+              <SummaryRow
+                key={line.id}
+                label={line.label.trim() || "Item"}
+                value={formatCurrency(line.amount, invoice.currencyCode)}
+              />
+            ))}
           </div>
-        </dl>
+        ) : null}
         <div className="space-y-4">
-          <div className="flex justify-between text-sm">
-            <span>Subtotal</span>
-            <span>{formatCurrency(invoice.subtotal, invoice.currencyCode)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Tax</span>
-            <span>{formatCurrency(invoice.taxAmount, invoice.currencyCode)}</span>
-          </div>
+          <SummaryRow
+            label="Subtotal"
+            value={formatCurrency(invoice.subtotal, invoice.currencyCode)}
+          />
+          <SummaryRow
+            label="GST"
+            value={formatCurrency(invoice.taxAmount, invoice.currencyCode)}
+          />
           <Separator />
-          <div className="flex justify-between text-sm font-semibold">
-            <span>Total</span>
-            <span>{formatCurrency(invoice.total, invoice.currencyCode)}</span>
-          </div>
+          <SummaryRow
+            label="Total"
+            value={formatCurrency(invoice.total, invoice.currencyCode)}
+            className="font-semibold [&_span]:text-foreground"
+          />
         </div>
       </div>
 
@@ -263,7 +291,6 @@ export function InvoiceDetailSheet({
             trip={trip}
             customer={customer}
             paymentMethod={paymentMethod}
-            onOpenChange={onOpenChange}
           />
         </div>
       </SheetContent>
