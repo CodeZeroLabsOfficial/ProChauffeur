@@ -6,10 +6,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CreditCard,
-  ExternalLink,
-  Mail,
-  MapPin,
-  Phone
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -124,27 +121,20 @@ function InvoiceDetailBody({
         <SectionHeading>Bill to</SectionHeading>
         <div className="space-y-2 text-sm">
           <p className="text-foreground font-medium">{name}</p>
-          {address ? (
-            <div className="text-foreground flex items-start gap-2">
-              <MapPin className="text-muted-foreground mt-0.5 size-3.5 shrink-0" aria-hidden />
-              <span>{address}</span>
-            </div>
-          ) : null}
+          {address ? <p className="text-foreground">{address}</p> : null}
           {phone ? (
-            <div className="text-foreground flex items-center gap-2">
-              <Phone className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+            <p className="text-foreground">
               <a href={`tel:${phone}`} className="hover:underline">
                 {phone}
               </a>
-            </div>
+            </p>
           ) : null}
           {email ? (
-            <div className="text-foreground flex items-center gap-2">
-              <Mail className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+            <p className="text-foreground">
               <a href={`mailto:${email}`} className="hover:underline">
                 {email}
               </a>
-            </div>
+            </p>
           ) : null}
         </div>
       </div>
