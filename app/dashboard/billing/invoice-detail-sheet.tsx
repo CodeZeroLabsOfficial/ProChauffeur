@@ -81,10 +81,10 @@ function InvoiceDetailBody({
   const phone =
     invoice.customerPhone?.trim() || customer?.profile.phoneNumber?.trim() || null;
   const tripLines = formatPostalAddressLines(trip ? postalAddressFromTripSnapshot(trip) : null);
-  const customerLines = formatPostalAddressLines(
-    customer ? postalAddressFromProfile(customer.profile) : null
-  );
-  const addressLines = tripLines.length > 0 ? tripLines : customerLines;
+  const addressLines =
+    tripLines.length > 0
+      ? tripLines
+      : formatPostalAddressLines(customer ? postalAddressFromProfile(customer.profile) : null);
 
   const lineItems = invoice.lineItems?.filter((l) => l.label.trim() || l.amount) ?? [];
 

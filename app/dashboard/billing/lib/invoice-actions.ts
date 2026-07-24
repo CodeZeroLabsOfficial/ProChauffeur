@@ -8,27 +8,5 @@ export const invoiceStatusStyle: Record<InvoiceStatus, string> = {
   overdue: "border-red-300 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
 };
 
-/** Paid and void invoices are immutable (body + status). */
-export function canEditInvoice(status: InvoiceStatus): boolean {
-  return status !== "paid" && status !== "void";
-}
-
-/**
- * Statuses an operator may set from the current state.
- * Paid/void are terminal — callers should not show a status select.
- */
-export function allowedInvoiceStatuses(
-  current: InvoiceStatus | null,
-  isNew: boolean
-): InvoiceStatus[] {
-  if (isNew || current === "draft") {
-    return ["draft", "sent", "paid", "void"];
-  }
-  if (current === "sent") {
-    return ["sent", "paid", "void", "overdue"];
-  }
-  if (current === "overdue") {
-    return ["overdue", "paid", "void"];
-  }
-  return current ? [current] : ["draft"];
-}
+/** Statuses available when creating a new invoice. */
+export const NEW_INVOICE_STATUSES: InvoiceStatus[] = ["draft", "sent", "paid", "void"];

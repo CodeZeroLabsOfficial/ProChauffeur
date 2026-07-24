@@ -175,7 +175,7 @@ export default function BillingPage() {
       </Card>
 
       <InvoiceDetailSheet invoice={selected} open={detailOpen} onOpenChange={setDetailOpen} />
-      <InvoiceEditSheet invoice={null} open={createOpen} onOpenChange={setCreateOpen} />
+      <InvoiceEditSheet open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
