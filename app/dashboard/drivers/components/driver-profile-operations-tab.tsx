@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { assignedVehicle } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
@@ -165,16 +165,15 @@ export function DriverProfileOperationsTab({
               {vehicle ? (
                 <Button
                   size="sm"
-                  variant="secondary"
-                  className="text-muted-foreground"
+                  variant="outline"
                   onClick={() => void handleUnassign()}>
-                  Unassign
+                  <MinusIcon /> Unassign
                 </Button>
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="outline">
-                      Assign
+                      <PlusIcon /> Assign
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
