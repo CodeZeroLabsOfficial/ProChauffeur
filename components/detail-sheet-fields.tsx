@@ -35,19 +35,22 @@ export function LabeledDetailValue({
   href?: string;
   className?: string;
 }) {
-  const text = value?.trim() || "—";
-  const hasLink = Boolean(href && value?.trim());
+  const trimmed = value?.trim() || "";
+  const isEmpty = !trimmed;
+  const text = trimmed || "—";
+  const hasLink = Boolean(href && trimmed);
+  const valueClass = cn("text-sm", isEmpty ? "text-muted-foreground" : "text-foreground");
 
   return (
     <div className={cn("space-y-1", className)}>
       <DetailLabel icon={icon}>{label}</DetailLabel>
       <dd>
         {hasLink ? (
-          <a href={href} className="text-muted-foreground text-sm hover:underline">
+          <a href={href} className={cn(valueClass, "hover:underline")}>
             {text}
           </a>
         ) : (
-          <p className="text-muted-foreground text-sm">{text}</p>
+          <p className={valueClass}>{text}</p>
         )}
       </dd>
     </div>

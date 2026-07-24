@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Calendar,
+  CalendarClock,
   CreditCard,
   ExternalLink,
+  ListChecks,
   Mail,
   MapPin,
   Phone,
@@ -25,7 +28,7 @@ import {
   type User
 } from "@/lib/models";
 import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions";
-import { LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
+import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { fetchDefaultSavedPaymentMethod } from "@/lib/services/firebase-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
@@ -33,21 +36,13 @@ import { useTrips, useUsers } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b py-3 last:border-0">
-      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
-      <div className="min-w-0 flex-1 text-right text-sm">{value ?? "—"}</div>
-    </div>
-  );
-}
 
 function cardPaymentLabel(method: SavedPaymentMethod): string {
   if (method.displayLabel.trim()) return method.displayLabel.trim();
@@ -81,7 +76,6 @@ function InvoiceDetailBody({
 
   const bookingCount = invoice.tripIDs?.length ?? 0;
   const singleTripId = bookingCount === 1 ? invoice.tripIDs[0] : null;
-  const lineItems = invoice.lineItems?.filter((l) => l.label.trim() || l.amount) ?? [];
 
   const paymentLabel =
     paymentMethod === undefined
@@ -112,59 +106,51 @@ function InvoiceDetailBody({
         </dl>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-4">
         <SectionHeading>Invoice summary</SectionHeading>
-        <div>
-          <DetailRow label="Issued" value={formatDate(invoice.issuedAt)} />
-          <DetailRow label="Due" value={formatDate(invoice.dueAt ?? null)} />
-          <DetailRow
-            label="Bookings"
-            value={
-              singleTripId ? (
+        <dl className="grid grid-cols-2 gap-4">
+          <LabeledDetailValue
+            icon={Calendar}
+            label="Issued"
+            value={formatDate(invoice.issuedAt)}
+          />
+          <LabeledDetailValue
+            icon={CalendarClock}
+            label="Due"
+            value={formatDate(invoice.dueAt ?? null)}
+          />
+          <div className="space-y-1">
+            <DetailLabel icon={ListChecks}>Bookings</DetailLabel>
+            <dd>
+              {singleTripId ? (
                 <Link
                   href={`/dashboard/bookings/${singleTripId}`}
-                  className="text-primary underline-offset-4 hover:underline"
+                  className="text-foreground text-sm underline-offset-4 hover:underline"
                   onClick={() => onOpenChange(false)}>
                   1 booking
                 </Link>
               ) : (
-                bookingCount
-              )
-            }
-          />
-          <DetailRow
-            label="Subtotal"
-            value={formatCurrency(invoice.subtotal, invoice.currencyCode)}
-          />
-          <DetailRow
-            label="Tax"
-            value={formatCurrency(invoice.taxAmount, invoice.currencyCode)}
-          />
-          <DetailRow
-            label="Total"
-            value={
-              <span className="font-semibold">
-                {formatCurrency(invoice.total, invoice.currencyCode)}
-              </span>
-            }
-          />
-        </div>
-      </div>
-
-      {lineItems.length > 0 ? (
-        <div className="space-y-1">
-          <SectionHeading>Line items</SectionHeading>
-          <div>
-            {lineItems.map((line) => (
-              <DetailRow
-                key={line.id}
-                label={line.label.trim() || "Item"}
-                value={formatCurrency(line.amount, invoice.currencyCode)}
-              />
-            ))}
+                <p className="text-foreground text-sm">{bookingCount}</p>
+              )}
+            </dd>
+          </div>
+        </dl>
+        <div className="space-y-4">
+          <div className="flex justify-between text-sm">
+            <span>Subtotal</span>
+            <span>{formatCurrency(invoice.subtotal, invoice.currencyCode)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Tax</span>
+            <span>{formatCurrency(invoice.taxAmount, invoice.currencyCode)}</span>
+          </div>
+          <Separator />
+          <div className="flex justify-between text-sm font-semibold">
+            <span>Total</span>
+            <span>{formatCurrency(invoice.total, invoice.currencyCode)}</span>
           </div>
         </div>
-      ) : null}
+      </div>
 
       <div className="bg-muted flex items-center justify-between rounded-md border p-4">
         <div className="space-y-1">
