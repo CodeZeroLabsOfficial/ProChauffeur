@@ -5,7 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
-import { useInvoices, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
+import {
+  useInvoices,
+  useRosterChauffeurs,
+  useTrips,
+  useUsers,
+  useVehicles
+} from "@/hooks/use-collections";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
@@ -40,11 +47,13 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
+  const { branchId } = useActiveBranch();
 
   const { trips } = useTrips();
   const { invoices } = useInvoices();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
+  const { chauffeurs, loading: rosterLoading, branchDrivers } = useRosterChauffeurs();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +68,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   }, [driverId]);
 
   useEffect(() => {
+    setLoading(true);
     loadUser().finally(() => setLoading(false));
   }, [loadUser]);
 
@@ -72,6 +82,19 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     [trips, invoices, driverId]
   );
 
+  const onActiveRoster = useMemo(
+    () =>
+      branchDrivers.some((d) => d.userId === driverId || d.id === driverId) ||
+      chauffeurs.some((c) => c.id === driverId) ||
+      user?.homeBranchId === branchId,
+    [branchDrivers, branchId, chauffeurs, driverId, user?.homeBranchId]
+  );
+
+  const displayUser = useMemo(() => {
+    const fromRoster = chauffeurs.find((c) => c.id === driverId);
+    return fromRoster ?? user;
+  }, [chauffeurs, driverId, user]);
+
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") params.delete("tab");
@@ -80,11 +103,11 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     router.replace(`/dashboard/drivers/${driverId}${q ? `?${q}` : ""}`, { scroll: false });
   };
 
-  if (loading) {
+  if (loading || rosterLoading) {
     return <p className="text-muted-foreground text-sm">Loading chauffeur profile…</p>;
   }
 
-  if (!user || user.role !== "driver") {
+  if (!displayUser || displayUser.role !== "driver" || !onActiveRoster) {
     return (
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">Chauffeur not found.</p>
@@ -123,7 +146,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           <div className="grid gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
               <DriverProfileSidebar
-                user={user}
+                user={displayUser}
                 statTrips={metrics.totalTrips}
                 statCompleted={metrics.completed}
                 statRevenueLabel={revenueLabel}
@@ -149,13 +172,13 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
               </TabsContent>
               <TabsContent value="compliance" className="mt-0">
                 <DriverProfileComplianceTab
-                  user={user}
+                  user={displayUser}
                   onUserUpdated={() => void loadUser()}
                 />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
                 <DriverProfileOperationsTab
-                  user={user}
+                  user={displayUser}
                   vehicles={vehicles}
                   onUserUpdated={() => void loadUser()}
                 />
@@ -166,7 +189,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
       </div>
 
       <DriverEditSheet
-        user={user}
+        user={displayUser}
         candidates={candidates}
         open={editOpen}
         onOpenChange={(open) => {

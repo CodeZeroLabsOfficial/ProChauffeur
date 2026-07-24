@@ -17,7 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import { useRosterChauffeurs, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import {
   assignFleetVehicle,
   deleteVehicle,
@@ -79,6 +79,7 @@ export function FleetDataTable({
 }) {
   const { vehicles, loading } = useVehicles();
   const { users } = useUsers();
+  const { chauffeurs: drivers } = useRosterChauffeurs();
   const { vehicleClasses } = useVehicleClasses();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -91,8 +92,6 @@ export function FleetDataTable({
   const [rowSelection, setRowSelection] = useState({});
   const [classFilter, setClassFilter] = useState<string[]>([]);
   const [assignmentFilter, setAssignmentFilter] = useState<string[]>([]);
-
-  const drivers = useMemo(() => users.filter((u) => u.role === "driver"), [users]);
 
   const defaultCreateDriverId = useMemo(() => {
     const vehicleDriverIds = new Set(vehicles.map((v) => v.driverID));

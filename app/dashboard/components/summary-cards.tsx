@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { CalendarCheckIcon, CarFrontIcon, DollarSign, UsersIcon } from "lucide-react";
 
-import { useInvoices, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
+import { useInvoices, useRosterChauffeurs, useTrips, useVehicles } from "@/hooks/use-collections";
 import { tripPickupReferenceDate } from "@/lib/models";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -39,7 +39,7 @@ function DeltaText({ value, label }: { value: number | null; label: string }) {
 
 export function SummaryCards() {
   const { trips } = useTrips();
-  const { users } = useUsers();
+  const { chauffeurs } = useRosterChauffeurs();
   const { vehicles } = useVehicles();
   const { invoices } = useInvoices();
 
@@ -75,7 +75,7 @@ export function SummaryCards() {
     const monthRevenue = invoiceRevenueInRange(invoices, thisMonth.start, thisMonth.end);
     const lastMonthRevenue = invoiceRevenueInRange(invoices, lastMonth.start, lastMonth.end);
 
-    const drivers = users.filter((u) => u.role === "driver").length;
+    const drivers = chauffeurs.length;
 
     return {
       todayPickups,
@@ -88,7 +88,7 @@ export function SummaryCards() {
       fleet: vehicles.length,
       drivers
     };
-  }, [trips, users, vehicles, invoices]);
+  }, [trips, chauffeurs, vehicles, invoices]);
 
   return (
     <div className="*:data-[slot=card]:from-primary/10 grid gap-4 *:data-[slot=card]:bg-gradient-to-t md:grid-cols-2 lg:grid-cols-4">
