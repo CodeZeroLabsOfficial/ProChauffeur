@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PencilIcon } from "lucide-react";
 
+import { DriverAccreditationEditSheet } from "@/app/dashboard/drivers/driver-accreditation-edit-sheet";
 import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
 import { defaultDriverProfile, type User } from "@/lib/models";
 import { formatDate } from "@/lib/format";
@@ -47,6 +48,7 @@ export function DriverProfileComplianceTab({
   const licenceWarn = expiryWarning(profile.driversLicenseExpiry);
   const accWarn = expiryWarning(profile.operatorAccreditationExpiry);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
+  const [accreditationEditOpen, setAccreditationEditOpen] = useState(false);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -89,7 +91,16 @@ export function DriverProfileComplianceTab({
         onSaved={onUserUpdated}
       />
 
-      <Card>
+      <Card className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="absolute top-4 right-4 z-10"
+          onClick={() => setAccreditationEditOpen(true)}
+          aria-label="Edit operator accreditation">
+          <PencilIcon />
+        </Button>
         <CardHeader>
           <CardTitle>Operator accreditation</CardTitle>
         </CardHeader>
@@ -111,6 +122,13 @@ export function DriverProfileComplianceTab({
           </div>
         </CardContent>
       </Card>
+
+      <DriverAccreditationEditSheet
+        user={user}
+        open={accreditationEditOpen}
+        onOpenChange={setAccreditationEditOpen}
+        onSaved={onUserUpdated}
+      />
     </div>
   );
 }

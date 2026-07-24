@@ -335,62 +335,65 @@ export function DriverEditSheet({
             </Popover>
           </div>
 
-          <div className="space-y-3">
-            <Input
-              id="addressLine1"
-              name="addressLine1"
-              autoComplete="address-line1"
-              placeholder="Line 1"
-              defaultValue={streetLines.line1}
-              aria-invalid={addressInvalid || undefined}
-            />
-            <Input
-              id="addressLine2"
-              name="addressLine2"
-              autoComplete="address-line2"
-              placeholder="Line 2"
-              defaultValue={streetLines.line2}
-              aria-invalid={addressInvalid || undefined}
-            />
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Address</Label>
+            <div className="space-y-3">
               <Input
-                id="city"
-                name="city"
-                autoComplete="address-level2"
-                placeholder="City"
-                defaultValue={userProfile?.city ?? ""}
+                id="addressLine1"
+                name="addressLine1"
+                autoComplete="address-line1"
+                placeholder="Line 1"
+                defaultValue={streetLines.line1}
                 aria-invalid={addressInvalid || undefined}
               />
               <Input
-                id="state"
-                name="state"
-                autoComplete="address-level1"
-                placeholder="State"
-                defaultValue={userProfile?.state ?? ""}
+                id="addressLine2"
+                name="addressLine2"
+                autoComplete="address-line2"
+                placeholder="Line 2"
+                defaultValue={streetLines.line2}
                 aria-invalid={addressInvalid || undefined}
               />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  id="city"
+                  name="city"
+                  autoComplete="address-level2"
+                  placeholder="City"
+                  defaultValue={userProfile?.city ?? ""}
+                  aria-invalid={addressInvalid || undefined}
+                />
+                <Input
+                  id="state"
+                  name="state"
+                  autoComplete="address-level1"
+                  placeholder="State"
+                  defaultValue={userProfile?.state ?? ""}
+                  aria-invalid={addressInvalid || undefined}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  id="postcode"
+                  name="postcode"
+                  autoComplete="postal-code"
+                  placeholder="Postal code"
+                  defaultValue={userProfile?.postcode ?? ""}
+                  aria-invalid={addressInvalid || undefined}
+                />
+                <Input
+                  id="country"
+                  name="country"
+                  autoComplete="country-name"
+                  placeholder="Country"
+                  defaultValue={userProfile?.country ?? ""}
+                  aria-invalid={addressInvalid || undefined}
+                />
+              </div>
+              {addressInvalid ? (
+                <p className="text-destructive text-sm">{ADDRESS_VALIDATION_MESSAGE}</p>
+              ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                id="postcode"
-                name="postcode"
-                autoComplete="postal-code"
-                placeholder="Postal code"
-                defaultValue={userProfile?.postcode ?? ""}
-                aria-invalid={addressInvalid || undefined}
-              />
-              <Input
-                id="country"
-                name="country"
-                autoComplete="country-name"
-                placeholder="Country"
-                defaultValue={userProfile?.country ?? ""}
-                aria-invalid={addressInvalid || undefined}
-              />
-            </div>
-            {addressInvalid ? (
-              <p className="text-destructive text-sm">{ADDRESS_VALIDATION_MESSAGE}</p>
-            ) : null}
           </div>
 
           <SheetFooter className="mt-auto px-0">
