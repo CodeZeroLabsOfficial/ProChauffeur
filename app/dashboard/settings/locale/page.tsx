@@ -12,6 +12,7 @@ import {
   COMMON_LANGUAGES,
   COMMON_TIMEZONES,
   distanceUnitTitle,
+  driverLicenceCountryLabel,
   labelForOption,
   taxDisplayModeTitle,
   type OperatorLocale
@@ -61,6 +62,10 @@ export default function LocalePage() {
             <DetailField
               label="Language"
               value={labelForOption(COMMON_LANGUAGES, value.locale)}
+            />
+            <DetailField
+              label="Country"
+              value={driverLicenceCountryLabel(value.driverLicenceCountry)}
             />
             <DetailField
               label="Currency"

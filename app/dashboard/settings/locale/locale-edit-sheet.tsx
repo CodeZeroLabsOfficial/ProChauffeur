@@ -10,6 +10,7 @@ import {
   COMMON_LANGUAGES,
   COMMON_TIMEZONES,
   DISTANCE_UNITS,
+  DRIVER_LICENCE_COUNTRY_PRESETS,
   TAX_DISPLAY_MODES,
   distanceUnitTitle,
   optionsWithCurrent,
@@ -45,7 +46,8 @@ function localeFormState(locale: OperatorLocale) {
     defaultTaxRatePct: locale.defaultTaxRate * 100,
     taxDisplayName: locale.taxName,
     taxDisplayMode: locale.taxDisplayMode,
-    showTaxOnQuotes: locale.showTaxOnQuotes
+    showTaxOnQuotes: locale.showTaxOnQuotes,
+    driverLicenceCountry: locale.driverLicenceCountry
   };
 }
 
@@ -71,6 +73,7 @@ export function LocaleEditSheet({
     locale.taxDisplayMode
   );
   const [showTaxOnQuotes, setShowTaxOnQuotes] = useState(locale.showTaxOnQuotes);
+  const [driverLicenceCountry, setDriverLicenceCountry] = useState(locale.driverLicenceCountry);
 
   useEffect(() => {
     if (!open) return;
@@ -83,6 +86,7 @@ export function LocaleEditSheet({
     setTaxDisplayName(next.taxDisplayName);
     setTaxDisplayMode(next.taxDisplayMode);
     setShowTaxOnQuotes(next.showTaxOnQuotes);
+    setDriverLicenceCountry(next.driverLicenceCountry);
   }, [open, locale]);
 
   const languageOptions = useMemo(() => optionsWithCurrent(COMMON_LANGUAGES, language), [language]);
@@ -99,7 +103,8 @@ export function LocaleEditSheet({
       defaultTaxRate: defaultTaxRatePct / 100,
       taxName: taxDisplayName.trim(),
       taxDisplayMode,
-      showTaxOnQuotes
+      showTaxOnQuotes,
+      driverLicenceCountry
     };
 
     if (!data.locale || !data.currency || !data.timezone || !data.taxName) {
@@ -141,6 +146,24 @@ export function LocaleEditSheet({
                   {languageOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="driverLicenceCountry">Country</Label>
+              <Select
+                value={driverLicenceCountry}
+                onValueChange={setDriverLicenceCountry}
+                disabled={saving}>
+                <SelectTrigger id="driverLicenceCountry" className="w-full">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DRIVER_LICENCE_COUNTRY_PRESETS.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

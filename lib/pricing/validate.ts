@@ -16,6 +16,7 @@ import {
   type WeekdayNumber
 } from "@/lib/models/enums";
 import type { OperatorLocale } from "@/lib/models/locale";
+import { normalizeDriverLicenceCountry } from "@/lib/models/driver-licence-presets";
 import type {
   HourlyPricingRates,
   PricingAddon,
@@ -215,7 +216,8 @@ export function parseOperatorLocale(d: DocumentData): OperatorLocale {
     defaultTaxRate: requireNonNegative(d.defaultTaxRate, "defaultTaxRate"),
     taxName: requireString(d.taxName, "taxName"),
     taxDisplayMode: requireEnum(d.taxDisplayMode, "taxDisplayMode", TAX_DISPLAY_MODES),
-    showTaxOnQuotes: requireBoolean(d.showTaxOnQuotes, "showTaxOnQuotes")
+    showTaxOnQuotes: requireBoolean(d.showTaxOnQuotes, "showTaxOnQuotes"),
+    driverLicenceCountry: normalizeDriverLicenceCountry(d.driverLicenceCountry)
   };
 }
 

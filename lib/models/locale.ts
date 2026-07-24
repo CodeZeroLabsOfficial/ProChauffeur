@@ -1,4 +1,5 @@
 import type { DistanceUnit, TaxDisplayMode } from "@/lib/models/enums";
+import { DEFAULT_DRIVER_LICENCE_COUNTRY } from "@/lib/models/driver-licence-presets";
 
 /** `app_settings/locale` — fleet regional and presentation preferences. All fields required. */
 export interface OperatorLocale {
@@ -10,6 +11,8 @@ export interface OperatorLocale {
   taxName: string;
   taxDisplayMode: TaxDisplayMode;
   showTaxOnQuotes: boolean;
+  /** Country preset that supplies driver licence class options. */
+  driverLicenceCountry: string;
 }
 
 /** Admin setup template only — not used at runtime when fetching config. */
@@ -22,6 +25,7 @@ export function buildInitialOperatorLocale(): OperatorLocale {
     defaultTaxRate: 0.1,
     taxName: "GST",
     taxDisplayMode: "exclusive",
-    showTaxOnQuotes: false
+    showTaxOnQuotes: false,
+    driverLicenceCountry: DEFAULT_DRIVER_LICENCE_COUNTRY
   };
 }

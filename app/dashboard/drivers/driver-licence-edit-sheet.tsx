@@ -2,11 +2,20 @@
 
 import { CalendarIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { MultiSelectField } from "@/components/multi-select-field";
 import { saveDriverProfile } from "@/lib/services/firebase-service";
-import { defaultDriverProfile, type User } from "@/lib/models";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
+import {
+  DEFAULT_DRIVER_LICENCE_COUNTRY,
+  defaultDriverProfile,
+  formatLicenceClasses,
+  licenceClassesForCountry,
+  parseLicenceClasses,
+  type User
+} from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,7 +26,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -40,13 +48,42 @@ export function DriverLicenceEditSheet({
   const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
     profile.driversLicenseExpiry ?? undefined
   );
+  const [licenceClasses, setLicenceClasses] = useState<string[]>(() =>
+    parseLicenceClasses(profile.driversLicenseClassOrType)
+  );
+  const [licenceCountry, setLicenceCountry] = useState(DEFAULT_DRIVER_LICENCE_COUNTRY);
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
   if (user.id !== seededId) {
     setSeededId(user.id);
     setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
+    setLicenceClasses(parseLicenceClasses(profile.driversLicenseClassOrType));
   }
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getCachedOperatorLocale()
+      .then((locale) => {
+        if (!cancelled) setLicenceCountry(locale.driverLicenceCountry);
+      })
+      .catch(() => {
+        if (!cancelled) setLicenceCountry(DEFAULT_DRIVER_LICENCE_COUNTRY);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const classOptions = useMemo(() => {
+    const preset = licenceClassesForCountry(licenceCountry);
+    const known = new Set(preset.map((option) => option.value.toUpperCase()));
+    const extras = licenceClasses
+      .filter((code) => !known.has(code.toUpperCase()))
+      .map((code) => ({ value: code, label: code }));
+    return [...preset, ...extras];
+  }, [licenceCountry, licenceClasses]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,7 +93,7 @@ export function DriverLicenceEditSheet({
       ...defaultDriverProfile(),
       ...profile,
       driversLicenseNumber: get("driversLicenseNumber") || null,
-      driversLicenseClassOrType: get("driversLicenseClassOrType") || null,
+      driversLicenseClassOrType: formatLicenceClasses(licenceClasses),
       driversLicenseJurisdictionCode: get("driversLicenseJurisdictionCode") || null,
       driversLicenseConditions: get("driversLicenseConditions") || null,
       driversLicenseSummary: get("driversLicenseSummary") || null,
@@ -82,9 +119,6 @@ export function DriverLicenceEditSheet({
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Edit driver licence</SheetTitle>
-          <SheetDescription>
-            Licence and compliance details for {user.profile.displayName?.trim() || user.email}
-          </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
           <div className="grid grid-cols-2 gap-3">
@@ -98,10 +132,13 @@ export function DriverLicenceEditSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="licence-driversLicenseClassOrType">Class / type</Label>
-              <Input
+              <MultiSelectField
                 id="licence-driversLicenseClassOrType"
-                name="driversLicenseClassOrType"
-                defaultValue={profile.driversLicenseClassOrType ?? ""}
+                options={classOptions}
+                selected={licenceClasses}
+                onSelectedChange={setLicenceClasses}
+                placeholder="Select classes"
+                disabled={saving}
               />
             </div>
             <div className="space-y-2">
