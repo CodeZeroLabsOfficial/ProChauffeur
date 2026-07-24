@@ -10,9 +10,10 @@ import {
   formatScheduleDays,
   ScheduleEditSheet
 } from "@/app/dashboard/locations/components/schedule-edit-sheet";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import {
-  defaultDriverProfile,
   effectiveChauffeurUserId,
+  type BranchDriver,
   type FleetWeeklyOperatingSchedule,
   type User,
   type Vehicle
@@ -62,14 +63,16 @@ function formatScheduleHours(
 
 export function DriverProfileOperationsTab({
   user,
+  roster,
   vehicles,
   onUserUpdated
 }: {
   user: User;
+  roster: BranchDriver;
   vehicles: Vehicle[];
   onUserUpdated?: () => void;
 }) {
-  const profile = user.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(roster);
   const { vehicleClasses } = useVehicleClasses();
   const vehicle = assignedVehicle(vehicles, user.id);
 

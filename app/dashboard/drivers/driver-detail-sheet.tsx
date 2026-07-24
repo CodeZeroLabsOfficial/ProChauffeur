@@ -25,10 +25,11 @@ import { z } from "zod";
 
 import {
   chauffeurCategoryTitle,
-  defaultDriverProfile,
+  type BranchDriver,
   type DriverProfile,
   type User
 } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
@@ -487,14 +488,17 @@ function DriverProfileAvatarUpload({ user }: { user: User }) {
 
 export function DriverDetailSheet({
   user,
+  roster,
   open,
   onOpenChange
 }: {
   user: User | null;
+  roster: BranchDriver | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const displayUser = useSheetDisplayItem(user, open);
+  const displayRoster = useSheetDisplayItem(roster, open);
   const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
 
   useEffect(() => {
@@ -514,9 +518,9 @@ export function DriverDetailSheet({
     };
   }, [open, displayUser?.id]);
 
-  if (!displayUser) return null;
+  if (!displayUser || !displayRoster) return null;
 
-  const profile = displayUser.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(displayRoster);
   const displayName = displayUser.profile.displayName.trim() || "Driver";
 
   return (

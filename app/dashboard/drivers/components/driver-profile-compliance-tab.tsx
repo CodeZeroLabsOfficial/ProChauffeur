@@ -5,7 +5,8 @@ import { PencilIcon } from "lucide-react";
 
 import { DriverAccreditationEditSheet } from "@/app/dashboard/drivers/driver-accreditation-edit-sheet";
 import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
-import { defaultDriverProfile, type User } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
+import type { BranchDriver, User } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,12 +40,14 @@ function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
 
 export function DriverProfileComplianceTab({
   user,
+  roster,
   onUserUpdated
 }: {
   user: User;
+  roster: BranchDriver;
   onUserUpdated?: () => void;
 }) {
-  const profile = user.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(roster);
   const licenceWarn = expiryWarning(profile.driversLicenseExpiry);
   const accWarn = expiryWarning(profile.operatorAccreditationExpiry);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
@@ -86,6 +89,7 @@ export function DriverProfileComplianceTab({
 
       <DriverLicenceEditSheet
         user={user}
+        roster={roster}
         open={licenceEditOpen}
         onOpenChange={setLicenceEditOpen}
         onSaved={onUserUpdated}
@@ -114,7 +118,7 @@ export function DriverProfileComplianceTab({
             value={profile.operatorAccreditationIssuingAuthority?.trim() || "—"}
           />
           <div className="flex items-start justify-between gap-4 py-3">
-            <span className="text-muted-foreground shrink-0 text-sm">Expiry</span>
+            <span className="text-muted-foreground text-sm shrink-0">Expiry</span>
             <span className="text-end text-sm">
               {formatDate(profile.operatorAccreditationExpiry)}
               {accWarn ? <ExpiryBadge level={accWarn} /> : null}
@@ -125,6 +129,7 @@ export function DriverProfileComplianceTab({
 
       <DriverAccreditationEditSheet
         user={user}
+        roster={roster}
         open={accreditationEditOpen}
         onOpenChange={setAccreditationEditOpen}
         onSaved={onUserUpdated}

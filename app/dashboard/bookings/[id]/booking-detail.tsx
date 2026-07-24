@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useInvoices, useTrip, useUsers } from "@/hooks/use-collections";
+import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canSendTripInvoice, effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import { listenTrip, updateTripStatus } from "@/lib/services/firebase-service";
@@ -269,6 +269,7 @@ function SectionCard({
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
   const { users } = useUsers();
+  const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();
   const [linkedTrip, setLinkedTrip] = useState<Trip | null>(null);
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
@@ -296,17 +297,24 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     [trip, users]
   );
 
+  const rosterChauffeur = useMemo(
+    () => (trip?.driverID ? chauffeurs.find((c) => c.user.id === trip.driverID) : undefined),
+    [trip?.driverID, chauffeurs]
+  );
+
   const chauffeur = useMemo(
-    () => (trip?.driverID ? users.find((u) => u.id === trip.driverID) : undefined),
-    [trip?.driverID, users]
+    () =>
+      rosterChauffeur?.user ??
+      (trip?.driverID ? users.find((u) => u.id === trip.driverID) : undefined),
+    [rosterChauffeur, trip?.driverID, users]
   );
 
   const chauffeurName = chauffeur?.profile.displayName || chauffeur?.email || "Unassigned";
-  const chauffeurDescription = chauffeur
-    ? chauffeur.driverProfile
-      ? chauffeurCategoryTitle[chauffeur.driverProfile.chauffeurCategory]
-      : chauffeur.email
-    : "No chauffeur assigned to this booking";
+  const chauffeurDescription = rosterChauffeur
+    ? chauffeurCategoryTitle[rosterChauffeur.roster.chauffeurCategory]
+    : chauffeur
+      ? chauffeur.email
+      : "No chauffeur assigned to this booking";
 
   const customerName =
     trip?.customerDisplayName || customer?.profile.displayName || null;

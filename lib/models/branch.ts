@@ -1,6 +1,6 @@
 import type { DriverProfile } from "@/lib/models/user";
 
-/** Default branch used when backfilling existing operator data. */
+/** Fallback Location id when none is selected or resolved. */
 export const DEFAULT_BRANCH_ID = "brisbane";
 
 /** Subcollections under `branches/{branchId}/`. */

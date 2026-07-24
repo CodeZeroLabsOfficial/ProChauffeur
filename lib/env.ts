@@ -84,14 +84,6 @@ export function getMapboxToken(): string {
   return parsed.data.NEXT_PUBLIC_MAPBOX_TOKEN;
 }
 
-/** @deprecated Prefer getFirebaseClientEnv(), getDatabaseUrl(), or getMapboxToken(). */
-export function getClientEnv(): FirebaseClientEnv & { NEXT_PUBLIC_MAPBOX_TOKEN?: string } {
-  return {
-    ...getFirebaseClientEnv(),
-    NEXT_PUBLIC_MAPBOX_TOKEN: rawClientEnv.NEXT_PUBLIC_MAPBOX_TOKEN
-  };
-}
-
 const serverSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_KEY: z.string().min(1)
 });

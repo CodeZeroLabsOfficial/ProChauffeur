@@ -6,7 +6,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { saveDriverProfile } from "@/lib/services/firebase-service";
-import { defaultDriverProfile, type User } from "@/lib/models";
+import type { BranchDriver, User } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,18 +24,20 @@ import {
 
 export function DriverAccreditationEditSheet({
   user,
+  roster,
   open,
   onOpenChange,
   onSaved,
   nested = false
 }: {
   user: User;
+  roster: BranchDriver;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
   nested?: boolean;
 }) {
-  const profile = user.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(roster);
   const [accreditationExpiry, setAccreditationExpiry] = useState<Date | undefined>(
     profile.operatorAccreditationExpiry ?? undefined
   );
@@ -51,7 +54,6 @@ export function DriverAccreditationEditSheet({
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverProfile = {
-      ...defaultDriverProfile(),
       ...profile,
       operatorAccreditationNumber: get("operatorAccreditationNumber") || null,
       operatorAccreditationIssuingAuthority: get("operatorAccreditationIssuingAuthority") || null,

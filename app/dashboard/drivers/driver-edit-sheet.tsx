@@ -16,10 +16,12 @@ import {
   chauffeurCategoryTitle,
   defaultDriverProfile,
   userRoleTitle,
+  type BranchDriver,
   type ChauffeurCategory,
   type User,
   type UserProfile
 } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import {
   isValidPostalAddress,
   toProfilePostalFields,
@@ -85,12 +87,14 @@ const ADDRESS_VALIDATION_MESSAGE =
 
 export function DriverEditSheet({
   user,
+  roster,
   candidates,
   open,
   onOpenChange,
   nested = false
 }: {
   user: User | null;
+  roster: BranchDriver | null;
   candidates: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,7 +104,9 @@ export function DriverEditSheet({
   const [selectedUserId, setSelectedUserId] = useState("");
   const selectedCandidate = candidates.find((u) => u.id === selectedUserId);
   const activeUser = user ?? selectedCandidate ?? null;
-  const driverProfile = activeUser?.driverProfile ?? defaultDriverProfile();
+  const driverProfile = roster
+    ? branchDriverToProfile(roster)
+    : defaultDriverProfile();
   const userProfile = activeUser?.profile;
   const names = userProfile ? nameParts(userProfile) : { firstName: "", lastName: "" };
   const streetLines = splitStreetLines(userProfile?.street);

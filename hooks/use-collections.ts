@@ -14,7 +14,7 @@ import {
   listenVehicleClasses,
   listenVehicles
 } from "@/lib/services/firebase-service";
-import { mergeRosterChauffeurs } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
+import { joinRosterChauffeurs } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import type {
   ActivityNotification,
   FleetLocation,
@@ -86,12 +86,12 @@ export function useBranchDrivers() {
   return { branchDrivers, loading };
 }
 
-/** Active Location chauffeurs (roster ∩ users), with roster ops profile. */
+/** Active Location chauffeurs: identity from users, ops from roster. */
 export function useRosterChauffeurs() {
   const { users, loading: usersLoading } = useUsers();
   const { branchDrivers, loading: rosterLoading } = useBranchDrivers();
   const chauffeurs = useMemo(
-    () => mergeRosterChauffeurs(users, branchDrivers),
+    () => joinRosterChauffeurs(users, branchDrivers),
     [users, branchDrivers]
   );
   return { chauffeurs, loading: usersLoading || rosterLoading, branchDrivers };

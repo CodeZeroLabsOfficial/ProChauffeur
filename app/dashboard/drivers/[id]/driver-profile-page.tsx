@@ -12,7 +12,6 @@ import {
   useUsers,
   useVehicles
 } from "@/hooks/use-collections";
-import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
@@ -47,13 +46,12 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
-  const { branchId } = useActiveBranch();
 
   const { trips } = useTrips();
   const { invoices } = useInvoices();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
-  const { chauffeurs, loading: rosterLoading, branchDrivers } = useRosterChauffeurs();
+  const { chauffeurs, loading: rosterLoading } = useRosterChauffeurs();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,18 +80,13 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     [trips, invoices, driverId]
   );
 
-  const onActiveRoster = useMemo(
-    () =>
-      branchDrivers.some((d) => d.userId === driverId || d.id === driverId) ||
-      chauffeurs.some((c) => c.id === driverId) ||
-      user?.homeBranchId === branchId,
-    [branchDrivers, branchId, chauffeurs, driverId, user?.homeBranchId]
+  const rosterChauffeur = useMemo(
+    () => chauffeurs.find((c) => c.user.id === driverId) ?? null,
+    [chauffeurs, driverId]
   );
 
-  const displayUser = useMemo(() => {
-    const fromRoster = chauffeurs.find((c) => c.id === driverId);
-    return fromRoster ?? user;
-  }, [chauffeurs, driverId, user]);
+  const displayUser = rosterChauffeur?.user ?? user;
+  const roster = rosterChauffeur?.roster ?? null;
 
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -107,7 +100,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     return <p className="text-muted-foreground text-sm">Loading chauffeur profile…</p>;
   }
 
-  if (!displayUser || displayUser.role !== "driver" || !onActiveRoster) {
+  if (!displayUser || displayUser.role !== "driver" || !roster) {
     return (
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">Chauffeur not found.</p>
@@ -147,6 +140,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
             <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
               <DriverProfileSidebar
                 user={displayUser}
+                roster={roster}
                 statTrips={metrics.totalTrips}
                 statCompleted={metrics.completed}
                 statRevenueLabel={revenueLabel}
@@ -173,12 +167,14 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
               <TabsContent value="compliance" className="mt-0">
                 <DriverProfileComplianceTab
                   user={displayUser}
+                  roster={roster}
                   onUserUpdated={() => void loadUser()}
                 />
               </TabsContent>
               <TabsContent value="operations" className="mt-0">
                 <DriverProfileOperationsTab
                   user={displayUser}
+                  roster={roster}
                   vehicles={vehicles}
                   onUserUpdated={() => void loadUser()}
                 />
@@ -190,6 +186,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
 
       <DriverEditSheet
         user={displayUser}
+        roster={roster}
         candidates={candidates}
         open={editOpen}
         onOpenChange={(open) => {

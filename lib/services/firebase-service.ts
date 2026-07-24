@@ -843,15 +843,7 @@ export async function uploadBranchImage(branchId: string, file: File): Promise<s
   return body.imageUrl;
 }
 
-export async function updateUserDriverProfile(
-  uid: string,
-  driverProfile: DriverProfile,
-  options?: { driverTitle?: string; isNew?: boolean }
-): Promise<void> {
-  return saveDriverProfile(uid, driverProfile, options);
-}
-
-/** Dual-writes ops profile to `users/{uid}` and active Location roster. */
+/** Writes ops profile to the active Location roster; sets homeBranchId when needed. */
 export async function saveDriverProfile(
   uid: string,
   driverProfile: DriverProfile,
@@ -860,13 +852,13 @@ export async function saveDriverProfile(
   const branchId = getActiveBranchId();
   const userRef = doc(db(), Collections.users, uid);
   const userSnap = await getDoc(userRef);
-  const patch: Record<string, unknown> = {
-    driverProfile: stripUndefined({ ...driverProfile })
-  };
+  const patch: Record<string, unknown> = {};
   if (options?.isNew || !userSnap.data()?.homeBranchId) {
     patch.homeBranchId = branchId;
   }
-  await updateDoc(userRef, patch);
+  if (Object.keys(patch).length > 0) {
+    await updateDoc(userRef, patch);
+  }
   await upsertBranchDriver(uid, driverProfile, branchId);
   if (options?.driverTitle) {
     const action = options.isNew ? "created" : "updated";
@@ -878,7 +870,7 @@ export async function updateUserRole(uid: string, role: UserRole): Promise<void>
   await updateDoc(doc(db(), Collections.users, uid), { role });
 }
 
-/** Demotes a chauffeur to customer and removes their driver profile (and fleet vehicle if any). */
+/** Demotes a chauffeur to customer and removes their Location roster (and fleet vehicle if any). */
 export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
   const branchId = getActiveBranchId();
   const vehicleRef = branchDocRef(db(), "vehicles", uid);
@@ -891,8 +883,7 @@ export async function removeDriver(uid: string, driverTitle?: string): Promise<v
   const homeBranchId =
     typeof userSnap.data()?.homeBranchId === "string" ? userSnap.data()?.homeBranchId : null;
   const patch: Record<string, unknown> = {
-    role: "customer",
-    driverProfile: deleteField()
+    role: "customer"
   };
   if (!homeBranchId || homeBranchId === branchId) {
     patch.homeBranchId = deleteField();

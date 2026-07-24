@@ -123,7 +123,6 @@ export function mapUser(id: string, d: DocumentData): User {
     role: d.role ?? "customer",
     email: d.email ?? "",
     profile: mapUserProfile(d.profile),
-    driverProfile: mapDriverProfile(d.driverProfile ?? d.driverStaff),
     preferences: mapUserPreferences(d.preferences),
     homeBranchId: d.homeBranchId ?? null,
     branchIds: Array.isArray(d.branchIds) ? d.branchIds : null,

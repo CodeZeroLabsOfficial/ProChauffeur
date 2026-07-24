@@ -10,13 +10,14 @@ import { saveDriverProfile } from "@/lib/services/firebase-service";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import {
   DEFAULT_DRIVER_LICENCE_COUNTRY,
-  defaultDriverProfile,
   formatLicenceClasses,
   licenceClassesForCountry,
   licenceJurisdictionsForCountry,
   parseLicenceClasses,
+  type BranchDriver,
   type User
 } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,18 +42,20 @@ import {
 
 export function DriverLicenceEditSheet({
   user,
+  roster,
   open,
   onOpenChange,
   onSaved,
   nested = false
 }: {
   user: User;
+  roster: BranchDriver;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
   nested?: boolean;
 }) {
-  const profile = user.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(roster);
   const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
     profile.driversLicenseExpiry ?? undefined
   );
@@ -112,7 +115,6 @@ export function DriverLicenceEditSheet({
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverProfile = {
-      ...defaultDriverProfile(),
       ...profile,
       driversLicenseNumber: get("driversLicenseNumber") || null,
       driversLicenseClassOrType: formatLicenceClasses(licenceClasses),

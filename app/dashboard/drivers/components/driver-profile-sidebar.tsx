@@ -4,9 +4,10 @@ import { Link2Icon, Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
 
 import {
   chauffeurCategoryTitle,
-  defaultDriverProfile,
+  type BranchDriver,
   type User
 } from "@/lib/models";
+import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { formatPostalAddress } from "@/lib/models/postal-address";
 import {
   dispatchBadgeIcon,
@@ -24,18 +25,20 @@ import { ContactRow } from "@/components/contact-row";
 
 export function DriverProfileSidebar({
   user,
+  roster,
   statTrips,
   statCompleted,
   statRevenueLabel,
   onEditClick
 }: {
   user: User;
+  roster: BranchDriver;
   statTrips: number;
   statCompleted: number;
   statRevenueLabel: string;
   onEditClick?: () => void;
 }) {
-  const profile = user.driverProfile ?? defaultDriverProfile();
+  const profile = branchDriverToProfile(roster);
   const displayName = user.profile.displayName.trim() || user.email || "Driver";
   const progressValue = driverProfileCompleteness(user, profile);
 

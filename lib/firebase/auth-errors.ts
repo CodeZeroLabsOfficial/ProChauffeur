@@ -40,8 +40,3 @@ export function authErrorMessage(error: unknown, fallback = "Something went wron
   }
   return fallback;
 }
-
-/** @deprecated Use authErrorMessage */
-export function loginErrorMessage(error: unknown): string {
-  return authErrorMessage(error, "Sign in failed. Please try again.");
-}

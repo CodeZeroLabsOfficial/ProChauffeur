@@ -95,7 +95,7 @@ export function FleetDataTable({
 
   const defaultCreateDriverId = useMemo(() => {
     const vehicleDriverIds = new Set(vehicles.map((v) => v.driverID));
-    return drivers.find((d) => !vehicleDriverIds.has(d.id))?.id;
+    return drivers.find((d) => !vehicleDriverIds.has(d.user.id))?.user.id;
   }, [drivers, vehicles]);
 
   const driverNameById = useMemo(() => {
@@ -307,10 +307,10 @@ export function FleetDataTable({
                     {drivers.length ? (
                       drivers.map((driver) => (
                         <DropdownMenuItem
-                          key={driver.id}
-                          disabled={assignedChauffeurId === driver.id}
-                          onClick={() => handleAssignVehicle(vehicle, driver.id)}>
-                          {driver.profile.displayName || driver.email}
+                          key={driver.user.id}
+                          disabled={assignedChauffeurId === driver.user.id}
+                          onClick={() => handleAssignVehicle(vehicle, driver.user.id)}>
+                          {driver.user.profile.displayName || driver.user.email}
                         </DropdownMenuItem>
                       ))
                     ) : (

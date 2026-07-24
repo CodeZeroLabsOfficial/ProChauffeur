@@ -6,7 +6,7 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/aut
 import { LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { loginErrorMessage } from "@/lib/firebase/auth-errors";
+import { authErrorMessage } from "@/lib/firebase/auth-errors";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ function LoginForm() {
       toast.success("Password reset email sent. Complete the link, then sign in here.");
     } catch (error) {
       console.error("Password reset failed:", error);
-      toast.error(loginErrorMessage(error));
+      toast.error(authErrorMessage(error, "Sign in failed. Please try again."));
     } finally {
       setResetting(false);
     }
@@ -61,7 +61,7 @@ function LoginForm() {
       router.refresh();
     } catch (error) {
       console.error("Login failed:", error);
-      toast.error(loginErrorMessage(error));
+      toast.error(authErrorMessage(error, "Sign in failed. Please try again."));
     } finally {
       setLoading(false);
     }

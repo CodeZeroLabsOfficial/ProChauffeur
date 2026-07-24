@@ -24,30 +24,9 @@ export * from "@/lib/models/promotion";
 export const Collections = {
   users: "users",
   branches: "branches",
-  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/trips */
-  trips: "trips",
-  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/vehicles */
-  vehicles: "vehicles",
-  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/locations */
-  locations: "locations",
-  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/invoices */
-  invoices: "invoices",
-  operator: "operator",
   appSettings: "app_settings",
   notifications: "notifications",
-  /** @deprecated Legacy top-level path; prefer nested under branches/{branchId}/vehicle_classes */
-  vehicleClasses: "vehicle_classes",
   promotions: "promotions"
-} as const;
-
-/**
- * Legacy `operator` collection document ids.
- * @deprecated Prefer `AppSettingsDocs` (company/locale) and `BranchSettingsDocs` (pricing/hours).
- * Kept for migration scripts that still read `operator/{docId}`.
- */
-export const OperatorDocs = {
-  company: "company",
-  locale: "locale"
 } as const;
 
 /** `app_settings` document ids. */

@@ -1,7 +1,13 @@
 import type { BranchDriver } from "@/lib/models/branch";
 import type { DriverProfile, User } from "@/lib/models/user";
 
-/** Ops profile fields from a Location roster entry. */
+/** Identity + Location roster ops for a chauffeur on the active Location. */
+export type RosterChauffeur = {
+  user: User;
+  roster: BranchDriver;
+};
+
+/** Ops profile fields from a Location roster entry (for save payloads). */
 export function branchDriverToProfile(driver: BranchDriver): DriverProfile {
   return {
     chauffeurCategory: driver.chauffeurCategory,
@@ -27,25 +33,20 @@ export function branchDriverToProfile(driver: BranchDriver): DriverProfile {
   };
 }
 
-/**
- * Chauffeurs on the active Location roster, joined to user identity.
- * Roster ops fields win over embedded `users.driverProfile`.
- */
-export function mergeRosterChauffeurs(users: User[], roster: BranchDriver[]): User[] {
+/** Join active Location roster to user identity. */
+export function joinRosterChauffeurs(users: User[], roster: BranchDriver[]): RosterChauffeur[] {
   const byId = new Map(users.map((u) => [u.id, u]));
-  const merged: User[] = [];
+  const joined: RosterChauffeur[] = [];
 
   for (const entry of roster) {
     const user = byId.get(entry.userId) ?? byId.get(entry.id);
     if (!user) continue;
-    merged.push({
-      ...user,
-      role: "driver",
-      driverProfile: branchDriverToProfile(entry)
-    });
+    joined.push({ user, roster: entry });
   }
 
-  return merged.sort((a, b) =>
-    (a.profile.displayName || a.email).localeCompare(b.profile.displayName || b.email)
+  return joined.sort((a, b) =>
+    (a.user.profile.displayName || a.user.email).localeCompare(
+      b.user.profile.displayName || b.user.email
+    )
   );
 }

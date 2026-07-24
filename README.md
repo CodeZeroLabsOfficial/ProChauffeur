@@ -62,7 +62,7 @@ Auth users live at `users/{uid}`. Operational data is scoped under branches:
 Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `company`, `locale`).
 Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`).
 
-Default branch id: `brisbane`. Backfill with `npm run backfill:brisbane-branch`.
+Default branch id: `brisbane`.
 
 ### Live locations
 

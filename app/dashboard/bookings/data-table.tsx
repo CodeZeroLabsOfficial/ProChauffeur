@@ -205,9 +205,9 @@ export function BookingsDataTable({
     () => [
       { value: UNASSIGNED_CHAUFFEUR, label: "Unassigned" },
       ...chauffeurs
-        .map((u) => ({
-          value: u.id,
-          label: u.profile.displayName || u.email
+        .map((c) => ({
+          value: c.user.id,
+          label: c.user.profile.displayName || c.user.email
         }))
         .sort((a, b) => a.label.localeCompare(b.label))
     ],
@@ -217,10 +217,10 @@ export function BookingsDataTable({
   const reassignableChauffeurs = useMemo(() => {
     const vehicleByChauffeur = vehiclesByChauffeurId(vehicles);
     return chauffeurs
-      .map((u) => ({
-        id: u.id,
-        label: u.profile.displayName || u.email,
-        vehicle: vehicleByChauffeur.get(u.id)
+      .map((c) => ({
+        id: c.user.id,
+        label: c.user.profile.displayName || c.user.email,
+        vehicle: vehicleByChauffeur.get(c.user.id)
       }))
       .filter((c): c is typeof c & { vehicle: NonNullable<typeof c.vehicle> } => c.vehicle != null)
       .sort((a, b) => a.label.localeCompare(b.label));

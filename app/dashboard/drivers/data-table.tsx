@@ -25,10 +25,12 @@ import {
 import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
-  defaultDriverProfile,
-  type ChauffeurCategory,
-  type User
+  type ChauffeurCategory
 } from "@/lib/models";
+import {
+  branchDriverToProfile,
+  type RosterChauffeur
+} from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { formatDate } from "@/lib/format";
 import {
   DriverDispatchListBadge,
@@ -65,7 +67,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-type DriverRow = User & {
+type DriverRow = RosterChauffeur & {
   searchLabel: string;
   category: string;
   dispatchStatus: "accepting" | "paused";
@@ -105,39 +107,35 @@ export function DriversDataTable({
 
   const data = useMemo<DriverRow[]>(
     () =>
-      chauffeurs.map((u) => {
-        const profile = u.driverProfile ?? defaultDriverProfile();
-        return {
-          ...u,
-          searchLabel: [u.profile.displayName, u.email, u.profile.phoneNumber]
-            .filter(Boolean)
-            .join(" "),
-          category: chauffeurCategoryTitle[profile.chauffeurCategory],
-          dispatchStatus: (profile.acceptsDispatchAssignments ? "accepting" : "paused") as
-            | "accepting"
-            | "paused",
-          visibilityStatus: (profile.visibleOnCustomerApp ? "active" : "inactive") as
-            | "active"
-            | "inactive"
-        };
-      }),
+      chauffeurs.map((c) => ({
+        ...c,
+        searchLabel: [c.user.profile.displayName, c.user.email, c.user.profile.phoneNumber]
+          .filter(Boolean)
+          .join(" "),
+        category: chauffeurCategoryTitle[c.roster.chauffeurCategory],
+        dispatchStatus: (c.roster.acceptsDispatchAssignments ? "accepting" : "paused") as
+          | "accepting"
+          | "paused",
+        visibilityStatus: (c.roster.visibleOnCustomerApp ? "active" : "inactive") as
+          | "active"
+          | "inactive"
+      })),
     [chauffeurs]
   );
 
   const driverTitle = useCallback(
-    (user: User) => user.profile.displayName?.trim() || user.email || "Chauffeur",
+    (c: RosterChauffeur) => c.user.profile.displayName?.trim() || c.user.email || "Chauffeur",
     []
   );
 
   const setDriverVisibility = useCallback(
-    async (user: User, active: boolean) => {
-      const profile = user.driverProfile ?? defaultDriverProfile();
-      if (profile.visibleOnCustomerApp === active) return;
+    async (c: RosterChauffeur, active: boolean) => {
+      if (c.roster.visibleOnCustomerApp === active) return;
       try {
         await saveDriverProfile(
-          user.id,
-          { ...profile, visibleOnCustomerApp: active },
-          { driverTitle: driverTitle(user) }
+          c.user.id,
+          { ...branchDriverToProfile(c.roster), visibleOnCustomerApp: active },
+          { driverTitle: driverTitle(c) }
         );
         toast.success(
           active ? "Driver visibility set to active." : "Driver visibility set to inactive."
@@ -150,14 +148,13 @@ export function DriversDataTable({
   );
 
   const setDispatchAcceptance = useCallback(
-    async (user: User, accepting: boolean) => {
-      const profile = user.driverProfile ?? defaultDriverProfile();
-      if (profile.acceptsDispatchAssignments === accepting) return;
+    async (c: RosterChauffeur, accepting: boolean) => {
+      if (c.roster.acceptsDispatchAssignments === accepting) return;
       try {
         await saveDriverProfile(
-          user.id,
-          { ...profile, acceptsDispatchAssignments: accepting },
-          { driverTitle: driverTitle(user) }
+          c.user.id,
+          { ...branchDriverToProfile(c.roster), acceptsDispatchAssignments: accepting },
+          { driverTitle: driverTitle(c) }
         );
         toast.success(
           accepting ? "Driver is now accepting dispatch." : "Dispatch paused for this driver."
@@ -170,14 +167,14 @@ export function DriversDataTable({
   );
 
   const handleRemoveDriver = useCallback(
-    async (user: User) => {
-      const name = driverTitle(user);
+    async (c: RosterChauffeur) => {
+      const name = driverTitle(c);
       if (!window.confirm(`Remove ${name} from chauffeurs? Their fleet vehicle will also be removed if one exists.`)) {
         return;
       }
       try {
-        await removeDriver(user.id, name);
-        if (selectedId === user.id) {
+        await removeDriver(c.user.id, name);
+        if (selectedId === c.user.id) {
           setDetailOpen(false);
           setEditOpen(false);
           setSelectedId(null);
@@ -217,20 +214,20 @@ export function DriversDataTable({
       },
       {
         id: "chauffeur",
-        accessorFn: (row) => row.profile.displayName || row.email,
+        accessorFn: (row) => row.user.profile.displayName || row.user.email,
         header: "Chauffeur",
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <Avatar className="size-9">
-              <AvatarImage src={row.original.profile.photoURL ?? undefined} />
+              <AvatarImage src={row.original.user.profile.photoURL ?? undefined} />
               <AvatarFallback>
                 {generateAvatarFallback(
-                  row.original.profile.displayName || row.original.email
+                  row.original.user.profile.displayName || row.original.user.email
                 )}
               </AvatarFallback>
             </Avatar>
             <div className="font-medium">
-              {row.original.profile.displayName || "Driver"}
+              {row.original.user.profile.displayName || "Driver"}
             </div>
           </div>
         ),
@@ -244,7 +241,7 @@ export function DriversDataTable({
       },
       {
         id: "category",
-        accessorFn: (row) => row.driverProfile?.chauffeurCategory ?? "",
+        accessorFn: (row) => row.roster.chauffeurCategory,
         header: "Category",
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.category}</span>
@@ -253,11 +250,11 @@ export function DriversDataTable({
       },
       {
         id: "licenceExpiry",
-        accessorFn: (row) => formatDate(row.driverProfile?.driversLicenseExpiry ?? null),
+        accessorFn: (row) => formatDate(row.roster.driversLicenseExpiry ?? null),
         header: "Licence expiry",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {formatDate(row.original.driverProfile?.driversLicenseExpiry ?? null)}
+            {formatDate(row.original.roster.driversLicenseExpiry ?? null)}
           </span>
         )
       },
@@ -265,27 +262,25 @@ export function DriversDataTable({
         id: "dispatch",
         accessorKey: "dispatchStatus",
         header: "Dispatch",
-        cell: ({ row }) => {
-          const profile = row.original.driverProfile ?? defaultDriverProfile();
-          return <DriverDispatchListBadge accepting={profile.acceptsDispatchAssignments} />;
-        },
+        cell: ({ row }) => (
+          <DriverDispatchListBadge accepting={row.original.roster.acceptsDispatchAssignments} />
+        ),
         filterFn: multiSelectFilter
       },
       {
         id: "visibility",
         accessorKey: "visibilityStatus",
         header: "Visibility",
-        cell: ({ row }) => {
-          const profile = row.original.driverProfile ?? defaultDriverProfile();
-          return <DriverVisibilityListBadge active={profile.visibleOnCustomerApp} />;
-        },
+        cell: ({ row }) => (
+          <DriverVisibilityListBadge active={row.original.roster.visibleOnCustomerApp} />
+        ),
         filterFn: multiSelectFilter
       },
       {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
-          const profile = row.original.driverProfile ?? defaultDriverProfile();
+          const c = row.original;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -296,7 +291,7 @@ export function DriversDataTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/drivers/${row.original.id}`}>View details</Link>
+                  <Link href={`/dashboard/drivers/${c.user.id}`}>View details</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
@@ -305,13 +300,13 @@ export function DriversDataTable({
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem
-                          disabled={profile.visibleOnCustomerApp}
-                          onClick={() => setDriverVisibility(row.original, true)}>
+                          disabled={c.roster.visibleOnCustomerApp}
+                          onClick={() => setDriverVisibility(c, true)}>
                           Set active
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!profile.visibleOnCustomerApp}
-                          onClick={() => setDriverVisibility(row.original, false)}>
+                          disabled={!c.roster.visibleOnCustomerApp}
+                          onClick={() => setDriverVisibility(c, false)}>
                           Set inactive
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
@@ -322,13 +317,13 @@ export function DriversDataTable({
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem
-                          disabled={profile.acceptsDispatchAssignments}
-                          onClick={() => setDispatchAcceptance(row.original, true)}>
+                          disabled={c.roster.acceptsDispatchAssignments}
+                          onClick={() => setDispatchAcceptance(c, true)}>
                           Accept dispatch
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!profile.acceptsDispatchAssignments}
-                          onClick={() => setDispatchAcceptance(row.original, false)}>
+                          disabled={!c.roster.acceptsDispatchAssignments}
+                          onClick={() => setDispatchAcceptance(c, false)}>
                           Pause dispatch
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
@@ -338,7 +333,7 @@ export function DriversDataTable({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => handleRemoveDriver(row.original)}>
+                  onClick={() => handleRemoveDriver(c)}>
                   <span>Delete</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -369,9 +364,9 @@ export function DriversDataTable({
     }
   });
 
-  const selectedUser = useMemo(
-    () => (selectedId ? users.find((u) => u.id === selectedId) ?? null : null),
-    [selectedId, users]
+  const selectedChauffeur = useMemo(
+    () => (selectedId ? chauffeurs.find((c) => c.user.id === selectedId) ?? null : null),
+    [selectedId, chauffeurs]
   );
 
   useEffect(() => {
@@ -382,9 +377,9 @@ export function DriversDataTable({
     }
   }, [createOpen]);
 
-  function openDriver(u: User) {
+  function openDriver(c: RosterChauffeur) {
     onCreateOpenChange?.(false);
-    setSelectedId(u.id);
+    setSelectedId(c.user.id);
     setEditOpen(false);
     setDetailOpen(true);
   }
@@ -511,13 +506,15 @@ export function DriversDataTable({
       </div>
 
       <DriverDetailSheet
-        user={selectedUser}
+        user={selectedChauffeur?.user ?? null}
+        roster={selectedChauffeur?.roster ?? null}
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
       />
 
       <DriverEditSheet
-        user={createOpen ? null : selectedUser}
+        user={createOpen ? null : selectedChauffeur?.user ?? null}
+        roster={createOpen ? null : selectedChauffeur?.roster ?? null}
         candidates={candidates}
         open={createOpen || editOpen}
         onOpenChange={(next) => {

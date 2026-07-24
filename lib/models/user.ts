@@ -65,8 +65,6 @@ export interface User {
   role: UserRole;
   email: string;
   profile: UserProfile;
-  /** Legacy embedded chauffeur profile; prefer `branches/{id}/drivers/{uid}` after cutover. */
-  driverProfile?: DriverProfile | null;
   /** Admin/dispatcher dashboard preferences. */
   preferences?: UserPreferences | null;
   /** Driver's home branch roster. */
