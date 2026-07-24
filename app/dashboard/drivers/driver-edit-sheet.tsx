@@ -5,33 +5,32 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { updateUserDriverProfile, updateUserProfile, updateUserRole } from "@/lib/services/firebase-service";
+import {
+  updateUserDriverProfile,
+  updateUserEmail,
+  updateUserProfile,
+  updateUserRole
+} from "@/lib/services/firebase-service";
 import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
   defaultDriverProfile,
   userRoleTitle,
   type ChauffeurCategory,
-  type User
+  type User,
+  type UserProfile
 } from "@/lib/models";
 import {
   isValidPostalAddress,
-  postalAddressFromProfile,
   toProfilePostalFields,
   type PostalAddress
 } from "@/lib/models/postal-address";
-import {
-  ProfileAddressField,
-  PROFILE_ADDRESS_VALIDATION_MESSAGE
-} from "@/components/profile-address-field";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -42,11 +41,47 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+
+function splitDisplayName(displayName: string): { firstName: string; lastName: string } {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function nameParts(profile: UserProfile): { firstName: string; lastName: string } {
+  if (profile.firstName || profile.lastName) {
+    return {
+      firstName: profile.firstName ?? "",
+      lastName: profile.lastName ?? ""
+    };
+  }
+  return splitDisplayName(profile.displayName);
+}
+
+/** Persist optional Line 2 in `street` using a newline (no separate profile field). */
+function splitStreetLines(street: string | null | undefined): { line1: string; line2: string } {
+  const raw = street ?? "";
+  const idx = raw.indexOf("\n");
+  if (idx === -1) return { line1: raw, line2: "" };
+  return { line1: raw.slice(0, idx), line2: raw.slice(idx + 1) };
+}
+
+function joinStreetLines(line1: string, line2: string): string | null {
+  const a = line1.trim();
+  const b = line2.trim();
+  if (!a && !b) return null;
+  if (!b) return a;
+  if (!a) return b;
+  return `${a}\n${b}`;
+}
+
+const ADDRESS_VALIDATION_MESSAGE =
+  "Enter a complete address, or leave all address fields empty.";
 
 export function DriverEditSheet({
   user,
@@ -65,29 +100,24 @@ export function DriverEditSheet({
   const [selectedUserId, setSelectedUserId] = useState("");
   const selectedCandidate = candidates.find((u) => u.id === selectedUserId);
   const activeUser = user ?? selectedCandidate ?? null;
-  const profile = activeUser?.driverProfile ?? defaultDriverProfile();
+  const driverProfile = activeUser?.driverProfile ?? defaultDriverProfile();
+  const userProfile = activeUser?.profile;
+  const names = userProfile ? nameParts(userProfile) : { firstName: "", lastName: "" };
+  const streetLines = splitStreetLines(userProfile?.street);
 
-  const [category, setCategory] = useState<ChauffeurCategory>(profile.chauffeurCategory);
-  const [visible, setVisible] = useState(profile.visibleOnCustomerApp);
-  const [dispatch, setDispatch] = useState(profile.acceptsDispatchAssignments);
-  const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
-    profile.driversLicenseExpiry ?? undefined
+  const [category, setCategory] = useState<ChauffeurCategory>(driverProfile.chauffeurCategory);
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
+    userProfile?.dateOfBirth ?? undefined
   );
   const [saving, setSaving] = useState(false);
-  const [address, setAddress] = useState<PostalAddress>(() =>
-    activeUser ? postalAddressFromProfile(activeUser.profile) : {}
-  );
   const [addressInvalid, setAddressInvalid] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
   const currentKey = user?.id ?? (selectedUserId || "__new__");
   if (currentKey !== seededId) {
     setSeededId(currentKey);
-    setCategory(profile.chauffeurCategory);
-    setVisible(profile.visibleOnCustomerApp);
-    setDispatch(profile.acceptsDispatchAssignments);
-    setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
-    setAddress(activeUser ? postalAddressFromProfile(activeUser.profile) : {});
+    setCategory(driverProfile.chauffeurCategory);
+    setDateOfBirth(userProfile?.dateOfBirth ?? undefined);
     setAddressInvalid(false);
   }
 
@@ -98,42 +128,65 @@ export function DriverEditSheet({
       toast.error("Select the user to add as a chauffeur.");
       return;
     }
-    if (!isValidPostalAddress(address)) {
-      setAddressInvalid(true);
-      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
-      return;
-    }
+
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
-    const driverProfile = {
+    const firstName = get("firstName");
+    const lastName = get("lastName");
+    const phoneNumber = get("phoneNumber");
+    const email = get("email");
+    const address: PostalAddress = {
+      street: joinStreetLines(get("addressLine1"), get("addressLine2")),
+      city: get("city") || null,
+      state: get("state") || null,
+      postcode: get("postcode") || null,
+      country: get("country") || null
+    };
+
+    if (!isValidPostalAddress(address)) {
+      setAddressInvalid(true);
+      toast.error(ADDRESS_VALIDATION_MESSAGE);
+      return;
+    }
+    setAddressInvalid(false);
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+
+    const nextDriverProfile = {
       ...defaultDriverProfile(),
-      ...profile,
-      chauffeurCategory: category,
-      bioStatement: get("bioStatement"),
-      driversLicenseNumber: get("driversLicenseNumber") || null,
-      driversLicenseClassOrType: get("driversLicenseClassOrType") || null,
-      driversLicenseJurisdictionCode: get("driversLicenseJurisdictionCode") || null,
-      driversLicenseExpiry: driversLicenseExpiry ?? null,
-      operatorAccreditationNumber: get("operatorAccreditationNumber") || null,
-      visibleOnCustomerApp: visible,
-      acceptsDispatchAssignments: dispatch
+      ...driverProfile,
+      chauffeurCategory: category
+    };
+
+    const displayName =
+      `${firstName} ${lastName}`.trim() ||
+      activeUser?.profile.displayName?.trim() ||
+      email ||
+      "Chauffeur";
+
+    const nextUserProfile: UserProfile = {
+      ...(activeUser?.profile ?? { displayName }),
+      displayName,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      phoneNumber: phoneNumber || null,
+      dateOfBirth: dateOfBirth ?? null,
+      ...toProfilePostalFields(address)
     };
 
     setSaving(true);
     try {
       if (isNew) await updateUserRole(uid, "driver");
-      const driverTitle =
-        activeUser?.profile.displayName?.trim() ||
-        activeUser?.email ||
-        selectedCandidate?.profile.displayName?.trim() ||
-        selectedCandidate?.email ||
-        "Chauffeur";
-      await updateUserDriverProfile(uid, driverProfile, { driverTitle, isNew });
-      if (activeUser) {
-        await updateUserProfile(uid, {
-          ...activeUser.profile,
-          ...toProfilePostalFields(address)
-        });
+      await updateUserDriverProfile(uid, nextDriverProfile, {
+        driverTitle: displayName,
+        isNew
+      });
+      await updateUserProfile(uid, nextUserProfile);
+      if (email !== (activeUser?.email ?? "").trim()) {
+        await updateUserEmail(uid, email);
       }
       toast.success(isNew ? "Driver added." : "Driver profile saved.");
       onOpenChange(false);
@@ -154,11 +207,6 @@ export function DriverEditSheet({
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add driver" : "Edit driver"}</SheetTitle>
-          <SheetDescription>
-            {isNew
-              ? "Promote an existing account to chauffeur and set their roster profile."
-              : activeUser?.email}
-          </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
           {isNew && (
@@ -185,127 +233,164 @@ export function DriverEditSheet({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>Roster category</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as ChauffeurCategory)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CHAUFFEUR_CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {chauffeurCategoryTitle[c]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <ProfileAddressField
-            value={address}
-            onChange={(next) => {
-              setAddress(next);
-              if (addressInvalid && isValidPostalAddress(next)) {
-                setAddressInvalid(false);
-              }
-            }}
-            invalid={addressInvalid}
-            disabled={saving}
-          />
-
-          <div className="space-y-2">
-            <Label htmlFor="bioStatement">Bio</Label>
-            <Textarea id="bioStatement" name="bioStatement" rows={3} defaultValue={profile.bioStatement} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Roster category</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as ChauffeurCategory)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHAUFFEUR_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {chauffeurCategoryTitle[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="driversLicenseNumber">Licence no.</Label>
+              <Label htmlFor="firstName">First name</Label>
               <Input
-                id="driversLicenseNumber"
-                name="driversLicenseNumber"
-                defaultValue={profile.driversLicenseNumber ?? ""}
+                id="firstName"
+                name="firstName"
+                autoComplete="given-name"
+                placeholder="Jane"
+                defaultValue={names.firstName}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="driversLicenseClassOrType">Class</Label>
+              <Label htmlFor="lastName">Last name</Label>
               <Input
-                id="driversLicenseClassOrType"
-                name="driversLicenseClassOrType"
-                defaultValue={profile.driversLicenseClassOrType ?? ""}
+                id="lastName"
+                name="lastName"
+                autoComplete="family-name"
+                placeholder="Smith"
+                defaultValue={names.lastName}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone</Label>
+              <Input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+61 400 000 000"
+                defaultValue={userProfile?.phoneNumber ?? ""}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="driversLicenseJurisdictionCode">State</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="driversLicenseJurisdictionCode"
-                name="driversLicenseJurisdictionCode"
-                placeholder="NSW"
-                defaultValue={profile.driversLicenseJurisdictionCode ?? ""}
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="jane@example.com"
+                defaultValue={activeUser?.email ?? ""}
               />
-            </div>
-            <div className="flex flex-col space-y-2">
-              <Label>Licence expiry</Label>
-              <Popover modal>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full pl-3 text-left font-normal",
-                      !driversLicenseExpiry && "text-muted-foreground"
-                    )}>
-                    {driversLicenseExpiry ? (
-                      format(driversLicenseExpiry, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className={cn(
-                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                    nested && "z-[110]"
-                  )}
-                  align="start">
-                  <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    fromYear={new Date().getFullYear() - 10}
-                    toYear={new Date().getFullYear() + 20}
-                    selected={driversLicenseExpiry}
-                    onSelect={setDriversLicenseExpiry}
-                    defaultMonth={driversLicenseExpiry}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="operatorAccreditationNumber">Operator accreditation no.</Label>
-            <Input
-              id="operatorAccreditationNumber"
-              name="operatorAccreditationNumber"
-              defaultValue={profile.operatorAccreditationNumber ?? ""}
-            />
+            <Label>Date of birth</Label>
+            <Popover modal>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-full pl-3 text-left font-normal",
+                    !dateOfBirth && "text-muted-foreground"
+                  )}>
+                  {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
+                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className={cn(
+                  "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                  nested && "z-[110]"
+                )}
+                align="start">
+                <Calendar
+                  mode="single"
+                  captionLayout="dropdown"
+                  fromYear={1900}
+                  toYear={new Date().getFullYear()}
+                  selected={dateOfBirth}
+                  onSelect={setDateOfBirth}
+                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                  defaultMonth={dateOfBirth}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Visible on customer app</p>
-              <p className="text-muted-foreground text-xs">Show this chauffeur to customers.</p>
+          <div className="space-y-3">
+            <Input
+              id="addressLine1"
+              name="addressLine1"
+              autoComplete="address-line1"
+              placeholder="Line 1"
+              defaultValue={streetLines.line1}
+              aria-invalid={addressInvalid || undefined}
+            />
+            <Input
+              id="addressLine2"
+              name="addressLine2"
+              autoComplete="address-line2"
+              placeholder="Line 2"
+              defaultValue={streetLines.line2}
+              aria-invalid={addressInvalid || undefined}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                id="city"
+                name="city"
+                autoComplete="address-level2"
+                placeholder="City"
+                defaultValue={userProfile?.city ?? ""}
+                aria-invalid={addressInvalid || undefined}
+              />
+              <Input
+                id="state"
+                name="state"
+                autoComplete="address-level1"
+                placeholder="State"
+                defaultValue={userProfile?.state ?? ""}
+                aria-invalid={addressInvalid || undefined}
+              />
             </div>
-            <Switch checked={visible} onCheckedChange={setVisible} />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Accepts dispatch</p>
-              <p className="text-muted-foreground text-xs">Auto-route trips to this chauffeur.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                id="postcode"
+                name="postcode"
+                autoComplete="postal-code"
+                placeholder="Postal code"
+                defaultValue={userProfile?.postcode ?? ""}
+                aria-invalid={addressInvalid || undefined}
+              />
+              <Input
+                id="country"
+                name="country"
+                autoComplete="country-name"
+                placeholder="Country"
+                defaultValue={userProfile?.country ?? ""}
+                aria-invalid={addressInvalid || undefined}
+              />
             </div>
-            <Switch checked={dispatch} onCheckedChange={setDispatch} />
+            {addressInvalid ? (
+              <p className="text-destructive text-sm">{ADDRESS_VALIDATION_MESSAGE}</p>
+            ) : null}
           </div>
 
           <SheetFooter className="px-0">
