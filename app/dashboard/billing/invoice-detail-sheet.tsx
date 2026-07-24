@@ -157,10 +157,6 @@ function InvoiceDetailBody({
             label="Subtotal"
             value={formatCurrency(invoice.subtotal, invoice.currencyCode)}
           />
-          <SummaryRow
-            label="GST"
-            value={formatCurrency(invoice.taxAmount, invoice.currencyCode)}
-          />
           <Separator />
           <SummaryRow
             label="Total"
@@ -249,7 +245,7 @@ export function InvoiceDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="overflow-y-auto sm:max-w-lg"
+        className="w-full overflow-y-auto"
         onOpenAutoFocus={(e) => e.preventDefault()}>
         <SheetHeader>
           <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
