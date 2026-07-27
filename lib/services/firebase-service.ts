@@ -116,7 +116,7 @@ import {
   type Branch,
   type BranchDriver
 } from "@/lib/models/branch";
-import { canCreateLocation, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
+import { canCreateLocation, clampPreferredPayment, normalizeAllowedPaymentMethods, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -735,6 +735,15 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
     throw new Error("Payment terms cannot be negative.");
   }
 
+  const allowedPaymentMethods = normalizeAllowedPaymentMethods(account.allowedPaymentMethods);
+  if (allowedPaymentMethods.length === 0) {
+    throw new Error("Select at least one allowed payment method.");
+  }
+  const preferredPayment = clampPreferredPayment(
+    account.preferredPayment ?? null,
+    allowedPaymentMethods
+  );
+
   const joinCode = account.joinCode ? normalizeCorporateJoinCode(account.joinCode) : null;
   if (joinCode) {
     const existing = await fetchCorporateAccounts();
@@ -774,7 +783,8 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
         account.monthlyBudget != null && Number.isFinite(account.monthlyBudget)
           ? account.monthlyBudget
           : null,
-      preferredPayment: account.preferredPayment ?? null,
+      allowedPaymentMethods,
+      preferredPayment,
       gstInclusive: account.gstInclusive !== false,
       status: account.status,
       billingDay: account.billingDay,

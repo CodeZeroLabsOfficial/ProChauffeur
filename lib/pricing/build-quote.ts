@@ -1,5 +1,6 @@
 import { getMapboxToken } from "@/lib/env";
 import { fetchRouteMetrics } from "@/lib/mapbox/directions";
+import { isFeatureEnabled } from "@/lib/models";
 import { requireDefaultOfficeLocation, type FleetLocation } from "@/lib/models/location";
 import type { OperatorLocale } from "@/lib/models/locale";
 import type { PricingConfig } from "@/lib/models/pricing";
@@ -13,6 +14,7 @@ import {
   setCachedRouteMetrics,
   type RouteMetrics
 } from "@/lib/pricing/route-metrics-cache";
+import { fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service";
 
 async function routeMetrics(
   from: CoordinateField,
@@ -37,6 +39,14 @@ export async function buildQuoteForRequest(
   locations: FleetLocation[],
   vehicleClass: VehicleClass
 ): Promise<QuoteResult> {
+  let gatedRequest = request;
+  if (request.corporateAccount) {
+    const [license, plans] = await Promise.all([fetchLicense(), fetchPlansCatalog()]);
+    if (!isFeatureEnabled(license, plans, "corporateAccounts")) {
+      gatedRequest = { ...request, corporateAccount: null };
+    }
+  }
+
   const officeLocation = requireDefaultOfficeLocation(locations);
   const token = getMapboxToken();
   const officeCoord = {
@@ -45,12 +55,12 @@ export async function buildQuoteForRequest(
   };
 
   const [onboard, officeToPickup, dropoffToOffice] = await Promise.all([
-    routeMetrics(request.pickup, request.dropoff, token),
-    routeMetrics(officeCoord, request.pickup, token),
-    routeMetrics(request.dropoff, officeCoord, token)
+    routeMetrics(gatedRequest.pickup, gatedRequest.dropoff, token),
+    routeMetrics(officeCoord, gatedRequest.pickup, token),
+    routeMetrics(gatedRequest.dropoff, officeCoord, token)
   ]);
 
-  return computeQuote(request, {
+  return computeQuote(gatedRequest, {
     pricing,
     locale,
     vehicleClass,

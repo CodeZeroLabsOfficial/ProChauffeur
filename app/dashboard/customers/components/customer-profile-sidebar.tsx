@@ -9,6 +9,7 @@ import { formatPostalAddress } from "@/lib/models/postal-address";
 import { customerProfileCompleteness } from "@/app/dashboard/customers/lib/customer-profile-metrics";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { formatDate } from "@/lib/format";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { fetchCorporateAccount } from "@/lib/services/firebase-service";
 import { generateAvatarFallback, cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,12 +34,13 @@ export function CustomerProfileSidebar({
 }) {
   const displayName = customerDisplayName(user);
   const progressValue = customerProfileCompleteness(user);
+  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
   const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
-  const isCorporate = Boolean(user.corporateAccountId?.trim());
+  const isCorporate = corporateAccountsEnabled && Boolean(user.corporateAccountId?.trim());
 
   useEffect(() => {
     const accountId = user.corporateAccountId?.trim();
-    if (!accountId) {
+    if (!accountId || !corporateAccountsEnabled) {
       setCorporateAccountName(null);
       return;
     }
@@ -53,7 +55,7 @@ export function CustomerProfileSidebar({
     return () => {
       cancelled = true;
     };
-  }, [user.corporateAccountId]);
+  }, [user.corporateAccountId, corporateAccountsEnabled]);
 
   return (
     <div className="space-y-4">

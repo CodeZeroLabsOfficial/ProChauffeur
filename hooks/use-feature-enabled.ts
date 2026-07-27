@@ -51,7 +51,9 @@ export function useLicenseEntitlements(): {
     ready,
     license: resolvedLicense,
     plans: resolvedPlans,
-    isEnabled: (feature: FeatureId) => isFeatureEnabled(resolvedLicense, resolvedPlans, feature)
+    // Fail closed until catalog loads — avoids flash of Pro features from defaultPlansCatalog.
+    isEnabled: (feature: FeatureId) =>
+      ready ? isFeatureEnabled(resolvedLicense, resolvedPlans, feature) : false
   };
 }
 

@@ -33,6 +33,7 @@ import {
   tripPickupReferenceDate,
   type CoordinateField,
   type CorporateAccount,
+  type CorporateAllowedPayment,
   type OperatorLocale,
   type PricingAddon,
   type PricingConfig,
@@ -40,13 +41,17 @@ import {
   type TripType,
   type User,
   BOOKING_TRIP_MODES,
+  accountAllowsPayment,
   bookingTripModeTitle,
+  clampPreferredPayment,
+  corporatePreferredPaymentTitle,
   quoteTripTypeForBookingMode,
   type BookingTripMode
 } from "@/lib/models";
 import type { QuotePromoApplication, QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { resolvePromoApplication } from "@/lib/pricing/apply-promo";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
+import { computeQuoteRemote } from "@/lib/services/quote-service";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
@@ -109,6 +114,45 @@ function quoteInputFingerprint(request: QuoteRequest): string {
     corporatePercentOff: request.corporateAccount?.percentOff ?? null,
     corporateFixedRates: request.corporateAccount?.fixedRates ?? null
   });
+}
+
+async function resolveBookingQuote(
+  request: QuoteRequest,
+  pricing: PricingConfig,
+  locale: OperatorLocale,
+  locations: Parameters<typeof buildQuoteForRequest>[3],
+  vehicleClass: NonNullable<Parameters<typeof buildQuoteForRequest>[4]>,
+  opts: {
+    customerId: string | null;
+    settlement: CorporateAllowedPayment | null;
+  }
+): Promise<QuoteResult> {
+  if (request.corporateAccount && opts.customerId && opts.settlement) {
+    return computeQuoteRemote({
+      customerId: opts.customerId,
+      settlement: opts.settlement,
+      trip: {
+        tripType: request.tripType,
+        vehicleClassId: request.vehicleClassId,
+        pickup: request.pickup,
+        dropoff: request.dropoff,
+        pickupAddressLine: request.pickupAddressLine,
+        dropoffAddressLine: request.dropoffAddressLine,
+        pickupPostcode: request.pickupPostcode,
+        dropoffPostcode: request.dropoffPostcode,
+        scheduledPickupAt: request.scheduledPickupAt,
+        bookedHours: request.bookedHours,
+        addonIds: request.addonIds
+      }
+    });
+  }
+  return buildQuoteForRequest(
+    { ...request, corporateAccount: null },
+    pricing,
+    locale,
+    locations,
+    vehicleClass
+  );
 }
 
 function roundTripQuoteFingerprint(outbound: QuoteRequest, returnLeg: QuoteRequest): string {
@@ -268,7 +312,7 @@ function resetFormFields(
     setPromoError: (error: string | null) => void;
     setPromoExpanded: (expanded: boolean) => void;
     setCorporateAccount: (account: CorporateAccount | null) => void;
-    setBillToCorporate: (value: boolean) => void;
+    setCorporateSettlement: (value: CorporateAllowedPayment | null) => void;
   }
 ) {
   setters.setFieldErrors({});
@@ -291,7 +335,7 @@ function resetFormFields(
   setters.setPromoError(null);
   setters.setPromoExpanded(false);
   setters.setCorporateAccount(null);
-  setters.setBillToCorporate(false);
+  setters.setCorporateSettlement(null);
 }
 
 export function NewBookingSheet({
@@ -312,12 +356,17 @@ export function NewBookingSheet({
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
   const { enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
-  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
+  const { ready: corporateFeatureReady, enabled: corporateAccountsEnabled } =
+    useFeatureEnabled("corporateAccounts");
+  const corporateFeatureOn = corporateFeatureReady && corporateAccountsEnabled;
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
   const [corporateAccount, setCorporateAccount] = useState<CorporateAccount | null>(null);
-  const [billToCorporate, setBillToCorporate] = useState(false);
+  /** Settlement when booking under a corporate account: on_account | card. */
+  const [corporateSettlement, setCorporateSettlement] = useState<CorporateAllowedPayment | null>(
+    null
+  );
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
@@ -396,16 +445,19 @@ export function NewBookingSheet({
   const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
 
   const activeCorporateAccount =
-    corporateAccount?.status === "active" ? corporateAccount : null;
-  const promoForQuote = billToCorporate ? null : appliedPromo;
+    corporateFeatureOn && corporateAccount?.status === "active" ? corporateAccount : null;
+  const applyCorporateRates = Boolean(activeCorporateAccount && corporateSettlement);
+  const corporateAccountForQuote = applyCorporateRates ? activeCorporateAccount : null;
+  const billToCorporate = corporateSettlement === "on_account";
+  const promoForQuote = applyCorporateRates ? null : appliedPromo;
 
   const lastCorporateCustomerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!customer?.corporateAccountId || !corporateAccountsEnabled) {
+    if (!customer?.corporateAccountId || !corporateFeatureOn) {
       setCorporateAccount(null);
+      setCorporateSettlement(null);
       if (!customer) {
-        setBillToCorporate(false);
         lastCorporateCustomerIdRef.current = null;
       }
       return;
@@ -421,31 +473,49 @@ export function NewBookingSheet({
         const active = account?.status === "active" ? account : null;
         setCorporateAccount(active);
         if (!active) {
-          setBillToCorporate(false);
+          setCorporateSettlement(null);
           return;
         }
         if (customerChanged) {
-          setBillToCorporate(active.preferredPayment === "on_account");
+          const allowed = active.allowedPaymentMethods;
+          const preferred = clampPreferredPayment(active.preferredPayment ?? null, allowed);
+          if (preferred) {
+            setCorporateSettlement(preferred);
+          } else if (allowed.includes("on_account")) {
+            setCorporateSettlement("on_account");
+          } else if (allowed.includes("card")) {
+            setCorporateSettlement("card");
+          } else {
+            setCorporateSettlement(null);
+          }
         }
         setVehicleClassId((current) => {
           if (current) return current;
           if (active.defaultVehicleClassIds.length === 0) return current;
-          const preferred = active.defaultVehicleClassIds.find((id) =>
+          const preferredClass = active.defaultVehicleClassIds.find((id) =>
             vehicleClasses.some((vc) => vc.id === id && vc.isEnabled)
           );
-          return preferred ?? current;
+          return preferredClass ?? current;
         });
       })
       .catch(() => {
         if (!cancelled) {
           setCorporateAccount(null);
-          setBillToCorporate(false);
+          setCorporateSettlement(null);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [customer, corporateAccountsEnabled, vehicleClasses]);
+  }, [customer, corporateFeatureOn, vehicleClasses]);
+
+  useEffect(() => {
+    if (!activeCorporateAccount || !corporateSettlement) return;
+    if (!accountAllowsPayment(activeCorporateAccount, corporateSettlement)) {
+      const allowed = activeCorporateAccount.allowedPaymentMethods;
+      setCorporateSettlement(allowed[0] ?? null);
+    }
+  }, [activeCorporateAccount, corporateSettlement]);
 
   useEffect(() => {
     if (!billToCorporate) return;
@@ -454,8 +524,8 @@ export function NewBookingSheet({
 
   async function applyPromoCode() {
     if (!loyaltyPromosEnabled) return;
-    if (billToCorporate) {
-      setPromoError("Promos are not available when billing to a corporate account.");
+    if (applyCorporateRates) {
+      setPromoError("Promos are not available when corporate rates apply.");
       return;
     }
     const code = promoCodeInput.trim();
@@ -498,14 +568,18 @@ export function NewBookingSheet({
         selectedAddonIds,
         quoteTripType === "hourly" ? bookedHours : null,
         null,
-        activeCorporateAccount
+        corporateAccountForQuote
       );
-      const baseQuote = await buildQuoteForRequest(
+      const baseQuote = await resolveBookingQuote(
         baseRequest,
         pricingConfig,
         operatorLocale,
         locations,
-        selectedVehicleClass
+        selectedVehicleClass,
+        {
+          customerId: customer?.id ?? null,
+          settlement: corporateSettlement
+        }
       );
       const customerUses = await countCustomerPromoRedemptions(customer.id, promo.id);
       const resolved = resolvePromoApplication(promo, {
@@ -564,7 +638,7 @@ export function NewBookingSheet({
         setPromoError,
         setPromoExpanded,
         setCorporateAccount,
-        setBillToCorporate
+        setCorporateSettlement
       });
     }
   }, [open]);
@@ -659,7 +733,7 @@ export function NewBookingSheet({
         setPromoError,
         setPromoExpanded,
         setCorporateAccount,
-        setBillToCorporate
+        setCorporateSettlement
       });
     }
   }, [open, editTrip, sourceTrip, users]);
@@ -704,7 +778,7 @@ export function NewBookingSheet({
             selectedAddonIds,
             null,
             promoForQuote,
-            activeCorporateAccount
+            corporateAccountForQuote
           );
           const returnRequest = buildQuoteRequestInput(
             "transfer",
@@ -715,7 +789,7 @@ export function NewBookingSheet({
             selectedAddonIds,
             null,
             promoForQuote,
-            activeCorporateAccount
+            corporateAccountForQuote
           );
           const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
           const cached = lastQuoteRef.current;
@@ -731,19 +805,27 @@ export function NewBookingSheet({
           }
 
           const [outboundQuote, returnQuote] = await Promise.all([
-            buildQuoteForRequest(
+            resolveBookingQuote(
               outboundRequest,
               pricingConfig,
               operatorLocale,
               locations,
-              selectedVehicleClass
+              selectedVehicleClass,
+              {
+                customerId: customer?.id ?? null,
+                settlement: corporateSettlement
+              }
             ),
-            buildQuoteForRequest(
+            resolveBookingQuote(
               returnRequest,
               pricingConfig,
               operatorLocale,
               locations,
-              selectedVehicleClass
+              selectedVehicleClass,
+              {
+                customerId: customer?.id ?? null,
+                settlement: corporateSettlement
+              }
             )
           ]);
           if (cancelled) return;
@@ -761,7 +843,7 @@ export function NewBookingSheet({
           selectedAddonIds,
           quoteTripType === "hourly" ? hourlyBookedHours : null,
           promoForQuote,
-          activeCorporateAccount
+          corporateAccountForQuote
         );
         const fingerprint = quoteInputFingerprint(request);
         const cached = lastQuoteRef.current;
@@ -770,12 +852,16 @@ export function NewBookingSheet({
           return;
         }
 
-        const quote = await buildQuoteForRequest(
+        const quote = await resolveBookingQuote(
           request,
           pricingConfig,
           operatorLocale,
           locations,
-          selectedVehicleClass
+          selectedVehicleClass,
+          {
+            customerId: customer?.id ?? null,
+            settlement: corporateSettlement
+          }
         );
         if (cancelled) return;
         lastQuoteRef.current = { fingerprint, quote };
@@ -817,8 +903,8 @@ export function NewBookingSheet({
     selectedAddonIds,
     appliedPromo,
     promoForQuote,
-    activeCorporateAccount,
-    billToCorporate
+    corporateAccountForQuote,
+    corporateSettlement
   ]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -894,7 +980,11 @@ export function NewBookingSheet({
             paymentSource: "web" as const,
             corporateAccountId: activeCorporateAccount.id
           }
-        : {};
+        : applyCorporateRates && activeCorporateAccount
+          ? {
+              corporateAccountId: activeCorporateAccount.id
+            }
+          : {};
 
     setSaving(true);
     try {
@@ -908,7 +998,7 @@ export function NewBookingSheet({
           selectedAddonIds,
           null,
           promoForQuote,
-          activeCorporateAccount
+          corporateAccountForQuote
         );
         const returnRequest = buildQuoteRequestInput(
           "transfer",
@@ -919,7 +1009,7 @@ export function NewBookingSheet({
           selectedAddonIds,
           null,
           promoForQuote,
-          activeCorporateAccount
+          corporateAccountForQuote
         );
         const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
         const cached = lastQuoteRef.current;
@@ -930,19 +1020,27 @@ export function NewBookingSheet({
           returnQuote = cached.returnLeg;
         } else {
           [outboundQuote, returnQuote] = await Promise.all([
-            buildQuoteForRequest(
+            resolveBookingQuote(
               outboundRequest,
               pricingConfig,
               operatorLocale,
               locations,
-              selectedVehicleClass
+              selectedVehicleClass,
+              {
+                customerId: customer?.id ?? null,
+                settlement: corporateSettlement
+              }
             ),
-            buildQuoteForRequest(
+            resolveBookingQuote(
               returnRequest,
               pricingConfig,
               operatorLocale,
               locations,
-              selectedVehicleClass
+              selectedVehicleClass,
+              {
+                customerId: customer?.id ?? null,
+                settlement: corporateSettlement
+              }
             )
           ]);
         }
@@ -1019,19 +1117,23 @@ export function NewBookingSheet({
         selectedAddonIds,
         submitBookedHours,
         promoForQuote,
-        activeCorporateAccount
+        corporateAccountForQuote
       );
       const fingerprint = quoteInputFingerprint(request);
       const cached = lastQuoteRef.current;
       const quote =
         cached && "quote" in cached && cached.fingerprint === fingerprint
           ? cached.quote
-          : await buildQuoteForRequest(
+          : await resolveBookingQuote(
               request,
               pricingConfig,
               operatorLocale,
               locations,
-              selectedVehicleClass
+              selectedVehicleClass,
+            {
+              customerId: customer?.id ?? null,
+              settlement: corporateSettlement
+            }
             );
 
       const quoteFields = quoteFieldsFromResult(
@@ -1166,16 +1268,46 @@ export function NewBookingSheet({
           </div>
 
           {activeCorporateAccount && !isEdit ? (
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="billToCorporate"
-                checked={billToCorporate}
-                onCheckedChange={(checked) => setBillToCorporate(checked === true)}
-                disabled={saving}
-              />
-              <Label htmlFor="billToCorporate" className="font-normal">
-                Bill to {activeCorporateAccount.name}
-              </Label>
+            <div className="space-y-2">
+              <Label>Payment method</Label>
+              <div className="flex flex-col gap-2">
+                {accountAllowsPayment(activeCorporateAccount, "on_account") ? (
+                  <label className="flex items-center gap-2 text-sm font-normal">
+                    <Checkbox
+                      id="settlement-on-account"
+                      checked={corporateSettlement === "on_account"}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) setCorporateSettlement("on_account");
+                      }}
+                      disabled={
+                        saving ||
+                        (!accountAllowsPayment(activeCorporateAccount, "card") &&
+                          corporateSettlement === "on_account")
+                      }
+                    />
+                    <span>
+                      {corporatePreferredPaymentTitle.on_account} ({activeCorporateAccount.name})
+                    </span>
+                  </label>
+                ) : null}
+                {accountAllowsPayment(activeCorporateAccount, "card") ? (
+                  <label className="flex items-center gap-2 text-sm font-normal">
+                    <Checkbox
+                      id="settlement-card"
+                      checked={corporateSettlement === "card"}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) setCorporateSettlement("card");
+                      }}
+                      disabled={
+                        saving ||
+                        (!accountAllowsPayment(activeCorporateAccount, "on_account") &&
+                          corporateSettlement === "card")
+                      }
+                    />
+                    <span>{corporatePreferredPaymentTitle.card}</span>
+                  </label>
+                ) : null}
+              </div>
             </div>
           ) : null}
 
@@ -1288,7 +1420,7 @@ export function NewBookingSheet({
             </div>
           </div>
 
-          {loyaltyPromosEnabled && !billToCorporate ? (
+          {loyaltyPromosEnabled && !applyCorporateRates ? (
             <div className="space-y-2">
               <Label>Promo code</Label>
               {appliedPromo ? (

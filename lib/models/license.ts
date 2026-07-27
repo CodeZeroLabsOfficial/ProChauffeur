@@ -64,6 +64,10 @@ export const defaultLicense: AppLicense = {
 export const defaultPlansCatalog: AppPlansCatalog = {
   defaultPlanId: "professional",
   plans: {
+    essentials: {
+      label: "Essentials",
+      features: ["driverRatings"]
+    },
     professional: {
       label: "Professional",
       features: ["driverRatings", "corporateAccounts"]

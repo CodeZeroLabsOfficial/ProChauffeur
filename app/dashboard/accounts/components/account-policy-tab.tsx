@@ -18,14 +18,23 @@ import {
 } from "@/components/ui/select";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import {
-  CORPORATE_PREFERRED_PAYMENTS,
+  CORPORATE_ALLOWED_PAYMENTS,
+  clampPreferredPayment,
+  corporateAllowedPaymentTitle,
   corporatePreferredPaymentTitle,
+  normalizeAllowedPaymentMethods,
   type CorporateAccount,
+  type CorporateAllowedPayment,
   type CorporatePreferredPayment
 } from "@/lib/models";
 import { saveCorporateAccount } from "@/lib/services/firebase-service";
 
 const SPEND_LIMIT_MAX = 1_000_000;
+
+const PAYMENT_METHOD_OPTIONS = CORPORATE_ALLOWED_PAYMENTS.map((value) => ({
+  value,
+  label: corporateAllowedPaymentTitle[value]
+}));
 
 function formatUnlimited(value: number): string {
   return value === 0 ? "Unlimited" : String(value);
@@ -58,11 +67,20 @@ export function AccountPolicyTab({
     [vehicleClasses]
   );
 
+  const allowedMethods = draft.allowedPaymentMethods;
+
   async function handleSave() {
+    const allowed = normalizeAllowedPaymentMethods(draft.allowedPaymentMethods);
+    if (allowed.length === 0) {
+      toast.error("Select at least one allowed payment method.");
+      return;
+    }
     setSaving(true);
     try {
       const next: CorporateAccount = {
         ...draft,
+        allowedPaymentMethods: allowed,
+        preferredPayment: clampPreferredPayment(draft.preferredPayment ?? null, allowed),
         updatedAt: new Date()
       };
       await saveCorporateAccount(next);
@@ -166,10 +184,38 @@ export function AccountPolicyTab({
 
       <SettingsSection
         title="Payment & tax"
-        description="Default payment preference and how GST is reflected in rates."
+        description="Choose how members on this account can pay when booking."
         footer={saveFooter}>
         <div className="space-y-2">
-          <Label htmlFor="policy-preferred-payment">Preferred payment</Label>
+          <Label htmlFor="policy-allowed-payments">Allowed payment methods</Label>
+          <MultiSelectField
+            id="policy-allowed-payments"
+            options={PAYMENT_METHOD_OPTIONS}
+            selected={allowedMethods}
+            onSelectedChange={(selected) => {
+              const nextAllowed = normalizeAllowedPaymentMethods(selected);
+              setDraft((c) => ({
+                ...c,
+                allowedPaymentMethods: nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods,
+                preferredPayment: clampPreferredPayment(
+                  c.preferredPayment ?? null,
+                  nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods
+                )
+              }));
+            }}
+            placeholder="Select payment methods"
+            emptyMessage="No payment methods."
+            disabled={saving}
+            className="max-w-sm"
+          />
+          <p className="text-muted-foreground text-xs">
+            Members only see methods you allow. Bill to account invoices the company; Pay by card
+            charges the member’s card (no account invoice).
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="policy-preferred-payment">Default payment method</Label>
           <Select
             value={draft.preferredPayment ?? "unset"}
             onValueChange={(value) =>
@@ -179,15 +225,15 @@ export function AccountPolicyTab({
                   value === "unset" ? null : (value as CorporatePreferredPayment)
               }))
             }
-            disabled={saving}>
+            disabled={saving || allowedMethods.length === 0}>
             <SelectTrigger id="policy-preferred-payment" className="w-full max-w-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="unset">Not set</SelectItem>
-              {CORPORATE_PREFERRED_PAYMENTS.map((payment) => (
+              {allowedMethods.map((payment) => (
                 <SelectItem key={payment} value={payment}>
-                  {corporatePreferredPaymentTitle[payment]}
+                  {corporatePreferredPaymentTitle[payment as CorporateAllowedPayment]}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -10,6 +10,10 @@ export type CorporateRateMode = (typeof CORPORATE_RATE_MODES)[number];
 export const CORPORATE_PREFERRED_PAYMENTS = ["card", "on_account"] as const;
 export type CorporatePreferredPayment = (typeof CORPORATE_PREFERRED_PAYMENTS)[number];
 
+/** Checkout methods linked members may use (multi-select policy). */
+export const CORPORATE_ALLOWED_PAYMENTS = CORPORATE_PREFERRED_PAYMENTS;
+export type CorporateAllowedPayment = CorporatePreferredPayment;
+
 /** Last calendar day of each month, or a fixed day number 1–28. */
 export type CorporateBillingDay = "last" | number;
 
@@ -30,6 +34,12 @@ export interface CorporateFixedRateOverride {
  * Corporate (business) billing account — `corporateAccounts/{id}`.
  * Company-wide; members link via `users.corporateAccountId`.
  * Managed only in the Web App (admin write).
+ *
+ * Soft downgrade playbook when `corporateAccounts` is off on the license:
+ * - Keep this document and member `corporateAccountId` links.
+ * - Hide Accounts UI; refuse join-code claims and corporate quotes.
+ * - Members check out with retail payment methods and retail client quotes.
+ * - Existing on-account trips / invoices remain; new corporate economics do not apply.
  */
 export interface CorporateAccount {
   id: string;
@@ -61,7 +71,12 @@ export interface CorporateAccount {
   maxRideAmount?: number | null;
   /** Calendar-month on-account spend cap; null = unlimited. */
   monthlyBudget?: number | null;
-  /** Account default payment hint for booking UI. */
+  /**
+   * Methods linked members may use at checkout.
+   * At least one required; `preferredPayment` must be in this set when set.
+   */
+  allowedPaymentMethods: CorporateAllowedPayment[];
+  /** Default among `allowedPaymentMethods`; null = no preference. */
   preferredPayment?: CorporatePreferredPayment | null;
   /** Display/policy flag; does not rewrite the tax engine. */
   gstInclusive: boolean;
@@ -90,6 +105,46 @@ export interface CorporateAccount {
 
 export function normalizeCorporateJoinCode(code: string): string {
   return code.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+export function isCorporateAllowedPayment(value: unknown): value is CorporateAllowedPayment {
+  return (
+    typeof value === "string" &&
+    (CORPORATE_ALLOWED_PAYMENTS as readonly string[]).includes(value)
+  );
+}
+
+/** Normalize allow-list; empty / missing defaults to on-account only. */
+export function normalizeAllowedPaymentMethods(
+  raw: unknown,
+  preferredPayment?: CorporatePreferredPayment | null
+): CorporateAllowedPayment[] {
+  const fromArray = Array.isArray(raw)
+    ? raw.filter(isCorporateAllowedPayment)
+    : [];
+  const unique = [...new Set(fromArray)];
+  if (unique.length > 0) return unique;
+  // Legacy docs without the field: prefer historical preferredPayment, else on-account only.
+  if (preferredPayment && isCorporateAllowedPayment(preferredPayment)) {
+    return preferredPayment === "card" ? ["on_account", "card"] : ["on_account"];
+  }
+  return ["on_account"];
+}
+
+/** Clamp preferred into the allow-list (or null when unset / invalid). */
+export function clampPreferredPayment(
+  preferred: CorporatePreferredPayment | null | undefined,
+  allowed: CorporateAllowedPayment[]
+): CorporatePreferredPayment | null {
+  if (!preferred) return null;
+  return allowed.includes(preferred) ? preferred : null;
+}
+
+export function accountAllowsPayment(
+  account: Pick<CorporateAccount, "allowedPaymentMethods">,
+  method: CorporateAllowedPayment
+): boolean {
+  return account.allowedPaymentMethods.includes(method);
 }
 
 export function formatCorporateAddress(account: CorporateAccount): string | null {
@@ -129,7 +184,8 @@ export function buildNewCorporateAccount(
     defaultVehicleClassIds: [],
     maxRideAmount: null,
     monthlyBudget: null,
-    preferredPayment: null,
+    allowedPaymentMethods: ["on_account"],
+    preferredPayment: "on_account",
     gstInclusive: true,
     status: "active",
     billingDay: "last",
@@ -157,6 +213,8 @@ export const corporateRateModeTitle: Record<CorporateRateMode, string> = {
 };
 
 export const corporatePreferredPaymentTitle: Record<CorporatePreferredPayment, string> = {
-  card: "Card",
-  on_account: "Bill to company"
+  card: "Pay by card",
+  on_account: "Bill to account"
 };
+
+export const corporateAllowedPaymentTitle = corporatePreferredPaymentTitle;

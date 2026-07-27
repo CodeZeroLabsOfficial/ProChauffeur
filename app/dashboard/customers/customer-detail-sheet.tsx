@@ -26,6 +26,7 @@ import {
   updateUserProfile
 } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -206,6 +207,7 @@ export function CustomerDetailSheet({
   tripCount?: number;
 }) {
   const displayUser = useSheetDisplayItem(user, open);
+  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
   const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
   const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
 
@@ -228,7 +230,7 @@ export function CustomerDetailSheet({
 
   useEffect(() => {
     const accountId = displayUser?.corporateAccountId?.trim();
-    if (!open || !accountId) {
+    if (!open || !accountId || !corporateAccountsEnabled) {
       setCorporateAccountName(null);
       return;
     }
@@ -243,12 +245,13 @@ export function CustomerDetailSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, displayUser?.corporateAccountId]);
+  }, [open, displayUser?.corporateAccountId, corporateAccountsEnabled]);
 
   if (!displayUser) return null;
 
   const displayName = customerDisplayName(displayUser);
-  const isCorporate = Boolean(displayUser.corporateAccountId?.trim());
+  const isCorporate =
+    corporateAccountsEnabled && Boolean(displayUser.corporateAccountId?.trim());
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

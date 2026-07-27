@@ -41,7 +41,9 @@ import type {
 import {
   CORPORATE_ACCOUNT_STATUSES,
   CORPORATE_PREFERRED_PAYMENTS,
-  CORPORATE_RATE_MODES
+  CORPORATE_RATE_MODES,
+  clampPreferredPayment,
+  normalizeAllowedPaymentMethods
 } from "@/lib/models/corporate-account";
 import { TRIP_APPROVAL_STATUSES } from "@/lib/models/trip";
 import {
@@ -577,6 +579,10 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
   )
     ? (d.preferredPayment as CorporatePreferredPayment)
     : null;
+  const allowedPaymentMethods = normalizeAllowedPaymentMethods(
+    d.allowedPaymentMethods,
+    preferredPayment
+  );
   const defaultVehicleClassIds = Array.isArray(d.defaultVehicleClassIds)
     ? d.defaultVehicleClassIds.filter((id): id is string => typeof id === "string" && id.trim() !== "")
     : [];
@@ -605,7 +611,8 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     defaultVehicleClassIds,
     maxRideAmount: typeof d.maxRideAmount === "number" ? d.maxRideAmount : null,
     monthlyBudget: typeof d.monthlyBudget === "number" ? d.monthlyBudget : null,
-    preferredPayment,
+    allowedPaymentMethods,
+    preferredPayment: clampPreferredPayment(preferredPayment, allowedPaymentMethods),
     gstInclusive: d.gstInclusive !== false,
     status,
     billingDay: mapCorporateBillingDay(d.billingDay),
