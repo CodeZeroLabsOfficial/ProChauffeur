@@ -281,7 +281,6 @@ export function CustomerDetailSheet({
             </Avatar>
             <div className="space-y-2">
               <p className="text-lg font-semibold">{displayName}</p>
-              <p className="text-muted-foreground text-sm">{displayUser.email}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
@@ -293,15 +292,6 @@ export function CustomerDetailSheet({
                   )}>
                   {isCorporate ? "Corporate" : "Individual"}
                 </Badge>
-                {isCorporate && corporateAccountName ? (
-                  <Badge variant="outline" asChild>
-                    <Link
-                      href={`/dashboard/accounts/${displayUser.corporateAccountId}`}
-                      className="font-medium">
-                      {corporateAccountName}
-                    </Link>
-                  </Badge>
-                ) : null}
               </div>
             </div>
           </div>
