@@ -182,11 +182,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="members" className="mt-0 space-y-4">
-            <AccountMembersTab
-              accountId={account.id}
-              primaryContactUserId={account.primaryContactUserId}
-              billingContactUserId={account.billingContactUserId}
-            />
+            <AccountMembersTab account={account} onSaved={setAccount} />
           </TabsContent>
 
           <TabsContent value="rates" className="mt-0 space-y-4">
