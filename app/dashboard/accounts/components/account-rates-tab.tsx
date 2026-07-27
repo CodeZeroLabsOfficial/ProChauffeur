@@ -149,17 +149,19 @@ export function AccountRatesTab({
         </div>
 
         {draft.rateMode === "percentOff" ? (
-          <NumberStepper
-            id="account-percent"
-            label="Percent off"
-            value={percentPoints}
-            onChange={setPercentPoints}
-            min={0}
-            max={100}
-          />
+          <div className="max-w-sm">
+            <NumberStepper
+              id="account-percent"
+              label="Percent off"
+              value={percentPoints}
+              onChange={setPercentPoints}
+              min={0}
+              max={100}
+            />
+          </div>
         ) : null}
 
-        <div>
+        <div className="flex justify-end">
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </Button>
@@ -276,7 +278,7 @@ export function AccountRatesTab({
             </Button>
           </div>
 
-          <div>
+          <div className="flex justify-end">
             <Button type="button" onClick={() => void handleSave()} disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>

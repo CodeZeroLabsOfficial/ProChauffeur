@@ -95,7 +95,7 @@ export function AccountPolicyTab({
             className="max-w-sm"
           />
         </div>
-        <div>
+        <div className="flex justify-end">
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </Button>
@@ -162,7 +162,7 @@ export function AccountPolicyTab({
           </p>
         </div>
 
-        <div>
+        <div className="flex justify-end">
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </Button>
@@ -209,7 +209,7 @@ export function AccountPolicyTab({
           GST included in rates
         </label>
 
-        <div>
+        <div className="flex justify-end">
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </Button>
