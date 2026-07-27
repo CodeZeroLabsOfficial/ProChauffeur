@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,15 @@ import {
 } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 
-export function AccountMembersTab({ accountId }: { accountId: string }) {
+export function AccountMembersTab({
+  accountId,
+  primaryContactUserId,
+  billingContactUserId
+}: {
+  accountId: string;
+  primaryContactUserId?: string | null;
+  billingContactUserId?: string | null;
+}) {
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberToAdd, setMemberToAdd] = useState<User | null>(null);
@@ -62,6 +71,13 @@ export function AccountMembersTab({ accountId }: { accountId: string }) {
   }
 
   async function handleUnlinkMember(userId: string) {
+    if (
+      userId === primaryContactUserId?.trim() ||
+      userId === billingContactUserId?.trim()
+    ) {
+      toast.error("Clear this member as Primary or Billing contact before unlinking.");
+      return;
+    }
     setLinking(true);
     try {
       await linkCustomerToCorporateAccount(userId, null);
@@ -86,25 +102,38 @@ export function AccountMembersTab({ accountId }: { accountId: string }) {
           <p className="text-muted-foreground text-sm">No members linked.</p>
         ) : (
           <ul className="space-y-2">
-            {members.map((member) => (
-              <li
-                key={member.id}
-                className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{customerDisplayName(member)}</p>
-                  <p className="text-muted-foreground truncate text-xs">{member.email}</p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                  disabled={linking}
-                  onClick={() => void handleUnlinkMember(member.id)}>
-                  Unlink
-                </Button>
-              </li>
-            ))}
+            {members.map((member) => {
+              const isPrimary = member.id === primaryContactUserId?.trim();
+              const isBilling = member.id === billingContactUserId?.trim();
+              return (
+                <li
+                  key={member.id}
+                  className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-medium">{customerDisplayName(member)}</p>
+                      {isPrimary ? <Badge variant="outline">Primary</Badge> : null}
+                      {isBilling ? <Badge variant="outline">Billing</Badge> : null}
+                    </div>
+                    <p className="text-muted-foreground truncate text-xs">{member.email}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                    disabled={linking || isPrimary || isBilling}
+                    title={
+                      isPrimary || isBilling
+                        ? "Clear Primary or Billing contact before unlinking"
+                        : undefined
+                    }
+                    onClick={() => void handleUnlinkMember(member.id)}>
+                    Unlink
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
 

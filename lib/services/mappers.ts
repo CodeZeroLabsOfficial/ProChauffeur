@@ -591,22 +591,10 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     state: typeof d.state === "string" ? d.state : null,
     postcode: typeof d.postcode === "string" ? d.postcode : null,
     country: typeof d.country === "string" ? d.country : null,
-    primaryContactName: typeof d.primaryContactName === "string" ? d.primaryContactName : null,
-    primaryContactEmail: typeof d.primaryContactEmail === "string" ? d.primaryContactEmail : null,
-    primaryContactPhone: typeof d.primaryContactPhone === "string" ? d.primaryContactPhone : null,
-    billingContactName: typeof d.billingContactName === "string" ? d.billingContactName : null,
-    billingContactEmail:
-      typeof d.billingContactEmail === "string"
-        ? d.billingContactEmail
-        : typeof d.billingEmail === "string"
-          ? d.billingEmail
-          : null,
-    billingContactPhone:
-      typeof d.billingContactPhone === "string"
-        ? d.billingContactPhone
-        : typeof d.billingPhone === "string"
-          ? d.billingPhone
-          : null,
+    primaryContactUserId:
+      typeof d.primaryContactUserId === "string" ? d.primaryContactUserId : null,
+    billingContactUserId:
+      typeof d.billingContactUserId === "string" ? d.billingContactUserId : null,
     accountManagerUserId:
       typeof d.accountManagerUserId === "string" ? d.accountManagerUserId : null,
     defaultVehicleClassIds,

@@ -28,9 +28,55 @@ import type { Trip } from "@/lib/models/trip";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { customerDisplayName } from "@/lib/users/customer-display";
 
+function PersonContactCard({
+  title,
+  person,
+  emptyLabel
+}: {
+  title: string;
+  person: AccountUser | null;
+  emptyLabel: string;
+}) {
+  const name = person ? customerDisplayName(person) : null;
+  const email = person?.email?.trim() || null;
+  const phone = person?.profile.phoneNumber?.trim() || null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col gap-y-4">
+          {name ? <ContactRow icon={User}>{name}</ContactRow> : null}
+          {email ? (
+            <ContactRow icon={Mail}>
+              <a href={`mailto:${email}`} className="hover:text-primary hover:underline">
+                {email}
+              </a>
+            </ContactRow>
+          ) : null}
+          {phone ? (
+            <ContactRow icon={PhoneCall}>
+              <a href={`tel:${phone}`} className="hover:text-primary hover:underline">
+                {phone}
+              </a>
+            </ContactRow>
+          ) : null}
+          {!name && !email && !phone ? (
+            <p className="text-muted-foreground text-sm">{emptyLabel}</p>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AccountOverviewTab({
   account,
   manager,
+  primaryContact,
+  billingContact,
   membersCount,
   mtdSpend,
   trips,
@@ -40,6 +86,8 @@ export function AccountOverviewTab({
 }: {
   account: CorporateAccount;
   manager: AccountUser | null;
+  primaryContact: AccountUser | null;
+  billingContact: AccountUser | null;
   membersCount: number;
   mtdSpend: number;
   trips: Trip[];
@@ -53,8 +101,6 @@ export function AccountOverviewTab({
 
   const address = formatCorporateAddress(account);
   const joinDate = formatDate(account.createdAt);
-  const managerName = manager ? customerDisplayName(manager) : null;
-  const managerPhone = manager?.profile.phoneNumber?.trim() || null;
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -101,71 +147,21 @@ export function AccountOverviewTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Manager</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-y-4">
-              {managerName ? <ContactRow icon={User}>{managerName}</ContactRow> : null}
-              {manager?.email?.trim() ? (
-                <ContactRow icon={Mail}>
-                  <a
-                    href={`mailto:${manager.email}`}
-                    className="hover:text-primary hover:underline">
-                    {manager.email}
-                  </a>
-                </ContactRow>
-              ) : null}
-              {managerPhone ? (
-                <ContactRow icon={PhoneCall}>
-                  <a href={`tel:${managerPhone}`} className="hover:text-primary hover:underline">
-                    {managerPhone}
-                  </a>
-                </ContactRow>
-              ) : null}
-              {!managerName && !manager?.email?.trim() && !managerPhone ? (
-                <p className="text-muted-foreground text-sm">No account manager assigned.</p>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Billing Contact</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-y-4">
-              {account.billingContactName?.trim() ? (
-                <ContactRow icon={User}>{account.billingContactName}</ContactRow>
-              ) : null}
-              {account.billingContactEmail?.trim() ? (
-                <ContactRow icon={Mail}>
-                  <a
-                    href={`mailto:${account.billingContactEmail}`}
-                    className="hover:text-primary hover:underline">
-                    {account.billingContactEmail}
-                  </a>
-                </ContactRow>
-              ) : null}
-              {account.billingContactPhone?.trim() ? (
-                <ContactRow icon={PhoneCall}>
-                  <a
-                    href={`tel:${account.billingContactPhone}`}
-                    className="hover:text-primary hover:underline">
-                    {account.billingContactPhone}
-                  </a>
-                </ContactRow>
-              ) : null}
-              {!account.billingContactName?.trim() &&
-              !account.billingContactEmail?.trim() &&
-              !account.billingContactPhone?.trim() ? (
-                <p className="text-muted-foreground text-sm">No billing contact set.</p>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
+        <PersonContactCard
+          title="Account Manager"
+          person={manager}
+          emptyLabel="No account manager assigned."
+        />
+        <PersonContactCard
+          title="Primary Contact"
+          person={primaryContact}
+          emptyLabel="No primary contact set."
+        />
+        <PersonContactCard
+          title="Billing Contact"
+          person={billingContact}
+          emptyLabel="No billing contact set."
+        />
 
         <Card>
           <CardHeader>

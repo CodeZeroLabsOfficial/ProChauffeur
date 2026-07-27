@@ -49,12 +49,10 @@ export interface CorporateAccount {
   state?: string | null;
   postcode?: string | null;
   country?: string | null;
-  primaryContactName?: string | null;
-  primaryContactEmail?: string | null;
-  primaryContactPhone?: string | null;
-  billingContactName?: string | null;
-  billingContactEmail?: string | null;
-  billingContactPhone?: string | null;
+  /** Customer `users/{uid}` — primary contact for this account. */
+  primaryContactUserId?: string | null;
+  /** Customer `users/{uid}` — billing contact for this account. */
+  billingContactUserId?: string | null;
   /** Team admin `users/{uid}` with `role: "admin"`. */
   accountManagerUserId?: string | null;
   /** Preferred vehicle class ids for members booking under this account. */
@@ -125,12 +123,8 @@ export function buildNewCorporateAccount(
     state: null,
     postcode: null,
     country: null,
-    primaryContactName: null,
-    primaryContactEmail: null,
-    primaryContactPhone: null,
-    billingContactName: null,
-    billingContactEmail: null,
-    billingContactPhone: null,
+    primaryContactUserId: null,
+    billingContactUserId: null,
     accountManagerUserId: null,
     defaultVehicleClassIds: [],
     maxRideAmount: null,

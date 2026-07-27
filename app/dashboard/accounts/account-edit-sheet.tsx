@@ -5,6 +5,7 @@ import { Building2, ImagePlusIcon, Power } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
+import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { NumberStepper } from "@/components/number-stepper";
 import { ProfileV2TabTrigger, profileV2TabsListClassName } from "@/components/layout/profile-tab-bar";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ import {
 import {
   deleteCorporateAccount,
   fetchUser,
+  linkCustomerToCorporateAccount,
   saveCorporateAccount,
   uploadCorporateAccountLogo
 } from "@/lib/services/firebase-service";
@@ -156,6 +158,8 @@ export function AccountEditSheet({
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState("");
   const [manager, setManager] = useState<User | null>(null);
+  const [primaryContact, setPrimaryContact] = useState<User | null>(null);
+  const [billingContact, setBillingContact] = useState<User | null>(null);
   const [billingSameAsPrimary, setBillingSameAsPrimary] = useState(false);
   const [tab, setTab] = useState<SheetTab>("company");
 
@@ -166,13 +170,13 @@ export function AccountEditSheet({
     setDraft(next);
     setFieldErrors({});
     setManager(null);
+    setPrimaryContact(null);
+    setBillingContact(null);
     setTab("company");
     setBillingSameAsPrimary(
       Boolean(
-        next.primaryContactName &&
-          next.primaryContactName === next.billingContactName &&
-          (next.primaryContactEmail ?? "") === (next.billingContactEmail ?? "") &&
-          (next.primaryContactPhone ?? "") === (next.billingContactPhone ?? "")
+        next.primaryContactUserId &&
+          next.primaryContactUserId === next.billingContactUserId
       )
     );
   }
@@ -195,6 +199,46 @@ export function AccountEditSheet({
     };
   }, [open, draft.accountManagerUserId]);
 
+  useEffect(() => {
+    if (!open || !draft.primaryContactUserId) {
+      if (!draft.primaryContactUserId) setPrimaryContact(null);
+      return;
+    }
+    let cancelled = false;
+    fetchUser(draft.primaryContactUserId)
+      .then((user) => {
+        if (!cancelled) setPrimaryContact(user?.role === "customer" ? user : null);
+      })
+      .catch(() => {
+        if (!cancelled) setPrimaryContact(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, draft.primaryContactUserId]);
+
+  useEffect(() => {
+    if (!open || billingSameAsPrimary) {
+      if (billingSameAsPrimary) setBillingContact(primaryContact);
+      return;
+    }
+    if (!draft.billingContactUserId) {
+      setBillingContact(null);
+      return;
+    }
+    let cancelled = false;
+    fetchUser(draft.billingContactUserId)
+      .then((user) => {
+        if (!cancelled) setBillingContact(user?.role === "customer" ? user : null);
+      })
+      .catch(() => {
+        if (!cancelled) setBillingContact(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, draft.billingContactUserId, billingSameAsPrimary, primaryContact]);
+
   function clearFieldError(field: keyof FieldErrors) {
     setFieldErrors((prev) => ({ ...prev, [field]: false }));
   }
@@ -202,6 +246,10 @@ export function AccountEditSheet({
   function handleLogoSaved(updated: CorporateAccount) {
     setDraft(updated);
     onSaved?.(updated);
+  }
+
+  async function ensureMemberLinked(userId: string, accountId: string) {
+    await linkCustomerToCorporateAccount(userId, accountId);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -215,18 +263,10 @@ export function AccountEditSheet({
     }
 
     const joinCode = draft.joinCode ? normalizeCorporateJoinCode(draft.joinCode) : null;
-
-    const billingContact = billingSameAsPrimary
-      ? {
-          billingContactName: draft.primaryContactName?.trim() || null,
-          billingContactEmail: draft.primaryContactEmail?.trim() || null,
-          billingContactPhone: draft.primaryContactPhone?.trim() || null
-        }
-      : {
-          billingContactName: draft.billingContactName?.trim() || null,
-          billingContactEmail: draft.billingContactEmail?.trim() || null,
-          billingContactPhone: draft.billingContactPhone?.trim() || null
-        };
+    const primaryContactUserId = primaryContact?.id ?? null;
+    const billingContactUserId = billingSameAsPrimary
+      ? primaryContactUserId
+      : (billingContact?.id ?? null);
 
     setSaving(true);
     try {
@@ -245,16 +285,20 @@ export function AccountEditSheet({
         state: draft.state?.trim() || null,
         postcode: draft.postcode?.trim() || null,
         country: draft.country?.trim() || null,
-        primaryContactName: draft.primaryContactName?.trim() || null,
-        primaryContactEmail: draft.primaryContactEmail?.trim() || null,
-        primaryContactPhone: draft.primaryContactPhone?.trim() || null,
-        ...billingContact,
+        primaryContactUserId,
+        billingContactUserId,
         accountManagerUserId: manager?.id ?? null,
         notes: draft.notes?.trim() || null,
         joinCode,
         updatedAt: new Date()
       };
       await saveCorporateAccount(next);
+      const memberIds = new Set(
+        [primaryContactUserId, billingContactUserId].filter((id): id is string => Boolean(id))
+      );
+      for (const userId of memberIds) {
+        await ensureMemberLinked(userId, next.id);
+      }
       toast.success(isNew ? "Account created." : "Account saved.");
       onSaved?.(next);
       onOpenChange(false);
@@ -548,40 +592,25 @@ export function AccountEditSheet({
             </TabsContent>
 
             <TabsContent value="contacts" className="mt-0 space-y-4">
-              <p className="text-sm font-medium">Primary contact</p>
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="account-primary-name">Name</Label>
-                <Input
-                  id="account-primary-name"
-                  value={draft.primaryContactName ?? ""}
-                  onChange={(e) =>
-                    setDraft((c) => ({ ...c, primaryContactName: e.target.value }))
-                  }
+              <div className="space-y-2">
+                <Label htmlFor="account-primary-contact">Primary contact</Label>
+                <CustomerAutocomplete
+                  id="account-primary-contact"
+                  value={primaryContact}
+                  onChange={(user) => {
+                    setPrimaryContact(user);
+                    setDraft((c) => ({
+                      ...c,
+                      primaryContactUserId: user?.id ?? null,
+                      ...(billingSameAsPrimary
+                        ? { billingContactUserId: user?.id ?? null }
+                        : {})
+                    }));
+                    if (billingSameAsPrimary) setBillingContact(user);
+                  }}
+                  placeholder="Search customers…"
+                  disabled={saving}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-primary-email">Email</Label>
-                  <Input
-                    id="account-primary-email"
-                    type="email"
-                    value={draft.primaryContactEmail ?? ""}
-                    onChange={(e) =>
-                      setDraft((c) => ({ ...c, primaryContactEmail: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-primary-phone">Phone</Label>
-                  <Input
-                    id="account-primary-phone"
-                    type="tel"
-                    value={draft.primaryContactPhone ?? ""}
-                    onChange={(e) =>
-                      setDraft((c) => ({ ...c, primaryContactPhone: e.target.value }))
-                    }
-                  />
-                </div>
               </div>
 
               <Separator />
@@ -590,54 +619,38 @@ export function AccountEditSheet({
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={billingSameAsPrimary}
-                    onCheckedChange={(checked) => setBillingSameAsPrimary(checked === true)}
+                    onCheckedChange={(checked) => {
+                      const same = checked === true;
+                      setBillingSameAsPrimary(same);
+                      if (same) {
+                        setBillingContact(primaryContact);
+                        setDraft((c) => ({
+                          ...c,
+                          billingContactUserId: primaryContact?.id ?? null
+                        }));
+                      }
+                    }}
                   />
                   Same as primary
                 </label>
               </div>
               {!billingSameAsPrimary ? (
-                <>
-                  <div className="*:not-first:mt-2">
-                    <Label htmlFor="account-billing-name">Name</Label>
-                    <Input
-                      id="account-billing-name"
-                      value={draft.billingContactName ?? ""}
-                      onChange={(e) =>
-                        setDraft((c) => ({ ...c, billingContactName: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="*:not-first:mt-2">
-                      <Label htmlFor="account-billing-email">Email</Label>
-                      <Input
-                        id="account-billing-email"
-                        type="email"
-                        value={draft.billingContactEmail ?? ""}
-                        onChange={(e) =>
-                          setDraft((c) => ({
-                            ...c,
-                            billingContactEmail: e.target.value
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="*:not-first:mt-2">
-                      <Label htmlFor="account-billing-phone">Phone</Label>
-                      <Input
-                        id="account-billing-phone"
-                        type="tel"
-                        value={draft.billingContactPhone ?? ""}
-                        onChange={(e) =>
-                          setDraft((c) => ({
-                            ...c,
-                            billingContactPhone: e.target.value
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="account-billing-contact">Customer</Label>
+                  <CustomerAutocomplete
+                    id="account-billing-contact"
+                    value={billingContact}
+                    onChange={(user) => {
+                      setBillingContact(user);
+                      setDraft((c) => ({
+                        ...c,
+                        billingContactUserId: user?.id ?? null
+                      }));
+                    }}
+                    placeholder="Search customers…"
+                    disabled={saving}
+                  />
+                </div>
               ) : null}
 
               <Separator />

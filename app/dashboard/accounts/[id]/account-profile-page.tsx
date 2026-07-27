@@ -44,6 +44,8 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
 
   const [account, setAccount] = useState<CorporateAccount | null>(null);
   const [manager, setManager] = useState<User | null>(null);
+  const [primaryContact, setPrimaryContact] = useState<User | null>(null);
+  const [billingContact, setBillingContact] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
@@ -80,6 +82,44 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       cancelled = true;
     };
   }, [account?.accountManagerUserId]);
+
+  useEffect(() => {
+    const id = account?.primaryContactUserId?.trim();
+    if (!id) {
+      setPrimaryContact(null);
+      return;
+    }
+    let cancelled = false;
+    fetchUser(id)
+      .then((user) => {
+        if (!cancelled) setPrimaryContact(user?.role === "customer" ? user : null);
+      })
+      .catch(() => {
+        if (!cancelled) setPrimaryContact(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.primaryContactUserId]);
+
+  useEffect(() => {
+    const id = account?.billingContactUserId?.trim();
+    if (!id) {
+      setBillingContact(null);
+      return;
+    }
+    let cancelled = false;
+    fetchUser(id)
+      .then((user) => {
+        if (!cancelled) setBillingContact(user?.role === "customer" ? user : null);
+      })
+      .catch(() => {
+        if (!cancelled) setBillingContact(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.billingContactUserId]);
 
   const memberCustomerIds = useMemo(() => {
     const ids = new Set<string>();
@@ -151,6 +191,8 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
             <AccountOverviewTab
               account={account}
               manager={manager}
+              primaryContact={primaryContact}
+              billingContact={billingContact}
               membersCount={memberCustomerIds.size}
               mtdSpend={mtdSpend}
               trips={accountTrips}
@@ -161,7 +203,11 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="members" className="mt-0 space-y-4">
-            <AccountMembersTab accountId={account.id} />
+            <AccountMembersTab
+              accountId={account.id}
+              primaryContactUserId={account.primaryContactUserId}
+              billingContactUserId={account.billingContactUserId}
+            />
           </TabsContent>
 
           <TabsContent value="rates" className="mt-0 space-y-4">
