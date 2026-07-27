@@ -6,7 +6,10 @@ import { toast } from "sonner";
 
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
-import { NumberStepper } from "@/components/number-stepper";
+import {
+  ProfileAddressField,
+  PROFILE_ADDRESS_VALIDATION_MESSAGE
+} from "@/components/profile-address-field";
 import { ProfileV2TabTrigger, profileV2TabsListClassName } from "@/components/layout/profile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,10 +43,13 @@ import {
   normalizeCorporateJoinCode,
   type CorporateAccount,
   type CorporateAccountStatus,
-  type CorporateBillingDay,
   type CorporateRateMode,
   type User
 } from "@/lib/models";
+import {
+  isValidPostalAddress,
+  type PostalAddress
+} from "@/lib/models/postal-address";
 import {
   deleteCorporateAccount,
   fetchUser,
@@ -52,29 +58,57 @@ import {
   uploadCorporateAccountLogo
 } from "@/lib/services/firebase-service";
 
-const BILLING_DAY_OPTIONS: { value: string; label: string }[] = [
-  { value: "last", label: "Last day of month" },
-  ...Array.from({ length: 28 }, (_, i) => {
-    const day = i + 1;
-    return { value: String(day), label: String(day) };
-  })
-];
-
 type FieldErrors = {
   name?: boolean;
 };
 
 type SheetTab = "company" | "contacts";
 
-function billingDayToSelectValue(day: CorporateBillingDay): string {
-  return day === "last" ? "last" : String(day);
+function splitStreetLines(street: string | null | undefined): {
+  addressLine1: string | null;
+  addressLine2: string | null;
+} {
+  const raw = street?.trim() ?? "";
+  if (!raw) return { addressLine1: null, addressLine2: null };
+  const idx = raw.indexOf("\n");
+  if (idx === -1) return { addressLine1: raw, addressLine2: null };
+  const line1 = raw.slice(0, idx).trim() || null;
+  const line2 = raw.slice(idx + 1).trim() || null;
+  return { addressLine1: line1, addressLine2: line2 };
 }
 
-function parseBillingDay(value: string): CorporateBillingDay {
-  if (value === "last") return "last";
-  const day = Number(value);
-  if (Number.isFinite(day) && day >= 1 && day <= 28) return day;
-  return "last";
+function joinStreetLines(line1: string | null | undefined, line2: string | null | undefined): string | null {
+  const a = line1?.trim() ?? "";
+  const b = line2?.trim() ?? "";
+  if (!a && !b) return null;
+  if (!b) return a;
+  if (!a) return b;
+  return `${a}\n${b}`;
+}
+
+function postalAddressFromAccount(account: CorporateAccount): PostalAddress {
+  return {
+    street: joinStreetLines(account.addressLine1, account.addressLine2),
+    city: account.city ?? null,
+    state: account.state ?? null,
+    postcode: account.postcode ?? null,
+    country: account.country ?? null
+  };
+}
+
+function accountAddressFromPostal(address: PostalAddress): Pick<
+  CorporateAccount,
+  "addressLine1" | "addressLine2" | "city" | "state" | "postcode" | "country"
+> {
+  const lines = splitStreetLines(address.street);
+  return {
+    addressLine1: lines.addressLine1,
+    addressLine2: lines.addressLine2,
+    city: address.city?.trim() || null,
+    state: address.state?.trim() || null,
+    postcode: address.postcode?.trim() || null,
+    country: address.country?.trim() || null
+  };
 }
 
 function AccountLogoUpload({
@@ -161,6 +195,10 @@ export function AccountEditSheet({
   const [primaryContact, setPrimaryContact] = useState<User | null>(null);
   const [billingContact, setBillingContact] = useState<User | null>(null);
   const [billingSameAsPrimary, setBillingSameAsPrimary] = useState(false);
+  const [address, setAddress] = useState<PostalAddress>(() =>
+    postalAddressFromAccount(account ?? buildNewCorporateAccount())
+  );
+  const [addressInvalid, setAddressInvalid] = useState(false);
   const [tab, setTab] = useState<SheetTab>("company");
 
   const sheetKey = account?.id ?? "__new__";
@@ -168,6 +206,8 @@ export function AccountEditSheet({
     setSeedKey(sheetKey);
     const next = account ?? buildNewCorporateAccount();
     setDraft(next);
+    setAddress(postalAddressFromAccount(next));
+    setAddressInvalid(false);
     setFieldErrors({});
     setManager(null);
     setPrimaryContact(null);
@@ -268,6 +308,14 @@ export function AccountEditSheet({
       ? primaryContactUserId
       : (billingContact?.id ?? null);
 
+    if (!isValidPostalAddress(address)) {
+      setAddressInvalid(true);
+      setTab("company");
+      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
+      return;
+    }
+    setAddressInvalid(false);
+
     setSaving(true);
     try {
       const next: CorporateAccount = {
@@ -279,12 +327,7 @@ export function AccountEditSheet({
         abn: draft.abn?.trim() || null,
         acn: draft.acn?.trim() || null,
         industry: draft.industry?.trim() || null,
-        addressLine1: draft.addressLine1?.trim() || null,
-        addressLine2: draft.addressLine2?.trim() || null,
-        city: draft.city?.trim() || null,
-        state: draft.state?.trim() || null,
-        postcode: draft.postcode?.trim() || null,
-        country: draft.country?.trim() || null,
+        ...accountAddressFromPostal(address),
         primaryContactUserId,
         billingContactUserId,
         accountManagerUserId: manager?.id ?? null,
@@ -403,58 +446,18 @@ export function AccountEditSheet({
                 ) : null}
               </div>
 
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="account-address1">Address line 1</Label>
-                <Input
-                  id="account-address1"
-                  value={draft.addressLine1 ?? ""}
-                  onChange={(e) => setDraft((c) => ({ ...c, addressLine1: e.target.value }))}
-                />
-              </div>
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="account-address2">Address line 2</Label>
-                <Input
-                  id="account-address2"
-                  value={draft.addressLine2 ?? ""}
-                  onChange={(e) => setDraft((c) => ({ ...c, addressLine2: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-city">City</Label>
-                  <Input
-                    id="account-city"
-                    value={draft.city ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, city: e.target.value }))}
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-state">State</Label>
-                  <Input
-                    id="account-state"
-                    value={draft.state ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, state: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-postcode">Postcode</Label>
-                  <Input
-                    id="account-postcode"
-                    value={draft.postcode ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, postcode: e.target.value }))}
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-country">Country</Label>
-                  <Input
-                    id="account-country"
-                    value={draft.country ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, country: e.target.value }))}
-                  />
-                </div>
-              </div>
+              <ProfileAddressField
+                id="account-address"
+                value={address}
+                onChange={(next) => {
+                  setAddress(next);
+                  if (addressInvalid && isValidPostalAddress(next)) {
+                    setAddressInvalid(false);
+                  }
+                }}
+                invalid={addressInvalid}
+                disabled={saving}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="*:not-first:mt-2">
@@ -530,37 +533,6 @@ export function AccountEditSheet({
                 </div>
               ) : (
                 <>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="account-billing-day">Billing day</Label>
-                      <Select
-                        value={billingDayToSelectValue(draft.billingDay)}
-                        onValueChange={(value) =>
-                          setDraft((c) => ({ ...c, billingDay: parseBillingDay(value) }))
-                        }>
-                        <SelectTrigger id="account-billing-day" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {BILLING_DAY_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <NumberStepper
-                      id="account-terms"
-                      label="Payment terms (days)"
-                      value={draft.paymentTermsDays}
-                      onChange={(value) => setDraft((c) => ({ ...c, paymentTermsDays: value }))}
-                      min={0}
-                      max={365}
-                    />
-                  </div>
-
                   <div className="*:not-first:mt-2">
                     <Label htmlFor="account-join-code">Join code</Label>
                     <Input

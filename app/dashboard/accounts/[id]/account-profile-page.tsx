@@ -43,7 +43,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   const { users } = useUsers();
 
   const [account, setAccount] = useState<CorporateAccount | null>(null);
-  const [manager, setManager] = useState<User | null>(null);
   const [primaryContact, setPrimaryContact] = useState<User | null>(null);
   const [billingContact, setBillingContact] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,25 +62,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       .catch(() => setAccount(null))
       .finally(() => setLoading(false));
   }, [loadAccount]);
-
-  useEffect(() => {
-    const id = account?.accountManagerUserId?.trim();
-    if (!id) {
-      setManager(null);
-      return;
-    }
-    let cancelled = false;
-    fetchUser(id)
-      .then((user) => {
-        if (!cancelled) setManager(user?.role === "admin" ? user : null);
-      })
-      .catch(() => {
-        if (!cancelled) setManager(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [account?.accountManagerUserId]);
 
   useEffect(() => {
     const id = account?.primaryContactUserId?.trim();
@@ -190,7 +170,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           <TabsContent value="overview" className="mt-0 space-y-4">
             <AccountOverviewTab
               account={account}
-              manager={manager}
               primaryContact={primaryContact}
               billingContact={billingContact}
               membersCount={memberCustomerIds.size}

@@ -74,7 +74,6 @@ function PersonContactCard({
 
 export function AccountOverviewTab({
   account,
-  manager,
   primaryContact,
   billingContact,
   membersCount,
@@ -85,7 +84,6 @@ export function AccountOverviewTab({
   onPeriodChange
 }: {
   account: CorporateAccount;
-  manager: AccountUser | null;
   primaryContact: AccountUser | null;
   billingContact: AccountUser | null;
   membersCount: number;
@@ -147,11 +145,6 @@ export function AccountOverviewTab({
           </CardContent>
         </Card>
 
-        <PersonContactCard
-          title="Account Manager"
-          person={manager}
-          emptyLabel="No account manager assigned."
-        />
         <PersonContactCard
           title="Primary Contact"
           person={primaryContact}
