@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
-  MoreHorizontalIcon,
   PlusIcon,
   Unlink
 } from "lucide-react";
@@ -39,12 +38,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -361,25 +354,18 @@ export function AccountMembersTab({
                           </Command>
                         </PopoverContent>
                       </Popover>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={busy}>
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            variant="destructive"
-                            disabled={isPrimary || isBilling || busy}
-                            onClick={() => requestUnlink(member)}>
-                            <Unlink className="size-4" />
-                            {isPrimary || isBilling
-                              ? "Clear Primary/Billing first"
-                              : "Unlink"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                        disabled={isPrimary || isBilling || busy}
+                        onClick={() => requestUnlink(member)}>
+                        <Unlink className="size-4" />
+                        <span className="sr-only">
+                          {isPrimary || isBilling ? "Clear Primary/Billing first" : "Unlink"}
+                        </span>
+                      </Button>
                     </div>
                   </div>
                 );
