@@ -76,7 +76,7 @@ export function AccountPolicyTab({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4">
       <SettingsSection
         title="Default vehicle classes"
         description="Prefills booking class when set. Leave empty to allow any class.">

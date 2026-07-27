@@ -124,7 +124,7 @@ export function AccountRatesTab({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4">
       <SettingsSection
         title="Rate mode"
         description="Choose how this account is priced relative to standard rates.">
