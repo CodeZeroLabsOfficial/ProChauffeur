@@ -750,10 +750,12 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
     stripUndefined({
       id: account.id,
       name: account.name.trim(),
-      billingEmail: account.billingEmail?.trim() || null,
-      billingPhone: account.billingPhone?.trim() || null,
+      logoUrl: account.logoUrl?.trim() || null,
+      email: account.email?.trim() || null,
+      phone: account.phone?.trim() || null,
       abn: account.abn?.trim() || null,
-      poNumber: account.poNumber?.trim() || null,
+      acn: account.acn?.trim() || null,
+      industry: account.industry?.trim() || null,
       addressLine1: account.addressLine1?.trim() || null,
       addressLine2: account.addressLine2?.trim() || null,
       city: account.city?.trim() || null,
@@ -787,6 +789,11 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       joinCode,
       creditLimit: account.creditLimit ?? null,
       notes: account.notes?.trim() || null,
+      /** Drop legacy fields removed from the model. */
+      poNumber: deleteField(),
+      billingEmail: deleteField(),
+      billingPhone: deleteField(),
+      employeeCount: deleteField(),
       createdAt: account.createdAt ?? now,
       updatedAt: now
     }),
@@ -1025,6 +1032,26 @@ export async function uploadBranchImage(branchId: string, file: File): Promise<s
     throw new Error("Could not upload location image.");
   }
   return body.imageUrl;
+}
+
+export async function uploadCorporateAccountLogo(
+  accountId: string,
+  file: File
+): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/accounts/${encodeURIComponent(accountId)}/logo`, {
+    method: "POST",
+    body: formData
+  });
+  const body = (await res.json().catch(() => ({}))) as { logoUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload account logo.");
+  }
+  if (!body.logoUrl) {
+    throw new Error("Could not upload account logo.");
+  }
+  return body.logoUrl;
 }
 
 /** Writes ops profile to the active Location roster; sets homeBranchId when needed. */

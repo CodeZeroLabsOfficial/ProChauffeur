@@ -14,13 +14,7 @@ import {
 } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 
-export function AccountMembersTab({
-  accountId,
-  onMembersChange
-}: {
-  accountId: string;
-  onMembersChange?: (count: number) => void;
-}) {
+export function AccountMembersTab({ accountId }: { accountId: string }) {
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberToAdd, setMemberToAdd] = useState<User | null>(null);
@@ -31,10 +25,7 @@ export function AccountMembersTab({
     setLoading(true);
     fetchCorporateAccountMembers(accountId)
       .then((rows) => {
-        if (!cancelled) {
-          setMembers(rows);
-          onMembersChange?.(rows.length);
-        }
+        if (!cancelled) setMembers(rows);
       })
       .catch(() => {
         if (!cancelled) {
@@ -48,7 +39,7 @@ export function AccountMembersTab({
     return () => {
       cancelled = true;
     };
-  }, [accountId, onMembersChange]);
+  }, [accountId]);
 
   async function handleAddMember() {
     if (!memberToAdd) return;
@@ -57,11 +48,9 @@ export function AccountMembersTab({
       await linkCustomerToCorporateAccount(memberToAdd.id, accountId);
       setMembers((current) => {
         if (current.some((m) => m.id === memberToAdd.id)) return current;
-        const next = [...current, memberToAdd].sort((a, b) =>
+        return [...current, memberToAdd].sort((a, b) =>
           customerDisplayName(a).localeCompare(customerDisplayName(b))
         );
-        onMembersChange?.(next.length);
-        return next;
       });
       setMemberToAdd(null);
       toast.success("Member linked.");
@@ -76,11 +65,7 @@ export function AccountMembersTab({
     setLinking(true);
     try {
       await linkCustomerToCorporateAccount(userId, null);
-      setMembers((current) => {
-        const next = current.filter((m) => m.id !== userId);
-        onMembersChange?.(next.length);
-        return next;
-      });
+      setMembers((current) => current.filter((m) => m.id !== userId));
       toast.success("Member unlinked.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not unlink member.");

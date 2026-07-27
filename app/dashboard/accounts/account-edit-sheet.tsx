@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Building2, ImagePlusIcon, Power } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
 import { NumberStepper } from "@/components/number-stepper";
+import { ProfileV2TabTrigger, profileV2TabsListClassName } from "@/components/layout/profile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,7 +27,9 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import {
   buildNewCorporateAccount,
   CORPORATE_ACCOUNT_STATUSES,
@@ -38,7 +43,12 @@ import {
   type CorporateRateMode,
   type User
 } from "@/lib/models";
-import { deleteCorporateAccount, fetchUser, saveCorporateAccount } from "@/lib/services/firebase-service";
+import {
+  deleteCorporateAccount,
+  fetchUser,
+  saveCorporateAccount,
+  uploadCorporateAccountLogo
+} from "@/lib/services/firebase-service";
 
 const BILLING_DAY_OPTIONS: { value: string; label: string }[] = [
   { value: "last", label: "Last day of month" },
@@ -52,6 +62,8 @@ type FieldErrors = {
   name?: boolean;
 };
 
+type SheetTab = "company" | "contacts";
+
 function billingDayToSelectValue(day: CorporateBillingDay): string {
   return day === "last" ? "last" : String(day);
 }
@@ -61,6 +73,68 @@ function parseBillingDay(value: string): CorporateBillingDay {
   const day = Number(value);
   if (Number.isFinite(day) && day >= 1 && day <= 28) return day;
   return "last";
+}
+
+function AccountLogoUpload({
+  account,
+  onSaved
+}: {
+  account: CorporateAccount;
+  onSaved: (account: CorporateAccount) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [localLogoUrl, setLocalLogoUrl] = useState<string | null>(account.logoUrl ?? null);
+
+  const [{ files }, { openFileDialog, getInputProps, clearFiles }] = useFileUpload({
+    accept: "image/*",
+    onFilesAdded: (added) => {
+      const file = added[0]?.file;
+      if (!(file instanceof File)) return;
+
+      void (async () => {
+        setUploading(true);
+        try {
+          const logoUrl = await uploadCorporateAccountLogo(account.id, file);
+          const updated: CorporateAccount = { ...account, logoUrl, updatedAt: new Date() };
+          await saveCorporateAccount(updated);
+          setLocalLogoUrl(logoUrl);
+          onSaved(updated);
+          clearFiles();
+          toast.success("Account logo updated.");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not upload logo.");
+        } finally {
+          setUploading(false);
+        }
+      })();
+    }
+  });
+
+  const previewUrl = files[0]?.preview ?? localLogoUrl;
+
+  useEffect(() => {
+    setLocalLogoUrl(account.logoUrl ?? null);
+  }, [account.logoUrl]);
+
+  return (
+    <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
+      {previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- local blob / Storage download URL preview
+        <img alt="" className="size-full object-cover" height={80} src={previewUrl} width={80} />
+      ) : (
+        <Building2 className="text-muted-foreground size-8" aria-hidden />
+      )}
+      <button
+        type="button"
+        aria-label="Change account logo"
+        disabled={uploading}
+        className="focus-visible:border-ring focus-visible:ring-ring/50 absolute flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+        onClick={openFileDialog}>
+        <ImagePlusIcon aria-hidden size={16} />
+      </button>
+      <input {...getInputProps()} aria-label="Upload account logo" className="sr-only" />
+    </div>
+  );
 }
 
 export function AccountEditSheet({
@@ -83,6 +157,7 @@ export function AccountEditSheet({
   const [seedKey, setSeedKey] = useState("");
   const [manager, setManager] = useState<User | null>(null);
   const [billingSameAsPrimary, setBillingSameAsPrimary] = useState(false);
+  const [tab, setTab] = useState<SheetTab>("company");
 
   const sheetKey = account?.id ?? "__new__";
   if (sheetKey !== seedKey) {
@@ -91,6 +166,7 @@ export function AccountEditSheet({
     setDraft(next);
     setFieldErrors({});
     setManager(null);
+    setTab("company");
     setBillingSameAsPrimary(
       Boolean(
         next.primaryContactName &&
@@ -123,12 +199,20 @@ export function AccountEditSheet({
     setFieldErrors((prev) => ({ ...prev, [field]: false }));
   }
 
+  function handleLogoSaved(updated: CorporateAccount) {
+    setDraft(updated);
+    onSaved?.(updated);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const name = draft.name.trim();
     const errors: FieldErrors = { name: !name };
     setFieldErrors(errors);
-    if (errors.name) return;
+    if (errors.name) {
+      setTab("company");
+      return;
+    }
 
     const joinCode = draft.joinCode ? normalizeCorporateJoinCode(draft.joinCode) : null;
 
@@ -149,10 +233,12 @@ export function AccountEditSheet({
       const next: CorporateAccount = {
         ...draft,
         name,
-        billingEmail: draft.billingEmail?.trim() || null,
-        billingPhone: draft.billingPhone?.trim() || null,
+        logoUrl: draft.logoUrl?.trim() || null,
+        email: draft.email?.trim() || null,
+        phone: draft.phone?.trim() || null,
         abn: draft.abn?.trim() || null,
-        poNumber: draft.poNumber?.trim() || null,
+        acn: draft.acn?.trim() || null,
+        industry: draft.industry?.trim() || null,
         addressLine1: draft.addressLine1?.trim() || null,
         addressLine2: draft.addressLine2?.trim() || null,
         city: draft.city?.trim() || null,
@@ -194,6 +280,8 @@ export function AccountEditSheet({
     }
   }
 
+  const headerTitle = draft.name.trim() || (isNew ? "New account" : "Account");
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
@@ -202,124 +290,73 @@ export function AccountEditSheet({
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
-          <div className="*:not-first:mt-2">
-            <Label htmlFor="account-name">Name</Label>
-            <Input
-              id="account-name"
-              value={draft.name}
-              onChange={(e) => {
-                setDraft((c) => ({ ...c, name: e.target.value }));
-                clearFieldError("name");
-              }}
-              placeholder="Acme Corp"
-              aria-invalid={fieldErrors.name || undefined}
-              className="peer"
-            />
-            {fieldErrors.name ? (
-              <p
-                aria-live="polite"
-                className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                role="alert">
-                Name is required
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="inline-flex items-center gap-4 align-top">
+            {!isNew ? (
+              <AccountLogoUpload account={draft} onSaved={handleLogoSaved} />
+            ) : (
+              <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
+                <Building2 className="text-muted-foreground size-8" aria-hidden />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="account-status">Status</Label>
-              <Select
-                value={draft.status}
-                onValueChange={(value) =>
-                  setDraft((c) => ({ ...c, status: value as CorporateAccountStatus }))
-                }>
-                <SelectTrigger id="account-status" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CORPORATE_ACCOUNT_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {corporateAccountStatusTitle[status]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="account-billing-day">Billing day</Label>
-              <Select
-                value={billingDayToSelectValue(draft.billingDay)}
-                onValueChange={(value) =>
-                  setDraft((c) => ({ ...c, billingDay: parseBillingDay(value) }))
-                }>
-                <SelectTrigger id="account-billing-day" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BILLING_DAY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <p className="text-lg font-semibold">{headerTitle}</p>
+              <DetailSheetIconBadge icon={Power}>
+                {corporateAccountStatusTitle[draft.status]}
+              </DetailSheetIconBadge>
             </div>
           </div>
 
-          {isNew ? (
-            <div className="space-y-2">
-              <Label htmlFor="account-rate-mode">Rate mode</Label>
-              <Select
-                value={draft.rateMode}
-                onValueChange={(value) =>
-                  setDraft((c) => ({ ...c, rateMode: value as CorporateRateMode }))
-                }>
-                <SelectTrigger id="account-rate-mode" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CORPORATE_RATE_MODES.map((mode) => (
-                    <SelectItem key={mode} value={mode}>
-                      {corporateRateModeTitle[mode]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                Configure rates, members, and policy on the account profile after creating.
-              </p>
-            </div>
-          ) : (
-            <>
-              <NumberStepper
-                id="account-terms"
-                label="Payment terms (days)"
-                value={draft.paymentTermsDays}
-                onChange={(value) => setDraft((c) => ({ ...c, paymentTermsDays: value }))}
-                min={0}
-                max={365}
-              />
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as SheetTab)}
+            className="gap-4">
+            <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
+              <ProfileV2TabTrigger value="company">Company details</ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="contacts">Contacts</ProfileV2TabTrigger>
+            </TabsList>
 
-              <Separator />
-              <p className="text-sm font-medium">Company</p>
+            <TabsContent value="company" className="mt-0 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="account-status">Status</Label>
+                <Select
+                  value={draft.status}
+                  onValueChange={(value) =>
+                    setDraft((c) => ({ ...c, status: value as CorporateAccountStatus }))
+                  }>
+                  <SelectTrigger id="account-status" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CORPORATE_ACCOUNT_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {corporateAccountStatusTitle[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-abn">ABN</Label>
-                  <Input
-                    id="account-abn"
-                    value={draft.abn ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, abn: e.target.value }))}
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-po">PO number</Label>
-                  <Input
-                    id="account-po"
-                    value={draft.poNumber ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, poNumber: e.target.value }))}
-                  />
-                </div>
+              <div className="*:not-first:mt-2">
+                <Label htmlFor="account-name">Company name</Label>
+                <Input
+                  id="account-name"
+                  value={draft.name}
+                  onChange={(e) => {
+                    setDraft((c) => ({ ...c, name: e.target.value }));
+                    clearFieldError("name");
+                  }}
+                  placeholder="Acme Corp"
+                  aria-invalid={fieldErrors.name || undefined}
+                  className="peer"
+                />
+                {fieldErrors.name ? (
+                  <p
+                    aria-live="polite"
+                    className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                    role="alert">
+                    Name is required
+                  </p>
+                ) : null}
               </div>
 
               <div className="*:not-first:mt-2">
@@ -375,7 +412,142 @@ export function AccountEditSheet({
                 </div>
               </div>
 
-              <Separator />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="account-phone">Phone</Label>
+                  <Input
+                    id="account-phone"
+                    type="tel"
+                    value={draft.phone ?? ""}
+                    onChange={(e) => setDraft((c) => ({ ...c, phone: e.target.value }))}
+                  />
+                </div>
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="account-email">Email</Label>
+                  <Input
+                    id="account-email"
+                    type="email"
+                    value={draft.email ?? ""}
+                    onChange={(e) => setDraft((c) => ({ ...c, email: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="account-abn">ABN</Label>
+                  <Input
+                    id="account-abn"
+                    value={draft.abn ?? ""}
+                    onChange={(e) => setDraft((c) => ({ ...c, abn: e.target.value }))}
+                  />
+                </div>
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="account-acn">ACN</Label>
+                  <Input
+                    id="account-acn"
+                    value={draft.acn ?? ""}
+                    onChange={(e) => setDraft((c) => ({ ...c, acn: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="*:not-first:mt-2">
+                <Label htmlFor="account-industry">Industry</Label>
+                <Input
+                  id="account-industry"
+                  value={draft.industry ?? ""}
+                  onChange={(e) => setDraft((c) => ({ ...c, industry: e.target.value }))}
+                />
+              </div>
+
+              {isNew ? (
+                <div className="space-y-2">
+                  <Label htmlFor="account-rate-mode">Rate mode</Label>
+                  <Select
+                    value={draft.rateMode}
+                    onValueChange={(value) =>
+                      setDraft((c) => ({ ...c, rateMode: value as CorporateRateMode }))
+                    }>
+                    <SelectTrigger id="account-rate-mode" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CORPORATE_RATE_MODES.map((mode) => (
+                        <SelectItem key={mode} value={mode}>
+                          {corporateRateModeTitle[mode]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-xs">
+                    Configure rates, members, and policy on the account profile after creating.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="account-billing-day">Billing day</Label>
+                      <Select
+                        value={billingDayToSelectValue(draft.billingDay)}
+                        onValueChange={(value) =>
+                          setDraft((c) => ({ ...c, billingDay: parseBillingDay(value) }))
+                        }>
+                        <SelectTrigger id="account-billing-day" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BILLING_DAY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <NumberStepper
+                      id="account-terms"
+                      label="Payment terms (days)"
+                      value={draft.paymentTermsDays}
+                      onChange={(value) => setDraft((c) => ({ ...c, paymentTermsDays: value }))}
+                      min={0}
+                      max={365}
+                    />
+                  </div>
+
+                  <div className="*:not-first:mt-2">
+                    <Label htmlFor="account-join-code">Join code</Label>
+                    <Input
+                      id="account-join-code"
+                      value={draft.joinCode ?? ""}
+                      onChange={(e) =>
+                        setDraft((c) => ({
+                          ...c,
+                          joinCode: e.target.value.toUpperCase()
+                        }))
+                      }
+                      placeholder="Optional"
+                      className="font-mono uppercase"
+                    />
+                  </div>
+
+                  <div className="*:not-first:mt-2">
+                    <Label htmlFor="account-notes">Notes</Label>
+                    <Textarea
+                      id="account-notes"
+                      value={draft.notes ?? ""}
+                      onChange={(e) => setDraft((c) => ({ ...c, notes: e.target.value }))}
+                      rows={3}
+                      placeholder="Internal notes…"
+                    />
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="contacts" className="mt-0 space-y-4">
               <p className="text-sm font-medium">Primary contact</p>
               <div className="*:not-first:mt-2">
                 <Label htmlFor="account-primary-name">Name</Label>
@@ -441,9 +613,12 @@ export function AccountEditSheet({
                       <Input
                         id="account-billing-email"
                         type="email"
-                        value={draft.billingContactEmail ?? draft.billingEmail ?? ""}
+                        value={draft.billingContactEmail ?? ""}
                         onChange={(e) =>
-                          setDraft((c) => ({ ...c, billingContactEmail: e.target.value }))
+                          setDraft((c) => ({
+                            ...c,
+                            billingContactEmail: e.target.value
+                          }))
                         }
                       />
                     </div>
@@ -452,37 +627,18 @@ export function AccountEditSheet({
                       <Input
                         id="account-billing-phone"
                         type="tel"
-                        value={draft.billingContactPhone ?? draft.billingPhone ?? ""}
+                        value={draft.billingContactPhone ?? ""}
                         onChange={(e) =>
-                          setDraft((c) => ({ ...c, billingContactPhone: e.target.value }))
+                          setDraft((c) => ({
+                            ...c,
+                            billingContactPhone: e.target.value
+                          }))
                         }
                       />
                     </div>
                   </div>
                 </>
               ) : null}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-billing-email-fallback">Billing email</Label>
-                  <Input
-                    id="account-billing-email-fallback"
-                    type="email"
-                    value={draft.billingEmail ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, billingEmail: e.target.value }))}
-                    placeholder="billing@acme.com"
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-billing-phone-fallback">Billing phone</Label>
-                  <Input
-                    id="account-billing-phone-fallback"
-                    type="tel"
-                    value={draft.billingPhone ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, billingPhone: e.target.value }))}
-                  />
-                </div>
-              </div>
 
               <Separator />
               <div className="space-y-2">
@@ -497,35 +653,8 @@ export function AccountEditSheet({
                   disabled={saving}
                 />
               </div>
-
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="account-join-code">Join code</Label>
-                <Input
-                  id="account-join-code"
-                  value={draft.joinCode ?? ""}
-                  onChange={(e) =>
-                    setDraft((c) => ({
-                      ...c,
-                      joinCode: e.target.value.toUpperCase()
-                    }))
-                  }
-                  placeholder="Optional"
-                  className="font-mono uppercase"
-                />
-              </div>
-
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="account-notes">Notes</Label>
-                <Textarea
-                  id="account-notes"
-                  value={draft.notes ?? ""}
-                  onChange={(e) => setDraft((c) => ({ ...c, notes: e.target.value }))}
-                  rows={3}
-                  placeholder="Internal notes…"
-                />
-              </div>
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
 
           <SheetFooter className="mt-auto px-0">
             {isNew ? (

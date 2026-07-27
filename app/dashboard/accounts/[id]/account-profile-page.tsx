@@ -46,7 +46,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   const [manager, setManager] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [membersCount, setMembersCount] = useState(0);
   const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const loadAccount = useCallback(() => {
@@ -91,10 +90,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
     }
     return ids;
   }, [users, accountId]);
-
-  useEffect(() => {
-    setMembersCount(memberCustomerIds.size);
-  }, [memberCustomerIds]);
 
   const accountTrips = useMemo(
     () => tripsForCorporateAccount(trips, accountId, memberCustomerIds),
@@ -156,7 +151,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
             <AccountOverviewTab
               account={account}
               manager={manager}
-              membersCount={membersCount}
+              membersCount={memberCustomerIds.size}
               mtdSpend={mtdSpend}
               trips={accountTrips}
               invoices={accountInvoices}
@@ -166,7 +161,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="members" className="mt-0 space-y-4">
-            <AccountMembersTab accountId={account.id} onMembersChange={setMembersCount} />
+            <AccountMembersTab accountId={account.id} />
           </TabsContent>
 
           <TabsContent value="rates" className="mt-0 space-y-4">

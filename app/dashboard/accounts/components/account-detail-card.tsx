@@ -25,7 +25,18 @@ export function AccountDetailCard({
       backAriaLabel="Back to accounts"
       onEditClick={onEditClick}
       editAriaLabel="Edit account"
-      avatar={<Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />}
+      avatar={
+        account.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Storage download URL
+          <img
+            alt=""
+            className="size-full object-cover"
+            src={account.logoUrl}
+          />
+        ) : (
+          <Building2 className="text-muted-foreground size-8 lg:size-10" aria-hidden />
+        )
+      }
       title={account.name}
       meta={
         <Badge

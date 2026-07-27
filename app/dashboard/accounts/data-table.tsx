@@ -113,7 +113,7 @@ export function AccountsDataTable({
     () =>
       accounts.map((account) => ({
         ...account,
-        searchLabel: [account.name, account.billingEmail, account.joinCode]
+        searchLabel: [account.name, account.email, account.phone, account.joinCode]
           .filter(Boolean)
           .join(" "),
         membersCount: memberCounts.get(account.id) ?? 0
@@ -191,10 +191,17 @@ export function AccountsDataTable({
         enableColumnFilter: false
       },
       {
-        id: "billingEmail",
-        accessorKey: "billingEmail",
-        header: "Billing email",
-        cell: ({ row }) => row.original.billingEmail || "—",
+        id: "email",
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => row.original.email || "—",
+        enableColumnFilter: false
+      },
+      {
+        id: "phone",
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ row }) => row.original.phone || "—",
         enableColumnFilter: false
       },
       {

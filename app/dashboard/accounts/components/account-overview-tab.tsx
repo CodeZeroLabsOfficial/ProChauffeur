@@ -5,10 +5,9 @@ import { Progress } from "@/components/ui/progress";
 import { ProfileBookingActivityChart } from "@/components/profile/profile-booking-activity-chart";
 import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
 import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import {
-  corporatePreferredPaymentTitle,
-  corporateRateModeTitle,
+  formatCorporateAddress,
   type CorporateAccount,
   type User
 } from "@/lib/models";
@@ -16,10 +15,6 @@ import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models/trip";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { customerDisplayName } from "@/lib/users/customer-display";
-
-function billingDayLabel(account: CorporateAccount): string {
-  return account.billingDay === "last" ? "Last day of month" : String(account.billingDay);
-}
 
 export function AccountOverviewTab({
   account,
@@ -44,6 +39,15 @@ export function AccountOverviewTab({
   const budgetPct =
     budget != null && budget > 0 ? Math.min(100, Math.round((mtdSpend / budget) * 100)) : null;
 
+  const primaryContactSummary = [
+    account.primaryContactName,
+    account.primaryContactEmail,
+    account.primaryContactPhone
+  ]
+    .map((v) => v?.trim())
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
@@ -52,38 +56,38 @@ export function AccountOverviewTab({
             <CardTitle>Company</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Name" value={account.name} />
+            <Row label="Company name" value={account.name} />
+            <Row label="Address" value={formatCorporateAddress(account)} />
+            <Row label="Phone" value={account.phone} />
+            <Row label="Email" value={account.email} />
             <Row label="ABN" value={account.abn} />
-            <Row label="PO number" value={account.poNumber} />
-            <Row label="Billing day" value={billingDayLabel(account)} />
-            <Row label="Payment terms" value={`${account.paymentTermsDays} days`} />
-            <Row label="Rate mode" value={corporateRateModeTitle[account.rateMode]} />
-            <Row
-              label="Preferred payment"
-              value={
-                account.preferredPayment
-                  ? corporatePreferredPaymentTitle[account.preferredPayment]
-                  : null
-              }
-            />
-            <Row label="GST inclusive" value={account.gstInclusive ? "Yes" : "No"} />
-            <Row label="Notes" value={account.notes} />
+            <Row label="ACN" value={account.acn} />
+            <Row label="Industry" value={account.industry} />
+            <Row label="Members" value={String(membersCount)} />
+            <Row label="Primary contact" value={primaryContactSummary || null} />
+            <Row label="Join date" value={formatDate(account.createdAt)} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Contacts</CardTitle>
+            <CardTitle>Account Manager</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Primary" value={account.primaryContactName} />
-            <Row label="Primary email" value={account.primaryContactEmail} />
-            <Row label="Primary phone" value={account.primaryContactPhone} />
-            <Row label="Billing" value={account.billingContactName} />
-            <Row label="Billing email" value={account.billingContactEmail ?? account.billingEmail} />
-            <Row label="Billing phone" value={account.billingContactPhone ?? account.billingPhone} />
-            <Row label="Account manager" value={manager ? customerDisplayName(manager) : null} />
-            <Row label="Members" value={String(membersCount)} />
+            <Row label="Name" value={manager ? customerDisplayName(manager) : null} />
+            <Row label="Email" value={manager?.email} />
+            <Row label="Phone" value={manager?.profile.phoneNumber} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Row label="Name" value={account.billingContactName} />
+            <Row label="Email" value={account.billingContactEmail} />
+            <Row label="Phone" value={account.billingContactPhone} />
           </CardContent>
         </Card>
 

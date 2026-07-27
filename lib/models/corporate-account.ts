@@ -34,10 +34,15 @@ export interface CorporateFixedRateOverride {
 export interface CorporateAccount {
   id: string;
   name: string;
-  billingEmail?: string | null;
-  billingPhone?: string | null;
+  /** Company logo / avatar URL in Storage. */
+  logoUrl?: string | null;
+  /** Company contact email (not billing contact). */
+  email?: string | null;
+  /** Company phone (not billing contact). */
+  phone?: string | null;
   abn?: string | null;
-  poNumber?: string | null;
+  acn?: string | null;
+  industry?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
   city?: string | null;
@@ -89,6 +94,18 @@ export function normalizeCorporateJoinCode(code: string): string {
   return code.trim().toUpperCase().replace(/\s+/g, "");
 }
 
+export function formatCorporateAddress(account: CorporateAccount): string | null {
+  const parts = [
+    account.addressLine1,
+    account.addressLine2,
+    [account.city, account.state, account.postcode].filter(Boolean).join(" "),
+    account.country
+  ]
+    .map((p) => p?.trim())
+    .filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
 export function buildNewCorporateAccount(
   overrides?: Partial<CorporateAccount> & Pick<CorporateAccount, "id">
 ): CorporateAccount {
@@ -96,10 +113,12 @@ export function buildNewCorporateAccount(
   return {
     id: overrides?.id ?? crypto.randomUUID(),
     name: "",
-    billingEmail: null,
-    billingPhone: null,
+    logoUrl: null,
+    email: null,
+    phone: null,
     abn: null,
-    poNumber: null,
+    acn: null,
+    industry: null,
     addressLine1: null,
     addressLine2: null,
     city: null,

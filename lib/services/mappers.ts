@@ -579,10 +579,12 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
   return {
     id,
     name: typeof d.name === "string" ? d.name : "",
-    billingEmail: typeof d.billingEmail === "string" ? d.billingEmail : null,
-    billingPhone: typeof d.billingPhone === "string" ? d.billingPhone : null,
+    logoUrl: typeof d.logoUrl === "string" ? d.logoUrl : null,
+    email: typeof d.email === "string" ? d.email : null,
+    phone: typeof d.phone === "string" ? d.phone : null,
     abn: typeof d.abn === "string" ? d.abn : null,
-    poNumber: typeof d.poNumber === "string" ? d.poNumber : null,
+    acn: typeof d.acn === "string" ? d.acn : null,
+    industry: typeof d.industry === "string" ? d.industry : null,
     addressLine1: typeof d.addressLine1 === "string" ? d.addressLine1 : null,
     addressLine2: typeof d.addressLine2 === "string" ? d.addressLine2 : null,
     city: typeof d.city === "string" ? d.city : null,
@@ -593,8 +595,18 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     primaryContactEmail: typeof d.primaryContactEmail === "string" ? d.primaryContactEmail : null,
     primaryContactPhone: typeof d.primaryContactPhone === "string" ? d.primaryContactPhone : null,
     billingContactName: typeof d.billingContactName === "string" ? d.billingContactName : null,
-    billingContactEmail: typeof d.billingContactEmail === "string" ? d.billingContactEmail : null,
-    billingContactPhone: typeof d.billingContactPhone === "string" ? d.billingContactPhone : null,
+    billingContactEmail:
+      typeof d.billingContactEmail === "string"
+        ? d.billingContactEmail
+        : typeof d.billingEmail === "string"
+          ? d.billingEmail
+          : null,
+    billingContactPhone:
+      typeof d.billingContactPhone === "string"
+        ? d.billingContactPhone
+        : typeof d.billingPhone === "string"
+          ? d.billingPhone
+          : null,
     accountManagerUserId:
       typeof d.accountManagerUserId === "string" ? d.accountManagerUserId : null,
     defaultVehicleClassIds,
