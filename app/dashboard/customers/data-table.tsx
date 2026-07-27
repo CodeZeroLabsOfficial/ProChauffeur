@@ -127,7 +127,9 @@ export function CustomersDataTable({
           const corporateAccountName = accountId
             ? accountNameById.get(accountId) ?? null
             : null;
-          const customerType = accountId ? "corporate" : "individual";
+          const customerType = (accountId ? "corporate" : "individual") as
+            | "corporate"
+            | "individual";
           return {
             ...u,
             searchLabel: [
