@@ -5,8 +5,8 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { NumberStepper } from "@/components/number-stepper";
+import { SettingsSection } from "@/components/settings-section";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -124,14 +124,10 @@ export function AccountRatesTab({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle>Rates</CardTitle>
-        <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-          {saving ? "Saving…" : "Save rates"}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-0">
+      <SettingsSection
+        title="Rate mode"
+        description="Choose how this account is priced relative to standard rates.">
         <div className="space-y-2">
           <Label htmlFor="account-rate-mode">Rate mode</Label>
           <Select
@@ -161,7 +157,19 @@ export function AccountRatesTab({
             min={0}
             max={100}
           />
-        ) : (
+        ) : null}
+
+        <div>
+          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+      </SettingsSection>
+
+      {draft.rateMode === "fixedRates" ? (
+        <SettingsSection
+          title="Fixed rate overrides"
+          description="Custom transfer and hourly rates by vehicle class and trip type.">
           <div className="space-y-3">
             {draft.fixedRates.map((row) => (
               <div key={row.id} className="space-y-3 rounded-lg border p-3">
@@ -267,8 +275,14 @@ export function AccountRatesTab({
               Add rate override
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <div>
+            <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </SettingsSection>
+      ) : null}
+    </div>
   );
 }

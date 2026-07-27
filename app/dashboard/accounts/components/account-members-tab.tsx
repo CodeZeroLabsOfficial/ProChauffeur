@@ -424,7 +424,7 @@ export function AccountMembersTab({
         }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add members to this corporate account</DialogTitle>
+            <DialogTitle>Add members to this account</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">

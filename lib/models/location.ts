@@ -18,7 +18,7 @@ export function hasValidFleetLocationCoordinate(
 }
 
 /** Requires exactly one default office site with valid coordinates. */
-export function requireDefaultGarageLocation(locations: FleetLocation[]): FleetLocation {
+export function requireDefaultOfficeLocation(locations: FleetLocation[]): FleetLocation {
   const defaults = locations.filter(
     (l) => l.isDefault && hasValidFleetLocationCoordinate(l)
   );
@@ -34,7 +34,7 @@ export function requireDefaultGarageLocation(locations: FleetLocation[]): FleetL
 /** Preferred site for map fallbacks — explicit default only. */
 export function resolveDefaultFleetLocation(locations: FleetLocation[]): FleetLocation | null {
   try {
-    return requireDefaultGarageLocation(locations);
+    return requireDefaultOfficeLocation(locations);
   } catch {
     return null;
   }

@@ -90,7 +90,9 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
       endTime: s.endTime ?? null
     })),
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
-    preferredGarageLocationId: d.preferredGarageLocationId ?? null,
+    preferredOfficeLocationId:
+      (typeof d.preferredOfficeLocationId === "string" ? d.preferredOfficeLocationId : null) ??
+      (typeof d.preferredGarageLocationId === "string" ? d.preferredGarageLocationId : null),
     driversLicenseSummary: d.driversLicenseSummary ?? null,
     driversLicenseNumber: d.driversLicenseNumber ?? null,
     driversLicenseClassOrType: d.driversLicenseClassOrType ?? null,
@@ -229,7 +231,10 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
     schemaVersion: d.schemaVersion ?? 1,
     tripType: d.tripType ?? "transfer",
     vehicleClassId: d.vehicleClassId ?? "",
-    garageLocationId: d.garageLocationId ?? "",
+    officeLocationId:
+      (typeof d.officeLocationId === "string" && d.officeLocationId) ||
+      (typeof d.garageLocationId === "string" ? d.garageLocationId : "") ||
+      "",
     distanceUnit: d.distanceUnit ?? "km",
     currencyCode: d.currencyCode ?? "",
     onboardUnits: d.onboardUnits ?? 0,

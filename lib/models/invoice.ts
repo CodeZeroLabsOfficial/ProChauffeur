@@ -1,6 +1,6 @@
 import type { InvoiceStatus, PaymentSource } from "@/lib/models/enums";
 
-/** A single labelled charge on an invoice (shape mirrors TripQuote line items). */
+/** A single labelled charge on an invoice (same shape as TripQuote line items). */
 export interface InvoiceLineItem {
   id: string;
   label: string;

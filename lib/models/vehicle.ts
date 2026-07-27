@@ -29,7 +29,7 @@ export function vehicleDisplayName(v: Pick<Vehicle, "color" | "make" | "model">)
   return `${v.color} ${v.make} ${v.model}`.trim();
 }
 
-/** Resolves the chauffeur linked to a fleet row (mirrors effectiveChauffeurUserId). */
+/** Resolves the chauffeur linked to a fleet row (assignedChauffeurUserId, else driverID). */
 export function effectiveChauffeurUserId(v: Vehicle): string | null {
   if (v.assignedChauffeurUserId != null) {
     return v.assignedChauffeurUserId === "" ? null : v.assignedChauffeurUserId;

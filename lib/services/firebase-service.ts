@@ -785,17 +785,6 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       joinCode,
       creditLimit: account.creditLimit ?? null,
       notes: account.notes?.trim() || null,
-      /** Drop legacy fields removed from the model. */
-      poNumber: deleteField(),
-      billingEmail: deleteField(),
-      billingPhone: deleteField(),
-      employeeCount: deleteField(),
-      primaryContactName: deleteField(),
-      primaryContactEmail: deleteField(),
-      primaryContactPhone: deleteField(),
-      billingContactName: deleteField(),
-      billingContactEmail: deleteField(),
-      billingContactPhone: deleteField(),
       createdAt: account.createdAt ?? now,
       updatedAt: now
     }),
@@ -1152,6 +1141,7 @@ export async function upsertBranchDriver(
       id: uid,
       userId: uid,
       ...profile,
+      preferredGarageLocationId: deleteField(),
       createdAt: existing.exists() ? (existing.data()?.createdAt ?? now) : now,
       updatedAt: now
     }),
@@ -1295,7 +1285,7 @@ export async function createFleetLocation(input: {
 }): Promise<void> {
   const name = input.name.trim();
   const addressLine = input.addressLine.trim();
-  if (!name || !addressLine) throw new Error("Enter a name and address before saving this garage.");
+  if (!name || !addressLine) throw new Error("Enter a name and address before saving this office.");
   const id = crypto.randomUUID();
   const isDefault = input.isDefault === true;
 
@@ -1316,7 +1306,7 @@ export async function createFleetLocation(input: {
 export async function updateFleetLocation(location: FleetLocation): Promise<void> {
   const name = location.name.trim();
   const addressLine = location.addressLine.trim();
-  if (!name || !addressLine) throw new Error("Enter a name and address before saving this garage.");
+  if (!name || !addressLine) throw new Error("Enter a name and address before saving this office.");
   const isDefault = location.isDefault === true;
 
   if (isDefault) await clearOtherDefaultFleetLocations(location.id);
@@ -1338,7 +1328,7 @@ export async function deleteFleetLocation(id: string): Promise<void> {
   const location = mapFleetLocation(snap.id, snap.data());
   if (location.isDefault) {
     throw new Error(
-      "Cannot delete the default garage. Set another garage as default first."
+      "Cannot delete the default office. Set another office as default first."
     );
   }
   await deleteDoc(ref);

@@ -23,7 +23,7 @@ export interface QuoteEngineContext {
   pricing: PricingConfig;
   locale: OperatorLocale;
   vehicleClass: VehicleClass;
-  garageLocation: FleetLocation;
+  officeLocation: FleetLocation;
   routeDistanceMeters: number;
   deadheadDistanceMeters: number;
   deadheadDurationMinutes: number;
@@ -539,7 +539,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     schemaVersion: context.pricing.schemaVersion,
     tripType: request.tripType,
     vehicleClassId: request.vehicleClassId,
-    garageLocationId: context.garageLocation.id,
+    officeLocationId: context.officeLocation.id,
     distanceUnit: context.locale.distanceUnit,
     currencyCode: context.locale.currency,
     onboardUnits,

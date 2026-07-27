@@ -14,7 +14,7 @@ export interface TripQuoteSnapshot {
   schemaVersion: number;
   tripType: TripType;
   vehicleClassId: string;
-  garageLocationId: string;
+  officeLocationId: string;
   distanceUnit: DistanceUnit;
   currencyCode: string;
   onboardUnits: number;

@@ -33,7 +33,7 @@ export interface Branch {
   timeZoneIdentifier?: string | null;
   /** Optional square image for location profile / sheet hero. */
   imageUrl?: string | null;
-  /** Office / operates-from address (replaces Garage in product UI). */
+  /** Office / operates-from address for deadhead and map centering. */
   officeAddressLine?: string | null;
   officeLatitude?: number | null;
   officeLongitude?: number | null;

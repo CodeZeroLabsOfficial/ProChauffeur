@@ -1,6 +1,6 @@
 import { getMapboxToken } from "@/lib/env";
 import { fetchRouteMetrics } from "@/lib/mapbox/directions";
-import { requireDefaultGarageLocation, type FleetLocation } from "@/lib/models/location";
+import { requireDefaultOfficeLocation, type FleetLocation } from "@/lib/models/location";
 import type { OperatorLocale } from "@/lib/models/locale";
 import type { PricingConfig } from "@/lib/models/pricing";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
@@ -37,27 +37,27 @@ export async function buildQuoteForRequest(
   locations: FleetLocation[],
   vehicleClass: VehicleClass
 ): Promise<QuoteResult> {
-  const garageLocation = requireDefaultGarageLocation(locations);
+  const officeLocation = requireDefaultOfficeLocation(locations);
   const token = getMapboxToken();
-  const garageCoord = {
-    latitude: garageLocation.latitude,
-    longitude: garageLocation.longitude
+  const officeCoord = {
+    latitude: officeLocation.latitude,
+    longitude: officeLocation.longitude
   };
 
-  const [onboard, garageToPickup, dropoffToGarage] = await Promise.all([
+  const [onboard, officeToPickup, dropoffToOffice] = await Promise.all([
     routeMetrics(request.pickup, request.dropoff, token),
-    routeMetrics(garageCoord, request.pickup, token),
-    routeMetrics(request.dropoff, garageCoord, token)
+    routeMetrics(officeCoord, request.pickup, token),
+    routeMetrics(request.dropoff, officeCoord, token)
   ]);
 
   return computeQuote(request, {
     pricing,
     locale,
     vehicleClass,
-    garageLocation,
+    officeLocation,
     routeDistanceMeters: onboard.distanceMeters,
-    deadheadDistanceMeters: garageToPickup.distanceMeters + dropoffToGarage.distanceMeters,
+    deadheadDistanceMeters: officeToPickup.distanceMeters + dropoffToOffice.distanceMeters,
     deadheadDurationMinutes:
-      (garageToPickup.durationSeconds + dropoffToGarage.durationSeconds) / 60
+      (officeToPickup.durationSeconds + dropoffToOffice.durationSeconds) / 60
   });
 }

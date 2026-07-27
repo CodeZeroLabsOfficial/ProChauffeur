@@ -155,8 +155,8 @@ export function DriverProfileOperationsTab({
             />
             <DetailRow label="Time zone" value={profile.timeZoneIdentifier?.trim() || "—"} />
             <DetailRow
-              label="Preferred garage"
-              value={profile.preferredGarageLocationId?.trim() || "—"}
+              label="Preferred office"
+              value={profile.preferredOfficeLocationId?.trim() || "—"}
             />
           </CardContent>
         </Card>
@@ -272,7 +272,7 @@ export function DriverProfileOperationsTab({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         allowDelete
-        defaultLocationId={profile.preferredGarageLocationId ?? null}
+        defaultLocationId={profile.preferredOfficeLocationId ?? null}
         activeHelpText="Inactive schedules are excluded when checking chauffeur availability."
         onPersist={persistSchedules}
         onSaved={() => onUserUpdated?.()}

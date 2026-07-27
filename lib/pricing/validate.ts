@@ -232,13 +232,6 @@ export function parsePricingConfig(d: DocumentData): PricingConfig {
   return {
     schemaVersion,
     minimumFare: requireNonNegative(d.minimumFare, "minimumFare"),
-    baseFare: requireNonNegative(d.baseFare ?? 0, "baseFare"),
-    distanceRatePerUnit: requireNonNegative(d.distanceRatePerUnit ?? 0, "distanceRatePerUnit"),
-    timeRatePerHour: requireNonNegative(d.timeRatePerHour ?? 0, "timeRatePerHour"),
-    waitingFeeFlat: requireNonNegative(d.waitingFeeFlat ?? 0, "waitingFeeFlat"),
-    waitingFeePerMinute: requireNonNegative(d.waitingFeePerMinute ?? 0, "waitingFeePerMinute"),
-    waitingGraceMinutes: requireNonNegative(d.waitingGraceMinutes ?? 0, "waitingGraceMinutes"),
-    returnToBaseFee: requireNonNegative(d.returnToBaseFee ?? 0, "returnToBaseFee"),
     weekendWeekdays: parseWeekdays(d.weekendWeekdays, "weekendWeekdays"),
     quoteRounding: requireEnum(d.quoteRounding, "quoteRounding", QUOTE_ROUNDING),
     addons: Array.isArray(d.addons)

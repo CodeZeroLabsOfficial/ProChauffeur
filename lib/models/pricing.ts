@@ -80,20 +80,6 @@ export interface PricingConfig {
   schemaVersion: number;
   /** Company-wide transfer floor applied after vehicle class calculation. */
   minimumFare: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  baseFare: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  distanceRatePerUnit: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  timeRatePerHour: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  waitingFeeFlat: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  waitingFeePerMinute: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  waitingGraceMinutes: number;
-  /** Schema v2 legacy — retained for Firestore compatibility; not used in quotes. */
-  returnToBaseFee: number;
   /** Weekdays treated as weekend for hourly class rates (e.g. Sat–Sun). */
   weekendWeekdays: WeekdayNumber[];
   quoteRounding: QuoteRounding;
@@ -102,22 +88,11 @@ export interface PricingConfig {
   rules: PricingRule[];
 }
 
-const LEGACY_PRICING_RATE_DEFAULTS = {
-  baseFare: 0,
-  distanceRatePerUnit: 0,
-  timeRatePerHour: 0,
-  waitingFeeFlat: 0,
-  waitingFeePerMinute: 0,
-  waitingGraceMinutes: 0,
-  returnToBaseFee: 0
-} as const;
-
-/** Zeros schema v2 legacy rate fields before persisting operator pricing. */
+/** Normalize schema version before persisting operator pricing. */
 export function preparePricingConfigForSave(config: PricingConfig): PricingConfig {
   return {
     ...config,
-    schemaVersion: 2,
-    ...LEGACY_PRICING_RATE_DEFAULTS
+    schemaVersion: 2
   };
 }
 
@@ -126,7 +101,6 @@ export function buildInitialPricingConfig(): PricingConfig {
   return {
     schemaVersion: 2,
     minimumFare: 89,
-    ...LEGACY_PRICING_RATE_DEFAULTS,
     weekendWeekdays: [6, 7],
     quoteRounding: "dollar",
     addons: [
