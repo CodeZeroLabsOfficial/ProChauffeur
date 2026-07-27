@@ -246,7 +246,7 @@ export function CustomersDataTable({
                 "font-medium",
                 isCorporate
                   ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                  : "border-border bg-muted text-muted-foreground"
+                  : "border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300"
               )}>
               {isCorporate ? "Corporate" : "Individual"}
             </Badge>
