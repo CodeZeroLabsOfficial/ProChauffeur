@@ -754,6 +754,30 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       billingPhone: account.billingPhone?.trim() || null,
       abn: account.abn?.trim() || null,
       poNumber: account.poNumber?.trim() || null,
+      addressLine1: account.addressLine1?.trim() || null,
+      addressLine2: account.addressLine2?.trim() || null,
+      city: account.city?.trim() || null,
+      state: account.state?.trim() || null,
+      postcode: account.postcode?.trim() || null,
+      country: account.country?.trim() || null,
+      primaryContactName: account.primaryContactName?.trim() || null,
+      primaryContactEmail: account.primaryContactEmail?.trim() || null,
+      primaryContactPhone: account.primaryContactPhone?.trim() || null,
+      billingContactName: account.billingContactName?.trim() || null,
+      billingContactEmail: account.billingContactEmail?.trim() || null,
+      billingContactPhone: account.billingContactPhone?.trim() || null,
+      accountManagerUserId: account.accountManagerUserId?.trim() || null,
+      defaultVehicleClassIds: account.defaultVehicleClassIds.filter((id) => id.trim()),
+      maxRideAmount:
+        account.maxRideAmount != null && Number.isFinite(account.maxRideAmount)
+          ? account.maxRideAmount
+          : null,
+      monthlyBudget:
+        account.monthlyBudget != null && Number.isFinite(account.monthlyBudget)
+          ? account.monthlyBudget
+          : null,
+      preferredPayment: account.preferredPayment ?? null,
+      gstInclusive: account.gstInclusive !== false,
       status: account.status,
       billingDay: account.billingDay,
       paymentTermsDays: account.paymentTermsDays,

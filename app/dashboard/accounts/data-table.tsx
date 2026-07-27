@@ -14,6 +14,7 @@ import {
   useReactTable
 } from "@tanstack/react-table";
 import { Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { AccountEditSheet } from "@/app/dashboard/accounts/account-edit-sheet";
@@ -78,11 +79,10 @@ export function AccountsDataTable({
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
 }) {
+  const router = useRouter();
   const { users } = useUsers();
   const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState<CorporateAccount | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CorporateAccount | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -250,22 +250,7 @@ export function AccountsDataTable({
   });
 
   function handleCreateOpenChange(next: boolean) {
-    if (next) {
-      setEditOpen(false);
-      setEditing(null);
-    }
     onCreateOpenChange?.(next);
-  }
-
-  function handleEditOpenChange(next: boolean) {
-    setEditOpen(next);
-    if (!next) setEditing(null);
-  }
-
-  function openEdit(account: CorporateAccount) {
-    onCreateOpenChange?.(false);
-    setEditing(account);
-    setEditOpen(true);
   }
 
   async function confirmDelete(e: React.MouseEvent) {
@@ -275,10 +260,6 @@ export function AccountsDataTable({
     try {
       await deleteCorporateAccount(pendingDelete.id);
       toast.success("Account deleted.");
-      if (editing?.id === pendingDelete.id) {
-        setEditOpen(false);
-        setEditing(null);
-      }
       setPendingDelete(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not delete account.");
@@ -286,9 +267,6 @@ export function AccountsDataTable({
       setDeleting(false);
     }
   }
-
-  const sheetOpen = Boolean(createOpen) || editOpen;
-  const sheetAccount = createOpen ? null : editing;
 
   return (
     <>
@@ -346,7 +324,7 @@ export function AccountsDataTable({
                       "cursor-pointer",
                       row.original.status === "suspended" && "text-muted-foreground"
                     )}
-                    onClick={() => openEdit(row.original)}>
+                    onClick={() => router.push(`/dashboard/accounts/${row.original.id}`)}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
@@ -399,11 +377,12 @@ export function AccountsDataTable({
       </AlertDialog>
 
       <AccountEditSheet
-        account={sheetAccount}
-        open={sheetOpen}
-        onOpenChange={(next) => {
-          if (createOpen) handleCreateOpenChange(next);
-          else handleEditOpenChange(next);
+        account={null}
+        open={Boolean(createOpen)}
+        onOpenChange={handleCreateOpenChange}
+        onSaved={(created) => {
+          handleCreateOpenChange(false);
+          router.push(`/dashboard/accounts/${created.id}`);
         }}
       />
     </>

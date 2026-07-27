@@ -25,6 +25,7 @@ import type {
   QuoteLineItem,
   SavedPaymentMethod,
   Trip,
+  TripApprovalStatus,
   TripQuoteSnapshot,
   User,
   UserPreferences,
@@ -34,12 +35,15 @@ import type {
   CorporateFixedRateOverride,
   CorporateAccountStatus,
   CorporateRateMode,
-  CorporateBillingDay
+  CorporateBillingDay,
+  CorporatePreferredPayment
 } from "@/lib/models";
 import {
   CORPORATE_ACCOUNT_STATUSES,
+  CORPORATE_PREFERRED_PAYMENTS,
   CORPORATE_RATE_MODES
 } from "@/lib/models/corporate-account";
+import { TRIP_APPROVAL_STATUSES } from "@/lib/models/trip";
 import {
   UNLIMITED,
   defaultPlansCatalog,
@@ -307,6 +311,12 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     stripePaymentIntentId: d.stripePaymentIntentId ?? null,
     invoiceId: d.invoiceId ?? null,
     corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
+    approvalStatus: TRIP_APPROVAL_STATUSES.includes(d.approvalStatus as TripApprovalStatus)
+      ? (d.approvalStatus as TripApprovalStatus)
+      : null,
+    approvedAt: toDate(d.approvedAt),
+    approvedByUserId: typeof d.approvedByUserId === "string" ? d.approvedByUserId : null,
+    approvalNote: typeof d.approvalNote === "string" ? d.approvalNote : null,
     paidAt: toDate(d.paidAt),
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
@@ -557,6 +567,14 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
         .map((row) => mapCorporateFixedRate(row as DocumentData))
         .filter((row): row is CorporateFixedRateOverride => Boolean(row))
     : [];
+  const preferredPayment = CORPORATE_PREFERRED_PAYMENTS.includes(
+    d.preferredPayment as CorporatePreferredPayment
+  )
+    ? (d.preferredPayment as CorporatePreferredPayment)
+    : null;
+  const defaultVehicleClassIds = Array.isArray(d.defaultVehicleClassIds)
+    ? d.defaultVehicleClassIds.filter((id): id is string => typeof id === "string" && id.trim() !== "")
+    : [];
 
   return {
     id,
@@ -565,6 +583,25 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     billingPhone: typeof d.billingPhone === "string" ? d.billingPhone : null,
     abn: typeof d.abn === "string" ? d.abn : null,
     poNumber: typeof d.poNumber === "string" ? d.poNumber : null,
+    addressLine1: typeof d.addressLine1 === "string" ? d.addressLine1 : null,
+    addressLine2: typeof d.addressLine2 === "string" ? d.addressLine2 : null,
+    city: typeof d.city === "string" ? d.city : null,
+    state: typeof d.state === "string" ? d.state : null,
+    postcode: typeof d.postcode === "string" ? d.postcode : null,
+    country: typeof d.country === "string" ? d.country : null,
+    primaryContactName: typeof d.primaryContactName === "string" ? d.primaryContactName : null,
+    primaryContactEmail: typeof d.primaryContactEmail === "string" ? d.primaryContactEmail : null,
+    primaryContactPhone: typeof d.primaryContactPhone === "string" ? d.primaryContactPhone : null,
+    billingContactName: typeof d.billingContactName === "string" ? d.billingContactName : null,
+    billingContactEmail: typeof d.billingContactEmail === "string" ? d.billingContactEmail : null,
+    billingContactPhone: typeof d.billingContactPhone === "string" ? d.billingContactPhone : null,
+    accountManagerUserId:
+      typeof d.accountManagerUserId === "string" ? d.accountManagerUserId : null,
+    defaultVehicleClassIds,
+    maxRideAmount: typeof d.maxRideAmount === "number" ? d.maxRideAmount : null,
+    monthlyBudget: typeof d.monthlyBudget === "number" ? d.monthlyBudget : null,
+    preferredPayment,
+    gstInclusive: d.gstInclusive !== false,
     status,
     billingDay: mapCorporateBillingDay(d.billingDay),
     paymentTermsDays: typeof d.paymentTermsDays === "number" ? d.paymentTermsDays : 0,

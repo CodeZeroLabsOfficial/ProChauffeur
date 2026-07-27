@@ -119,7 +119,7 @@ export function CustomerProfileSidebar({
               {user.corporateAccountId && corporateAccountName ? (
                 <ContactRow icon={Building2}>
                   <Link
-                    href="/dashboard/accounts"
+                    href={`/dashboard/accounts/${user.corporateAccountId}`}
                     className="hover:text-primary hover:underline">
                     {corporateAccountName}
                   </Link>

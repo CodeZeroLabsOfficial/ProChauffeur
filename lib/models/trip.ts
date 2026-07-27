@@ -3,6 +3,14 @@ import type { PricingAddon } from "@/lib/models/pricing";
 import type { QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { Vehicle } from "@/lib/models/vehicle";
 
+export const TRIP_APPROVAL_STATUSES = [
+  "not_required",
+  "pending",
+  "approved",
+  "declined"
+] as const;
+export type TripApprovalStatus = (typeof TRIP_APPROVAL_STATUSES)[number];
+
 /** CoordinateField.swift — plain lat/lng pair used for pickup/dropoff. */
 export interface CoordinateField {
   latitude: number;
@@ -67,6 +75,14 @@ export interface Trip {
   invoiceId?: string | null;
   /** Corporate account billed when payment is on-account (or rates applied). */
   corporateAccountId?: string | null;
+  /**
+   * Reserved for account-manager credit-limit approval (customer portal).
+   * Not enforced in the dashboard yet.
+   */
+  approvalStatus?: TripApprovalStatus | null;
+  approvedAt?: Date | null;
+  approvedByUserId?: string | null;
+  approvalNote?: string | null;
   paidAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;

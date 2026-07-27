@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { MultiSelectField } from "@/components/multi-select-field";
-import { useFleetLocations, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import {
+  useFleetLocations,
+  useUsers,
+  useVehicleClasses,
+  useVehicles
+} from "@/hooks/use-collections";
 import {
   filterEligibleFleetVehicles,
   vehicleClassesById
@@ -394,21 +399,42 @@ export function NewBookingSheet({
     corporateAccount?.status === "active" ? corporateAccount : null;
   const promoForQuote = billToCorporate ? null : appliedPromo;
 
+  const lastCorporateCustomerIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!customer?.corporateAccountId || !corporateAccountsEnabled) {
       setCorporateAccount(null);
-      if (!customer) setBillToCorporate(false);
+      if (!customer) {
+        setBillToCorporate(false);
+        lastCorporateCustomerIdRef.current = null;
+      }
       return;
     }
     let cancelled = false;
     const accountId = customer.corporateAccountId;
+    const customerChanged = lastCorporateCustomerIdRef.current !== customer.id;
+    if (customerChanged) lastCorporateCustomerIdRef.current = customer.id;
+
     fetchCorporateAccount(accountId)
       .then((account) => {
         if (cancelled) return;
-        setCorporateAccount(account?.status === "active" ? account : null);
-        if (!account || account.status !== "active") {
+        const active = account?.status === "active" ? account : null;
+        setCorporateAccount(active);
+        if (!active) {
           setBillToCorporate(false);
+          return;
         }
+        if (customerChanged) {
+          setBillToCorporate(active.preferredPayment === "on_account");
+        }
+        setVehicleClassId((current) => {
+          if (current) return current;
+          if (active.defaultVehicleClassIds.length === 0) return current;
+          const preferred = active.defaultVehicleClassIds.find((id) =>
+            vehicleClasses.some((vc) => vc.id === id && vc.isEnabled)
+          );
+          return preferred ?? current;
+        });
       })
       .catch(() => {
         if (!cancelled) {
@@ -419,7 +445,7 @@ export function NewBookingSheet({
     return () => {
       cancelled = true;
     };
-  }, [customer, corporateAccountsEnabled]);
+  }, [customer, corporateAccountsEnabled, vehicleClasses]);
 
   useEffect(() => {
     if (!billToCorporate) return;

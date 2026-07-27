@@ -378,7 +378,7 @@ export function BookingsDataTable({
                     <DropdownMenuItem
                       key={status}
                       disabled={row.original.status === status}
-                      onClick={() => changeStatus(row.original.id, status)}>
+                      onClick={() => void changeStatus(row.original.id, status)}>
                       {label}
                     </DropdownMenuItem>
                   ))}
@@ -412,7 +412,7 @@ export function BookingsDataTable({
                 disabled={
                   row.original.status === "cancelled" || row.original.status === "completed"
                 }
-                onClick={() => changeStatus(row.original.id, "cancelled")}>
+                onClick={() => void changeStatus(row.original.id, "cancelled")}>
                 Cancel booking
               </DropdownMenuItem>
             </DropdownMenuContent>
