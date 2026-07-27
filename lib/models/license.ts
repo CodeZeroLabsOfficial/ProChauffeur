@@ -5,7 +5,8 @@ export const FEATURE_IDS = [
   "bookingValidation",
   "driverRatings",
   "dynamicPricing",
-  "loyaltyPromos"
+  "loyaltyPromos",
+  "corporateAccounts"
 ] as const;
 
 export type FeatureId = (typeof FEATURE_IDS)[number];
@@ -20,7 +21,8 @@ export const FEATURE_LABELS: Record<FeatureId, string> = {
   bookingValidation: "Booking Validation",
   driverRatings: "Driver ratings",
   dynamicPricing: "Dynamic trip pricing",
-  loyaltyPromos: "Loyalty & promotional tools"
+  loyaltyPromos: "Loyalty & promotional tools",
+  corporateAccounts: "Accounts"
 };
 
 export interface PlanDefinition {
@@ -64,7 +66,7 @@ export const defaultPlansCatalog: AppPlansCatalog = {
   plans: {
     professional: {
       label: "Professional",
-      features: ["driverRatings"]
+      features: ["driverRatings", "corporateAccounts"]
     },
     premium: {
       label: "Premium",
@@ -73,7 +75,8 @@ export const defaultPlansCatalog: AppPlansCatalog = {
         "bookingValidation",
         "driverRatings",
         "dynamicPricing",
-        "loyaltyPromos"
+        "loyaltyPromos",
+        "corporateAccounts"
       ]
     }
   }

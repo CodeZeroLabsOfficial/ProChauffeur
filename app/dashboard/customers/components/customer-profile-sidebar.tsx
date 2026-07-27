@@ -1,12 +1,15 @@
 "use client";
 
-import { Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Building2, Mail, MapPin, PhoneCall, PencilIcon } from "lucide-react";
 
 import type { User } from "@/lib/models";
 import { formatPostalAddress } from "@/lib/models/postal-address";
 import { customerProfileCompleteness } from "@/app/dashboard/customers/lib/customer-profile-metrics";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { formatDate } from "@/lib/format";
+import { fetchCorporateAccount } from "@/lib/services/firebase-service";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,26 @@ export function CustomerProfileSidebar({
 }) {
   const displayName = customerDisplayName(user);
   const progressValue = customerProfileCompleteness(user);
+  const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const accountId = user.corporateAccountId?.trim();
+    if (!accountId) {
+      setCorporateAccountName(null);
+      return;
+    }
+    let cancelled = false;
+    fetchCorporateAccount(accountId)
+      .then((account) => {
+        if (!cancelled) setCorporateAccountName(account?.name?.trim() || null);
+      })
+      .catch(() => {
+        if (!cancelled) setCorporateAccountName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.corporateAccountId]);
 
   return (
     <div className="space-y-4">
@@ -92,6 +115,15 @@ export function CustomerProfileSidebar({
               ) : null}
               {formatPostalAddress(user.profile) ? (
                 <ContactRow icon={MapPin}>{formatPostalAddress(user.profile)}</ContactRow>
+              ) : null}
+              {user.corporateAccountId && corporateAccountName ? (
+                <ContactRow icon={Building2}>
+                  <Link
+                    href="/dashboard/accounts"
+                    className="hover:text-primary hover:underline">
+                    {corporateAccountName}
+                  </Link>
+                </ContactRow>
               ) : null}
             </div>
           </div>

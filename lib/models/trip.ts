@@ -65,6 +65,8 @@ export interface Trip {
   paymentSource?: PaymentSource | null;
   stripePaymentIntentId?: string | null;
   invoiceId?: string | null;
+  /** Corporate account billed when payment is on-account (or rates applied). */
+  corporateAccountId?: string | null;
   paidAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;

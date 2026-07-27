@@ -76,6 +76,13 @@ export interface User {
   createdAt: Date;
   /** Stripe Customer id for saved cards and payments. */
   stripeCustomerId?: string | null;
+  /** Linked corporate (business) account for on-account billing and rates. */
+  corporateAccountId?: string | null;
+  /**
+   * Preferred checkout method when eligible for corporate billing.
+   * Deferred default-payment UX; stored for Phase 6.
+   */
+  preferredPaymentMethod?: "card" | "corporate" | null;
   /** Live tracking fields written by the driver app. */
   liveLocation?: { latitude: number; longitude: number } | null;
   liveLocationUpdatedAt?: Date | null;

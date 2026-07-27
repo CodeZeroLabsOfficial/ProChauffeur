@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { navGroups, type NavGroup, type NavItem } from "@/components/layout/nav-config";
-import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
+import { useLicenseEntitlements } from "@/hooks/use-feature-enabled";
 import type { Appearance, FeatureId } from "@/lib/models";
 
 function isActive(pathname: string, href: string): boolean {
@@ -32,25 +32,23 @@ function isActive(pathname: string, href: string): boolean {
 
 function featureAllowed(
   featureId: FeatureId | undefined,
-  loyaltyPromosEnabled: boolean,
-  loyaltyReady: boolean
+  ready: boolean,
+  isEnabled: (feature: FeatureId) => boolean
 ): boolean {
   if (!featureId) return true;
-  if (featureId === "loyaltyPromos") return !loyaltyReady || loyaltyPromosEnabled;
-  return true;
+  if (!ready) return false;
+  return isEnabled(featureId);
 }
 
 function filterNavGroups(
   groups: NavGroup[],
-  loyaltyPromosEnabled: boolean,
-  loyaltyReady: boolean
+  ready: boolean,
+  isEnabled: (feature: FeatureId) => boolean
 ): NavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) =>
-        featureAllowed(item.featureId, loyaltyPromosEnabled, loyaltyReady)
-      )
+      items: group.items.filter((item) => featureAllowed(item.featureId, ready, isEnabled))
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -107,10 +105,10 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { appearance?: Appearance | null }) {
   const pathname = usePathname();
-  const { ready: loyaltyReady, enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
+  const { ready, isEnabled } = useLicenseEntitlements();
   const groups = React.useMemo(
-    () => filterNavGroups(navGroups, loyaltyPromosEnabled, loyaltyReady),
-    [loyaltyPromosEnabled, loyaltyReady]
+    () => filterNavGroups(navGroups, ready, isEnabled),
+    [ready, isEnabled]
   );
 
   return (

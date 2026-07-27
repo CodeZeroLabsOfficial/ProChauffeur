@@ -44,7 +44,7 @@ export default function BillingPage() {
     return invoices.filter((i) => {
       if (statusFilter !== "all" && i.status !== statusFilter) return false;
       if (!q) return true;
-      return [i.invoiceNumber, i.customerName, i.customerEmail]
+      return [i.invoiceNumber, i.customerName, i.customerEmail, i.corporateAccountId]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
@@ -106,7 +106,7 @@ export default function BillingPage() {
             <div className="relative flex-1">
               <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
               <Input
-                placeholder="Search invoice no. or customer…"
+                placeholder="Search invoice, customer, or account id…"
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

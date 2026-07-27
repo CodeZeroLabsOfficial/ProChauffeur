@@ -55,8 +55,14 @@ service cloud.firestore {
           && validUsersCreatePayload(userId)
           && request.resource.data.role == 'driver');
       allow update: if isAdmin()
-        || (isSelf(userId) && request.resource.data.role == resource.data.role)
-        || (isSelf(userId) && customerDriverSwap());
+        || (isSelf(userId)
+          && request.resource.data.role == resource.data.role
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['corporateAccountId']))
+        || (isSelf(userId)
+          && customerDriverSwap()
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['corporateAccountId']));
       allow delete: if isAdmin();
 
       match /payment_methods/{paymentMethodId} {
@@ -97,6 +103,11 @@ service cloud.firestore {
     }
 
     match /promotions/{promoId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /corporateAccounts/{accountId} {
       allow read: if signedIn();
       allow write: if isAdmin();
     }

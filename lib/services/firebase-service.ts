@@ -53,6 +53,7 @@ import {
   emptyOperatingHours,
   defaultLicense,
   defaultPlansCatalog,
+  isFeatureEnabled,
   type ActivityNotification,
   type CompanyProfile,
   type CreateActivityNotificationInput,
@@ -73,13 +74,15 @@ import {
   type UserProfile,
   type UserRole,
   type Vehicle,
-  type VehicleClass
+  type VehicleClass,
+  type CorporateAccount
 } from "@/lib/models";
 import {
   mapActivityNotification,
   mapBranch,
   mapBranchDriver,
   mapCompanyProfile,
+  mapCorporateAccount,
   mapOperatorLocale,
   mapFleetLocation,
   mapInvoice,
@@ -113,7 +116,7 @@ import {
   type Branch,
   type BranchDriver
 } from "@/lib/models/branch";
-import { canCreateLocation, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
+import { canCreateLocation, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -660,6 +663,163 @@ export async function savePromotion(promo: Promotion): Promise<void> {
 
 export async function deletePromotion(id: string): Promise<void> {
   await deleteDoc(doc(db(), Collections.promotions, id));
+}
+
+// ─────────────────────────────── Corporate accounts ───────────────────────────────
+
+async function assertCorporateAccountsEnabled(): Promise<void> {
+  const [license, plans] = await Promise.all([fetchLicense(), fetchPlansCatalog()]);
+  if (!isFeatureEnabled(license, plans, "corporateAccounts")) {
+    throw new Error("Accounts is not enabled on the current license.");
+  }
+}
+
+export function listenCorporateAccounts(onUpdate: (rows: CorporateAccount[]) => void): Unsub {
+  return onSnapshot(
+    collection(db(), Collections.corporateAccounts),
+    (snap) => {
+      const rows = snapToList(snap, mapCorporateAccount).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+      onUpdate(rows);
+    },
+    onSnapshotError("corporateAccounts", onUpdate)
+  );
+}
+
+export async function fetchCorporateAccounts(): Promise<CorporateAccount[]> {
+  const snap = await getDocs(collection(db(), Collections.corporateAccounts));
+  return snapToList(snap, mapCorporateAccount).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function fetchCorporateAccount(id: string): Promise<CorporateAccount | null> {
+  if (!id.trim()) return null;
+  const snap = await getDoc(doc(db(), Collections.corporateAccounts, id));
+  if (!snap.exists()) return null;
+  return mapCorporateAccount(snap.id, snap.data());
+}
+
+export async function fetchCorporateAccountByJoinCode(
+  code: string
+): Promise<CorporateAccount | null> {
+  const normalized = normalizeCorporateJoinCode(code);
+  if (!normalized) return null;
+  const snap = await getDocs(
+    query(
+      collection(db(), Collections.corporateAccounts),
+      where("joinCode", "==", normalized),
+      fsLimit(1)
+    )
+  );
+  if (snap.empty) return null;
+  const docSnap = snap.docs[0];
+  return mapCorporateAccount(docSnap.id, docSnap.data());
+}
+
+export async function saveCorporateAccount(account: CorporateAccount): Promise<void> {
+  await assertCorporateAccountsEnabled();
+  if (!account.name.trim()) throw new Error("Account name is required.");
+  if (account.rateMode === "percentOff") {
+    const pct = account.percentOff ?? 0;
+    if (pct < 0 || pct > 1) {
+      throw new Error("Percent off must be between 0 and 1 (e.g. 0.15 for 15%).");
+    }
+  }
+  if (
+    typeof account.billingDay === "number" &&
+    (account.billingDay < 1 || account.billingDay > 28)
+  ) {
+    throw new Error("Billing day must be 1–28, or last day of month.");
+  }
+  if (account.paymentTermsDays < 0) {
+    throw new Error("Payment terms cannot be negative.");
+  }
+
+  const joinCode = account.joinCode ? normalizeCorporateJoinCode(account.joinCode) : null;
+  if (joinCode) {
+    const existing = await fetchCorporateAccounts();
+    const clash = existing.find(
+      (row) => row.id !== account.id && normalizeCorporateJoinCode(row.joinCode ?? "") === joinCode
+    );
+    if (clash) throw new Error(`Join code "${joinCode}" is already in use.`);
+  }
+
+  const now = new Date();
+  await setDoc(
+    doc(db(), Collections.corporateAccounts, account.id),
+    stripUndefined({
+      id: account.id,
+      name: account.name.trim(),
+      billingEmail: account.billingEmail?.trim() || null,
+      billingPhone: account.billingPhone?.trim() || null,
+      abn: account.abn?.trim() || null,
+      poNumber: account.poNumber?.trim() || null,
+      status: account.status,
+      billingDay: account.billingDay,
+      paymentTermsDays: account.paymentTermsDays,
+      rateMode: account.rateMode,
+      percentOff: account.rateMode === "percentOff" ? (account.percentOff ?? 0) : null,
+      fixedRates: account.rateMode === "fixedRates" ? account.fixedRates : [],
+      joinCode,
+      creditLimit: account.creditLimit ?? null,
+      notes: account.notes?.trim() || null,
+      createdAt: account.createdAt ?? now,
+      updatedAt: now
+    }),
+    { merge: true }
+  );
+}
+
+export async function deleteCorporateAccount(id: string): Promise<void> {
+  await assertCorporateAccountsEnabled();
+  const members = await fetchCorporateAccountMembers(id);
+  if (members.length > 0) {
+    throw new Error("Unlink all members before deleting this account.");
+  }
+  await deleteDoc(doc(db(), Collections.corporateAccounts, id));
+}
+
+export async function fetchCorporateAccountMembers(accountId: string): Promise<User[]> {
+  if (!accountId.trim()) return [];
+  const snap = await getDocs(
+    query(
+      collection(db(), Collections.users),
+      where("corporateAccountId", "==", accountId),
+      where("role", "==", "customer")
+    )
+  );
+  return snapToList(snap, mapUser).sort((a, b) =>
+    a.profile.displayName.localeCompare(b.profile.displayName)
+  );
+}
+
+export async function linkCustomerToCorporateAccount(
+  userId: string,
+  corporateAccountId: string | null
+): Promise<void> {
+  await assertCorporateAccountsEnabled();
+  if (corporateAccountId) {
+    const account = await fetchCorporateAccount(corporateAccountId);
+    if (!account) throw new Error("Account not found.");
+    if (account.status !== "active") {
+      throw new Error("Cannot link members to a suspended account.");
+    }
+  }
+  await updateDoc(doc(db(), Collections.users, userId), {
+    corporateAccountId: corporateAccountId || deleteField(),
+    ...(corporateAccountId
+      ? {}
+      : { preferredPaymentMethod: deleteField() })
+  });
+}
+
+export async function updateUserPreferredPaymentMethod(
+  userId: string,
+  preferred: "card" | "corporate" | null
+): Promise<void> {
+  await updateDoc(doc(db(), Collections.users, userId), {
+    preferredPaymentMethod: preferred ?? deleteField()
+  });
 }
 
 async function incrementPromoRedemption(promoId: string): Promise<void> {

@@ -8,5 +8,10 @@ export function effectivePaymentStatus(trip: Trip): PaymentStatus {
 /** Whether an admin can send a Stripe invoice for this booking. */
 export function canSendTripInvoice(trip: Trip): boolean {
   const status = effectivePaymentStatus(trip);
-  return status !== "paid" && status !== "pending" && status !== "invoiced";
+  return (
+    status !== "paid" &&
+    status !== "pending" &&
+    status !== "invoiced" &&
+    status !== "on_account"
+  );
 }

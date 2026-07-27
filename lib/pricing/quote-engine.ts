@@ -11,6 +11,11 @@ import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult, QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
 import type { WeekdayNumber } from "@/lib/models/enums";
 import { applyPromoDiscountLayer } from "@/lib/pricing/apply-promo";
+import {
+  applyCorporateFixedRatesToVehicleClass,
+  applyCorporatePercentOffLayer,
+  findCorporateFixedOverride
+} from "@/lib/pricing/apply-corporate-rate";
 import { metersToDistanceUnit } from "@/lib/pricing/distance";
 import { QuoteError } from "@/lib/pricing/errors";
 
@@ -430,10 +435,18 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     throw new QuoteError("Booked hours are required for hourly trips.");
   }
 
-  const vehicleClass = requireVehicleClass(context.vehicleClass);
-  if (vehicleClass.id !== request.vehicleClassId) {
+  const vehicleClassRaw = requireVehicleClass(context.vehicleClass);
+  if (vehicleClassRaw.id !== request.vehicleClassId) {
     throw new QuoteError("Vehicle class does not match the quote request.");
   }
+
+  const corporate = request.corporateAccount ?? null;
+  const fixedOverride =
+    corporate && corporate.status === "active"
+      ? findCorporateFixedOverride(corporate, request.vehicleClassId, request.tripType)
+      : null;
+  const vehicleClass = applyCorporateFixedRatesToVehicleClass(vehicleClassRaw, fixedOverride);
+
   const pickupTime: PickupTimeContext = {
     weekday: isoWeekdayInTimezone(request.scheduledPickupAt, context.locale.timezone),
     time: timeStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
@@ -447,7 +460,22 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   let baseAmount = 0;
   let lines: QuoteLineItem[] = [];
 
-  if (request.tripType === "transfer") {
+  if (
+    request.tripType === "transfer" &&
+    fixedOverride?.fixedTransferRate != null &&
+    fixedOverride.fixedTransferRate > 0
+  ) {
+    baseAmount = fixedOverride.fixedTransferRate;
+    lines = [
+      {
+        id: lineId(),
+        label: "Corporate fixed transfer",
+        amount: baseAmount,
+        category: "base",
+        isInternal: false
+      }
+    ];
+  } else if (request.tripType === "transfer") {
     const transfer = computeTransferBase(vehicleClass, onboardUnits, deadheadUnits);
     baseAmount = Math.max(context.pricing.minimumFare, transfer.amount);
     lines = transfer.lines;
@@ -491,19 +519,22 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
   amount = addonResult.amount;
   lines = addonResult.lines;
 
-  const promoResult = applyPromoDiscountLayer(
-    amount,
-    lines,
-    request.appliedPromo ?? null,
-    lineId
-  );
+  const useCorporateRates = Boolean(corporate && corporate.status === "active");
+  if (useCorporateRates && corporate?.rateMode === "percentOff") {
+    const corpResult = applyCorporatePercentOffLayer(amount, lines, corporate, lineId);
+    amount = corpResult.amount;
+    lines = corpResult.lines;
+  }
+
+  // Corporate rates do not stack with promo codes.
+  const appliedPromo = useCorporateRates ? null : (request.appliedPromo ?? null);
+  const promoResult = applyPromoDiscountLayer(amount, lines, appliedPromo, lineId);
   amount = promoResult.amount;
   lines = promoResult.lines;
 
   const taxed = applyTax(amount, lines, context.locale);
   const roundedTotal = roundTotal(taxed.total, context.pricing.quoteRounding);
 
-  const appliedPromo = request.appliedPromo ?? null;
   const snapshot: TripQuoteSnapshot = {
     schemaVersion: context.pricing.schemaVersion,
     tripType: request.tripType,
@@ -521,6 +552,8 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     addonIds: request.addonIds,
     appliedPromoId: appliedPromo?.id ?? null,
     promoCode: appliedPromo?.code ?? null,
+    corporateAccountId: useCorporateRates ? corporate!.id : null,
+    corporateRateMode: useCorporateRates ? corporate!.rateMode : null,
     pickupPostcode: request.pickupPostcode,
     dropoffPostcode: request.dropoffPostcode,
     scheduledPickupAt: request.scheduledPickupAt

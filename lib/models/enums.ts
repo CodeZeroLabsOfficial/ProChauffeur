@@ -154,6 +154,7 @@ export const PAYMENT_STATUSES = [
   "paid",
   "failed",
   "invoiced",
+  "on_account",
   "refunded"
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
@@ -164,6 +165,7 @@ export const paymentStatusTitle: Record<PaymentStatus, string> = {
   paid: "Paid",
   failed: "Payment failed",
   invoiced: "Invoiced",
+  on_account: "On account",
   refunded: "Refunded"
 };
 

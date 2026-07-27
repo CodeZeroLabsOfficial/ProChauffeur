@@ -1,5 +1,6 @@
 import {
   BarChart3Icon,
+  BriefcaseBusinessIcon,
   Building2Icon,
   CalendarCheckIcon,
   CarFrontIcon,
@@ -42,6 +43,12 @@ export const navGroups: NavGroup[] = [
   {
     title: "Operations",
     items: [
+      {
+        title: "Accounts",
+        href: "/dashboard/accounts",
+        icon: BriefcaseBusinessIcon,
+        featureId: "corporateAccounts"
+      },
       { title: "Billing", href: "/dashboard/billing", icon: ReceiptIcon },
       { title: "Bookings", href: "/dashboard/bookings", icon: CalendarCheckIcon },
       { title: "Customers", href: "/dashboard/customers", icon: ContactIcon },

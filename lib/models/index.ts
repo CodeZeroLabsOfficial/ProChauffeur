@@ -19,6 +19,7 @@ export * from "@/lib/models/saved-payment-method";
 export * from "@/lib/models/workspace";
 export * from "@/lib/models/branch";
 export * from "@/lib/models/promotion";
+export * from "@/lib/models/corporate-account";
 
 /** Firestore collection names. */
 export const Collections = {
@@ -26,7 +27,8 @@ export const Collections = {
   branches: "branches",
   appSettings: "app_settings",
   notifications: "notifications",
-  promotions: "promotions"
+  promotions: "promotions",
+  corporateAccounts: "corporateAccounts"
 } as const;
 
 /** `app_settings` document ids. */

@@ -1,5 +1,6 @@
 import type { DistanceUnit, QuoteLineCategory, TripType } from "@/lib/models/enums";
 import type { CoordinateField } from "@/lib/models/trip";
+import type { CorporateAccount } from "@/lib/models/corporate-account";
 
 export interface QuoteLineItem {
   id: string;
@@ -26,6 +27,8 @@ export interface TripQuoteSnapshot {
   addonIds: string[];
   appliedPromoId: string | null;
   promoCode: string | null;
+  corporateAccountId: string | null;
+  corporateRateMode: "percentOff" | "fixedRates" | null;
   pickupPostcode: string;
   dropoffPostcode: string;
   scheduledPickupAt: Date;
@@ -52,8 +55,10 @@ export interface QuoteRequest {
   scheduledPickupAt: Date;
   bookedHours: number | null;
   addonIds: string[];
-  /** Optional validated promo to apply after add-ons. */
+  /** Optional validated promo to apply after add-ons (skipped when corporate rates apply). */
   appliedPromo?: QuotePromoApplication | null;
+  /** Active corporate account for rate card (percent or fixed). */
+  corporateAccount?: CorporateAccount | null;
 }
 
 export interface QuoteResult {

@@ -10,6 +10,8 @@ const statusStyles: Record<PaymentStatus, string> = {
   failed: "border-red-300 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
   invoiced:
     "border-blue-300 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+  on_account:
+    "border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
   refunded:
     "border-violet-300 bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
 };

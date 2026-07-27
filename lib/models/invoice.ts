@@ -31,6 +31,10 @@ export interface Invoice {
   paidAt?: Date | null;
   notes?: string | null;
   source?: PaymentSource | null;
+  /** Corporate account when this is a consolidated period invoice. */
+  corporateAccountId?: string | null;
+  billingPeriodStart?: Date | null;
+  billingPeriodEnd?: Date | null;
   stripeInvoiceId?: string | null;
   stripeHostedInvoiceUrl?: string | null;
   stripePaymentIntentId?: string | null;

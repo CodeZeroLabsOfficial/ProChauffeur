@@ -29,8 +29,17 @@ import type {
   User,
   UserPreferences,
   UserProfile,
-  Vehicle
+  Vehicle,
+  CorporateAccount,
+  CorporateFixedRateOverride,
+  CorporateAccountStatus,
+  CorporateRateMode,
+  CorporateBillingDay
 } from "@/lib/models";
+import {
+  CORPORATE_ACCOUNT_STATUSES,
+  CORPORATE_RATE_MODES
+} from "@/lib/models/corporate-account";
 import {
   UNLIMITED,
   defaultPlansCatalog,
@@ -130,6 +139,11 @@ export function mapUser(id: string, d: DocumentData): User {
     canAccessAllBranches: d.canAccessAllBranches ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     stripeCustomerId: d.stripeCustomerId ?? null,
+    corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
+    preferredPaymentMethod:
+      d.preferredPaymentMethod === "card" || d.preferredPaymentMethod === "corporate"
+        ? d.preferredPaymentMethod
+        : null,
     liveLocation: toCoordinate(d.liveLocation),
     liveLocationUpdatedAt: toDate(d.liveLocationUpdatedAt)
   };
@@ -224,6 +238,11 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
     addonIds: d.addonIds ?? [],
     appliedPromoId: d.appliedPromoId ?? null,
     promoCode: d.promoCode ?? null,
+    corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
+    corporateRateMode:
+      d.corporateRateMode === "percentOff" || d.corporateRateMode === "fixedRates"
+        ? d.corporateRateMode
+        : null,
     pickupPostcode: d.pickupPostcode ?? "",
     dropoffPostcode: d.dropoffPostcode ?? "",
     scheduledPickupAt: toDate(d.scheduledPickupAt) ?? new Date()
@@ -287,6 +306,7 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     paymentSource: d.paymentSource ?? null,
     stripePaymentIntentId: d.stripePaymentIntentId ?? null,
     invoiceId: d.invoiceId ?? null,
+    corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
     paidAt: toDate(d.paidAt),
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
@@ -452,6 +472,9 @@ export function mapInvoice(id: string, d: DocumentData): Invoice {
     paidAt: toDate(d.paidAt),
     notes: d.notes ?? null,
     source: d.source ?? null,
+    corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
+    billingPeriodStart: toDate(d.billingPeriodStart),
+    billingPeriodEnd: toDate(d.billingPeriodEnd),
     stripeInvoiceId: d.stripeInvoiceId ?? null,
     stripeHostedInvoiceUrl: d.stripeHostedInvoiceUrl ?? null,
     stripePaymentIntentId: d.stripePaymentIntentId ?? null,
@@ -487,6 +510,70 @@ export function mapPromotion(id: string, d: DocumentData): Promotion {
     value: typeof d.value === "number" ? d.value : 0,
     conditions: mapPromotionConditions(conditionsRaw),
     redemptionCount: typeof d.redemptionCount === "number" ? d.redemptionCount : 0,
+    createdAt: toDate(d.createdAt) ?? new Date(),
+    updatedAt: toDate(d.updatedAt) ?? new Date()
+  };
+}
+
+function mapCorporateFixedRate(raw: DocumentData): CorporateFixedRateOverride | null {
+  if (!raw || typeof raw !== "object") return null;
+  const vehicleClassId = typeof raw.vehicleClassId === "string" ? raw.vehicleClassId : "";
+  if (!vehicleClassId) return null;
+  const tripType = raw.tripType === "hourly" ? "hourly" : "transfer";
+  return {
+    id: typeof raw.id === "string" && raw.id ? raw.id : crypto.randomUUID(),
+    vehicleClassId,
+    tripType,
+    transfer:
+      raw.transfer && typeof raw.transfer === "object"
+        ? (raw.transfer as CorporateFixedRateOverride["transfer"])
+        : null,
+    hourly:
+      raw.hourly && typeof raw.hourly === "object"
+        ? (raw.hourly as CorporateFixedRateOverride["hourly"])
+        : null,
+    fixedTransferRate: typeof raw.fixedTransferRate === "number" ? raw.fixedTransferRate : null
+  };
+}
+
+function mapCorporateBillingDay(raw: unknown): CorporateBillingDay {
+  if (raw === "last") return "last";
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const day = Math.trunc(raw);
+    if (day >= 1 && day <= 28) return day;
+  }
+  return "last";
+}
+
+export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccount {
+  const status = CORPORATE_ACCOUNT_STATUSES.includes(d.status as CorporateAccountStatus)
+    ? (d.status as CorporateAccountStatus)
+    : "active";
+  const rateMode = CORPORATE_RATE_MODES.includes(d.rateMode as CorporateRateMode)
+    ? (d.rateMode as CorporateRateMode)
+    : "percentOff";
+  const fixedRates = Array.isArray(d.fixedRates)
+    ? d.fixedRates
+        .map((row) => mapCorporateFixedRate(row as DocumentData))
+        .filter((row): row is CorporateFixedRateOverride => Boolean(row))
+    : [];
+
+  return {
+    id,
+    name: typeof d.name === "string" ? d.name : "",
+    billingEmail: typeof d.billingEmail === "string" ? d.billingEmail : null,
+    billingPhone: typeof d.billingPhone === "string" ? d.billingPhone : null,
+    abn: typeof d.abn === "string" ? d.abn : null,
+    poNumber: typeof d.poNumber === "string" ? d.poNumber : null,
+    status,
+    billingDay: mapCorporateBillingDay(d.billingDay),
+    paymentTermsDays: typeof d.paymentTermsDays === "number" ? d.paymentTermsDays : 0,
+    rateMode,
+    percentOff: typeof d.percentOff === "number" ? d.percentOff : null,
+    fixedRates,
+    joinCode: typeof d.joinCode === "string" ? d.joinCode : null,
+    creditLimit: typeof d.creditLimit === "number" ? d.creditLimit : null,
+    notes: typeof d.notes === "string" ? d.notes : null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

@@ -15,6 +15,7 @@ import {
   countCustomerPromoRedemptions,
   createRoundTripBookings,
   createTrip,
+  fetchCorporateAccount,
   fetchPromotionByCode,
   updateTrip
 } from "@/lib/services/firebase-service";
@@ -26,6 +27,7 @@ import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
 import {
   tripPickupReferenceDate,
   type CoordinateField,
+  type CorporateAccount,
   type OperatorLocale,
   type PricingAddon,
   type PricingConfig,
@@ -45,11 +47,13 @@ import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
 import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
 import { DateTimePicker } from "@/components/datetime-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -94,7 +98,11 @@ function quoteInputFingerprint(request: QuoteRequest): string {
     scheduledPickupAt: request.scheduledPickupAt.toISOString(),
     bookedHours: request.bookedHours,
     addonIds: [...request.addonIds].sort(),
-    appliedPromoId: request.appliedPromo?.id ?? null
+    appliedPromoId: request.appliedPromo?.id ?? null,
+    corporateAccountId: request.corporateAccount?.id ?? null,
+    corporateRateMode: request.corporateAccount?.rateMode ?? null,
+    corporatePercentOff: request.corporateAccount?.percentOff ?? null,
+    corporateFixedRates: request.corporateAccount?.fixedRates ?? null
   });
 }
 
@@ -113,7 +121,8 @@ function buildQuoteRequestInput(
   scheduledPickupAt: Date,
   selectedAddonIds: string[],
   bookedHours: number | null,
-  appliedPromo: QuotePromoApplication | null = null
+  appliedPromo: QuotePromoApplication | null = null,
+  corporateAccount: CorporateAccount | null = null
 ): QuoteRequest {
   return {
     tripType,
@@ -127,7 +136,8 @@ function buildQuoteRequestInput(
     scheduledPickupAt,
     bookedHours,
     addonIds: selectedAddonIds,
-    appliedPromo
+    appliedPromo,
+    corporateAccount
   };
 }
 
@@ -252,6 +262,8 @@ function resetFormFields(
     setPromoCodeInput: (code: string) => void;
     setPromoError: (error: string | null) => void;
     setPromoExpanded: (expanded: boolean) => void;
+    setCorporateAccount: (account: CorporateAccount | null) => void;
+    setBillToCorporate: (value: boolean) => void;
   }
 ) {
   setters.setFieldErrors({});
@@ -273,6 +285,8 @@ function resetFormFields(
   setters.setPromoCodeInput("");
   setters.setPromoError(null);
   setters.setPromoExpanded(false);
+  setters.setCorporateAccount(null);
+  setters.setBillToCorporate(false);
 }
 
 export function NewBookingSheet({
@@ -293,9 +307,12 @@ export function NewBookingSheet({
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
   const { enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
+  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [customer, setCustomer] = useState<User | null>(null);
+  const [corporateAccount, setCorporateAccount] = useState<CorporateAccount | null>(null);
+  const [billToCorporate, setBillToCorporate] = useState(false);
   const [pickup, setPickup] = useState<AddressSuggestion | null>(null);
   const [dropoff, setDropoff] = useState<AddressSuggestion | null>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
@@ -373,8 +390,48 @@ export function NewBookingSheet({
 
   const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
 
+  const activeCorporateAccount =
+    corporateAccount?.status === "active" ? corporateAccount : null;
+  const promoForQuote = billToCorporate ? null : appliedPromo;
+
+  useEffect(() => {
+    if (!customer?.corporateAccountId || !corporateAccountsEnabled) {
+      setCorporateAccount(null);
+      if (!customer) setBillToCorporate(false);
+      return;
+    }
+    let cancelled = false;
+    const accountId = customer.corporateAccountId;
+    fetchCorporateAccount(accountId)
+      .then((account) => {
+        if (cancelled) return;
+        setCorporateAccount(account?.status === "active" ? account : null);
+        if (!account || account.status !== "active") {
+          setBillToCorporate(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCorporateAccount(null);
+          setBillToCorporate(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer, corporateAccountsEnabled]);
+
+  useEffect(() => {
+    if (!billToCorporate) return;
+    if (appliedPromo) clearPromo();
+  }, [billToCorporate]);
+
   async function applyPromoCode() {
     if (!loyaltyPromosEnabled) return;
+    if (billToCorporate) {
+      setPromoError("Promos are not available when billing to a corporate account.");
+      return;
+    }
     const code = promoCodeInput.trim();
     if (!code) {
       setPromoError("Enter a promo code.");
@@ -414,7 +471,8 @@ export function NewBookingSheet({
         scheduledPickupAt,
         selectedAddonIds,
         quoteTripType === "hourly" ? bookedHours : null,
-        null
+        null,
+        activeCorporateAccount
       );
       const baseQuote = await buildQuoteForRequest(
         baseRequest,
@@ -478,7 +536,9 @@ export function NewBookingSheet({
         setAppliedPromo,
         setPromoCodeInput,
         setPromoError,
-        setPromoExpanded
+        setPromoExpanded,
+        setCorporateAccount,
+        setBillToCorporate
       });
     }
   }, [open]);
@@ -571,7 +631,9 @@ export function NewBookingSheet({
         setAppliedPromo,
         setPromoCodeInput,
         setPromoError,
-        setPromoExpanded
+        setPromoExpanded,
+        setCorporateAccount,
+        setBillToCorporate
       });
     }
   }, [open, editTrip, sourceTrip, users]);
@@ -615,7 +677,8 @@ export function NewBookingSheet({
             scheduledPickupAt,
             selectedAddonIds,
             null,
-            appliedPromo
+            promoForQuote,
+            activeCorporateAccount
           );
           const returnRequest = buildQuoteRequestInput(
             "transfer",
@@ -625,7 +688,8 @@ export function NewBookingSheet({
             scheduledReturnAt!,
             selectedAddonIds,
             null,
-            appliedPromo
+            promoForQuote,
+            activeCorporateAccount
           );
           const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
           const cached = lastQuoteRef.current;
@@ -670,7 +734,8 @@ export function NewBookingSheet({
           scheduledPickupAt,
           selectedAddonIds,
           quoteTripType === "hourly" ? hourlyBookedHours : null,
-          appliedPromo
+          promoForQuote,
+          activeCorporateAccount
         );
         const fingerprint = quoteInputFingerprint(request);
         const cached = lastQuoteRef.current;
@@ -724,7 +789,10 @@ export function NewBookingSheet({
     vehicleClassId,
     selectedVehicleClass,
     selectedAddonIds,
-    appliedPromo
+    appliedPromo,
+    promoForQuote,
+    activeCorporateAccount,
+    billToCorporate
   ]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -793,6 +861,14 @@ export function NewBookingSheet({
       bookingLargeLuggageCount: largeLuggageCount,
       bookingAddons: bookingAddons.length ? bookingAddons : null
     };
+    const corporateBillingFields =
+      !isEditMode && billToCorporate && activeCorporateAccount
+        ? {
+            paymentStatus: "on_account" as const,
+            paymentSource: "web" as const,
+            corporateAccountId: activeCorporateAccount.id
+          }
+        : {};
 
     setSaving(true);
     try {
@@ -805,7 +881,8 @@ export function NewBookingSheet({
           scheduledPickupAt,
           selectedAddonIds,
           null,
-          appliedPromo
+          promoForQuote,
+          activeCorporateAccount
         );
         const returnRequest = buildQuoteRequestInput(
           "transfer",
@@ -815,7 +892,8 @@ export function NewBookingSheet({
           scheduledReturnAt!,
           selectedAddonIds,
           null,
-          appliedPromo
+          promoForQuote,
+          activeCorporateAccount
         );
         const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
         const cached = lastQuoteRef.current;
@@ -869,6 +947,7 @@ export function NewBookingSheet({
             selectedVehicleClass.displayName,
             null
           ),
+          ...corporateBillingFields,
           createdAt: now,
           updatedAt: now
         };
@@ -894,6 +973,7 @@ export function NewBookingSheet({
             selectedVehicleClass.displayName,
             null
           ),
+          ...corporateBillingFields,
           createdAt: now,
           updatedAt: now
         };
@@ -912,7 +992,8 @@ export function NewBookingSheet({
         scheduledPickupAt,
         selectedAddonIds,
         submitBookedHours,
-        appliedPromo
+        promoForQuote,
+        activeCorporateAccount
       );
       const fingerprint = quoteInputFingerprint(request);
       const cached = lastQuoteRef.current;
@@ -965,6 +1046,7 @@ export function NewBookingSheet({
           scheduledPickupAt,
           ...sharedBookingFields,
           ...quoteFields,
+          ...corporateBillingFields,
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -1056,6 +1138,20 @@ export function NewBookingSheet({
               />
             </div>
           </div>
+
+          {activeCorporateAccount && !isEdit ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="billToCorporate"
+                checked={billToCorporate}
+                onCheckedChange={(checked) => setBillToCorporate(checked === true)}
+                disabled={saving}
+              />
+              <Label htmlFor="billToCorporate" className="font-normal">
+                Bill to {activeCorporateAccount.name}
+              </Label>
+            </div>
+          ) : null}
 
           {!isEdit && bookingMode === "round_trip" ? (
             <div className="space-y-2">
@@ -1166,7 +1262,7 @@ export function NewBookingSheet({
             </div>
           </div>
 
-          {loyaltyPromosEnabled ? (
+          {loyaltyPromosEnabled && !billToCorporate ? (
             <div className="space-y-2">
               <Label>Promo code</Label>
               {appliedPromo ? (
