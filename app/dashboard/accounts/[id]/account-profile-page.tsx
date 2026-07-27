@@ -39,7 +39,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
   const { ready, enabled } = useFeatureEnabled("corporateAccounts");
   const { trips } = useTrips();
-  const { invoices } = useInvoices();
+  const { invoices, loading: invoicesLoading } = useInvoices();
   const { users } = useUsers();
 
   const [account, setAccount] = useState<CorporateAccount | null>(null);
@@ -194,7 +194,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="billing" className="mt-0 space-y-4">
-            <AccountBillingTab />
+            <AccountBillingTab invoices={accountInvoices} loading={invoicesLoading} />
           </TabsContent>
         </Tabs>
       </div>
