@@ -7,14 +7,14 @@ import {
   IdCard,
   Mail,
   MapPin,
-  Phone,
+  PhoneCall,
   User,
   Users
 } from "lucide-react";
 
+import { ContactRow } from "@/components/contact-row";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { LabeledDetailValue } from "@/components/detail-sheet-fields";
 import { ProfileBookingActivityChart } from "@/components/profile/profile-booking-activity-chart";
 import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
 import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
@@ -52,6 +52,11 @@ export function AccountOverviewTab({
   const budgetPct =
     budget != null && budget > 0 ? Math.min(100, Math.round((mtdSpend / budget) * 100)) : null;
 
+  const address = formatCorporateAddress(account);
+  const joinDate = formatDate(account.createdAt);
+  const managerName = manager ? customerDisplayName(manager) : null;
+  const managerPhone = manager?.profile.phoneNumber?.trim() || null;
+
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
@@ -60,25 +65,41 @@ export function AccountOverviewTab({
             <CardTitle>Company</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="space-y-3">
-              <LabeledDetailValue icon={Building2} label="Company name" value={account.name} />
-              <LabeledDetailValue
-                icon={MapPin}
-                label="Address"
-                value={formatCorporateAddress(account)}
-              />
-              <LabeledDetailValue icon={Phone} label="Phone" value={account.phone} />
-              <LabeledDetailValue icon={Mail} label="Email" value={account.email} />
-              <LabeledDetailValue icon={IdCard} label="ABN" value={account.abn} />
-              <LabeledDetailValue icon={IdCard} label="ACN" value={account.acn} />
-              <LabeledDetailValue icon={Briefcase} label="Industry" value={account.industry} />
-              <LabeledDetailValue icon={Users} label="Members" value={String(membersCount)} />
-              <LabeledDetailValue
-                icon={Calendar}
-                label="Join date"
-                value={formatDate(account.createdAt)}
-              />
-            </dl>
+            <div className="flex flex-col gap-y-4">
+              {account.name.trim() ? (
+                <ContactRow icon={Building2}>{account.name}</ContactRow>
+              ) : null}
+              {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
+              {account.phone?.trim() ? (
+                <ContactRow icon={PhoneCall}>
+                  <a
+                    href={`tel:${account.phone}`}
+                    className="hover:text-primary hover:underline">
+                    {account.phone}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {account.email?.trim() ? (
+                <ContactRow icon={Mail}>
+                  <a
+                    href={`mailto:${account.email}`}
+                    className="hover:text-primary hover:underline">
+                    {account.email}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {account.abn?.trim() ? (
+                <ContactRow icon={IdCard}>ABN {account.abn}</ContactRow>
+              ) : null}
+              {account.acn?.trim() ? (
+                <ContactRow icon={IdCard}>ACN {account.acn}</ContactRow>
+              ) : null}
+              {account.industry?.trim() ? (
+                <ContactRow icon={Briefcase}>{account.industry}</ContactRow>
+              ) : null}
+              <ContactRow icon={Users}>{String(membersCount)} members</ContactRow>
+              {joinDate ? <ContactRow icon={Calendar}>{joinDate}</ContactRow> : null}
+            </div>
           </CardContent>
         </Card>
 
@@ -87,19 +108,28 @@ export function AccountOverviewTab({
             <CardTitle>Account Manager</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="space-y-3">
-              <LabeledDetailValue
-                icon={User}
-                label="Name"
-                value={manager ? customerDisplayName(manager) : null}
-              />
-              <LabeledDetailValue icon={Mail} label="Email" value={manager?.email} />
-              <LabeledDetailValue
-                icon={Phone}
-                label="Phone"
-                value={manager?.profile.phoneNumber}
-              />
-            </dl>
+            <div className="flex flex-col gap-y-4">
+              {managerName ? <ContactRow icon={User}>{managerName}</ContactRow> : null}
+              {manager?.email?.trim() ? (
+                <ContactRow icon={Mail}>
+                  <a
+                    href={`mailto:${manager.email}`}
+                    className="hover:text-primary hover:underline">
+                    {manager.email}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {managerPhone ? (
+                <ContactRow icon={PhoneCall}>
+                  <a href={`tel:${managerPhone}`} className="hover:text-primary hover:underline">
+                    {managerPhone}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {!managerName && !manager?.email?.trim() && !managerPhone ? (
+                <p className="text-muted-foreground text-sm">No account manager assigned.</p>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
@@ -108,23 +138,34 @@ export function AccountOverviewTab({
             <CardTitle>Billing Contact</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="space-y-3">
-              <LabeledDetailValue
-                icon={User}
-                label="Name"
-                value={account.billingContactName}
-              />
-              <LabeledDetailValue
-                icon={Mail}
-                label="Email"
-                value={account.billingContactEmail}
-              />
-              <LabeledDetailValue
-                icon={Phone}
-                label="Phone"
-                value={account.billingContactPhone}
-              />
-            </dl>
+            <div className="flex flex-col gap-y-4">
+              {account.billingContactName?.trim() ? (
+                <ContactRow icon={User}>{account.billingContactName}</ContactRow>
+              ) : null}
+              {account.billingContactEmail?.trim() ? (
+                <ContactRow icon={Mail}>
+                  <a
+                    href={`mailto:${account.billingContactEmail}`}
+                    className="hover:text-primary hover:underline">
+                    {account.billingContactEmail}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {account.billingContactPhone?.trim() ? (
+                <ContactRow icon={PhoneCall}>
+                  <a
+                    href={`tel:${account.billingContactPhone}`}
+                    className="hover:text-primary hover:underline">
+                    {account.billingContactPhone}
+                  </a>
+                </ContactRow>
+              ) : null}
+              {!account.billingContactName?.trim() &&
+              !account.billingContactEmail?.trim() &&
+              !account.billingContactPhone?.trim() ? (
+                <p className="text-muted-foreground text-sm">No billing contact set.</p>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
