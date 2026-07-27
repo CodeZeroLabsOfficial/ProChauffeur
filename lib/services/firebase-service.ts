@@ -904,7 +904,6 @@ export type CreateCustomerInput = {
   state?: string | null;
   postcode?: string | null;
   country?: string | null;
-  dateOfBirth?: string | null;
 };
 
 export async function createCustomer(input: CreateCustomerInput): Promise<{ uid: string }> {

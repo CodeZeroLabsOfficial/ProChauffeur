@@ -1,28 +1,17 @@
 "use client";
 
-import { CalendarIcon } from "@radix-ui/react-icons";
-import { format } from "date-fns";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { createCustomer, updateUserEmail, updateUserProfile } from "@/lib/services/firebase-service";
-import type { User } from "@/lib/models";
-import {
-  isValidPostalAddress,
-  postalAddressFromProfile,
-  toProfilePostalFields,
-  type PostalAddress
-} from "@/lib/models/postal-address";
+import { CorporateAccountSelect } from "@/components/corporate-account-select";
 import {
   ProfileAddressField,
   PROFILE_ADDRESS_VALIDATION_MESSAGE
 } from "@/components/profile-address-field";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -31,6 +20,28 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
+import type { CorporateAccount, User } from "@/lib/models";
+import {
+  isValidPostalAddress,
+  postalAddressFromProfile,
+  toProfilePostalFields,
+  type PostalAddress
+} from "@/lib/models/postal-address";
+import {
+  createCustomer,
+  linkCustomerToCorporateAccount,
+  listenCorporateAccounts,
+  updateUserEmail,
+  updateUserProfile
+} from "@/lib/services/firebase-service";
+
+type CustomerKind = "individual" | "corporate";
+
+function kindFromUser(user: User | null): CustomerKind {
+  return user?.corporateAccountId?.trim() ? "corporate" : "individual";
+}
 
 export function CustomerEditSheet({
   user,
@@ -44,9 +55,13 @@ export function CustomerEditSheet({
   nested?: boolean;
 }) {
   const isNew = !user;
-  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
-    user?.profile.dateOfBirth ?? undefined
+  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
+  const [customerKind, setCustomerKind] = useState<CustomerKind>(() => kindFromUser(user));
+  const [corporateAccountId, setCorporateAccountId] = useState<string | null>(
+    () => user?.corporateAccountId?.trim() || null
   );
+  const [accountInvalid, setAccountInvalid] = useState(false);
+  const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
   const [address, setAddress] = useState<PostalAddress>(() =>
     user ? postalAddressFromProfile(user.profile) : {}
   );
@@ -57,9 +72,28 @@ export function CustomerEditSheet({
   const currentKey = user?.id ?? "__new__";
   if (currentKey !== seededId) {
     setSeededId(currentKey);
-    setDateOfBirth(user?.profile.dateOfBirth ?? undefined);
+    setCustomerKind(kindFromUser(user));
+    setCorporateAccountId(user?.corporateAccountId?.trim() || null);
+    setAccountInvalid(false);
     setAddress(user ? postalAddressFromProfile(user.profile) : {});
     setAddressInvalid(false);
+  }
+
+  useEffect(() => {
+    if (!open || !corporateAccountsEnabled) {
+      setAccounts([]);
+      return;
+    }
+    return listenCorporateAccounts(setAccounts);
+  }, [open, corporateAccountsEnabled]);
+
+  function handleKindChange(next: string) {
+    if (next !== "individual" && next !== "corporate") return;
+    setCustomerKind(next);
+    setAccountInvalid(false);
+    if (next === "individual") {
+      setCorporateAccountId(null);
+    }
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -75,6 +109,14 @@ export function CustomerEditSheet({
       return;
     }
 
+    const wantsCorporate = corporateAccountsEnabled && customerKind === "corporate";
+    const nextAccountId = wantsCorporate ? corporateAccountId?.trim() || null : null;
+    if (wantsCorporate && !nextAccountId) {
+      setAccountInvalid(true);
+      toast.error("Select a corporate account.");
+      return;
+    }
+
     if (!isValidPostalAddress(address)) {
       setAddressInvalid(true);
       toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
@@ -82,39 +124,47 @@ export function CustomerEditSheet({
     }
 
     const addressFields = toProfilePostalFields(address);
+    const previousAccountId = user?.corporateAccountId?.trim() || null;
+    const password = isNew ? get("password") : "";
+
+    if (isNew) {
+      if (!email) {
+        toast.error("Email is required.");
+        return;
+      }
+      if (!password || password.length < 6) {
+        toast.error("Password must be at least 6 characters.");
+        return;
+      }
+    }
 
     setSaving(true);
     try {
       if (isNew) {
-        const password = get("password");
-        if (!email) {
-          toast.error("Email is required.");
-          return;
-        }
-        if (!password || password.length < 6) {
-          toast.error("Password must be at least 6 characters.");
-          return;
-        }
-        await createCustomer({
+        const { uid } = await createCustomer({
           email,
           password,
           displayName,
           phoneNumber,
-          ...addressFields,
-          dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null
+          ...addressFields
         });
+        if (nextAccountId) {
+          await linkCustomerToCorporateAccount(uid, nextAccountId);
+        }
         toast.success("Customer added.");
       } else {
         const profile = {
           ...user.profile,
           displayName,
           phoneNumber: phoneNumber || null,
-          ...addressFields,
-          dateOfBirth: dateOfBirth ?? null
+          ...addressFields
         };
         await updateUserProfile(user.id, profile);
         if (email && email !== user.email) {
           await updateUserEmail(user.id, email);
+        }
+        if (corporateAccountsEnabled && nextAccountId !== previousAccountId) {
+          await linkCustomerToCorporateAccount(user.id, nextAccountId);
         }
         toast.success("Customer profile saved.");
       }
@@ -138,6 +188,49 @@ export function CustomerEditSheet({
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
+          {corporateAccountsEnabled ? (
+            <div className="space-y-2">
+              <Label>Customer type</Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={customerKind}
+                onValueChange={handleKindChange}
+                disabled={saving}
+                className="w-full">
+                <ToggleGroupItem value="individual" className="flex-1">
+                  Individual
+                </ToggleGroupItem>
+                <ToggleGroupItem value="corporate" className="flex-1">
+                  Corporate
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          ) : null}
+
+          {corporateAccountsEnabled && customerKind === "corporate" ? (
+            <div className="space-y-2">
+              <Label>Corporate account</Label>
+              <CorporateAccountSelect
+                accounts={accounts}
+                value={corporateAccountId}
+                onChange={(id) => {
+                  setCorporateAccountId(id);
+                  if (id) setAccountInvalid(false);
+                }}
+                disabled={saving}
+                invalid={accountInvalid}
+                nested={nested}
+              />
+              <p className="text-muted-foreground text-xs">
+                Need a new company?{" "}
+                <Link href="/dashboard/accounts" className="text-foreground underline-offset-4 hover:underline">
+                  Create account
+                </Link>
+              </p>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="displayName">Name</Label>
             <Input
@@ -197,41 +290,6 @@ export function CustomerEditSheet({
             invalid={addressInvalid}
             disabled={saving}
           />
-
-          <div className="flex flex-col space-y-2">
-            <Label>Date of birth</Label>
-            <Popover modal>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-full pl-3 text-left font-normal",
-                    !dateOfBirth && "text-muted-foreground"
-                  )}>
-                  {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
-                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className={cn(
-                  "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                  nested && "z-[110]"
-                )}
-                align="start">
-                <Calendar
-                  mode="single"
-                  captionLayout="dropdown"
-                  fromYear={1920}
-                  toYear={new Date().getFullYear()}
-                  selected={dateOfBirth}
-                  onSelect={setDateOfBirth}
-                  defaultMonth={dateOfBirth}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
 
           <SheetFooter className="px-0">
             <Button type="submit" disabled={saving}>

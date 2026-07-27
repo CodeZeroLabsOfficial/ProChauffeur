@@ -10,8 +10,9 @@ import { customerProfileCompleteness } from "@/app/dashboard/customers/lib/custo
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { formatDate } from "@/lib/format";
 import { fetchCorporateAccount } from "@/lib/services/firebase-service";
-import { generateAvatarFallback } from "@/lib/utils";
+import { generateAvatarFallback, cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -33,6 +34,7 @@ export function CustomerProfileSidebar({
   const displayName = customerDisplayName(user);
   const progressValue = customerProfileCompleteness(user);
   const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
+  const isCorporate = Boolean(user.corporateAccountId?.trim());
 
   useEffect(() => {
     const accountId = user.corporateAccountId?.trim();
@@ -76,8 +78,28 @@ export function CustomerProfileSidebar({
               </Avatar>
               <div className="text-center">
                 <h5 className="text-xl font-semibold">{displayName}</h5>
-                <div className="text-muted-foreground text-sm">Customer</div>
-                <div className="text-muted-foreground mt-1 text-xs">
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "font-medium",
+                      isCorporate
+                        ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                        : "border-border bg-muted text-muted-foreground"
+                    )}>
+                    {isCorporate ? "Corporate" : "Individual"}
+                  </Badge>
+                  {isCorporate && user.corporateAccountId && corporateAccountName ? (
+                    <Badge variant="outline" asChild>
+                      <Link
+                        href={`/dashboard/accounts/${user.corporateAccountId}`}
+                        className="font-medium">
+                        {corporateAccountName}
+                      </Link>
+                    </Badge>
+                  ) : null}
+                </div>
+                <div className="text-muted-foreground mt-2 text-xs">
                   Member since {formatDate(user.createdAt)}
                 </div>
               </div>
@@ -116,7 +138,7 @@ export function CustomerProfileSidebar({
               {formatPostalAddress(user.profile) ? (
                 <ContactRow icon={MapPin}>{formatPostalAddress(user.profile)}</ContactRow>
               ) : null}
-              {user.corporateAccountId && corporateAccountName ? (
+              {isCorporate && user.corporateAccountId && corporateAccountName ? (
                 <ContactRow icon={Building2}>
                   <Link
                     href={`/dashboard/accounts/${user.corporateAccountId}`}

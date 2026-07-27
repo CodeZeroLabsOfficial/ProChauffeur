@@ -17,7 +17,8 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 
 import { useTrips, useUsers } from "@/hooks/use-collections";
-import type { User } from "@/lib/models";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
+import type { CorporateAccount, User } from "@/lib/models";
 import { formatPostalAddress } from "@/lib/models/postal-address";
 import { formatDate } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
@@ -25,7 +26,7 @@ import {
   lastBookingAtForCustomer,
   tripCountByCustomerId
 } from "@/app/dashboard/customers/lib/customer-profile-metrics";
-import { generateAvatarFallback } from "@/lib/utils";
+import { cn, generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -33,8 +34,10 @@ import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import { CustomerDetailSheet } from "@/app/dashboard/customers/customer-detail-sheet";
 import { CustomerEditSheet } from "@/app/dashboard/customers/customer-edit-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { listenCorporateAccounts } from "@/lib/services/firebase-service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +59,8 @@ type CustomerRow = User & {
   tripCount: number;
   lastBookingAt: Date | null;
   activityStatus: "has_bookings" | "no_bookings";
+  customerType: "individual" | "corporate";
+  corporateAccountName: string | null;
 };
 
 function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown) {
@@ -79,6 +84,7 @@ export function CustomersDataTable({
 }) {
   const { users, loading: usersLoading } = useUsers();
   const { trips, loading: tripsLoading } = useTrips();
+  const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
   const loading = usersLoading || tripsLoading;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -89,6 +95,25 @@ export function CustomersDataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [activityFilter, setActivityFilter] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
+
+  useEffect(() => {
+    if (!corporateAccountsEnabled) {
+      setAccounts([]);
+      return;
+    }
+    return listenCorporateAccounts(setAccounts);
+  }, [corporateAccountsEnabled]);
+
+  const accountNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const account of accounts) {
+      const name = account.name.trim();
+      if (name) map.set(account.id, name);
+    }
+    return map;
+  }, [accounts]);
 
   const tripCounts = useMemo(() => tripCountByCustomerId(trips), [trips]);
 
@@ -98,22 +123,34 @@ export function CustomersDataTable({
         .filter((u) => u.role === "customer")
         .map((u) => {
           const tripCount = tripCounts.get(u.id) ?? 0;
+          const accountId = u.corporateAccountId?.trim() || null;
+          const corporateAccountName = accountId
+            ? accountNameById.get(accountId) ?? null
+            : null;
+          const customerType = accountId ? "corporate" : "individual";
           return {
             ...u,
-            searchLabel: [u.profile.displayName, u.email, u.profile.phoneNumber]
+            searchLabel: [
+              u.profile.displayName,
+              u.email,
+              u.profile.phoneNumber,
+              corporateAccountName
+            ]
               .filter(Boolean)
               .join(" "),
             tripCount,
             lastBookingAt: lastBookingAtForCustomer(trips, u.id),
             activityStatus: (tripCount > 0 ? "has_bookings" : "no_bookings") as
               | "has_bookings"
-              | "no_bookings"
+              | "no_bookings",
+            customerType,
+            corporateAccountName
           };
         })
         .sort((a, b) =>
           customerDisplayName(a).localeCompare(customerDisplayName(b))
         ),
-    [users, trips, tripCounts]
+    [users, trips, tripCounts, accountNameById]
   );
 
   const openCustomer = useCallback(
@@ -175,7 +212,15 @@ export function CustomersDataTable({
                 )}
               </AvatarFallback>
             </Avatar>
-            <div className="font-medium">{customerDisplayName(row.original)}</div>
+            <div className="min-w-0">
+              <div className="font-medium">{customerDisplayName(row.original)}</div>
+              {row.original.customerType === "corporate" &&
+              row.original.corporateAccountName ? (
+                <div className="text-muted-foreground truncate text-xs">
+                  {row.original.corporateAccountName}
+                </div>
+              ) : null}
+            </div>
           </div>
         ),
         filterFn: (row, _columnId, filterValue) => {
@@ -185,6 +230,27 @@ export function CustomersDataTable({
           if (!q) return true;
           return row.original.searchLabel.toLowerCase().includes(q);
         }
+      },
+      {
+        id: "customerType",
+        accessorKey: "customerType",
+        header: "Type",
+        cell: ({ row }) => {
+          const isCorporate = row.original.customerType === "corporate";
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                "font-medium",
+                isCorporate
+                  ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                  : "border-border bg-muted text-muted-foreground"
+              )}>
+              {isCorporate ? "Corporate" : "Individual"}
+            </Badge>
+          );
+        },
+        filterFn: multiSelectFilter
       },
       {
         id: "email",
@@ -280,7 +346,11 @@ export function CustomersDataTable({
     state: {
       sorting,
       columnFilters,
-      columnVisibility: { ...columnVisibility, activity: false },
+      columnVisibility: {
+        ...columnVisibility,
+        activity: false,
+        ...(corporateAccountsEnabled ? {} : { customerType: false })
+      },
       rowSelection
     }
   });
@@ -330,18 +400,36 @@ export function CustomersDataTable({
           searchColumnId="customer"
           nowrap
           filters={
-            <ListFilterPopover
-              label="Activity"
-              options={[
-                { value: "has_bookings", label: "Has bookings" },
-                { value: "no_bookings", label: "No bookings" }
-              ]}
-              selected={activityFilter}
-              onSelectedChange={(values) => {
-                setActivityFilter(values);
-                table.getColumn("activity")?.setFilterValue(values.length ? values : undefined);
-              }}
-            />
+            <>
+              {corporateAccountsEnabled ? (
+                <ListFilterPopover
+                  label="Type"
+                  options={[
+                    { value: "individual", label: "Individual" },
+                    { value: "corporate", label: "Corporate" }
+                  ]}
+                  selected={typeFilter}
+                  onSelectedChange={(values) => {
+                    setTypeFilter(values);
+                    table
+                      .getColumn("customerType")
+                      ?.setFilterValue(values.length ? values : undefined);
+                  }}
+                />
+              ) : null}
+              <ListFilterPopover
+                label="Activity"
+                options={[
+                  { value: "has_bookings", label: "Has bookings" },
+                  { value: "no_bookings", label: "No bookings" }
+                ]}
+                selected={activityFilter}
+                onSelectedChange={(values) => {
+                  setActivityFilter(values);
+                  table.getColumn("activity")?.setFilterValue(values.length ? values : undefined);
+                }}
+              />
+            </>
           }
         />
         <div className="rounded-md border">

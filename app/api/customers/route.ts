@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
 import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
@@ -25,7 +25,6 @@ export async function POST(request: Request) {
     state?: string | null;
     postcode?: string | null;
     country?: string | null;
-    dateOfBirth?: string | null;
   };
   try {
     body = await request.json();
@@ -53,14 +52,6 @@ export async function POST(request: Request) {
   const state = body.state?.trim() || null;
   const postcode = body.postcode?.trim() || null;
   const country = body.country?.trim() || null;
-  let dateOfBirth: Timestamp | null = null;
-  if (body.dateOfBirth) {
-    const parsed = new Date(body.dateOfBirth);
-    if (Number.isNaN(parsed.getTime())) {
-      return NextResponse.json({ error: "Enter a valid date of birth." }, { status: 400 });
-    }
-    dateOfBirth = Timestamp.fromDate(parsed);
-  }
 
   try {
     const authUser = await adminAuth().createUser({
@@ -83,8 +74,7 @@ export async function POST(request: Request) {
           city,
           state,
           postcode,
-          country,
-          dateOfBirth
+          country
         },
         createdAt: FieldValue.serverTimestamp()
       });

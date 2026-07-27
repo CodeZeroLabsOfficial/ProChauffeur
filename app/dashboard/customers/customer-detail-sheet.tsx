@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Cake,
+  Building2,
   CalendarPlus,
   Clock,
   ExternalLink,
@@ -15,20 +15,21 @@ import {
 import { z } from "zod";
 
 import type { User } from "@/lib/models";
-import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
 import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
+  fetchCorporateAccount,
   fetchUserLastSignIn,
   updateUserEmail,
   updateUserProfile
 } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
-import { generateAvatarFallback } from "@/lib/utils";
+import { cn, generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -40,16 +41,19 @@ import {
 function CustomerOverviewFields({
   user,
   lastSignInAt,
-  tripCount
+  tripCount,
+  corporateAccountName
 }: {
   user: User;
   lastSignInAt: Date | null | undefined;
   tripCount: number;
+  corporateAccountName: string | null;
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = customerDisplayName(user);
   const lastActivityLabel =
     lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
+  const isCorporate = Boolean(user.corporateAccountId?.trim());
 
   async function saveProfile(
     patch: Partial<User["profile"]>
@@ -84,19 +88,6 @@ function CustomerOverviewFields({
                   }
                   return saveProfile({ displayName: trimmed });
                 }}
-              />
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <DetailLabel icon={Cake}>Date of birth</DetailLabel>
-            <dd>
-              <InlineEditableDateField
-                fieldId="dateOfBirth"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={user.profile.dateOfBirth}
-                editLabel="date of birth"
-                onSave={async (next) => saveProfile({ dateOfBirth: next })}
               />
             </dd>
           </div>
@@ -157,6 +148,22 @@ function CustomerOverviewFields({
               />
             </dd>
           </div>
+          {isCorporate ? (
+            <div className="col-span-2 space-y-1">
+              <DetailLabel icon={Building2}>Corporate account</DetailLabel>
+              <dd>
+                {user.corporateAccountId && corporateAccountName ? (
+                  <Link
+                    href={`/dashboard/accounts/${user.corporateAccountId}`}
+                    className="hover:text-primary text-sm hover:underline">
+                    {corporateAccountName}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground text-sm">—</span>
+                )}
+              </dd>
+            </div>
+          ) : null}
         </dl>
       </div>
 
@@ -200,6 +207,7 @@ export function CustomerDetailSheet({
 }) {
   const displayUser = useSheetDisplayItem(user, open);
   const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
+  const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !displayUser?.id) {
@@ -218,9 +226,29 @@ export function CustomerDetailSheet({
     };
   }, [open, displayUser?.id]);
 
+  useEffect(() => {
+    const accountId = displayUser?.corporateAccountId?.trim();
+    if (!open || !accountId) {
+      setCorporateAccountName(null);
+      return;
+    }
+    let cancelled = false;
+    fetchCorporateAccount(accountId)
+      .then((account) => {
+        if (!cancelled) setCorporateAccountName(account?.name?.trim() || null);
+      })
+      .catch(() => {
+        if (!cancelled) setCorporateAccountName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, displayUser?.corporateAccountId]);
+
   if (!displayUser) return null;
 
   const displayName = customerDisplayName(displayUser);
+  const isCorporate = Boolean(displayUser.corporateAccountId?.trim());
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -254,6 +282,27 @@ export function CustomerDetailSheet({
             <div className="space-y-2">
               <p className="text-lg font-semibold">{displayName}</p>
               <p className="text-muted-foreground text-sm">{displayUser.email}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium",
+                    isCorporate
+                      ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                      : "border-border bg-muted text-muted-foreground"
+                  )}>
+                  {isCorporate ? "Corporate" : "Individual"}
+                </Badge>
+                {isCorporate && corporateAccountName ? (
+                  <Badge variant="outline" asChild>
+                    <Link
+                      href={`/dashboard/accounts/${displayUser.corporateAccountId}`}
+                      className="font-medium">
+                      {corporateAccountName}
+                    </Link>
+                  </Badge>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -261,6 +310,7 @@ export function CustomerDetailSheet({
             user={displayUser}
             lastSignInAt={lastSignInAt}
             tripCount={tripCount}
+            corporateAccountName={corporateAccountName}
           />
         </div>
       </SheetContent>
