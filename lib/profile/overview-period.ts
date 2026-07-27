@@ -8,10 +8,10 @@ import {
   tripsInRange
 } from "@/app/dashboard/lib/dashboard-metrics";
 
-export type DriverOverviewPeriod = "7d" | "30d" | "90d" | "1y";
+export type ProfileOverviewPeriod = "7d" | "30d" | "90d" | "1y";
 
-export const DRIVER_OVERVIEW_PERIOD_OPTIONS: {
-  value: DriverOverviewPeriod;
+export const PROFILE_OVERVIEW_PERIOD_OPTIONS: {
+  value: ProfileOverviewPeriod;
   label: string;
   shortLabel: string;
   days: number;
@@ -22,16 +22,14 @@ export const DRIVER_OVERVIEW_PERIOD_OPTIONS: {
   { value: "1y", label: "Last year", shortLabel: "Last year", days: 365 }
 ];
 
-export function overviewPeriodDays(period: DriverOverviewPeriod): number {
-  return (
-    DRIVER_OVERVIEW_PERIOD_OPTIONS.find((o) => o.value === period)?.days ?? 30
-  );
+export function overviewPeriodDays(period: ProfileOverviewPeriod): number {
+  return PROFILE_OVERVIEW_PERIOD_OPTIONS.find((o) => o.value === period)?.days ?? 30;
 }
 
-export function overviewPeriodOption(period: DriverOverviewPeriod) {
+export function overviewPeriodOption(period: ProfileOverviewPeriod) {
   return (
-    DRIVER_OVERVIEW_PERIOD_OPTIONS.find((o) => o.value === period) ??
-    DRIVER_OVERVIEW_PERIOD_OPTIONS[1]
+    PROFILE_OVERVIEW_PERIOD_OPTIONS.find((o) => o.value === period) ??
+    PROFILE_OVERVIEW_PERIOD_OPTIONS[1]
   );
 }
 
@@ -50,14 +48,18 @@ export function previousRollingWindow(windowStart: Date, days: number) {
   return { start: prevStart, end: prevEnd };
 }
 
-export function overviewPeriodRanges(period: DriverOverviewPeriod, now = new Date()) {
+export function overviewPeriodRanges(period: ProfileOverviewPeriod, now = new Date()) {
   const days = overviewPeriodDays(period);
   const current = rollingWindow(now, days);
   const previous = previousRollingWindow(current.start, days);
   return { days, current, previous };
 }
 
-export function countBookingsInOverviewPeriod(trips: Trip[], period: DriverOverviewPeriod, now = new Date()) {
+export function countBookingsInOverviewPeriod(
+  trips: Trip[],
+  period: ProfileOverviewPeriod,
+  now = new Date()
+) {
   const { current } = overviewPeriodRanges(period, now);
   const inRange = tripsInRange(trips, current.start, current.end);
   const upcoming = inRange.filter(
@@ -71,7 +73,7 @@ export function countBookingsInOverviewPeriod(trips: Trip[], period: DriverOverv
   return { total: inRange.length, upcoming, completed };
 }
 
-function projectedTop(revenue: number, period: DriverOverviewPeriod) {
+function projectedTop(revenue: number, period: ProfileOverviewPeriod) {
   const factor = period === "7d" ? 0.35 : period === "30d" ? 0.3 : 0.25;
   return Math.max(revenue * factor, 0);
 }
@@ -86,7 +88,7 @@ function formatMonthLabel(date: Date) {
 
 export function buildOverviewRevenueSeries(
   invoices: Invoice[],
-  period: DriverOverviewPeriod,
+  period: ProfileOverviewPeriod,
   now = new Date()
 ) {
   const days = overviewPeriodDays(period);
@@ -142,7 +144,7 @@ export function buildOverviewRevenueSeries(
 
 export function overviewRevenueMetrics(
   invoices: Invoice[],
-  period: DriverOverviewPeriod,
+  period: ProfileOverviewPeriod,
   now = new Date()
 ) {
   const { current, previous } = overviewPeriodRanges(period, now);

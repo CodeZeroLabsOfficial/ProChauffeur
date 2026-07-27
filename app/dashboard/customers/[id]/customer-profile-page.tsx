@@ -10,7 +10,7 @@ import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
 import { customerOverviewMetrics } from "@/app/dashboard/customers/lib/customer-profile-metrics";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { CustomerProfileSidebar } from "@/app/dashboard/customers/components/customer-profile-sidebar";
 import { CustomerProfileOverviewTab } from "@/app/dashboard/customers/components/customer-profile-overview-tab";
 import { CustomerProfileTripsTab } from "@/app/dashboard/customers/components/customer-profile-trips-tab";
@@ -39,7 +39,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
+  const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const loadUser = useCallback(() => {
     return fetchUser(customerId).then((loaded) => {

@@ -2,11 +2,11 @@
 
 import { ActivityIcon } from "lucide-react";
 
-import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
+import { ProfileOverviewPeriodSelector } from "@/components/profile/profile-overview-period-selector";
 import {
   overviewPeriodOption,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+  type ProfileOverviewPeriod
+} from "@/lib/profile/overview-period";
 import {
   Card,
   CardAction,
@@ -27,8 +27,8 @@ export function VehicleProfileUtilizationChart({
   period,
   onPeriodChange
 }: {
-  period: DriverOverviewPeriod;
-  onPeriodChange: (period: DriverOverviewPeriod) => void;
+  period: ProfileOverviewPeriod;
+  onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
   const selectedOption = overviewPeriodOption(period);
 
@@ -43,7 +43,7 @@ export function VehicleProfileUtilizationChart({
           <span className="@[540px]/card:hidden">{selectedOption.shortLabel}</span>
         </CardDescription>
         <CardAction>
-          <DriverProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
+          <ProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
         </CardAction>
       </CardHeader>
       <CardContent>

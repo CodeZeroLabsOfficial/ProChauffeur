@@ -12,7 +12,7 @@ import { LocationServiceAreaPanel } from "@/app/dashboard/locations/components/l
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -38,7 +38,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
+  const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const loadBranch = useCallback(() => {
     return fetchBranch(locationId).then((loaded) => {

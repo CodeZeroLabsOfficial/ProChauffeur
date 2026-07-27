@@ -9,9 +9,9 @@ import {
   overviewPeriodOption,
   overviewPeriodDays,
   overviewPeriodRanges,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { DriverProfileOverviewPeriodSelector } from "@/app/dashboard/drivers/components/driver-profile-overview-period-selector";
+  type ProfileOverviewPeriod
+} from "@/lib/profile/overview-period";
+import { ProfileOverviewPeriodSelector } from "@/components/profile/profile-overview-period-selector";
 import {
   Card,
   CardAction,
@@ -85,7 +85,7 @@ function chartYDomain(chartData: { booked: number; completed: number }[]) {
   return { domain: [0, ceiling] as [number, number], ticks };
 }
 
-function getRangeData(trips: Trip[], period: DriverOverviewPeriod, now: Date) {
+function getRangeData(trips: Trip[], period: ProfileOverviewPeriod, now: Date) {
   const days = overviewPeriodDays(period);
   const { current, previous } = overviewPeriodRanges(period, now);
   const inRange = tripsInRange(trips, current.start, current.end);
@@ -103,14 +103,14 @@ function getRangeData(trips: Trip[], period: DriverOverviewPeriod, now: Date) {
   };
 }
 
-export function DriverProfileTrendChart({
+export function ProfileBookingActivityChart({
   trips,
   period,
   onPeriodChange
 }: {
   trips: Trip[];
-  period: DriverOverviewPeriod;
-  onPeriodChange: (period: DriverOverviewPeriod) => void;
+  period: ProfileOverviewPeriod;
+  onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
   const now = useMemo(() => new Date(), []);
   const metrics = useMemo(() => getRangeData(trips, period, now), [trips, period, now]);
@@ -128,7 +128,7 @@ export function DriverProfileTrendChart({
           <span className="@[540px]/card:hidden">{selectedOption.shortLabel}</span>
         </CardDescription>
         <CardAction>
-          <DriverProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
+          <ProfileOverviewPeriodSelector value={period} onChange={onPeriodChange} />
         </CardAction>
       </CardHeader>
       <CardContent>

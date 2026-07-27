@@ -6,21 +6,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { AccountBillingTab } from "@/app/dashboard/accounts/components/account-billing-tab";
+import { AccountDetailCard } from "@/app/dashboard/accounts/components/account-detail-card";
 import { AccountMembersTab } from "@/app/dashboard/accounts/components/account-members-tab";
 import { AccountOverviewTab } from "@/app/dashboard/accounts/components/account-overview-tab";
 import { AccountPolicyTab } from "@/app/dashboard/accounts/components/account-policy-tab";
-import { AccountProfileSidebar } from "@/app/dashboard/accounts/components/account-profile-sidebar";
 import { AccountRatesTab } from "@/app/dashboard/accounts/components/account-rates-tab";
 import { AccountEditSheet } from "@/app/dashboard/accounts/account-edit-sheet";
+import {
+  invoicesForCorporateAccount,
+  tripsForCorporateAccount
+} from "@/app/dashboard/accounts/lib/account-profile-metrics";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useInvoices, useTrips, useUsers } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
-import {
-  corporateMonthlySpend,
-  corporateOpenExposure
-} from "@/lib/bookings/corporate-policy";
+import { corporateMonthlySpend } from "@/lib/bookings/corporate-policy";
 import type { CorporateAccount, User } from "@/lib/models";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { fetchCorporateAccount, fetchUser } from "@/lib/services/firebase-service";
 
 const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing"] as const;
@@ -45,6 +47,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [membersCount, setMembersCount] = useState(0);
+  const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const loadAccount = useCallback(() => {
     return fetchCorporateAccount(accountId).then((loaded) => {
@@ -54,7 +57,10 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   }, [accountId]);
 
   useEffect(() => {
-    loadAccount().finally(() => setLoading(false));
+    setLoading(true);
+    loadAccount()
+      .catch(() => setAccount(null))
+      .finally(() => setLoading(false));
   }, [loadAccount]);
 
   useEffect(() => {
@@ -76,20 +82,32 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
     };
   }, [account?.accountManagerUserId]);
 
-  useEffect(() => {
-    const count = users.filter(
-      (u) => u.role === "customer" && u.corporateAccountId === accountId
-    ).length;
-    setMembersCount(count);
+  const memberCustomerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const user of users) {
+      if (user.role === "customer" && user.corporateAccountId === accountId) {
+        ids.add(user.id);
+      }
+    }
+    return ids;
   }, [users, accountId]);
+
+  useEffect(() => {
+    setMembersCount(memberCustomerIds.size);
+  }, [memberCustomerIds]);
+
+  const accountTrips = useMemo(
+    () => tripsForCorporateAccount(trips, accountId, memberCustomerIds),
+    [trips, accountId, memberCustomerIds]
+  );
+  const accountInvoices = useMemo(
+    () => invoicesForCorporateAccount(invoices, accountId, memberCustomerIds),
+    [invoices, accountId, memberCustomerIds]
+  );
 
   const mtdSpend = useMemo(
     () => (account ? corporateMonthlySpend(trips, account.id) : 0),
     [account, trips]
-  );
-  const openBalance = useMemo(
-    () => (account ? corporateOpenExposure(trips, invoices, account.id) : 0),
-    [account, trips, invoices]
   );
 
   const setTab = (tab: ProfileTab) => {
@@ -118,13 +136,12 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   if (!account) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">Account not found.</p>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/accounts">
+        <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
+          <Link href="/dashboard/accounts" aria-label="Back to accounts">
             <ChevronLeftIcon />
-            Back to accounts
           </Link>
         </Button>
+        <p className="text-muted-foreground text-sm">Account not found.</p>
       </div>
     );
   }
@@ -132,57 +149,37 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/accounts">
-              <ChevronLeftIcon />
-              Accounts
-            </Link>
-          </Button>
-        </div>
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">{account.name}</h1>
-
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
-          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="rates">Rates</TabsTrigger>
-            <TabsTrigger value="policy">Policy</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-          </TabsList>
+          <AccountDetailCard account={account} onEditClick={() => setEditOpen(true)} />
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <div className="space-y-4 xl:sticky xl:top-4 xl:col-span-1 xl:self-start">
-              <AccountProfileSidebar
-                account={account}
-                mtdSpend={mtdSpend}
-                openBalance={openBalance}
-                onEditClick={() => setEditOpen(true)}
-              />
-            </div>
+          <TabsContent value="overview" className="mt-0 space-y-4">
+            <AccountOverviewTab
+              account={account}
+              manager={manager}
+              membersCount={membersCount}
+              mtdSpend={mtdSpend}
+              trips={accountTrips}
+              invoices={accountInvoices}
+              period={overviewPeriod}
+              onPeriodChange={setOverviewPeriod}
+            />
+          </TabsContent>
 
-            <div className="space-y-4 xl:col-span-2">
-              <TabsContent value="overview" className="mt-0">
-                <AccountOverviewTab
-                  account={account}
-                  manager={manager}
-                  membersCount={membersCount}
-                />
-              </TabsContent>
-              <TabsContent value="members" className="mt-0">
-                <AccountMembersTab accountId={account.id} onMembersChange={setMembersCount} />
-              </TabsContent>
-              <TabsContent value="rates" className="mt-0">
-                <AccountRatesTab account={account} onSaved={setAccount} />
-              </TabsContent>
-              <TabsContent value="policy" className="mt-0">
-                <AccountPolicyTab account={account} onSaved={setAccount} />
-              </TabsContent>
-              <TabsContent value="billing" className="mt-0">
-                <AccountBillingTab />
-              </TabsContent>
-            </div>
-          </div>
+          <TabsContent value="members" className="mt-0 space-y-4">
+            <AccountMembersTab accountId={account.id} onMembersChange={setMembersCount} />
+          </TabsContent>
+
+          <TabsContent value="rates" className="mt-0 space-y-4">
+            <AccountRatesTab account={account} onSaved={setAccount} />
+          </TabsContent>
+
+          <TabsContent value="policy" className="mt-0 space-y-4">
+            <AccountPolicyTab account={account} onSaved={setAccount} />
+          </TabsContent>
+
+          <TabsContent value="billing" className="mt-0 space-y-4">
+            <AccountBillingTab />
+          </TabsContent>
         </Tabs>
       </div>
 

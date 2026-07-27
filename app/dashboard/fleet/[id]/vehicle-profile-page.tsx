@@ -8,7 +8,7 @@ import { ChevronLeftIcon } from "lucide-react";
 import { useInvoices, useTrips, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import { effectiveChauffeurUserId } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
 import { VehicleDetailCard } from "@/app/dashboard/fleet/components/vehicle-detail-card";
 import { VehicleProfileOverviewTab } from "@/app/dashboard/fleet/components/vehicle-profile-overview-tab";
@@ -46,7 +46,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   const { vehicleClasses } = useVehicleClasses();
 
   const [editOpen, setEditOpen] = useState(false);
-  const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
+  const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const vehicle = useMemo(
     () => vehicles.find((v) => v.driverID === vehicleDocumentId) ?? null,

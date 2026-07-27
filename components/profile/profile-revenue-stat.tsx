@@ -9,8 +9,8 @@ import type { Invoice } from "@/lib/models/invoice";
 import {
   overviewPeriodOption,
   overviewRevenueMetrics,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+  type ProfileOverviewPeriod
+} from "@/lib/profile/overview-period";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -32,7 +32,7 @@ const chartConfig = {
 
 const StripePattern = () => (
   <pattern
-    id="driverOverviewStripePattern"
+    id="profileOverviewStripePattern"
     patternUnits="userSpaceOnUse"
     width="8"
     height="8"
@@ -49,12 +49,12 @@ function formatYAxisTick(value: number) {
   return value.toString();
 }
 
-export function DriverProfileRevenueStat({
+export function ProfileRevenueStat({
   invoices,
   period
 }: {
   invoices: Invoice[];
-  period: DriverOverviewPeriod;
+  period: ProfileOverviewPeriod;
 }) {
   const now = useMemo(() => new Date(), []);
   const { data, total, percentageChange } = useMemo(
@@ -69,9 +69,7 @@ export function DriverProfileRevenueStat({
     <Card>
       <CardHeader className="grid-cols-[1fr_auto]">
         <CardTitle>Revenue Stat</CardTitle>
-        <CardDescription>
-          Revenue {selectedOption.label.toLowerCase()}
-        </CardDescription>
+        <CardDescription>Revenue {selectedOption.label.toLowerCase()}</CardDescription>
         <span className="col-start-2 row-start-1 justify-self-end text-2xl font-semibold tracking-tight lg:text-3xl">
           {formatCurrency(total)}
         </span>
@@ -142,7 +140,7 @@ export function DriverProfileRevenueStat({
               dataKey="projected"
               stackId="stack"
               radius={[4, 4, 0, 0]}
-              fill="url(#driverOverviewStripePattern)"
+              fill="url(#profileOverviewStripePattern)"
             />
           </BarChart>
         </ChartContainer>

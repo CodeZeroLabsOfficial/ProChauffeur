@@ -2,9 +2,9 @@
 
 import type { Invoice } from "@/lib/models/invoice";
 import type { Trip, User, Vehicle } from "@/lib/models";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { DriverProfileRevenueStat } from "@/app/dashboard/drivers/components/driver-profile-revenue-stat";
-import { VehicleProfileBookingsCard } from "@/app/dashboard/fleet/components/vehicle-profile-bookings-card";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
+import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
+import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
 import { VehicleProfileUtilizationChart } from "@/app/dashboard/fleet/components/vehicle-profile-utilization-chart";
 import {
   VehicleDetailsCard,
@@ -25,8 +25,8 @@ export function VehicleProfileOverviewTab({
   trips: Trip[];
   invoices: Invoice[];
   vehicleDocumentId: string;
-  period: DriverOverviewPeriod;
-  onPeriodChange: (period: DriverOverviewPeriod) => void;
+  period: ProfileOverviewPeriod;
+  onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -38,11 +38,11 @@ export function VehicleProfileOverviewTab({
       <div className="space-y-4 xl:col-span-2">
         <VehicleProfileUtilizationChart period={period} onPeriodChange={onPeriodChange} />
         <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:space-y-0">
-          <DriverProfileRevenueStat invoices={invoices} period={period} />
-          <VehicleProfileBookingsCard
+          <ProfileRevenueStat invoices={invoices} period={period} />
+          <ProfileBookingsCard
             trips={trips}
             period={period}
-            vehicleDocumentId={vehicleDocumentId}
+            tripsHref={`/dashboard/fleet/${vehicleDocumentId}?tab=trips`}
           />
         </div>
       </div>

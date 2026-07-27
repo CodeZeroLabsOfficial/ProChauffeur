@@ -8,19 +8,21 @@ import type { Trip } from "@/lib/models";
 import {
   countBookingsInOverviewPeriod,
   overviewPeriodOption,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+  type ProfileOverviewPeriod
+} from "@/lib/profile/overview-period";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-export function VehicleProfileBookingsCard({
+export function ProfileBookingsCard({
   trips,
   period,
-  vehicleDocumentId
+  tripsHref,
+  tripsLinkLabel = "Trips tab"
 }: {
   trips: Trip[];
-  period: DriverOverviewPeriod;
-  vehicleDocumentId: string;
+  period: ProfileOverviewPeriod;
+  tripsHref: string;
+  tripsLinkLabel?: string;
 }) {
   const currentData = useMemo(
     () => countBookingsInOverviewPeriod(trips, period),
@@ -73,10 +75,8 @@ export function VehicleProfileBookingsCard({
           <Info className="text-muted-foreground h-4 w-4" />
           <span className="text-muted-foreground text-sm">
             View all trips on the{" "}
-            <Link
-              href={`/dashboard/fleet/${vehicleDocumentId}?tab=trips`}
-              className="text-foreground underline-offset-4 hover:underline">
-              Trips tab
+            <Link href={tripsHref} className="text-foreground underline-offset-4 hover:underline">
+              {tripsLinkLabel}
             </Link>
             .
           </span>

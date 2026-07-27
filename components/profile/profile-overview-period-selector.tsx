@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  DRIVER_OVERVIEW_PERIOD_OPTIONS,
-  type DriverOverviewPeriod
-} from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+  PROFILE_OVERVIEW_PERIOD_OPTIONS,
+  type ProfileOverviewPeriod
+} from "@/lib/profile/overview-period";
 import {
   Select,
   SelectContent,
@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export function DriverProfileOverviewPeriodSelector({
+export function ProfileOverviewPeriodSelector({
   value,
   onChange,
   className
 }: {
-  value: DriverOverviewPeriod;
-  onChange: (value: DriverOverviewPeriod) => void;
+  value: ProfileOverviewPeriod;
+  onChange: (value: ProfileOverviewPeriod) => void;
   className?: string;
 }) {
   return (
@@ -27,16 +27,16 @@ export function DriverProfileOverviewPeriodSelector({
       <ToggleGroup
         type="single"
         value={value}
-        onValueChange={(next) => next && onChange(next as DriverOverviewPeriod)}
+        onValueChange={(next) => next && onChange(next as ProfileOverviewPeriod)}
         variant="outline"
         className="hidden *:data-[slot=toggle-group-item]:!px-4 md:flex">
-        {DRIVER_OVERVIEW_PERIOD_OPTIONS.map((option) => (
+        {PROFILE_OVERVIEW_PERIOD_OPTIONS.map((option) => (
           <ToggleGroupItem key={option.value} value={option.value}>
             {option.label}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <Select value={value} onValueChange={(v) => onChange(v as DriverOverviewPeriod)}>
+      <Select value={value} onValueChange={(v) => onChange(v as ProfileOverviewPeriod)}>
         <SelectTrigger
           className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate md:hidden"
           size="sm"
@@ -44,7 +44,7 @@ export function DriverProfileOverviewPeriodSelector({
           <SelectValue placeholder="Last 30 days" />
         </SelectTrigger>
         <SelectContent className="rounded-xl">
-          {DRIVER_OVERVIEW_PERIOD_OPTIONS.map((option) => (
+          {PROFILE_OVERVIEW_PERIOD_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value} className="rounded-lg">
               {option.label}
             </SelectItem>

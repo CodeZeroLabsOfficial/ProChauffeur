@@ -2,10 +2,10 @@
 
 import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
-import { DriverProfileTrendChart } from "@/app/dashboard/drivers/components/driver-profile-trend-chart";
-import { DriverProfileRevenueStat } from "@/app/dashboard/drivers/components/driver-profile-revenue-stat";
-import { CustomerProfileBookingsCard } from "@/app/dashboard/customers/components/customer-profile-bookings-card";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
+import { ProfileBookingActivityChart } from "@/components/profile/profile-booking-activity-chart";
+import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
+import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
 
 export function CustomerProfileOverviewTab({
   trips,
@@ -17,15 +17,19 @@ export function CustomerProfileOverviewTab({
   trips: Trip[];
   invoices: Invoice[];
   customerId: string;
-  period: DriverOverviewPeriod;
-  onPeriodChange: (period: DriverOverviewPeriod) => void;
+  period: ProfileOverviewPeriod;
+  onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
   return (
     <div className="space-y-4">
-      <DriverProfileTrendChart trips={trips} period={period} onPeriodChange={onPeriodChange} />
+      <ProfileBookingActivityChart trips={trips} period={period} onPeriodChange={onPeriodChange} />
       <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:space-y-0">
-        <DriverProfileRevenueStat invoices={invoices} period={period} />
-        <CustomerProfileBookingsCard trips={trips} period={period} customerId={customerId} />
+        <ProfileRevenueStat invoices={invoices} period={period} />
+        <ProfileBookingsCard
+          trips={trips}
+          period={period}
+          tripsHref={`/dashboard/customers/${customerId}?tab=trips`}
+        />
       </div>
     </div>
   );

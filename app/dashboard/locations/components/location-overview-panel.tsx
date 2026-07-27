@@ -5,9 +5,9 @@ import { CheckCircle2, Circle } from "lucide-react";
 
 import { LocationDetailsCard } from "@/app/dashboard/locations/components/location-details-card";
 import { LocationRecentTripsCard } from "@/app/dashboard/locations/components/location-recent-trips-card";
-import { DriverProfileRevenueStat } from "@/app/dashboard/drivers/components/driver-profile-revenue-stat";
-import { DriverProfileTrendChart } from "@/app/dashboard/drivers/components/driver-profile-trend-chart";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
+import { ProfileBookingActivityChart } from "@/components/profile/profile-booking-activity-chart";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Branch } from "@/lib/models";
 import type { Invoice } from "@/lib/models/invoice";
@@ -42,8 +42,8 @@ export function LocationOverviewPanel({
   branch: Branch;
   trips: Trip[];
   invoices: Invoice[];
-  period: DriverOverviewPeriod;
-  onPeriodChange: (period: DriverOverviewPeriod) => void;
+  period: ProfileOverviewPeriod;
+  onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
   const { vehicleClasses } = useVehicleClasses();
   const [hoursConfigured, setHoursConfigured] = useState(false);
@@ -83,9 +83,9 @@ export function LocationOverviewPanel({
       </div>
 
       <div className="space-y-4 xl:col-span-2">
-        <DriverProfileTrendChart trips={trips} period={period} onPeriodChange={onPeriodChange} />
+        <ProfileBookingActivityChart trips={trips} period={period} onPeriodChange={onPeriodChange} />
         <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:space-y-0">
-          <DriverProfileRevenueStat invoices={invoices} period={period} />
+          <ProfileRevenueStat invoices={invoices} period={period} />
           <LocationRecentTripsCard trips={trips} />
         </div>
       </div>

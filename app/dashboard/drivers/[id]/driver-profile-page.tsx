@@ -16,7 +16,7 @@ import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
 import { driverOverviewMetrics } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
-import type { DriverOverviewPeriod } from "@/app/dashboard/drivers/lib/driver-profile-overview-period";
+import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { DriverProfileSidebar } from "@/app/dashboard/drivers/components/driver-profile-sidebar";
 import { DriverProfileOverviewTab } from "@/app/dashboard/drivers/components/driver-profile-overview-tab";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
@@ -56,7 +56,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [overviewPeriod, setOverviewPeriod] = useState<DriverOverviewPeriod>("30d");
+  const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
 
   const loadUser = useCallback(() => {
     return fetchUser(driverId).then((loaded) => {
