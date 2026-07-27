@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { CustomerAutocomplete } from "@/components/customer-autocomplete";
+import { CustomerMultiAutocomplete } from "@/components/customer-multi-autocomplete";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,13 @@ import {
 } from "@/components/ui/card";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -41,13 +48,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import type { CorporateAccount, User } from "@/lib/models";
 import {
   fetchCorporateAccountMembers,
@@ -58,6 +64,7 @@ import { customerDisplayName } from "@/lib/users/customer-display";
 import { generateAvatarFallback } from "@/lib/utils";
 
 type ContactRoleLabel = "Member" | "Primary" | "Billing" | "Primary & Billing";
+type AddMemberRole = "member" | "primary" | "billing";
 
 function contactRoleLabel(
   userId: string,
@@ -83,13 +90,23 @@ export function AccountMembersTab({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [memberToAdd, setMemberToAdd] = useState<User | null>(null);
+  const [membersToAdd, setMembersToAdd] = useState<User[]>([]);
+  const [addRole, setAddRole] = useState<AddMemberRole>("member");
   const [linking, setLinking] = useState(false);
   const [roleOpenFor, setRoleOpenFor] = useState<string | null>(null);
   const [pendingUnlink, setPendingUnlink] = useState<User | null>(null);
 
   const primaryId = account.primaryContactUserId;
   const billingId = account.billingContactUserId;
+  const existingMemberIds = useMemo(
+    () => new Set(members.map((m) => m.id)),
+    [members]
+  );
+
+  function resetAddDialog() {
+    setMembersToAdd([]);
+    setAddRole("member");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -125,22 +142,42 @@ export function AccountMembersTab({
     onSaved(next);
   }
 
-  async function handleAddMember() {
-    if (!memberToAdd) return;
+  async function handleAddMembers() {
+    if (membersToAdd.length === 0) return;
+    if ((addRole === "primary" || addRole === "billing") && membersToAdd.length > 1) {
+      toast.error("Select only one customer for Primary or Billing.");
+      return;
+    }
+
     setLinking(true);
     try {
-      await linkCustomerToCorporateAccount(memberToAdd.id, account.id);
+      for (const user of membersToAdd) {
+        await linkCustomerToCorporateAccount(user.id, account.id);
+      }
+
+      if (addRole === "primary" || addRole === "billing") {
+        const contactId = membersToAdd[0].id;
+        await persistContactRoles(
+          addRole === "primary"
+            ? { primaryContactUserId: contactId }
+            : { billingContactUserId: contactId }
+        );
+      }
+
       setMembers((current) => {
-        if (current.some((m) => m.id === memberToAdd.id)) return current;
-        return [...current, memberToAdd].sort((a, b) =>
+        const byId = new Map(current.map((m) => [m.id, m]));
+        for (const user of membersToAdd) byId.set(user.id, user);
+        return [...byId.values()].sort((a, b) =>
           customerDisplayName(a).localeCompare(customerDisplayName(b))
         );
       });
-      setMemberToAdd(null);
+      resetAddDialog();
       setAddOpen(false);
-      toast.success("Member linked.");
+      toast.success(
+        membersToAdd.length === 1 ? "Member linked." : `${membersToAdd.length} members linked.`
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not link member.");
+      toast.error(err instanceof Error ? err.message : "Could not link members.");
     } finally {
       setLinking(false);
     }
@@ -379,41 +416,62 @@ export function AccountMembersTab({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Sheet
+      <Dialog
         open={addOpen}
         onOpenChange={(open) => {
           setAddOpen(open);
-          if (!open) setMemberToAdd(null);
+          if (!open) resetAddDialog();
         }}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Add member</SheetTitle>
-            <SheetDescription>
-              Link an existing customer to this corporate account.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="space-y-4 px-4">
-            <div className="space-y-2">
-              <Label htmlFor="account-add-member">Customer</Label>
-              <CustomerAutocomplete
-                id="account-add-member"
-                value={memberToAdd}
-                onChange={setMemberToAdd}
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add members to this corporate account</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="account-add-members-name">Name</Label>
+              <CustomerMultiAutocomplete
+                id="account-add-members-name"
+                value={membersToAdd}
+                onChange={setMembersToAdd}
+                excludeIds={existingMemberIds}
                 placeholder="Search customers…"
                 disabled={linking}
               />
             </div>
-            <SheetFooter className="px-0">
-              <Button
-                type="button"
-                disabled={!memberToAdd || linking}
-                onClick={() => void handleAddMember()}>
-                {linking ? "Linking…" : "Link member"}
-              </Button>
-            </SheetFooter>
+            <div className="grid gap-2">
+              <Label htmlFor="account-add-members-role">Role</Label>
+              <Select
+                value={addRole}
+                onValueChange={(value) => setAddRole(value as AddMemberRole)}
+                disabled={linking}>
+                <SelectTrigger id="account-add-members-role" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="billing">Billing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={linking}
+              onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={membersToAdd.length === 0 || linking}
+              onClick={() => void handleAddMembers()}>
+              {linking ? "Adding…" : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
