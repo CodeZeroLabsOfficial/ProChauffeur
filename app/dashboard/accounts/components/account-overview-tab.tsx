@@ -2,7 +2,6 @@
 
 import {
   Briefcase,
-  Building2,
   Calendar,
   IdCard,
   Mail,
@@ -62,12 +61,12 @@ export function AccountOverviewTab({
       <div className="space-y-4 xl:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Company</CardTitle>
+            <CardTitle>Company details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-y-4">
-              {account.name.trim() ? (
-                <ContactRow icon={Building2}>{account.name}</ContactRow>
+              {joinDate ? (
+                <ContactRow icon={Calendar}>Member since {joinDate}</ContactRow>
               ) : null}
               {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
               {account.phone?.trim() ? (
@@ -98,7 +97,6 @@ export function AccountOverviewTab({
                 <ContactRow icon={Briefcase}>{account.industry}</ContactRow>
               ) : null}
               <ContactRow icon={Users}>{String(membersCount)} members</ContactRow>
-              {joinDate ? <ContactRow icon={Calendar}>{joinDate}</ContactRow> : null}
             </div>
           </CardContent>
         </Card>
