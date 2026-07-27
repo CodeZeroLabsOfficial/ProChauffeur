@@ -75,6 +75,12 @@ export function AccountPolicyTab({
     }
   }
 
+  const saveFooter = (
+    <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+      {saving ? "Saving…" : "Save changes"}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
       <SettingsSection
@@ -94,11 +100,6 @@ export function AccountPolicyTab({
             disabled={saving}
             className="max-w-sm"
           />
-        </div>
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
         </div>
       </SettingsSection>
 
@@ -161,17 +162,12 @@ export function AccountPolicyTab({
             When exceeded, account manager will approve or reject (not enforced yet).
           </p>
         </div>
-
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
       </SettingsSection>
 
       <SettingsSection
         title="Payment & tax"
-        description="Default payment preference and how GST is reflected in rates.">
+        description="Default payment preference and how GST is reflected in rates."
+        footer={saveFooter}>
         <div className="space-y-2">
           <Label htmlFor="policy-preferred-payment">Preferred payment</Label>
           <Select
@@ -208,12 +204,6 @@ export function AccountPolicyTab({
           />
           GST included in rates
         </label>
-
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
       </SettingsSection>
     </div>
   );

@@ -123,11 +123,18 @@ export function AccountRatesTab({
     }
   }
 
+  const saveFooter = (
+    <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+      {saving ? "Saving…" : "Save changes"}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
       <SettingsSection
         title="Rate mode"
-        description="Choose how this account is priced relative to standard rates.">
+        description="Choose how this account is priced relative to standard rates."
+        footer={draft.rateMode !== "fixedRates" ? saveFooter : undefined}>
         <div className="space-y-2">
           <Label htmlFor="account-rate-mode">Rate mode</Label>
           <Select
@@ -160,18 +167,13 @@ export function AccountRatesTab({
             />
           </div>
         ) : null}
-
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
       </SettingsSection>
 
       {draft.rateMode === "fixedRates" ? (
         <SettingsSection
           title="Fixed rate overrides"
-          description="Custom transfer and hourly rates by vehicle class and trip type.">
+          description="Custom transfer and hourly rates by vehicle class and trip type."
+          footer={saveFooter}>
           <div className="space-y-3">
             {draft.fixedRates.map((row) => (
               <div key={row.id} className="space-y-3 rounded-lg border p-3">
@@ -275,12 +277,6 @@ export function AccountRatesTab({
                 }))}>
               <PlusIcon className="size-4" />
               Add rate override
-            </Button>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </SettingsSection>

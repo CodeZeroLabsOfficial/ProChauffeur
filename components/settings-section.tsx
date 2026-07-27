@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /** Card-wrapped two-column settings row: title + description on the left, controls on the right. */
@@ -8,12 +8,15 @@ export function SettingsSection({
   title,
   description,
   children,
+  footer,
   className,
   contentClassName
 }: {
   title: string;
   description?: string;
   children: ReactNode;
+  /** Optional footer (e.g. Save), rendered below a top border. */
+  footer?: ReactNode;
   className?: string;
   contentClassName?: string;
 }) {
@@ -30,6 +33,9 @@ export function SettingsSection({
           <div className={cn("min-w-0 space-y-4", contentClassName)}>{children}</div>
         </section>
       </CardContent>
+      {footer ? (
+        <CardFooter className="justify-end border-t">{footer}</CardFooter>
+      ) : null}
     </Card>
   );
 }
