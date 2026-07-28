@@ -520,18 +520,16 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                 ) : null}
               </>
             ) : null}
-            <DetailRow
-              label="Service class:"
-              value={
-                trip.vehicleClassDisplayName ??
-                trip.vehicleClassId ??
-                trip.vehicleSnapshot?.vehicleClassId ??
-                "—"
-              }
-            />
             {trip.tripType === "hourly" ? (
               <DetailRow label="Booked hours:" value={trip.bookedHours ?? "—"} />
             ) : null}
+            {trip.bookingAddons?.map((addon) => (
+              <DetailRow
+                key={addon.id}
+                label={`${addon.title}:`}
+                value={formatCurrency(addon.price, trip.quotedCurrencyCode ?? appConfig.currency)}
+              />
+            ))}
             <DetailRow
               label="Quoted total:"
               value={
@@ -540,21 +538,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                   : "—"
               }
             />
-          </SectionCard>
-
-          <SectionCard title="Extras / Add-ons">
-            {trip.bookingAddons?.length ? (
-              <ul className="text-muted-foreground space-y-1 text-sm">
-                {trip.bookingAddons.map((addon) => (
-                  <li key={addon.id}>
-                    {addon.title} (
-                    {formatCurrency(addon.price, trip.quotedCurrencyCode ?? appConfig.currency)})
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground text-sm">No add-ons or extras recorded.</p>
-            )}
           </SectionCard>
         </div>
       </div>
