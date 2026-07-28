@@ -545,8 +545,10 @@ export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void
 
 function tripFirestorePayload(trip: Trip): Record<string, unknown> {
   const now = new Date();
+  const branchId = trip.branchId ?? getActiveBranchId();
   return stripUndefined({
     ...trip,
+    branchId,
     pickup: coordinateToFirestoreField(trip.pickup),
     dropoff: coordinateToFirestoreField(trip.dropoff),
     liveLocation: trip.liveLocation ? coordinateToGeoPoint(trip.liveLocation) : undefined,

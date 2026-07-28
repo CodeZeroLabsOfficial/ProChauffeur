@@ -234,10 +234,7 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
     schemaVersion: d.schemaVersion ?? 1,
     tripType: d.tripType ?? "transfer",
     vehicleClassId: d.vehicleClassId ?? "",
-    officeLocationId:
-      (typeof d.officeLocationId === "string" && d.officeLocationId) ||
-      (typeof d.garageLocationId === "string" ? d.garageLocationId : "") ||
-      "",
+    officeLocationId: typeof d.officeLocationId === "string" ? d.officeLocationId : "",
     distanceUnit: d.distanceUnit ?? "km",
     currencyCode: d.currencyCode ?? "",
     onboardUnits: d.onboardUnits ?? 0,
@@ -276,6 +273,7 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     customerCountry: d.customerCountry ?? null,
     customerCompany: d.customerCompany ?? null,
     driverID: d.driverID ?? null,
+    branchId: typeof d.branchId === "string" ? d.branchId : null,
     pickup: toCoordinate(d.pickup) ?? { latitude: 0, longitude: 0 },
     dropoff: toCoordinate(d.dropoff) ?? { latitude: 0, longitude: 0 },
     pickupAddressLine: d.pickupAddressLine ?? null,

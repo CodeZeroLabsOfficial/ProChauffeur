@@ -32,6 +32,8 @@ export interface Trip {
   customerCountry?: string | null;
   customerCompany?: string | null;
   driverID?: string | null;
+  /** Location id this trip is stored under (`branches/{branchId}/trips/{id}`). */
+  branchId?: string | null;
   pickup: CoordinateField;
   dropoff: CoordinateField;
   pickupAddressLine?: string | null;
