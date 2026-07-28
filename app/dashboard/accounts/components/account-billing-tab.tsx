@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AccountInvoicesTab } from "@/app/dashboard/accounts/components/account-invoices-tab";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,10 +29,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { sumTripQuotedTotals, unbilledCorporateTrips } from "@/lib/bookings/corporate-billing";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import type { CorporateAccount, Invoice, Trip } from "@/lib/models";
+import {
+  TRIP_STATUSES,
+  tripStatusTitle,
+  type CorporateAccount,
+  type Invoice,
+  type Trip,
+  type TripStatus
+} from "@/lib/models";
 import { generateCorporatePeriodInvoice } from "@/lib/services/payment-service";
 
 type BillingSection = "unbilled" | "invoices";
+
+const UNBILLED_STATUS_OPTIONS = TRIP_STATUSES.filter((status) => status !== "cancelled");
 
 export function AccountBillingTab({
   account,
@@ -40,11 +58,28 @@ export function AccountBillingTab({
 }) {
   const [section, setSection] = useState<BillingSection>(defaultSection);
   const [generating, setGenerating] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TripStatus | "all">("all");
 
   const unbilled = useMemo(
     () => unbilledCorporateTrips(trips, account.id),
     [trips, account.id]
   );
+  const filteredUnbilled = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return unbilled.filter((trip) => {
+      if (statusFilter !== "all" && trip.status !== statusFilter) return false;
+      if (!q) return true;
+      return [
+        trip.id,
+        shortBookingId(trip.id),
+        trip.customerDisplayName,
+        formatDateTime(trip.scheduledPickupAt ?? trip.createdAt)
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q));
+    });
+  }, [unbilled, search, statusFilter]);
   const unbilledTotal = useMemo(() => sumTripQuotedTotals(unbilled), [unbilled]);
   const budget = account.monthlyBudget;
   const budgetRemaining =
@@ -136,7 +171,34 @@ export function AccountBillingTab({
         </div>
 
         <Card>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                <Input
+                  placeholder="Search booking or customer…"
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as TripStatus | "all")}>
+                <SelectTrigger className="sm:w-44">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {UNBILLED_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {tripStatusTitle[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -154,8 +216,14 @@ export function AccountBillingTab({
                       No unbilled trips for this account.
                     </TableCell>
                   </TableRow>
+                ) : filteredUnbilled.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
+                      No trips match your filters.
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  unbilled.map((trip) => (
+                  filteredUnbilled.map((trip) => (
                     <TableRow key={trip.id}>
                       <TableCell className="font-medium">
                         <Link
