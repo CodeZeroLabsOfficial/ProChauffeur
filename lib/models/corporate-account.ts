@@ -117,20 +117,12 @@ export function isCorporateAllowedPayment(value: unknown): value is CorporateAll
 }
 
 /** Normalize allow-list; empty / missing defaults to on-account only. */
-export function normalizeAllowedPaymentMethods(
-  raw: unknown,
-  preferredPayment?: CorporatePreferredPayment | null
-): CorporateAllowedPayment[] {
+export function normalizeAllowedPaymentMethods(raw: unknown): CorporateAllowedPayment[] {
   const fromArray = Array.isArray(raw)
     ? raw.filter(isCorporateAllowedPayment)
     : [];
   const unique = [...new Set(fromArray)];
-  if (unique.length > 0) return unique;
-  // Legacy docs without the field: prefer historical preferredPayment, else on-account only.
-  if (preferredPayment && isCorporateAllowedPayment(preferredPayment)) {
-    return preferredPayment === "card" ? ["on_account", "card"] : ["on_account"];
-  }
-  return ["on_account"];
+  return unique.length > 0 ? unique : ["on_account"];
 }
 
 /** Clamp preferred into the allow-list (or null when unset / invalid). */

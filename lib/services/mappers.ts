@@ -578,10 +578,7 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
   )
     ? (d.preferredPayment as CorporatePreferredPayment)
     : null;
-  const allowedPaymentMethods = normalizeAllowedPaymentMethods(
-    d.allowedPaymentMethods,
-    preferredPayment
-  );
+  const allowedPaymentMethods = normalizeAllowedPaymentMethods(d.allowedPaymentMethods);
   const allowedVehicleClassIds = normalizeAllowedVehicleClassIds(d.allowedVehicleClassIds);
 
   return {

@@ -777,7 +777,6 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       billingContactUserId: account.billingContactUserId?.trim() || null,
       accountManagerUserId: account.accountManagerUserId?.trim() || null,
       allowedVehicleClassIds: normalizeAllowedVehicleClassIds(account.allowedVehicleClassIds),
-      defaultVehicleClassIds: deleteField(),
       maxRideAmount:
         account.maxRideAmount != null && Number.isFinite(account.maxRideAmount)
           ? account.maxRideAmount
