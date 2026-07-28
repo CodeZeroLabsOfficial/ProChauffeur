@@ -1,0 +1,242 @@
+const admin = require("firebase-admin");
+const {
+  Collections,
+  PaymentMethodSubcollection,
+  DEFAULT_BRANCH_ID,
+  resolveTripRef,
+  resolveInvoiceRef,
+} = require("../lib/collections");
+const { createFirestoreInvoice } = require("../billing/invoiceFromTrip");
+const { syncPaymentMethodToFirestore } = require("../billing/paymentMethods");
+const { getStripe, stripeWebhookSecret } = require("./client");
+
+async function recordPaymentEvent(db, event) {
+  const ref = db.collection(Collections.paymentEvents).doc(event.id);
+  const existing = await ref.get();
+  if (existing.exists) return false;
+  await ref.set({
+    stripeEventId: event.id,
+    type: event.type,
+    stripeObjectId: event.data.object?.id || null,
+    processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    rawMetadata: event.data.object?.metadata || {},
+  });
+  return true;
+}
+
+async function findUidForStripeCustomer(db, customerId) {
+  const snap = await db
+    .collection(Collections.users)
+    .where("stripeCustomerId", "==", customerId)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  return snap.docs[0].id;
+}
+
+/** Parses the trip id list from Stripe payment-intent metadata. */
+function parseTripIdsFromMetadata(metadata) {
+  try {
+    if (metadata.tripIds) return JSON.parse(metadata.tripIds);
+  } catch {
+    return metadata.tripId ? [metadata.tripId] : [];
+  }
+  return [];
+}
+
+function branchIdFromMetadata(metadata) {
+  if (typeof metadata.branchId === "string" && metadata.branchId.trim()) {
+    return metadata.branchId.trim();
+  }
+  return DEFAULT_BRANCH_ID;
+}
+
+async function handlePaymentIntentSucceeded(db, paymentIntent) {
+  const metadata = paymentIntent.metadata || {};
+  const uid = metadata.firebaseUid;
+  const branchId = branchIdFromMetadata(metadata);
+  const tripIds = parseTripIdsFromMetadata(metadata);
+  if (metadata.tripId && !tripIds.includes(metadata.tripId)) {
+    tripIds.unshift(metadata.tripId);
+  }
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  const resolvedRefs = [];
+
+  for (const tripId of tripIds) {
+    const { ref } = await resolveTripRef(db, tripId, branchId);
+    resolvedRefs.push(ref);
+    batch.update(ref, {
+      paymentStatus: "paid",
+      paymentSource: metadata.source === "web" ? "web" : "ios",
+      stripePaymentIntentId: paymentIntent.id,
+      paidAt: now,
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+
+  const primaryTripId = tripIds[0];
+  if (!primaryTripId || !uid) return;
+
+  const { snap: tripSnap } = await resolveTripRef(db, primaryTripId, branchId);
+  if (!tripSnap.exists) return;
+  const trip = { id: tripSnap.id, ...tripSnap.data() };
+
+  if (trip.invoiceId) {
+    const { ref: invoiceDoc } = await resolveInvoiceRef(db, trip.invoiceId, branchId);
+    await invoiceDoc.update({
+      status: "paid",
+      paidAt: now,
+      stripePaymentIntentId: paymentIntent.id,
+      updatedAt: now,
+    });
+    return;
+  }
+
+  const invoice = await createFirestoreInvoice(db, {
+    trip,
+    tripIds,
+    status: "paid",
+    source: "ios",
+    branchId,
+    stripeFields: { stripePaymentIntentId: paymentIntent.id },
+  });
+
+  const invoiceLinkBatch = db.batch();
+  for (const ref of resolvedRefs) {
+    invoiceLinkBatch.update(ref, {
+      invoiceId: invoice.id,
+      updatedAt: now,
+    });
+  }
+  await invoiceLinkBatch.commit();
+}
+
+async function handlePaymentIntentFailed(db, paymentIntent) {
+  const metadata = paymentIntent.metadata || {};
+  const branchId = branchIdFromMetadata(metadata);
+  const tripIds = parseTripIdsFromMetadata(metadata);
+  const batch = db.batch();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  for (const tripId of tripIds) {
+    const { ref } = await resolveTripRef(db, tripId, branchId);
+    batch.update(ref, {
+      paymentStatus: "failed",
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+}
+
+async function handleInvoicePaid(db, stripeInvoice) {
+  const metadata = stripeInvoice.metadata || {};
+  const invoiceId = metadata.invoiceId;
+  const tripId = metadata.tripId;
+  const branchId = branchIdFromMetadata(metadata);
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  if (invoiceId) {
+    const { ref } = await resolveInvoiceRef(db, invoiceId, branchId);
+    await ref.update({
+      status: "paid",
+      paidAt: now,
+      stripeInvoiceId: stripeInvoice.id,
+      stripeHostedInvoiceUrl: stripeInvoice.hosted_invoice_url || null,
+      updatedAt: now,
+    });
+  }
+
+  if (tripId) {
+    const { ref } = await resolveTripRef(db, tripId, branchId);
+    await ref.update({
+      paymentStatus: "paid",
+      paymentSource: "stripe",
+      paidAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
+async function handlePaymentMethodAttached(db, pm) {
+  const customerId = pm.customer;
+  if (!customerId) return;
+  const uid = await findUidForStripeCustomer(db, customerId);
+  if (!uid) return;
+
+  const stripe = getStripe();
+  const customer = await stripe.customers.retrieve(customerId);
+  const defaultPm =
+    customer.invoice_settings?.default_payment_method === pm.id;
+  await syncPaymentMethodToFirestore(db, uid, pm, defaultPm);
+}
+
+async function handlePaymentMethodDetached(db, pm) {
+  const customerId = pm.customer;
+  if (!customerId) return;
+  const uid = await findUidForStripeCustomer(db, customerId);
+  if (!uid) return;
+  await db
+    .collection(Collections.users)
+    .doc(uid)
+    .collection(PaymentMethodSubcollection)
+    .doc(pm.id)
+    .delete();
+}
+
+async function stripeWebhookHandler(req, res) {
+  const stripe = getStripe();
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      stripeWebhookSecret.value()
+    );
+  } catch (err) {
+    console.error("Webhook signature verification failed.", err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
+  const db = admin.firestore();
+  const isNew = await recordPaymentEvent(db, event);
+  if (!isNew) {
+    res.json({ received: true, duplicate: true });
+    return;
+  }
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        await handlePaymentIntentSucceeded(db, event.data.object);
+        break;
+      case "payment_intent.payment_failed":
+        await handlePaymentIntentFailed(db, event.data.object);
+        break;
+      case "invoice.paid":
+        await handleInvoicePaid(db, event.data.object);
+        break;
+      case "payment_method.attached":
+        await handlePaymentMethodAttached(db, event.data.object);
+        break;
+      case "payment_method.detached":
+        await handlePaymentMethodDetached(db, event.data.object);
+        break;
+      case "payment_method.automatically_updated":
+        await handlePaymentMethodAttached(db, event.data.object);
+        break;
+      default:
+        break;
+    }
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook handler error", err);
+    res.status(500).send("Webhook handler failed.");
+  }
+}
+
+module.exports = { stripeWebhookHandler };
