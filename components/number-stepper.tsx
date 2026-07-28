@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MinusIcon, PlusIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ function formatDisplay(value: number, decimals?: number) {
 export function NumberStepper({
   id,
   label,
+  labelExtra,
   value,
   onChange,
   min = 0,
@@ -32,6 +33,8 @@ export function NumberStepper({
 }: {
   id: string;
   label: string;
+  /** Optional control next to the label (e.g. info tooltip). */
+  labelExtra?: ReactNode;
   value: number;
   onChange: (value: number) => void;
   min?: number;
@@ -82,7 +85,10 @@ export function NumberStepper({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor={id}>{label}</Label>
+        {labelExtra}
+      </div>
       <div
         className={cn(
           "border-input bg-background flex h-9 items-center justify-between rounded-md border shadow-xs",

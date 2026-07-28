@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { InfoIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { MultiSelectField } from "@/components/multi-select-field";
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import {
   CORPORATE_ALLOWED_PAYMENTS,
@@ -39,6 +41,24 @@ const PAYMENT_METHOD_OPTIONS = CORPORATE_ALLOWED_PAYMENTS.map((value) => ({
 
 function formatUnlimited(value: number): string {
   return value === 0 ? "Unlimited" : String(value);
+}
+
+function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-accent rounded-full p-1"
+          aria-label={`About ${label}`}>
+          <InfoIcon className="text-muted-foreground size-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{children}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function AccountPolicyTab({
@@ -105,155 +125,187 @@ export function AccountPolicyTab({
       <SettingsSection
         title="Allowed vehicle classes"
         description="Classes members can book. Leave empty to allow any class.">
-        <div className="space-y-2">
-          <Label htmlFor="policy-allowed-classes">Vehicle classes</Label>
-          <MultiSelectField
-            id="policy-allowed-classes"
-            options={vehicleClassOptions}
-            selected={draft.allowedVehicleClassIds}
-            onSelectedChange={(selected) =>
-              setDraft((c) => ({
-                ...c,
-                allowedVehicleClassIds: normalizeAllowedVehicleClassIds(selected)
-              }))
-            }
-            placeholder="Select vehicle classes"
-            emptyMessage="No vehicle classes configured."
-            disabled={saving}
-            className="max-w-sm"
-          />
-        </div>
+        <TooltipProvider>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Label htmlFor="policy-allowed-classes">Vehicle classes</Label>
+              <FieldInfoTooltip label="vehicle classes">
+                Vehicle classes members may book on this account. Leave empty to allow any enabled
+                class. Selecting classes restricts bookings to that list only.
+              </FieldInfoTooltip>
+            </div>
+            <MultiSelectField
+              id="policy-allowed-classes"
+              options={vehicleClassOptions}
+              selected={draft.allowedVehicleClassIds}
+              onSelectedChange={(selected) =>
+                setDraft((c) => ({
+                  ...c,
+                  allowedVehicleClassIds: normalizeAllowedVehicleClassIds(selected)
+                }))
+              }
+              placeholder="Select vehicle classes"
+              emptyMessage="No vehicle classes configured."
+              disabled={saving}
+              className="max-w-sm"
+            />
+          </div>
+        </TooltipProvider>
       </SettingsSection>
 
       <SettingsSection
         title="Spend limits"
         description="Caps used for approvals and account-manager review.">
-        <div className="max-w-sm space-y-1">
-          <NumberStepper
-            id="policy-max-ride"
-            label="Max per ride"
-            value={draft.maxRideAmount ?? 0}
-            onChange={(value) =>
-              setDraft((c) => ({ ...c, maxRideAmount: value === 0 ? null : value }))
-            }
-            min={0}
-            max={SPEND_LIMIT_MAX}
-            step={1}
-            disabled={saving}
-            formatValue={formatUnlimited}
-          />
-          <p className="text-muted-foreground text-xs">
-            Over this amount will require approval (not enforced yet).
-          </p>
-        </div>
+        <TooltipProvider>
+          <div className="max-w-sm space-y-4">
+            <NumberStepper
+              id="policy-max-ride"
+              label="Max per ride"
+              labelExtra={
+                <FieldInfoTooltip label="max per ride">
+                  Caps the quote total for a single trip on this account. Trips above this amount
+                  require account-manager approval before dispatch. Use 0 (Unlimited) for no
+                  per-ride cap.
+                </FieldInfoTooltip>
+              }
+              value={draft.maxRideAmount ?? 0}
+              onChange={(value) =>
+                setDraft((c) => ({ ...c, maxRideAmount: value === 0 ? null : value }))
+              }
+              min={0}
+              max={SPEND_LIMIT_MAX}
+              step={1}
+              disabled={saving}
+              formatValue={formatUnlimited}
+            />
 
-        <div className="max-w-sm space-y-1">
-          <NumberStepper
-            id="policy-monthly-budget"
-            label="Monthly budget"
-            value={draft.monthlyBudget ?? 0}
-            onChange={(value) =>
-              setDraft((c) => ({ ...c, monthlyBudget: value === 0 ? null : value }))
-            }
-            min={0}
-            max={SPEND_LIMIT_MAX}
-            step={1}
-            disabled={saving}
-            formatValue={formatUnlimited}
-          />
-          <p className="text-muted-foreground text-xs">
-            Tracked on the account profile; enforcement via account manager later.
-          </p>
-        </div>
+            <NumberStepper
+              id="policy-monthly-budget"
+              label="Monthly budget"
+              labelExtra={
+                <FieldInfoTooltip label="monthly budget">
+                  Target on-account spend for the current calendar month. Used on the account
+                  profile and Billing as remaining budget. Use 0 (Unlimited) for no monthly
+                  target.
+                </FieldInfoTooltip>
+              }
+              value={draft.monthlyBudget ?? 0}
+              onChange={(value) =>
+                setDraft((c) => ({ ...c, monthlyBudget: value === 0 ? null : value }))
+              }
+              min={0}
+              max={SPEND_LIMIT_MAX}
+              step={1}
+              disabled={saving}
+              formatValue={formatUnlimited}
+            />
 
-        <div className="max-w-sm space-y-1">
-          <NumberStepper
-            id="policy-credit-limit"
-            label="Credit limit"
-            value={draft.creditLimit ?? 0}
-            onChange={(value) =>
-              setDraft((c) => ({ ...c, creditLimit: value === 0 ? null : value }))
-            }
-            min={0}
-            max={SPEND_LIMIT_MAX}
-            step={1}
-            disabled={saving}
-            formatValue={formatUnlimited}
-          />
-          <p className="text-muted-foreground text-xs">
-            When exceeded, account manager will approve or reject (not enforced yet).
-          </p>
-        </div>
+            <NumberStepper
+              id="policy-credit-limit"
+              label="Credit limit"
+              labelExtra={
+                <FieldInfoTooltip label="credit limit">
+                  Soft cap on outstanding bill-to-account balance. When exceeded, further trips
+                  require account-manager approval or rejection. Use 0 (Unlimited) for no credit
+                  cap.
+                </FieldInfoTooltip>
+              }
+              value={draft.creditLimit ?? 0}
+              onChange={(value) =>
+                setDraft((c) => ({ ...c, creditLimit: value === 0 ? null : value }))
+              }
+              min={0}
+              max={SPEND_LIMIT_MAX}
+              step={1}
+              disabled={saving}
+              formatValue={formatUnlimited}
+            />
+          </div>
+        </TooltipProvider>
       </SettingsSection>
 
       <SettingsSection
         title="Payment & tax"
         description="Choose how members on this account can pay when booking."
         footer={saveFooter}>
-        <div className="space-y-2">
-          <Label htmlFor="policy-allowed-payments">Allowed payment methods</Label>
-          <MultiSelectField
-            id="policy-allowed-payments"
-            options={PAYMENT_METHOD_OPTIONS}
-            selected={allowedMethods}
-            onSelectedChange={(selected) => {
-              const nextAllowed = normalizeAllowedPaymentMethods(selected);
-              setDraft((c) => ({
-                ...c,
-                allowedPaymentMethods: nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods,
-                preferredPayment: clampPreferredPayment(
-                  c.preferredPayment ?? null,
-                  nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods
-                )
-              }));
-            }}
-            placeholder="Select payment methods"
-            emptyMessage="No payment methods."
-            disabled={saving}
-            className="max-w-sm"
-          />
-          <p className="text-muted-foreground text-xs">
-            Members only see methods you allow. Bill to account invoices the company; Pay by card
-            charges the member’s card (no account invoice).
-          </p>
-        </div>
+        <TooltipProvider>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="policy-allowed-payments">Allowed payment methods</Label>
+                <FieldInfoTooltip label="allowed payment methods">
+                  Methods members can choose when booking on this account. Bill to account invoices
+                  the company; Pay by card charges the member’s card and is not added to the
+                  account invoice. At least one method is required.
+                </FieldInfoTooltip>
+              </div>
+              <MultiSelectField
+                id="policy-allowed-payments"
+                options={PAYMENT_METHOD_OPTIONS}
+                selected={allowedMethods}
+                onSelectedChange={(selected) => {
+                  const nextAllowed = normalizeAllowedPaymentMethods(selected);
+                  setDraft((c) => ({
+                    ...c,
+                    allowedPaymentMethods:
+                      nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods,
+                    preferredPayment: clampPreferredPayment(
+                      c.preferredPayment ?? null,
+                      nextAllowed.length > 0 ? nextAllowed : c.allowedPaymentMethods
+                    )
+                  }));
+                }}
+                placeholder="Select payment methods"
+                emptyMessage="No payment methods."
+                disabled={saving}
+                className="max-w-sm"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="policy-preferred-payment">Default payment method</Label>
-          <Select
-            value={draft.preferredPayment ?? "unset"}
-            onValueChange={(value) =>
-              setDraft((c) => ({
-                ...c,
-                preferredPayment:
-                  value === "unset" ? null : (value as CorporatePreferredPayment)
-              }))
-            }
-            disabled={saving || allowedMethods.length === 0}>
-            <SelectTrigger id="policy-preferred-payment" className="w-full max-w-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unset">Not set</SelectItem>
-              {allowedMethods.map((payment) => (
-                <SelectItem key={payment} value={payment}>
-                  {corporatePreferredPaymentTitle[payment as CorporateAllowedPayment]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="policy-preferred-payment">Default payment method</Label>
+                <FieldInfoTooltip label="default payment method">
+                  Pre-selected at checkout for members of this account. Must be one of the allowed
+                  methods. Not set leaves the choice to the member each time.
+                </FieldInfoTooltip>
+              </div>
+              <Select
+                value={draft.preferredPayment ?? "unset"}
+                onValueChange={(value) =>
+                  setDraft((c) => ({
+                    ...c,
+                    preferredPayment:
+                      value === "unset" ? null : (value as CorporatePreferredPayment)
+                  }))
+                }
+                disabled={saving || allowedMethods.length === 0}>
+                <SelectTrigger id="policy-preferred-payment" className="w-full max-w-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Not set</SelectItem>
+                  {allowedMethods.map((payment) => (
+                    <SelectItem key={payment} value={payment}>
+                      {corporatePreferredPaymentTitle[payment as CorporateAllowedPayment]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={draft.gstInclusive}
-            disabled={saving}
-            onCheckedChange={(checked) =>
-              setDraft((c) => ({ ...c, gstInclusive: checked === true }))
-            }
-          />
-          GST included in rates
-        </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={draft.gstInclusive}
+                disabled={saving}
+                onCheckedChange={(checked) =>
+                  setDraft((c) => ({ ...c, gstInclusive: checked === true }))
+                }
+              />
+              GST included in rates
+            </label>
+          </div>
+        </TooltipProvider>
       </SettingsSection>
     </div>
   );
