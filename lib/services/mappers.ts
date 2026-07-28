@@ -476,6 +476,7 @@ export function mapInvoice(id: string, d: DocumentData): Invoice {
     customerEmail: d.customerEmail ?? null,
     customerPhone: d.customerPhone ?? null,
     tripIDs: d.tripIDs ?? [],
+    branchId: typeof d.branchId === "string" ? d.branchId : null,
     status: d.status ?? "draft",
     currencyCode: d.currencyCode ?? "AUD",
     lineItems: d.lineItems ?? [],

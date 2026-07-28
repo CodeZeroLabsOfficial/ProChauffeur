@@ -42,6 +42,9 @@ export type GenerateCorporatePeriodInvoiceResult = {
     invoiceId: string;
     tripCount: number;
     total: number;
+    stripeInvoiceId?: string;
+    hostedInvoiceUrl?: string | null;
+    stripeError?: string;
   }>;
 };
 
@@ -54,5 +57,27 @@ export async function generateCorporatePeriodInvoice(
     GenerateCorporatePeriodInvoiceResult
   >(firebaseFunctions(), "consolidateCorporateInvoicesManual");
   const result = await callable({ corporateAccountId, force: true });
+  return result.data;
+}
+
+export type MarkInvoicePaidResult = {
+  invoiceId: string;
+  tripCount?: number;
+  alreadyPaid?: boolean;
+};
+
+/** Mark a Firestore invoice paid and sync linked trips (admin callable). */
+export async function markInvoicePaid(
+  invoiceId: string,
+  branchId?: string | null
+): Promise<MarkInvoicePaidResult> {
+  const callable = httpsCallable<
+    { invoiceId: string; branchId?: string },
+    MarkInvoicePaidResult
+  >(firebaseFunctions(), "markInvoicePaid");
+  const result = await callable({
+    invoiceId,
+    ...(branchId?.trim() ? { branchId: branchId.trim() } : {})
+  });
   return result.data;
 }

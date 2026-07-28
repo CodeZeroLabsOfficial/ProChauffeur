@@ -5,6 +5,7 @@ const {
   invoicesCollection,
 } = require("../lib/collections");
 const { requireAuth, requireAdmin } = require("../lib/auth");
+const { sendCorporateStripeInvoice } = require("./sendCorporateStripeInvoice");
 
 function invoiceNumber() {
   return `INV-${Date.now().toString().slice(-6)}`;
@@ -43,9 +44,6 @@ function billingPeriodForToday(today = new Date()) {
 
 /**
  * Loads on-account trips for a corporate account under one branch that are not yet invoiced.
- * @param {FirebaseFirestore.Firestore} db
- * @param {string} branchId
- * @param {string} corporateAccountId
  */
 async function fetchUninvoicedOnAccountTrips(db, branchId, corporateAccountId) {
   const tripsRef = db.collection(
@@ -66,7 +64,8 @@ async function fetchUninvoicedOnAccountTrips(db, branchId, corporateAccountId) {
 }
 
 /**
- * Builds and writes a consolidated corporate invoice for trips under one branch.
+ * Builds and writes a consolidated corporate invoice for trips under one branch,
+ * then sends a Stripe Invoice to the corporate customer.
  */
 async function createCorporateInvoice(db, {
   account,
@@ -74,6 +73,7 @@ async function createCorporateInvoice(db, {
   trips,
   billingPeriodStart,
   billingPeriodEnd,
+  sendStripe = true,
 }) {
   const first = trips[0];
   const lineItems = trips.map((trip) => ({
@@ -97,34 +97,29 @@ async function createCorporateInvoice(db, {
     new Date(Date.now() + paymentTermsDays * 24 * 60 * 60 * 1000)
   );
 
-  const customerID =
-    first.customerID ||
-    null;
+  const customerID = first.customerID || null;
   const customerName =
-    account.name ||
-    first.customerDisplayName ||
-    "Corporate account";
+    account.name || first.customerDisplayName || "Corporate account";
   const customerEmail =
-    account.billingEmail ||
-    first.customerEmail ||
-    null;
+    account.billingEmail || account.email || first.customerEmail || null;
   const customerPhone =
-    account.billingPhone ||
-    first.customerPhoneNumber ||
-    null;
+    account.billingPhone || account.phone || first.customerPhoneNumber || null;
 
+  const tripIds = trips.map((t) => t.id);
+  const number = invoiceNumber();
   const ref = invoicesCollection(db, branchId).doc();
+  const currencyCode = (first.quotedCurrencyCode || "AUD").toUpperCase();
   const payload = {
     id: ref.id,
-    invoiceNumber: invoiceNumber(),
+    invoiceNumber: number,
     customerID: customerID || account.id,
     customerName,
     customerEmail,
     customerPhone,
-    tripIDs: trips.map((t) => t.id),
+    tripIDs: tripIds,
     branchId,
     status: "sent",
-    currencyCode: (first.quotedCurrencyCode || "AUD").toUpperCase(),
+    currencyCode,
     lineItems,
     subtotal: Number.isFinite(subtotal) ? subtotal : total,
     taxRate,
@@ -153,14 +148,43 @@ async function createCorporateInvoice(db, {
   }
   await batch.commit();
 
-  return { invoiceId: ref.id, tripCount: trips.length, total };
+  /** @type {{ stripeInvoiceId?: string, hostedInvoiceUrl?: string|null, stripeError?: string }} */
+  const stripeResult = {};
+  if (sendStripe) {
+    try {
+      const sent = await sendCorporateStripeInvoice(db, {
+        account,
+        branchId,
+        invoiceId: ref.id,
+        invoiceNumber: number,
+        tripIds,
+        lineItems,
+        currencyCode,
+        paymentTermsDays,
+      });
+      stripeResult.stripeInvoiceId = sent.stripeInvoiceId;
+      stripeResult.hostedInvoiceUrl = sent.hostedInvoiceUrl;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Stripe invoice send failed.";
+      console.error("sendCorporateStripeInvoice failed", {
+        invoiceId: ref.id,
+        corporateAccountId: account.id,
+        message,
+      });
+      stripeResult.stripeError = message;
+    }
+  }
+
+  return {
+    invoiceId: ref.id,
+    tripCount: trips.length,
+    total,
+    ...stripeResult,
+  };
 }
 
 /**
  * Runs consolidation for active corporate accounts.
- * @param {{ force?: boolean, corporateAccountId?: string }} [options]
- *   - force: ignore billing day (manual / admin)
- *   - corporateAccountId: limit to one account
  */
 async function consolidateCorporateInvoices(
   db,
@@ -211,6 +235,7 @@ async function consolidateCorporateInvoices(
         trips,
         billingPeriodStart,
         billingPeriodEnd,
+        sendStripe: true,
       });
       invoicesCreated += 1;
       results.push({
@@ -224,13 +249,11 @@ async function consolidateCorporateInvoices(
   return { accountsProcessed, invoicesCreated, results };
 }
 
-/** Scheduled / shared handler body. */
 async function consolidateCorporateInvoicesHandler() {
   const db = admin.firestore();
   return consolidateCorporateInvoices(db, { force: false });
 }
 
-/** Admin-only callable for manual runs. */
 async function consolidateCorporateInvoicesCallableHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();

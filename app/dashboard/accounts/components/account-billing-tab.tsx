@@ -57,11 +57,21 @@ export function AccountBillingTab({
         toast.message("No invoices were created.");
       } else {
         const tripCount = result.results.reduce((sum, row) => sum + row.tripCount, 0);
+        const stripeErrors = result.results.filter((row) => row.stripeError);
+        const hosted = result.results.find((row) => row.hostedInvoiceUrl)?.hostedInvoiceUrl;
         toast.success(
           result.invoicesCreated === 1
             ? `Invoice created for ${tripCount} trip${tripCount === 1 ? "" : "s"}.`
             : `${result.invoicesCreated} invoices created for ${tripCount} trips.`
         );
+        if (stripeErrors.length > 0) {
+          toast.message(
+            stripeErrors[0].stripeError ||
+              "Firestore invoice saved, but Stripe email could not be sent."
+          );
+        } else if (hosted) {
+          toast.message("Stripe invoice emailed to the accounts address.");
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not generate invoice.");

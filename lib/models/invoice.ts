@@ -19,6 +19,8 @@ export interface Invoice {
   customerEmail?: string | null;
   customerPhone?: string | null;
   tripIDs: string[];
+  /** Branch the invoice document lives under. */
+  branchId?: string | null;
   status: InvoiceStatus;
   currencyCode: string;
   lineItems: InvoiceLineItem[];

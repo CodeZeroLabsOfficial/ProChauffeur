@@ -137,8 +137,24 @@ async function handleInvoicePaid(db, stripeInvoice) {
   const branchId = branchIdFromMetadata(metadata);
   const now = admin.firestore.FieldValue.serverTimestamp();
 
+  /** @type {string[]} */
+  let tripIds = [];
+  try {
+    if (metadata.tripIds) {
+      const parsed = JSON.parse(metadata.tripIds);
+      if (Array.isArray(parsed)) {
+        tripIds = parsed.filter((id) => typeof id === "string" && id.trim());
+      }
+    }
+  } catch {
+    // ignore malformed tripIds metadata
+  }
+  if (tripId && !tripIds.includes(tripId)) {
+    tripIds.unshift(tripId);
+  }
+
   if (invoiceId) {
-    const { ref } = await resolveInvoiceRef(db, invoiceId, branchId);
+    const { ref, snap } = await resolveInvoiceRef(db, invoiceId, branchId);
     await ref.update({
       status: "paid",
       paidAt: now,
@@ -146,17 +162,28 @@ async function handleInvoicePaid(db, stripeInvoice) {
       stripeHostedInvoiceUrl: stripeInvoice.hosted_invoice_url || null,
       updatedAt: now,
     });
+
+    if (tripIds.length === 0 && snap.exists) {
+      const data = snap.data() || {};
+      if (Array.isArray(data.tripIDs)) {
+        tripIds = data.tripIDs.filter((id) => typeof id === "string" && id.trim());
+      }
+    }
   }
 
-  if (tripId) {
-    const { ref } = await resolveTripRef(db, tripId, branchId);
-    await ref.update({
+  if (tripIds.length === 0) return;
+
+  const batch = db.batch();
+  for (const id of tripIds) {
+    const { ref } = await resolveTripRef(db, id, branchId);
+    batch.update(ref, {
       paymentStatus: "paid",
       paymentSource: "stripe",
       paidAt: now,
       updatedAt: now,
     });
   }
+  await batch.commit();
 }
 
 async function handlePaymentMethodAttached(db, pm) {

@@ -23,6 +23,7 @@ const {
 const {
   syncCorporateStripeCustomerHandler,
 } = require("./billing/syncCorporateStripeCustomer");
+const { markInvoicePaidHandler } = require("./billing/markInvoicePaid");
 
 setGlobalOptions({ region: "australia-southeast1" });
 
@@ -30,6 +31,11 @@ admin.initializeApp();
 
 const callableOptions = { secrets: [stripeSecretKey] };
 const computeQuoteOptions = { secrets: [mapboxAccessToken] };
+const consolidateScheduleOptions = {
+  schedule: "0 1 * * *",
+  timeZone: "Australia/Sydney",
+  secrets: [stripeSecretKey],
+};
 
 exports.createBookingPayment = onCall(callableOptions, createBookingPaymentHandler);
 exports.createSetupIntent = onCall(callableOptions, createSetupIntentHandler);
@@ -41,15 +47,16 @@ exports.syncCorporateStripeCustomer = onCall(
   callableOptions,
   syncCorporateStripeCustomerHandler
 );
+exports.markInvoicePaid = onCall(callableOptions, markInvoicePaidHandler);
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
 exports.computeQuote = onCall(computeQuoteOptions, computeQuoteHandler);
-exports.consolidateCorporateInvoicesManual = onCall(consolidateCorporateInvoicesCallableHandler);
+exports.consolidateCorporateInvoicesManual = onCall(
+  callableOptions,
+  consolidateCorporateInvoicesCallableHandler
+);
 exports.consolidateCorporateInvoices = onSchedule(
-  {
-    schedule: "0 1 * * *",
-    timeZone: "Australia/Sydney",
-  },
+  consolidateScheduleOptions,
   async () => {
     await consolidateCorporateInvoicesHandler();
   }

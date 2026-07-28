@@ -26,6 +26,7 @@ import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions"
 import { LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { fetchDefaultSavedPaymentMethod } from "@/lib/services/firebase-service";
+import { markInvoicePaid } from "@/lib/services/payment-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { useTrips, useUsers } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
@@ -68,14 +69,20 @@ function InvoiceDetailBody({
   invoice,
   trip,
   customer,
-  paymentMethod
+  paymentMethod,
+  markingPaid,
+  onMarkPaid
 }: {
   invoice: Invoice;
   trip: Trip | undefined;
   customer: User | undefined;
   paymentMethod: SavedPaymentMethod | null | undefined;
+  markingPaid?: boolean;
+  onMarkPaid?: () => void;
 }) {
   const isPaid = invoice.status === "paid";
+  const canMarkPaid =
+    Boolean(onMarkPaid) && (invoice.status === "sent" || invoice.status === "overdue");
   const name = invoice.customerName.trim() || customer?.profile.displayName.trim() || "—";
   const email = invoice.customerEmail?.trim() || customer?.email?.trim() || null;
   const phone =
@@ -184,6 +191,15 @@ function InvoiceDetailBody({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
+        {canMarkPaid ? (
+          <Button
+            type="button"
+            className="flex-1"
+            disabled={markingPaid}
+            onClick={() => onMarkPaid?.()}>
+            {markingPaid ? "Marking paid…" : "Mark as paid"}
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
@@ -194,6 +210,7 @@ function InvoiceDetailBody({
         </Button>
         <Button
           type="button"
+          variant={canMarkPaid ? "outline" : "default"}
           className="flex-1"
           onClick={() => toast.message("Sending receipts is not available yet.")}>
           Send receipt
@@ -218,6 +235,7 @@ export function InvoiceDetailSheet({
   const [paymentMethod, setPaymentMethod] = useState<SavedPaymentMethod | null | undefined>(
     undefined
   );
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const trip = useMemo(() => {
     if (!displayInvoice?.tripIDs?.length) return undefined;
@@ -246,6 +264,26 @@ export function InvoiceDetailSheet({
       cancelled = true;
     };
   }, [open, displayInvoice?.customerID]);
+
+  async function handleMarkPaid() {
+    if (!displayInvoice) return;
+    setMarkingPaid(true);
+    try {
+      const result = await markInvoicePaid(
+        displayInvoice.id,
+        displayInvoice.branchId ?? undefined
+      );
+      toast.success(
+        result.alreadyPaid
+          ? "Invoice was already paid."
+          : `Marked paid${result.tripCount ? ` (${result.tripCount} trips)` : ""}.`
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not mark invoice paid.");
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
 
   if (!displayInvoice) return null;
 
@@ -284,6 +322,8 @@ export function InvoiceDetailSheet({
             trip={trip}
             customer={customer}
             paymentMethod={paymentMethod}
+            markingPaid={markingPaid}
+            onMarkPaid={() => void handleMarkPaid()}
           />
         </div>
       </SheetContent>
