@@ -7,7 +7,6 @@ import { ChevronLeftIcon } from "lucide-react";
 
 import { AccountBillingTab } from "@/app/dashboard/accounts/components/account-billing-tab";
 import { AccountDetailCard } from "@/app/dashboard/accounts/components/account-detail-card";
-import { AccountInvoicesTab } from "@/app/dashboard/accounts/components/account-invoices-tab";
 import { AccountMembersTab } from "@/app/dashboard/accounts/components/account-members-tab";
 import { AccountOverviewTab } from "@/app/dashboard/accounts/components/account-overview-tab";
 import { AccountPolicyTab } from "@/app/dashboard/accounts/components/account-policy-tab";
@@ -26,7 +25,7 @@ import type { CorporateAccount, User } from "@/lib/models";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { fetchCorporateAccount, fetchUser } from "@/lib/services/firebase-service";
 
-const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing", "invoices"] as const;
+const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing"] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 function isProfileTab(value: string | null): value is ProfileTab {
@@ -37,7 +36,14 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
+  // Legacy ?tab=invoices deep links open Billing → Invoices.
+  const legacyInvoicesTab = tabParam === "invoices";
+  const activeTab: ProfileTab = isProfileTab(tabParam)
+    ? tabParam
+    : legacyInvoicesTab
+      ? "billing"
+      : "overview";
+  const billingDefaultSection = legacyInvoicesTab ? "invoices" : "unbilled";
   const { ready, enabled } = useFeatureEnabled("corporateAccounts");
   const { trips } = useTrips();
   const { invoices, loading: invoicesLoading } = useInvoices();
@@ -126,6 +132,14 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
     [account, trips]
   );
 
+  useEffect(() => {
+    if (!legacyInvoicesTab) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "billing");
+    const q = params.toString();
+    router.replace(`/dashboard/accounts/${accountId}?${q}`, { scroll: false });
+  }, [accountId, legacyInvoicesTab, router, searchParams]);
+
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") params.delete("tab");
@@ -195,11 +209,13 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="billing" className="mt-0 space-y-4">
-            <AccountBillingTab account={account} trips={trips} />
-          </TabsContent>
-
-          <TabsContent value="invoices" className="mt-0 space-y-4">
-            <AccountInvoicesTab invoices={accountInvoices} loading={invoicesLoading} />
+            <AccountBillingTab
+              account={account}
+              trips={trips}
+              invoices={accountInvoices}
+              invoicesLoading={invoicesLoading}
+              defaultSection={billingDefaultSection}
+            />
           </TabsContent>
         </Tabs>
       </div>
