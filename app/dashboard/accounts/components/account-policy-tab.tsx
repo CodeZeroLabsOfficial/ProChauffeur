@@ -23,6 +23,7 @@ import {
   corporateAllowedPaymentTitle,
   corporatePreferredPaymentTitle,
   normalizeAllowedPaymentMethods,
+  normalizeAllowedVehicleClassIds,
   type CorporateAccount,
   type CorporateAllowedPayment,
   type CorporatePreferredPayment
@@ -102,16 +103,19 @@ export function AccountPolicyTab({
   return (
     <div className="space-y-4">
       <SettingsSection
-        title="Default vehicle classes"
-        description="Prefills booking class when set. Leave empty to allow any class.">
+        title="Allowed vehicle classes"
+        description="Classes members can book. Leave empty to allow any class.">
         <div className="space-y-2">
-          <Label htmlFor="policy-default-classes">Vehicle classes</Label>
+          <Label htmlFor="policy-allowed-classes">Vehicle classes</Label>
           <MultiSelectField
-            id="policy-default-classes"
+            id="policy-allowed-classes"
             options={vehicleClassOptions}
-            selected={draft.defaultVehicleClassIds}
+            selected={draft.allowedVehicleClassIds}
             onSelectedChange={(selected) =>
-              setDraft((c) => ({ ...c, defaultVehicleClassIds: selected }))
+              setDraft((c) => ({
+                ...c,
+                allowedVehicleClassIds: normalizeAllowedVehicleClassIds(selected)
+              }))
             }
             placeholder="Select vehicle classes"
             emptyMessage="No vehicle classes configured."

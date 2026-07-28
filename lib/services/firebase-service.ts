@@ -116,7 +116,7 @@ import {
   type Branch,
   type BranchDriver
 } from "@/lib/models/branch";
-import { canCreateLocation, clampPreferredPayment, normalizeAllowedPaymentMethods, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
+import { canCreateLocation, clampPreferredPayment, normalizeAllowedPaymentMethods, normalizeAllowedVehicleClassIds, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -774,7 +774,8 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       primaryContactUserId: account.primaryContactUserId?.trim() || null,
       billingContactUserId: account.billingContactUserId?.trim() || null,
       accountManagerUserId: account.accountManagerUserId?.trim() || null,
-      defaultVehicleClassIds: account.defaultVehicleClassIds.filter((id) => id.trim()),
+      allowedVehicleClassIds: normalizeAllowedVehicleClassIds(account.allowedVehicleClassIds),
+      defaultVehicleClassIds: deleteField(),
       maxRideAmount:
         account.maxRideAmount != null && Number.isFinite(account.maxRideAmount)
           ? account.maxRideAmount

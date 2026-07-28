@@ -43,7 +43,8 @@ import {
   CORPORATE_PREFERRED_PAYMENTS,
   CORPORATE_RATE_MODES,
   clampPreferredPayment,
-  normalizeAllowedPaymentMethods
+  normalizeAllowedPaymentMethods,
+  normalizeAllowedVehicleClassIds
 } from "@/lib/models/corporate-account";
 import { TRIP_APPROVAL_STATUSES } from "@/lib/models/trip";
 import {
@@ -583,9 +584,7 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     d.allowedPaymentMethods,
     preferredPayment
   );
-  const defaultVehicleClassIds = Array.isArray(d.defaultVehicleClassIds)
-    ? d.defaultVehicleClassIds.filter((id): id is string => typeof id === "string" && id.trim() !== "")
-    : [];
+  const allowedVehicleClassIds = normalizeAllowedVehicleClassIds(d.allowedVehicleClassIds);
 
   return {
     id,
@@ -608,7 +607,7 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
       typeof d.billingContactUserId === "string" ? d.billingContactUserId : null,
     accountManagerUserId:
       typeof d.accountManagerUserId === "string" ? d.accountManagerUserId : null,
-    defaultVehicleClassIds,
+    allowedVehicleClassIds,
     maxRideAmount: typeof d.maxRideAmount === "number" ? d.maxRideAmount : null,
     monthlyBudget: typeof d.monthlyBudget === "number" ? d.monthlyBudget : null,
     allowedPaymentMethods,

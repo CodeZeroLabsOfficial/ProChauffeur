@@ -42,6 +42,7 @@ import {
   type User,
   BOOKING_TRIP_MODES,
   accountAllowsPayment,
+  accountAllowsVehicleClass,
   bookingTripModeTitle,
   clampPreferredPayment,
   corporatePreferredPaymentTitle,
@@ -490,12 +491,13 @@ export function NewBookingSheet({
           }
         }
         setVehicleClassId((current) => {
-          if (current) return current;
-          if (active.defaultVehicleClassIds.length === 0) return current;
-          const preferredClass = active.defaultVehicleClassIds.find((id) =>
+          if (current && accountAllowsVehicleClass(active, current)) return current;
+          const allowed = active.allowedVehicleClassIds;
+          if (allowed.length === 0) return current;
+          const preferredClass = allowed.find((id) =>
             vehicleClasses.some((vc) => vc.id === id && vc.isEnabled)
           );
-          return preferredClass ?? current;
+          return preferredClass ?? null;
         });
       })
       .catch(() => {
@@ -508,6 +510,18 @@ export function NewBookingSheet({
       cancelled = true;
     };
   }, [customer, corporateFeatureOn, vehicleClasses]);
+
+  useEffect(() => {
+    if (!activeCorporateAccount) return;
+    setVehicleClassId((current) => {
+      if (!current) return current;
+      if (accountAllowsVehicleClass(activeCorporateAccount, current)) return current;
+      const preferredClass = activeCorporateAccount.allowedVehicleClassIds.find((id) =>
+        vehicleClasses.some((vc) => vc.id === id && vc.isEnabled)
+      );
+      return preferredClass ?? null;
+    });
+  }, [activeCorporateAccount, vehicleClasses]);
 
   useEffect(() => {
     if (!activeCorporateAccount || !corporateSettlement) return;
@@ -1398,6 +1412,9 @@ export function NewBookingSheet({
                 <SelectContent>
                   {vehicleClasses
                     .filter((vehicleClass) => vehicleClass.isEnabled)
+                    .filter((vehicleClass) =>
+                      accountAllowsVehicleClass(activeCorporateAccount, vehicleClass.id)
+                    )
                     .map((vehicleClass) => (
                       <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
                         {vehicleClass.displayName}

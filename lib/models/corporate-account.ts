@@ -65,8 +65,10 @@ export interface CorporateAccount {
   billingContactUserId?: string | null;
   /** Team admin `users/{uid}` with `role: "admin"`. */
   accountManagerUserId?: string | null;
-  /** Preferred vehicle class ids for members booking under this account. */
-  defaultVehicleClassIds: string[];
+  /**
+   * Vehicle classes members may book. Empty = all enabled classes.
+   */
+  allowedVehicleClassIds: string[];
   /** Quote total above this requires admin approval before dispatch. */
   maxRideAmount?: number | null;
   /** Calendar-month on-account spend cap; null = unlimited. */
@@ -147,6 +149,24 @@ export function accountAllowsPayment(
   return account.allowedPaymentMethods.includes(method);
 }
 
+/** Normalize class allow-list; empty = unrestricted. */
+export function normalizeAllowedVehicleClassIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const ids = raw.filter((id): id is string => typeof id === "string" && id.trim() !== "");
+  return [...new Set(ids.map((id) => id.trim()))];
+}
+
+/** Whether a class is bookable under account policy (empty list = all). */
+export function accountAllowsVehicleClass(
+  account: Pick<CorporateAccount, "allowedVehicleClassIds"> | null | undefined,
+  vehicleClassId: string
+): boolean {
+  if (!account) return true;
+  const allowed = account.allowedVehicleClassIds;
+  if (allowed.length === 0) return true;
+  return allowed.includes(vehicleClassId);
+}
+
 export function formatCorporateAddress(account: CorporateAccount): string | null {
   const parts = [
     account.addressLine1,
@@ -181,7 +201,7 @@ export function buildNewCorporateAccount(
     primaryContactUserId: null,
     billingContactUserId: null,
     accountManagerUserId: null,
-    defaultVehicleClassIds: [],
+    allowedVehicleClassIds: [],
     maxRideAmount: null,
     monthlyBudget: null,
     allowedPaymentMethods: ["on_account"],
