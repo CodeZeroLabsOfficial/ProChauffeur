@@ -80,43 +80,45 @@ function BookingCustomerCard({
   customer,
   customerName,
   customerEmail,
+  customerPhone,
   isCorporate
 }: {
   customer: User | undefined;
   customerName: string | null;
   customerEmail: string | null;
+  customerPhone: string | null;
   isCorporate: boolean;
 }) {
   const profileName = customerName?.trim() || "Customer";
   const avatarName = customerName?.trim() || customerEmail?.trim() || "Customer";
+  const phone = customerPhone?.trim() || null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Passenger</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
-          <Avatar className="size-12">
-            <AvatarImage src={customer?.profile.photoURL ?? undefined} alt={avatarName} />
-            <AvatarFallback>{generateAvatarFallback(avatarName)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-1.5">
-            <h3 className="font-semibold">{profileName}</h3>
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-medium",
-                isCorporate
-                  ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                  : "border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300"
-              )}>
-              {isCorporate ? "Corporate" : "Individual"}
-            </Badge>
-          </div>
+    <SectionCard
+      title="Passenger"
+      headerAction={
+        <Badge
+          variant="outline"
+          className={cn(
+            "font-medium",
+            isCorporate
+              ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+              : "border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300"
+          )}>
+          {isCorporate ? "Corporate" : "Individual"}
+        </Badge>
+      }>
+      <div className="flex items-center gap-4">
+        <Avatar className="size-12">
+          <AvatarImage src={customer?.profile.photoURL ?? undefined} alt={avatarName} />
+          <AvatarFallback>{generateAvatarFallback(avatarName)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold">{profileName}</h3>
+          {phone ? <p className="text-muted-foreground text-sm">{phone}</p> : null}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -129,38 +131,33 @@ function BookingVehicleCard({
 }) {
   if (!vehicleSnapshot) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Vehicle</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">No vehicle assigned for this trip.</p>
-        </CardContent>
-      </Card>
+      <SectionCard title="Vehicle">
+        <p className="text-muted-foreground text-sm">No vehicle assigned for this trip.</p>
+      </SectionCard>
     );
   }
 
   const vehicleName = vehicleDisplayName(vehicleSnapshot);
+  const plate = vehicleSnapshot.licensePlate?.trim() || null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Vehicle</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
-          <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
-          <div className="flex-1 space-y-1.5">
-            <h3 className="font-semibold">{vehicleName || "Vehicle"}</h3>
-            {vehicleClassLabel ? (
-              <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>
-                {vehicleClassLabel}
-              </DetailSheetIconBadge>
-            ) : null}
-          </div>
+    <SectionCard
+      title="Vehicle"
+      headerAction={
+        vehicleClassLabel ? (
+          <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>
+            {vehicleClassLabel}
+          </DetailSheetIconBadge>
+        ) : undefined
+      }>
+      <div className="flex items-center gap-4">
+        <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold">{vehicleName || "Vehicle"}</h3>
+          {plate ? <p className="text-muted-foreground text-sm">{plate}</p> : null}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -259,6 +256,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const customerName =
     trip?.customerDisplayName || customer?.profile.displayName || null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
+  const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const isCorporateCustomer = Boolean(
     trip?.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
   );
@@ -455,6 +453,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             customer={customer}
             customerName={customerName}
             customerEmail={customerEmail}
+            customerPhone={customerPhone}
             isCorporate={isCorporateCustomer}
           />
 
