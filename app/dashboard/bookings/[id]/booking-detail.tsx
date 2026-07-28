@@ -9,11 +9,8 @@ import {
   ChevronLeftIcon,
   CircleDotIcon,
   FileTextIcon,
-  Mail,
-  MapPin,
   PackageIcon,
   PencilIcon,
-  PhoneCall,
   PrinterIcon
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,27 +26,25 @@ import {
   tripPickupReferenceDate,
   tripJourneyTimeLabel,
   tripStatusTitle,
+  tripTypeTitle,
   paymentSourceTitle,
   isRoundTripLeg,
   roundTripLegLabel,
+  vehicleDisplayName,
   type Trip,
   type TripStatus,
   type User,
   type Vehicle
 } from "@/lib/models";
-import {
-  formatPostalAddress,
-  postalAddressFromTripSnapshot
-} from "@/lib/models/postal-address";
-import { tripTypeTitle } from "@/lib/models";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { appConfig } from "@/lib/env";
-import { generateAvatarFallback } from "@/lib/utils";
+import { cn, generateAvatarFallback } from "@/lib/utils";
+import { vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
-import { ContactRow } from "@/components/contact-row";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -60,6 +55,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Item,
@@ -83,44 +79,16 @@ const statusStepIcons: Record<(typeof ACTIVE_STATUSES)[number], ReactNode> = {
 function BookingCustomerCard({
   customer,
   customerName,
-  customerAddress,
-  customerPhone,
   customerEmail,
-  customerCompany
+  isCorporate
 }: {
   customer: User | undefined;
   customerName: string | null;
-  customerAddress: string | null;
-  customerPhone: string | null;
   customerEmail: string | null;
-  customerCompany: string | null;
+  isCorporate: boolean;
 }) {
-  const hasCustomerDetails = Boolean(
-    customerName?.trim() ||
-      customerAddress?.trim() ||
-      customerPhone?.trim() ||
-      customerEmail?.trim() ||
-      customerCompany?.trim()
-  );
-
-  if (!hasCustomerDetails) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Passenger</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">No customer details on file.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const profileName = customerName?.trim() || "Customer";
-  const profileSubtitle = customerCompany?.trim() || customerEmail?.trim() || "Customer";
-  const showSubtitle = profileSubtitle !== profileName || !customerName?.trim();
   const avatarName = customerName?.trim() || customerEmail?.trim() || "Customer";
-  const showEmailInContact = Boolean(customerEmail?.trim() && customerCompany?.trim());
 
   return (
     <Card>
@@ -133,43 +101,32 @@ function BookingCustomerCard({
             <AvatarImage src={customer?.profile.photoURL ?? undefined} alt={avatarName} />
             <AvatarFallback>{generateAvatarFallback(avatarName)}</AvatarFallback>
           </Avatar>
-          <div className="flex-1">
+          <div className="flex-1 space-y-1.5">
             <h3 className="font-semibold">{profileName}</h3>
-            {showSubtitle ? (
-              <p className="text-muted-foreground text-sm">{profileSubtitle}</p>
-            ) : null}
+            <Badge
+              variant="outline"
+              className={cn(
+                "font-medium",
+                isCorporate
+                  ? "border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                  : "border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300"
+              )}>
+              {isCorporate ? "Corporate" : "Individual"}
+            </Badge>
           </div>
         </div>
-
-        {customerAddress?.trim() || customerPhone?.trim() || showEmailInContact ? (
-          <div className="mt-4 space-y-3">
-            {customerAddress?.trim() ? (
-              <ContactRow icon={MapPin}>{customerAddress}</ContactRow>
-            ) : null}
-            {customerPhone?.trim() ? (
-              <ContactRow icon={PhoneCall}>{customerPhone}</ContactRow>
-            ) : null}
-            {showEmailInContact ? (
-              <ContactRow icon={Mail}>{customerEmail}</ContactRow>
-            ) : null}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-function vehicleSnapshotLuggageLabel(vehicle: Vehicle) {
-  if (vehicle.luggageDescription?.trim()) {
-    return vehicle.luggageDescription.trim();
-  }
-  if (vehicle.smallLuggageCount != null || vehicle.largeLuggageCount != null) {
-    return `${vehicle.smallLuggageCount ?? 0} small, ${vehicle.largeLuggageCount ?? 0} large`;
-  }
-  return null;
-}
-
-function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | null | undefined }) {
+function BookingVehicleCard({
+  vehicleSnapshot,
+  vehicleClassLabel
+}: {
+  vehicleSnapshot: Vehicle | null | undefined;
+  vehicleClassLabel: string | null;
+}) {
   if (!vehicleSnapshot) {
     return (
       <Card>
@@ -183,11 +140,7 @@ function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | nu
     );
   }
 
-  const vehicleName = `${vehicleSnapshot.color} ${vehicleSnapshot.make} ${vehicleSnapshot.model}`.trim();
-  const vehicleClass = vehicleSnapshot.vehicleClassId ?? null;
-  const plate = vehicleSnapshot.licensePlate?.trim();
-  const subtitle = [vehicleClass, plate].filter(Boolean).join(" • ");
-  const luggage = vehicleSnapshotLuggageLabel(vehicleSnapshot);
+  const vehicleName = vehicleDisplayName(vehicleSnapshot);
 
   return (
     <Card>
@@ -197,28 +150,15 @@ function BookingVehicleCard({ vehicleSnapshot }: { vehicleSnapshot: Vehicle | nu
       <CardContent>
         <div className="flex items-center gap-4">
           <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
-          <div className="flex-1">
+          <div className="flex-1 space-y-1.5">
             <h3 className="font-semibold">{vehicleName || "Vehicle"}</h3>
-            {subtitle ? <p className="text-muted-foreground text-sm">{subtitle}</p> : null}
+            {vehicleClassLabel ? (
+              <DetailSheetIconBadge icon={vehicleTierBadgeIcon}>
+                {vehicleClassLabel}
+              </DetailSheetIconBadge>
+            ) : null}
           </div>
         </div>
-
-        {vehicleSnapshot.passengerCapacity != null ||
-        vehicleSnapshot.manufactureYear != null ||
-        luggage ? (
-          <div className="mt-4 space-y-3">
-            {vehicleSnapshot.passengerCapacity != null ? (
-              <DetailRow
-                label="Passengers"
-                value={vehicleSnapshot.passengerCapacity}
-              />
-            ) : null}
-            {vehicleSnapshot.manufactureYear != null ? (
-              <DetailRow label="Year" value={vehicleSnapshot.manufactureYear} />
-            ) : null}
-            {luggage ? <DetailRow label="Luggage" value={luggage} /> : null}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );
@@ -318,12 +258,11 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
   const customerName =
     trip?.customerDisplayName || customer?.profile.displayName || null;
-  const customerAddress = trip
-    ? formatPostalAddress(postalAddressFromTripSnapshot(trip))
-    : null;
-  const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
-  const customerCompany = trip?.customerCompany ?? null;
+  const isCorporateCustomer = Boolean(
+    trip?.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
+  );
+  const vehicleClassLabel = trip?.vehicleClassDisplayName?.trim() || null;
 
   const roundTripLeg = useMemo(
     () => (trip ? roundTripLegLabel(trip, linkedTrip) : null),
@@ -515,13 +454,14 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           <BookingCustomerCard
             customer={customer}
             customerName={customerName}
-            customerAddress={customerAddress}
-            customerPhone={customerPhone}
             customerEmail={customerEmail}
-            customerCompany={customerCompany}
+            isCorporate={isCorporateCustomer}
           />
 
-          <BookingVehicleCard vehicleSnapshot={trip.vehicleSnapshot} />
+          <BookingVehicleCard
+            vehicleSnapshot={trip.vehicleSnapshot}
+            vehicleClassLabel={vehicleClassLabel}
+          />
 
           <SectionCard
             title="Payment"

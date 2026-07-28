@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
+import MapGL, { Layer, Marker, Source, type MapRef } from "react-map-gl/mapbox";
 import { useTheme } from "next-themes";
 import { MapPinIcon } from "lucide-react";
 
@@ -88,7 +88,7 @@ export function BookingJourneyMap({
         </div>
       )}
 
-      <div className="h-[320px] overflow-hidden rounded-lg border">
+      <div className="h-[480px] overflow-hidden rounded-lg border">
         {tokenError ? (
           <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
             Set NEXT_PUBLIC_MAPBOX_TOKEN to show the journey map.
@@ -104,8 +104,8 @@ export function BookingJourneyMap({
             initialViewState={initialViewState}
             mapStyle={mapStyle}
             style={{ width: "100%", height: "100%" }}
-            attributionControl={false}>
-            <NavigationControl position="top-right" />
+            attributionControl={false}
+            interactive={false}>
             {route && (
               <Source id="journey-route" type="geojson" data={route}>
                 <Layer
