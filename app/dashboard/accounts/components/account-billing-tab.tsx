@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AccountInvoicesTab } from "@/app/dashboard/accounts/components/account-invoices-tab";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -136,12 +136,6 @@ export function AccountBillingTab({
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Trips to invoice</CardTitle>
-            <CardDescription>
-              On-account bookings not yet linked to an invoice.
-            </CardDescription>
-          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -150,7 +144,7 @@ export function AccountBillingTab({
                   <TableHead>Pickup</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -177,7 +171,7 @@ export function AccountBillingTab({
                       <TableCell>
                         <TripStatusBadge status={trip.status} />
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell>
                         {trip.quotedTotal != null
                           ? formatCurrency(trip.quotedTotal, trip.quotedCurrencyCode ?? undefined)
                           : "—"}

@@ -25,7 +25,7 @@ import type { CorporateAccount, User } from "@/lib/models";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { fetchCorporateAccount, fetchUser } from "@/lib/services/firebase-service";
 
-const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing"] as const;
+const PROFILE_TABS = ["overview", "billing", "members", "policy", "rates"] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 function isProfileTab(value: string | null): value is ProfileTab {
@@ -196,18 +196,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
             />
           </TabsContent>
 
-          <TabsContent value="members" className="mt-0 space-y-4">
-            <AccountMembersTab account={account} onSaved={setAccount} />
-          </TabsContent>
-
-          <TabsContent value="rates" className="mt-0 space-y-4">
-            <AccountRatesTab account={account} onSaved={setAccount} />
-          </TabsContent>
-
-          <TabsContent value="policy" className="mt-0 space-y-4">
-            <AccountPolicyTab account={account} onSaved={setAccount} />
-          </TabsContent>
-
           <TabsContent value="billing" className="mt-0 space-y-4">
             <AccountBillingTab
               account={account}
@@ -216,6 +204,18 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
               invoicesLoading={invoicesLoading}
               defaultSection={billingDefaultSection}
             />
+          </TabsContent>
+
+          <TabsContent value="members" className="mt-0 space-y-4">
+            <AccountMembersTab account={account} onSaved={setAccount} />
+          </TabsContent>
+
+          <TabsContent value="policy" className="mt-0 space-y-4">
+            <AccountPolicyTab account={account} onSaved={setAccount} />
+          </TabsContent>
+
+          <TabsContent value="rates" className="mt-0 space-y-4">
+            <AccountRatesTab account={account} onSaved={setAccount} />
           </TabsContent>
         </Tabs>
       </div>

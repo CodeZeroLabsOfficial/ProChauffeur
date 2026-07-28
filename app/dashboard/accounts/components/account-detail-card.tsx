@@ -53,10 +53,10 @@ export function AccountDetailCard({
       tabs={
         <>
           <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
-          <ProfileV2TabTrigger value="members">Members</ProfileV2TabTrigger>
-          <ProfileV2TabTrigger value="rates">Rates</ProfileV2TabTrigger>
-          <ProfileV2TabTrigger value="policy">Policy</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="billing">Billing</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="members">Members</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="policy">Policy</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="rates">Rates</ProfileV2TabTrigger>
         </>
       }
     />
