@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canSendTripInvoice, effectivePaymentStatus } from "@/lib/bookings/trip-payment";
-import { listenTrip, updateTripStatus } from "@/lib/services/firebase-service";
+import { updateTripStatus } from "@/lib/services/firebase-service";
 import { createInvoiceForTrip } from "@/lib/services/payment-service";
 import {
   TRIP_STATUSES,
@@ -28,8 +28,6 @@ import {
   tripStatusTitle,
   tripTypeTitle,
   paymentSourceTitle,
-  isRoundTripLeg,
-  roundTripLegLabel,
   vehicleDisplayName,
   type Trip,
   type TripStatus,
@@ -208,16 +206,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();
-  const [linkedTrip, setLinkedTrip] = useState<Trip | null>(null);
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
-
-  useEffect(() => {
-    if (!trip?.linkedTripID) {
-      setLinkedTrip(null);
-      return;
-    }
-    return listenTrip(trip.linkedTripID, setLinkedTrip);
-  }, [trip?.linkedTripID]);
 
   const currentStepIndex = trip ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number]) : -1;
   const progressValue =
@@ -261,11 +250,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     trip?.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
   );
   const vehicleClassLabel = trip?.vehicleClassDisplayName?.trim() || null;
-
-  const roundTripLeg = useMemo(
-    () => (trip ? roundTripLegLabel(trip, linkedTrip) : null),
-    [trip, linkedTrip]
-  );
 
   const paymentStatus = trip ? effectivePaymentStatus(trip) : "unpaid";
   const linkedInvoice = useMemo(
@@ -443,6 +427,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             headerAction={<TripStatusBadge status={trip.status} />}>
             <DetailRow label="Requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
+              label="Trip type:"
+              value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
+            />
+            <DetailRow
               label="Completed:"
               value={completedAt ? formatDateTime(completedAt) : "—"}
             />
@@ -491,47 +479,23 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
           <SectionCard title="Pricing">
             <DetailRow
-              label="Trip type:"
-              value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
+              label="Base Fare:"
+              value={
+                trip.quotedSubtotal != null
+                  ? formatCurrency(trip.quotedSubtotal, trip.quotedCurrencyCode ?? appConfig.currency)
+                  : "—"
+              }
             />
-            {isRoundTripLeg(trip) ? (
-              <>
-                <DetailRow
-                  label="Booking:"
-                  value={
-                    roundTripLeg === "outbound"
-                      ? "Round trip — outbound leg"
-                      : roundTripLeg === "return"
-                        ? "Round trip — return leg"
-                        : "Round trip"
-                  }
-                />
-                {trip.linkedTripID ? (
-                  <DetailRow
-                    label="Linked booking:"
-                    value={
-                      <Link
-                        href={`/dashboard/bookings/${trip.linkedTripID}`}
-                        className="text-primary underline-offset-4 hover:underline">
-                        {shortBookingId(trip.linkedTripID)}
-                      </Link>
-                    }
-                  />
-                ) : null}
-              </>
-            ) : null}
-            {trip.tripType === "hourly" ? (
-              <DetailRow label="Booked hours:" value={trip.bookedHours ?? "—"} />
-            ) : null}
-            {trip.bookingAddons?.map((addon) => (
-              <DetailRow
-                key={addon.id}
-                label={`${addon.title}:`}
-                value={formatCurrency(addon.price, trip.quotedCurrencyCode ?? appConfig.currency)}
-              />
-            ))}
             <DetailRow
-              label="Quoted total:"
+              label="GST:"
+              value={
+                trip.quotedTaxAmount != null
+                  ? formatCurrency(trip.quotedTaxAmount, trip.quotedCurrencyCode ?? appConfig.currency)
+                  : "—"
+              }
+            />
+            <DetailRow
+              label="Total:"
               value={
                 trip.quotedTotal != null
                   ? formatCurrency(trip.quotedTotal, trip.quotedCurrencyCode ?? appConfig.currency)
