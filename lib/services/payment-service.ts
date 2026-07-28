@@ -32,3 +32,27 @@ export async function syncCorporateStripeCustomer(
   const result = await callable({ corporateAccountId });
   return result.data;
 }
+
+export type GenerateCorporatePeriodInvoiceResult = {
+  accountsProcessed: number;
+  invoicesCreated: number;
+  results: Array<{
+    corporateAccountId: string;
+    branchId: string;
+    invoiceId: string;
+    tripCount: number;
+    total: number;
+  }>;
+};
+
+/** Generate period invoice(s) for one corporate account (admin callable). */
+export async function generateCorporatePeriodInvoice(
+  corporateAccountId: string
+): Promise<GenerateCorporatePeriodInvoiceResult> {
+  const callable = httpsCallable<
+    { corporateAccountId: string; force: boolean },
+    GenerateCorporatePeriodInvoiceResult
+  >(firebaseFunctions(), "consolidateCorporateInvoicesManual");
+  const result = await callable({ corporateAccountId, force: true });
+  return result.data;
+}

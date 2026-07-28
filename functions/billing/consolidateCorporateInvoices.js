@@ -57,7 +57,12 @@ async function fetchUninvoicedOnAccountTrips(db, branchId, corporateAccountId) {
 
   return snap.docs
     .map((doc) => ({ id: doc.id, ref: doc.ref, ...(doc.data() || {}) }))
-    .filter((trip) => trip.paymentStatus === "on_account" && !trip.invoiceId);
+    .filter(
+      (trip) =>
+        trip.paymentStatus === "on_account" &&
+        !trip.invoiceId &&
+        trip.status !== "cancelled"
+    );
 }
 
 /**
@@ -152,19 +157,35 @@ async function createCorporateInvoice(db, {
 }
 
 /**
- * Runs consolidation for all active corporate accounts whose billing day is today.
- * @returns {Promise<{ accountsProcessed: number, invoicesCreated: number, results: object[] }>}
+ * Runs consolidation for active corporate accounts.
+ * @param {{ force?: boolean, corporateAccountId?: string }} [options]
+ *   - force: ignore billing day (manual / admin)
+ *   - corporateAccountId: limit to one account
  */
-async function consolidateCorporateInvoices(db, { force = false } = {}) {
-  const accountsSnap = await db
-    .collection(Collections.corporateAccounts)
-    .where("status", "==", "active")
-    .get();
-
+async function consolidateCorporateInvoices(
+  db,
+  { force = false, corporateAccountId = null } = {}
+) {
   const today = new Date();
   const { start: billingPeriodStart, end: billingPeriodEnd } = billingPeriodForToday(today);
   const branchesSnap = await db.collection(Collections.branches).get();
   const branchIds = branchesSnap.docs.map((d) => d.id);
+
+  let accountsSnap;
+  if (typeof corporateAccountId === "string" && corporateAccountId.trim()) {
+    const accountDoc = await db
+      .doc(`${Collections.corporateAccounts}/${corporateAccountId.trim()}`)
+      .get();
+    if (!accountDoc.exists) {
+      throw new HttpsError("not-found", "Corporate account not found.");
+    }
+    accountsSnap = { docs: [accountDoc] };
+  } else {
+    accountsSnap = await db
+      .collection(Collections.corporateAccounts)
+      .where("status", "==", "active")
+      .get();
+  }
 
   let accountsProcessed = 0;
   let invoicesCreated = 0;
@@ -172,6 +193,9 @@ async function consolidateCorporateInvoices(db, { force = false } = {}) {
 
   for (const accountDoc of accountsSnap.docs) {
     const account = { id: accountDoc.id, ...(accountDoc.data() || {}) };
+    if (account.status && account.status !== "active") {
+      continue;
+    }
     if (!force && !isBillingDayToday(account.billingDay, today)) {
       continue;
     }
@@ -206,13 +230,22 @@ async function consolidateCorporateInvoicesHandler() {
   return consolidateCorporateInvoices(db, { force: false });
 }
 
-/** Admin-only callable for manual runs (optional `force: true` ignores billing day). */
+/** Admin-only callable for manual runs. */
 async function consolidateCorporateInvoicesCallableHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
   await requireAdmin(db, uid);
   const force = request.data?.force === true;
-  return consolidateCorporateInvoices(db, { force });
+  const corporateAccountId =
+    typeof request.data?.corporateAccountId === "string"
+      ? request.data.corporateAccountId.trim()
+      : typeof request.data?.accountId === "string"
+        ? request.data.accountId.trim()
+        : null;
+  return consolidateCorporateInvoices(db, {
+    force: force || Boolean(corporateAccountId),
+    corporateAccountId: corporateAccountId || null,
+  });
 }
 
 module.exports = {

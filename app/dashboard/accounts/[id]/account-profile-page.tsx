@@ -7,6 +7,7 @@ import { ChevronLeftIcon } from "lucide-react";
 
 import { AccountBillingTab } from "@/app/dashboard/accounts/components/account-billing-tab";
 import { AccountDetailCard } from "@/app/dashboard/accounts/components/account-detail-card";
+import { AccountInvoicesTab } from "@/app/dashboard/accounts/components/account-invoices-tab";
 import { AccountMembersTab } from "@/app/dashboard/accounts/components/account-members-tab";
 import { AccountOverviewTab } from "@/app/dashboard/accounts/components/account-overview-tab";
 import { AccountPolicyTab } from "@/app/dashboard/accounts/components/account-policy-tab";
@@ -25,7 +26,7 @@ import type { CorporateAccount, User } from "@/lib/models";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { fetchCorporateAccount, fetchUser } from "@/lib/services/firebase-service";
 
-const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing"] as const;
+const PROFILE_TABS = ["overview", "members", "rates", "policy", "billing", "invoices"] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 function isProfileTab(value: string | null): value is ProfileTab {
@@ -194,7 +195,11 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
           </TabsContent>
 
           <TabsContent value="billing" className="mt-0 space-y-4">
-            <AccountBillingTab invoices={accountInvoices} loading={invoicesLoading} />
+            <AccountBillingTab account={account} trips={trips} />
+          </TabsContent>
+
+          <TabsContent value="invoices" className="mt-0 space-y-4">
+            <AccountInvoicesTab invoices={accountInvoices} loading={invoicesLoading} />
           </TabsContent>
         </Tabs>
       </div>

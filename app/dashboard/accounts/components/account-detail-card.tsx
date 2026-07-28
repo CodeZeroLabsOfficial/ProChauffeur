@@ -57,6 +57,7 @@ export function AccountDetailCard({
           <ProfileV2TabTrigger value="rates">Rates</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="policy">Policy</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="billing">Billing</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="invoices">Invoices</ProfileV2TabTrigger>
         </>
       }
     />
