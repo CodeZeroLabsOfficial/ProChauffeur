@@ -48,6 +48,11 @@ export interface CorporateAccount {
   logoUrl?: string | null;
   /** Company contact email (not billing contact). */
   email?: string | null;
+  /**
+   * Accounts / AP inbox for period invoices (e.g. accounts@).
+   * Prefer over `email` and billing contact when sending invoices / syncing Stripe.
+   */
+  billingEmail?: string | null;
   /** Company phone (not billing contact). */
   phone?: string | null;
   abn?: string | null;
@@ -100,6 +105,8 @@ export interface CorporateAccount {
   joinCode?: string | null;
   /** Soft credit cap in account currency; null = unlimited. */
   creditLimit?: number | null;
+  /** Stripe Customer id for company invoicing (server-written). */
+  stripeCustomerId?: string | null;
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -180,6 +187,7 @@ export function buildNewCorporateAccount(
     name: "",
     logoUrl: null,
     email: null,
+    billingEmail: null,
     phone: null,
     abn: null,
     acn: null,
@@ -207,6 +215,7 @@ export function buildNewCorporateAccount(
     fixedRates: [],
     joinCode: null,
     creditLimit: null,
+    stripeCustomerId: null,
     notes: null,
     createdAt: now,
     updatedAt: now,

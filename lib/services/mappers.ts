@@ -586,6 +586,7 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     name: typeof d.name === "string" ? d.name : "",
     logoUrl: typeof d.logoUrl === "string" ? d.logoUrl : null,
     email: typeof d.email === "string" ? d.email : null,
+    billingEmail: typeof d.billingEmail === "string" ? d.billingEmail : null,
     phone: typeof d.phone === "string" ? d.phone : null,
     abn: typeof d.abn === "string" ? d.abn : null,
     acn: typeof d.acn === "string" ? d.acn : null,
@@ -616,6 +617,7 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     fixedRates,
     joinCode: typeof d.joinCode === "string" ? d.joinCode : null,
     creditLimit: typeof d.creditLimit === "number" ? d.creditLimit : null,
+    stripeCustomerId: typeof d.stripeCustomerId === "string" ? d.stripeCustomerId : null,
     notes: typeof d.notes === "string" ? d.notes : null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()

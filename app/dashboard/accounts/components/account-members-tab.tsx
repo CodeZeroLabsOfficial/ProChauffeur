@@ -48,11 +48,13 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import type { CorporateAccount, User } from "@/lib/models";
+import { resolveCorporateInvoiceEmail } from "@/lib/bookings/corporate-billing";
 import {
   fetchCorporateAccountMembers,
   linkCustomerToCorporateAccount,
   saveCorporateAccount
 } from "@/lib/services/firebase-service";
+import { syncCorporateStripeCustomer } from "@/lib/services/payment-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { generateAvatarFallback } from "@/lib/utils";
 
@@ -132,6 +134,23 @@ export function AccountMembersTab({
       updatedAt: new Date()
     };
     await saveCorporateAccount(next);
+
+    const billingChanged = Object.prototype.hasOwnProperty.call(patch, "billingContactUserId");
+    if (billingChanged && next.billingContactUserId) {
+      const billingMember =
+        members.find((m) => m.id === next.billingContactUserId) ??
+        membersToAdd.find((m) => m.id === next.billingContactUserId) ??
+        null;
+      if (resolveCorporateInvoiceEmail(next, billingMember)) {
+        try {
+          const { stripeCustomerId } = await syncCorporateStripeCustomer(next.id);
+          next.stripeCustomerId = stripeCustomerId;
+        } catch {
+          toast.message("Contact updated, but Stripe customer could not be synced.");
+        }
+      }
+    }
+
     onSaved(next);
   }
 

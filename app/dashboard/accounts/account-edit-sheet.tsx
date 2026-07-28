@@ -57,6 +57,8 @@ import {
   saveCorporateAccount,
   uploadCorporateAccountLogo
 } from "@/lib/services/firebase-service";
+import { syncCorporateStripeCustomer } from "@/lib/services/payment-service";
+import { resolveCorporateInvoiceEmail } from "@/lib/bookings/corporate-billing";
 
 type FieldErrors = {
   name?: boolean;
@@ -323,6 +325,7 @@ export function AccountEditSheet({
         name,
         logoUrl: draft.logoUrl?.trim() || null,
         email: draft.email?.trim() || null,
+        billingEmail: draft.billingEmail?.trim() || null,
         phone: draft.phone?.trim() || null,
         abn: draft.abn?.trim() || null,
         acn: draft.acn?.trim() || null,
@@ -341,6 +344,19 @@ export function AccountEditSheet({
       );
       for (const userId of memberIds) {
         await ensureMemberLinked(userId, next.id);
+      }
+      if (
+        resolveCorporateInvoiceEmail(
+          next,
+          billingSameAsPrimary ? primaryContact : billingContact
+        )
+      ) {
+        try {
+          const { stripeCustomerId } = await syncCorporateStripeCustomer(next.id);
+          next.stripeCustomerId = stripeCustomerId;
+        } catch {
+          toast.message("Account saved, but Stripe customer could not be synced.");
+        }
       }
       toast.success(isNew ? "Account created." : "Account saved.");
       onSaved?.(next);
@@ -623,6 +639,27 @@ export function AccountEditSheet({
                     disabled={saving}
                   />
                 </div>
+              ) : null}
+
+              <div className="*:not-first:mt-2">
+                <Label htmlFor="account-billing-email">Accounts email</Label>
+                <Input
+                  id="account-billing-email"
+                  type="email"
+                  value={draft.billingEmail ?? ""}
+                  onChange={(e) => setDraft((c) => ({ ...c, billingEmail: e.target.value }))}
+                  placeholder="accounts@company.com"
+                  disabled={saving}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Where period invoices are sent. Falls back to company email, then billing contact.
+                </p>
+              </div>
+
+              {draft.stripeCustomerId?.trim() ? (
+                <p className="text-muted-foreground text-xs">
+                  Stripe customer linked ({draft.stripeCustomerId.slice(0, 14)}…).
+                </p>
               ) : null}
 
               <Separator />

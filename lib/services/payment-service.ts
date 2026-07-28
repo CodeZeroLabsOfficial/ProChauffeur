@@ -16,3 +16,19 @@ export async function createInvoiceForTrip(tripId: string): Promise<CreateInvoic
   const result = await callable({ tripId });
   return result.data;
 }
+
+export type SyncCorporateStripeCustomerResult = {
+  stripeCustomerId: string;
+};
+
+/** Create or update the Stripe Customer for a corporate account (admin callable). */
+export async function syncCorporateStripeCustomer(
+  corporateAccountId: string
+): Promise<SyncCorporateStripeCustomerResult> {
+  const callable = httpsCallable<
+    { corporateAccountId: string },
+    SyncCorporateStripeCustomerResult
+  >(firebaseFunctions(), "syncCorporateStripeCustomer");
+  const result = await callable({ corporateAccountId });
+  return result.data;
+}

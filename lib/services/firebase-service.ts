@@ -763,6 +763,7 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
       name: account.name.trim(),
       logoUrl: account.logoUrl?.trim() || null,
       email: account.email?.trim() || null,
+      billingEmail: account.billingEmail?.trim() || null,
       phone: account.phone?.trim() || null,
       abn: account.abn?.trim() || null,
       acn: account.acn?.trim() || null,
