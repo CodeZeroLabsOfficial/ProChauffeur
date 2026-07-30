@@ -1,5 +1,4 @@
-import { formatDistanceToNow } from "date-fns";
-
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 export function expiryWarning(date: Date | null | undefined): "expired" | "soon" | null {
@@ -11,17 +10,20 @@ export function expiryWarning(date: Date | null | undefined): "expired" | "soon"
   return null;
 }
 
-export function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
+export function ExpiryBadge({
+  level,
+  className
+}: {
+  level: "expired" | "soon";
+  className?: string;
+}) {
   return (
-    <Badge variant={level === "expired" ? "destructive" : "outline"} className="ms-2">
+    <Badge
+      variant={level === "expired" ? "destructive" : "outline"}
+      className={cn("ms-2", level === "soon" && "border-warning text-warning", className)}>
       {level === "expired" ? "Expired" : "Expiring soon"}
     </Badge>
   );
-}
-
-export function remainingTimeLabel(expiry: Date | null | undefined): string | null {
-  if (!expiry) return null;
-  return formatDistanceToNow(expiry, { addSuffix: true });
 }
 
 export function isStartAfterExpiry(

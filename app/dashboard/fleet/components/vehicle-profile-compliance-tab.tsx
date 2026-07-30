@@ -1,52 +1,67 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { ArrowRightIcon, PlusIcon } from "lucide-react";
 
 import type { Vehicle, VehicleInsurancePolicy } from "@/lib/models";
 import { vehicleInsuranceCoverTypeLabel } from "@/lib/vehicle-insurance";
+import { cn } from "@/lib/utils";
 import { VehicleRegistrationEditSheet } from "@/app/dashboard/fleet/vehicle-registration-edit-sheet";
 import { VehicleInsuranceEditSheet } from "@/app/dashboard/fleet/vehicle-insurance-edit-sheet";
 import { VehicleRoadworthyEditSheet } from "@/app/dashboard/fleet/vehicle-roadworthy-edit-sheet";
-import {
-  ComplianceEditButton,
-  ValidityTermFooter
-} from "@/app/dashboard/fleet/components/validity-term-footer";
+import { ComplianceDetailsSheet } from "@/app/dashboard/fleet/components/compliance-details-sheet";
+import { ComplianceEditButton } from "@/app/dashboard/fleet/components/compliance-edit-button";
+import { ComplianceStat } from "@/app/dashboard/fleet/components/compliance-stat";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function ViewDetailsFooter({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b py-3 last:border-0">
-      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
-      <span className="text-end text-sm">{value}</span>
-    </div>
+    <CardFooter className="border-border mt-auto flex items-center justify-end border-t p-0!">
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-primary hover:text-primary/90 flex items-center px-6 py-3 text-sm font-medium">
+        View details
+        <ArrowRightIcon className="ms-1 size-4" />
+      </button>
+    </CardFooter>
   );
 }
 
 function InsurancePolicyCard({
   policy,
-  onEdit
+  onEdit,
+  onViewDetails
 }: {
   policy: VehicleInsurancePolicy;
   onEdit: () => void;
+  onViewDetails: () => void;
 }) {
   return (
-    <div className="relative rounded-lg border p-3 text-sm">
+    <Card className="relative gap-4 py-4 pb-0 shadow-none">
       <ComplianceEditButton
         label="Edit insurance policy"
         onClick={onEdit}
-        className="top-2 right-2"
+        className="absolute top-3 right-3"
       />
-      <div className="pr-10">
-        <p className="font-semibold">{vehicleInsuranceCoverTypeLabel[policy.coverType]}</p>
-        <p className="text-muted-foreground mt-1 text-sm">{policy.insurerName.trim() || "—"}</p>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          {policy.policyReferenceNumber.trim() || "—"}
-        </p>
-      </div>
-      <ValidityTermFooter start={policy.policyStart} expiry={policy.policyExpiry} />
-    </div>
+      <CardContent className="pe-14">
+        <ComplianceStat
+          label={vehicleInsuranceCoverTypeLabel[policy.coverType]}
+          secondary={policy.insurerName}
+          start={policy.policyStart}
+          expiry={policy.policyExpiry}
+        />
+      </CardContent>
+      <ViewDetailsFooter onClick={onViewDetails} />
+    </Card>
   );
 }
 
@@ -63,6 +78,9 @@ export function VehicleProfileComplianceTab({
   const [roadworthyOpen, setRoadworthyOpen] = useState(false);
   const [insuranceOpen, setInsuranceOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<VehicleInsurancePolicy | null>(null);
+  const [registrationDetailsOpen, setRegistrationDetailsOpen] = useState(false);
+  const [roadworthyDetailsOpen, setRoadworthyDetailsOpen] = useState(false);
+  const [detailsPolicy, setDetailsPolicy] = useState<VehicleInsurancePolicy | null>(null);
   const policies = vehicle.insurancePolicies ?? [];
   const registration = vehicle.registration;
   const roadworthy = vehicle.roadworthy;
@@ -78,66 +96,132 @@ export function VehicleProfileComplianceTab({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="relative">
-        <ComplianceEditButton label="Edit registration" onClick={() => setRegistrationOpen(true)} />
+    <div className={cn("grid gap-4", nested ? "grid-cols-1" : "lg:grid-cols-2")}>
+      <Card className="pb-0">
         <CardHeader>
           <CardTitle>Registration</CardTitle>
+          <CardAction>
+            <ComplianceEditButton
+              label="Edit registration"
+              onClick={() => setRegistrationOpen(true)}
+            />
+          </CardAction>
         </CardHeader>
         <CardContent>
-          <DetailRow
-            label="Issuing Authority"
-            value={registration?.issuingAuthority?.trim() || "—"}
-          />
-          <DetailRow label="Jurisdiction" value={registration?.jurisdictionCode?.trim() || "—"} />
-          <DetailRow
-            label="Registration Number"
-            value={registration?.registrationNumber?.trim() || "—"}
-          />
-          <ValidityTermFooter
+          <ComplianceStat
+            label={registration?.registrationNumber ?? ""}
+            secondary={registration?.jurisdictionCode}
             start={registration?.registrationStart}
             expiry={registration?.registrationExpiry}
           />
         </CardContent>
+        <ViewDetailsFooter onClick={() => setRegistrationDetailsOpen(true)} />
       </Card>
 
-      <Card className="relative">
-        <ComplianceEditButton label="Edit roadworthy" onClick={() => setRoadworthyOpen(true)} />
+      <Card className="pb-0">
         <CardHeader>
           <CardTitle>Roadworthy</CardTitle>
+          <CardAction>
+            <ComplianceEditButton label="Edit roadworthy" onClick={() => setRoadworthyOpen(true)} />
+          </CardAction>
         </CardHeader>
         <CardContent>
-          <DetailRow label="Issuing Authority" value={roadworthy?.issuingAuthority?.trim() || "—"} />
-          <DetailRow label="Jurisdiction" value={roadworthy?.jurisdictionCode?.trim() || "—"} />
-          <DetailRow label="Certificate no." value={roadworthy?.certificateNumber?.trim() || "—"} />
-          <ValidityTermFooter start={roadworthy?.issueDate} expiry={roadworthy?.expiryDate} />
+          <ComplianceStat
+            label={roadworthy?.certificateNumber ?? ""}
+            secondary={roadworthy?.jurisdictionCode}
+            start={roadworthy?.issueDate}
+            expiry={roadworthy?.expiryDate}
+          />
         </CardContent>
+        <ViewDetailsFooter onClick={() => setRoadworthyDetailsOpen(true)} />
       </Card>
 
-      <Card className="relative lg:col-span-2">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <Card className={nested ? undefined : "lg:col-span-2"}>
+        <CardHeader>
           <CardTitle>Insurance</CardTitle>
-          <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
-            <PlusIcon />
-            Add policy
-          </Button>
+          <CardAction>
+            <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
+              <PlusIcon />
+              Add policy
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {policies.length === 0 ? (
             <p className="text-muted-foreground text-sm">No insurance policies yet.</p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={cn("grid gap-3", nested ? "grid-cols-1" : "md:grid-cols-2")}>
               {policies.map((policy) => (
                 <InsurancePolicyCard
                   key={policy.id}
                   policy={policy}
                   onEdit={() => openEditPolicy(policy)}
+                  onViewDetails={() => setDetailsPolicy(policy)}
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <ComplianceDetailsSheet
+        title="Registration details"
+        description="Registration information for this fleet vehicle."
+        details={[
+          {
+            label: "Registration number",
+            value: registration?.registrationNumber?.trim() || "—"
+          },
+          { label: "Jurisdiction", value: registration?.jurisdictionCode?.trim() || "—" },
+          { label: "Issuing authority", value: registration?.issuingAuthority?.trim() || "—" }
+        ]}
+        startLabel="Registration start"
+        start={registration?.registrationStart}
+        expiry={registration?.registrationExpiry}
+        open={registrationDetailsOpen}
+        onOpenChange={setRegistrationDetailsOpen}
+        nested={nested}
+      />
+
+      <ComplianceDetailsSheet
+        title="Roadworthy details"
+        description="Roadworthy certificate information for this fleet vehicle."
+        details={[
+          { label: "Certificate number", value: roadworthy?.certificateNumber?.trim() || "—" },
+          { label: "Jurisdiction", value: roadworthy?.jurisdictionCode?.trim() || "—" },
+          { label: "Issuing authority", value: roadworthy?.issuingAuthority?.trim() || "—" }
+        ]}
+        startLabel="Issue date"
+        start={roadworthy?.issueDate}
+        expiry={roadworthy?.expiryDate}
+        open={roadworthyDetailsOpen}
+        onOpenChange={setRoadworthyDetailsOpen}
+        nested={nested}
+      />
+
+      <ComplianceDetailsSheet
+        title="Insurance policy details"
+        description="Insurance policy information for this fleet vehicle."
+        details={[
+          {
+            label: "Cover type",
+            value: detailsPolicy ? vehicleInsuranceCoverTypeLabel[detailsPolicy.coverType] : "—"
+          },
+          { label: "Insurer", value: detailsPolicy?.insurerName.trim() || "—" },
+          {
+            label: "Policy reference",
+            value: detailsPolicy?.policyReferenceNumber.trim() || "—"
+          }
+        ]}
+        startLabel="Policy start"
+        start={detailsPolicy?.policyStart}
+        expiry={detailsPolicy?.policyExpiry}
+        open={detailsPolicy != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailsPolicy(null);
+        }}
+        nested={nested}
+      />
 
       <VehicleRegistrationEditSheet
         vehicle={vehicle}
