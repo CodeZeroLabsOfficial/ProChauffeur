@@ -1,7 +1,17 @@
 "use client";
 
+import { useState } from "react";
+
 import type { Vehicle } from "@/lib/models";
-import { VehicleComplianceFields } from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
+import {
+  VehicleCtpFields,
+  VehicleInsuranceFields,
+  VehicleRegistrationFields,
+  VehicleRoadworthyFields
+} from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
+import {
+  saveVehicleFields
+} from "@/app/dashboard/fleet/lib/save-vehicle-fields";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function VehicleProfileComplianceTab({
@@ -11,6 +21,23 @@ export function VehicleProfileComplianceTab({
   vehicle: Vehicle;
   onVehicleUpdated?: () => void;
 }) {
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+
+  async function saveVehicle(patch: Partial<Vehicle>) {
+    const result = await saveVehicleFields(vehicle, patch);
+    if (result.ok) onVehicleUpdated?.();
+    return result;
+  }
+
+  const shared = {
+    vehicle,
+    onSaved: onVehicleUpdated,
+    showSectionHeading: false,
+    activeFieldId,
+    onActiveFieldIdChange: setActiveFieldId,
+    saveVehicle
+  };
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
@@ -18,22 +45,34 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent>
-          <VehicleComplianceFields
-            vehicle={vehicle}
-            onSaved={onVehicleUpdated}
-            showSectionHeading={false}
-          />
+          <VehicleRegistrationFields {...shared} />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Other compliance</CardTitle>
+          <CardTitle>Compulsory Third Party</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">
-            Insurance, roadworthy, and fleet certification details coming soon.
-          </p>
+          <VehicleCtpFields {...shared} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vehicle insurance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VehicleInsuranceFields {...shared} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Roadworthy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VehicleRoadworthyFields {...shared} />
         </CardContent>
       </Card>
     </div>

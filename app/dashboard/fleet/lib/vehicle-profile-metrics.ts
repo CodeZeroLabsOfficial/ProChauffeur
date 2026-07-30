@@ -30,7 +30,10 @@ export function vehicleProfileCompleteness(vehicle: Vehicle): number {
     Boolean(vehicle.vehicleClassId),
     Boolean(vehicle.vehicleIdentificationNumber?.trim()),
     Boolean(vehicle.registrationExpiry),
-    Boolean(vehicle.registrationJurisdictionCode?.trim())
+    Boolean(vehicle.registrationJurisdictionCode?.trim()),
+    Boolean(vehicle.ctpExpiry),
+    Boolean(vehicle.ctpProviderName?.trim() || vehicle.ctpPolicyNumber?.trim()),
+    Boolean(vehicle.roadworthyExpiry)
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }

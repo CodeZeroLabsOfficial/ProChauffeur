@@ -1,3 +1,5 @@
+import type { VehicleInsurancePolicyType } from "@/lib/vehicle-insurance";
+
 /**
  * Vehicle.swift — `vehicles/{driverID}` document.
  * The document id always equals `driverID` (the chauffeur user id).
@@ -13,6 +15,23 @@ export interface Vehicle {
   manufactureYear?: number | null;
   registrationJurisdictionCode?: string | null;
   registrationExpiry?: Date | null;
+  /** CTP insurer or government scheme name. */
+  ctpProviderName?: string | null;
+  /** CTP policy / Green Slip / reference number. */
+  ctpPolicyNumber?: string | null;
+  /** CTP class or category (e.g. booked-hire class); varies by jurisdiction. */
+  ctpClassOrType?: string | null;
+  ctpExpiry?: Date | null;
+  /** When true, CTP is commonly bundled with registration. */
+  ctpIncludedWithRegistration?: boolean | null;
+  /** Optional vehicle insurance policy type (not CTP). */
+  insurancePolicyType?: VehicleInsurancePolicyType | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceExpiry?: Date | null;
+  roadworthyCertificateNumber?: string | null;
+  roadworthyIssuingAuthority?: string | null;
+  roadworthyExpiry?: Date | null;
   vehicleClassId?: string | null;
   /** VIN or internal fleet vehicle identifier. */
   vehicleIdentificationNumber?: string | null;

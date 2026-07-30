@@ -55,6 +55,7 @@ import {
 } from "@/lib/models/license";
 import { parseOperatorLocale, parsePricingConfig, parseVehicleClass } from "@/lib/pricing/validate";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
+import { parseVehicleInsurancePolicyType } from "@/lib/vehicle-insurance";
 
 /** Pure mappers from raw Firestore document data into typed app models. */
 
@@ -198,6 +199,19 @@ export function mapVehicle(d: DocumentData): Vehicle {
     manufactureYear: d.manufactureYear != null ? toInt(d.manufactureYear, 0) : null,
     registrationJurisdictionCode: d.registrationJurisdictionCode ?? null,
     registrationExpiry: toDate(d.registrationExpiry),
+    ctpProviderName: d.ctpProviderName ?? null,
+    ctpPolicyNumber: d.ctpPolicyNumber ?? null,
+    ctpClassOrType: d.ctpClassOrType ?? null,
+    ctpExpiry: toDate(d.ctpExpiry),
+    ctpIncludedWithRegistration:
+      typeof d.ctpIncludedWithRegistration === "boolean" ? d.ctpIncludedWithRegistration : null,
+    insurancePolicyType: parseVehicleInsurancePolicyType(d.insurancePolicyType),
+    insuranceProviderName: d.insuranceProviderName ?? null,
+    insurancePolicyNumber: d.insurancePolicyNumber ?? null,
+    insuranceExpiry: toDate(d.insuranceExpiry),
+    roadworthyCertificateNumber: d.roadworthyCertificateNumber ?? null,
+    roadworthyIssuingAuthority: d.roadworthyIssuingAuthority ?? null,
+    roadworthyExpiry: toDate(d.roadworthyExpiry),
     vehicleClassId: d.vehicleClassId ?? null,
     vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
     engineTypeDescription: d.engineTypeDescription ?? null,
