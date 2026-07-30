@@ -14,28 +14,33 @@ export function validateTripAgainstVehicle(
   vehicle: Vehicle
 ): CapacityIssue[] {
   const issues: CapacityIssue[] = [];
-  if (requirements.passengers > vehicle.passengerCapacity) {
+  const capacity = vehicle.capacity;
+  const passengerCount = capacity?.passengerCount ?? 0;
+  const smallCount = capacity?.luggage.smallCount ?? 0;
+  const largeCount = capacity?.luggage.largeCount ?? 0;
+
+  if (requirements.passengers > passengerCount) {
     issues.push({
       code: "TRIP_PASSENGERS_EXCEED_VEHICLE",
       severity: "error",
       field: "passengers",
-      message: `Passengers (${requirements.passengers}) exceeds vehicle capacity (${vehicle.passengerCapacity}).`
+      message: `Passengers (${requirements.passengers}) exceeds vehicle capacity (${passengerCount}).`
     });
   }
-  if (requirements.smallLuggage > vehicle.smallLuggageCount) {
+  if (requirements.smallLuggage > smallCount) {
     issues.push({
       code: "TRIP_SMALL_LUGGAGE_EXCEED_VEHICLE",
       severity: "error",
       field: "smallLuggage",
-      message: `Small luggage (${requirements.smallLuggage}) exceeds vehicle capacity (${vehicle.smallLuggageCount}).`
+      message: `Small luggage (${requirements.smallLuggage}) exceeds vehicle capacity (${smallCount}).`
     });
   }
-  if (requirements.largeLuggage > vehicle.largeLuggageCount) {
+  if (requirements.largeLuggage > largeCount) {
     issues.push({
       code: "TRIP_LARGE_LUGGAGE_EXCEED_VEHICLE",
       severity: "error",
       field: "largeLuggage",
-      message: `Large luggage (${requirements.largeLuggage}) exceeds vehicle capacity (${vehicle.largeLuggageCount}).`
+      message: `Large luggage (${requirements.largeLuggage}) exceeds vehicle capacity (${largeCount}).`
     });
   }
   return issues;

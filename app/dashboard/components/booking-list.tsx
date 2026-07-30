@@ -24,6 +24,7 @@ import {
 import { useTrips } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models/trip";
+import { vehicleDisplayName } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +62,7 @@ interface BookingRow {
 function vehicleClassLabel(trip: Trip) {
   return (
     trip.vehicleClassDisplayName ??
-    trip.vehicleSnapshot?.vehicleClassId ??
+    trip.vehicleSnapshot?.details?.vehicleClassId ??
     trip.vehicleClassId ??
     "Unassigned"
   );
@@ -70,7 +71,7 @@ function vehicleClassLabel(trip: Trip) {
 function vehicleLabel(trip: Trip) {
   const v = trip.vehicleSnapshot;
   if (!v) return "—";
-  return `${v.make} ${v.model}`.trim();
+  return vehicleDisplayName(v) || "—";
 }
 
 function durationLabel(trip: Trip) {
@@ -214,10 +215,7 @@ export function BookingList() {
   const bookings = useMemo(
     () =>
       [...trips]
-        .sort(
-          (a, b) =>
-            tripPickupReferenceDate(b).getTime() - tripPickupReferenceDate(a).getTime()
-        )
+        .sort((a, b) => tripPickupReferenceDate(b).getTime() - tripPickupReferenceDate(a).getTime())
         .map(toRow),
     [trips]
   );
@@ -328,7 +326,8 @@ export function BookingList() {
 
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {Math.max(table.getPageCount(), 1)}
             </p>
             <div className="flex items-center gap-2">
               <Button

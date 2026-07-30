@@ -58,11 +58,53 @@ import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type {
   VehicleInsurancePolicy,
   VehicleRegistration,
-  VehicleRoadworthy
+  VehicleRoadworthy,
+  VehicleCapacity,
+  VehicleDetails,
+  VehicleSpecifications
 } from "@/lib/models/vehicle";
 import { parseVehicleInsuranceCoverType } from "@/lib/vehicle-insurance";
 
 /** Pure mappers from raw Firestore document data into typed app models. */
+
+function mapVehicleDetails(raw: unknown): VehicleDetails | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    make: typeof d.make === "string" ? d.make : "",
+    model: typeof d.model === "string" ? d.model : "",
+    color: typeof d.color === "string" ? d.color : "",
+    manufactureYear: d.manufactureYear != null ? toInt(d.manufactureYear, 0) : null,
+    vehicleIdentificationNumber:
+      typeof d.vehicleIdentificationNumber === "string" ? d.vehicleIdentificationNumber : null,
+    vehicleClassId: typeof d.vehicleClassId === "string" ? d.vehicleClassId : null
+  };
+}
+
+function mapVehicleCapacity(raw: unknown): VehicleCapacity | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  const luggage = d.luggage && typeof d.luggage === "object" ? (d.luggage as DocumentData) : {};
+  return {
+    passengerCount: toInt(d.passengerCount, 0),
+    luggage: {
+      smallCount: toInt(luggage.smallCount, 0),
+      largeCount: toInt(luggage.largeCount, 0)
+    }
+  };
+}
+
+function mapVehicleSpecifications(raw: unknown): VehicleSpecifications | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    engineType: typeof d.engineType === "string" ? d.engineType : null,
+    transmission: typeof d.transmission === "string" ? d.transmission : "",
+    wifi: typeof d.wifi === "string" ? d.wifi : "",
+    interior: typeof d.interior === "string" ? d.interior : "",
+    climateControl: typeof d.climateControl === "string" ? d.climateControl : ""
+  };
+}
 
 function mapVehicleRegistration(raw: unknown): VehicleRegistration | null {
   if (!raw || typeof raw !== "object") return null;
@@ -244,21 +286,12 @@ export function mapVehicle(d: DocumentData): Vehicle {
     driverID: d.driverID,
     assignedChauffeurUserId: d.assignedChauffeurUserId ?? null,
     isEnabled: d.isEnabled !== false,
-    make: d.make ?? "",
-    model: d.model ?? "",
-    color: d.color ?? "",
-    passengerCapacity: toInt(d.passengerCapacity, 0),
-    manufactureYear: d.manufactureYear != null ? toInt(d.manufactureYear, 0) : null,
+    details: mapVehicleDetails(d.details),
+    capacity: mapVehicleCapacity(d.capacity),
+    specifications: mapVehicleSpecifications(d.specifications),
     registration: mapVehicleRegistration(d.registration),
     insurancePolicies: mapVehicleInsurancePolicies(d.insurancePolicies),
-    roadworthy: mapVehicleRoadworthy(d.roadworthy),
-    vehicleClassId: d.vehicleClassId ?? null,
-    vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
-    engineTypeDescription: d.engineTypeDescription ?? null,
-    luggageDescription: d.luggageDescription ?? "",
-    smallLuggageCount: toInt(d.smallLuggageCount, 0),
-    largeLuggageCount: toInt(d.largeLuggageCount, 0),
-    gearTypeDescription: d.gearTypeDescription ?? ""
+    roadworthy: mapVehicleRoadworthy(d.roadworthy)
   };
 }
 

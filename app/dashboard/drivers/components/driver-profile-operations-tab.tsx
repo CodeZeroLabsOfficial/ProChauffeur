@@ -13,6 +13,7 @@ import {
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import {
   effectiveChauffeurUserId,
+  vehicleDisplayName,
   type BranchDriver,
   type FleetWeeklyOperatingSchedule,
   type User,
@@ -46,7 +47,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 function vehicleMakeModel(vehicle: Vehicle): string {
-  return `${vehicle.make} ${vehicle.model}`.trim() || "Vehicle";
+  return vehicleDisplayName(vehicle) || "Vehicle";
 }
 
 function formatScheduleHours(
@@ -84,8 +85,8 @@ export function DriverProfileOperationsTab({
     [vehicleClasses]
   );
 
-  const classLabel = vehicle?.vehicleClassId
-    ? (classesById.get(vehicle.vehicleClassId) ?? vehicle.vehicleClassId)
+  const classLabel = vehicle?.details?.vehicleClassId
+    ? (classesById.get(vehicle.details.vehicleClassId) ?? vehicle.details.vehicleClassId)
     : null;
 
   const availableVehicles = useMemo(
@@ -199,7 +200,7 @@ export function DriverProfileOperationsTab({
               <Link
                 href={`/dashboard/fleet/${vehicle.driverID}`}
                 className="hover:bg-muted/50 -mx-2 flex items-center gap-4 rounded-lg px-2 py-1 transition-colors">
-                <VehicleMakeAvatar make={vehicle.make} className="size-12 shrink-0" />
+                <VehicleMakeAvatar make={vehicle.details?.make} className="size-12 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{vehicleMakeModel(vehicle)}</p>
                   <p className="text-muted-foreground truncate text-sm">{classLabel ?? "—"}</p>

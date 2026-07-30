@@ -14,7 +14,13 @@ import { getMapboxToken } from "@/lib/env";
 import { useLiveLocations } from "@/hooks/use-live-locations";
 import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-collections";
 import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
-import { companyDefaultMapView, tripPickupReferenceDate, tripStatusTitle, upcomingTripStatuses, type Trip } from "@/lib/models";
+import {
+  companyDefaultMapView,
+  tripPickupReferenceDate,
+  tripStatusTitle,
+  upcomingTripStatuses,
+  type Trip
+} from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -97,15 +103,12 @@ export default function DispatchPage() {
     const map = new globalThis.Map<string, string>();
     for (const v of vehicles) {
       const driverId = effectiveChauffeurUserId(v) ?? v.driverID;
-      if (driverId) map.set(driverId, v.make);
+      if (driverId) map.set(driverId, v.details?.make ?? "");
     }
     return map;
   }, [vehicles]);
 
-  const companyDefaultView = useMemo(
-    () => companyDefaultMapView(fleetLocations),
-    [fleetLocations]
-  );
+  const companyDefaultView = useMemo(() => companyDefaultMapView(fleetLocations), [fleetLocations]);
 
   const activeTrips = useMemo(
     () =>
@@ -177,7 +180,9 @@ export default function DispatchPage() {
           title="Dispatch"
           actions={
             <Badge variant="outline" className="gap-1.5">
-              <RadioIcon className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")} />
+              <RadioIcon
+                className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")}
+              />
               {locations.length} live
             </Badge>
           }
@@ -202,44 +207,44 @@ export default function DispatchPage() {
                 <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
               ) : (
                 filteredActiveTrips.map((t) => (
-                    <div
-                      key={t.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => toggleTripSelection(t.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          toggleTripSelection(t.id);
-                        }
-                      }}
-                      className={cn(
-                        "border-border hover:bg-muted/60 flex w-full cursor-pointer flex-col gap-3 border-b p-4 text-left transition-colors",
-                        selectedTripId === t.id && "bg-muted"
-                      )}>
-                      <div className="flex items-start justify-between gap-2">
-                        {t.driverID ? (
-                          <Link
-                            href={`/dashboard/drivers/${t.driverID}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-foreground text-sm font-medium hover:underline">
-                            {chauffeurLabel(t)}
-                          </Link>
-                        ) : (
-                          <span className="text-foreground text-sm font-medium">Unassigned</span>
-                        )}
-                        <TripStatusBadge status={t.status} />
-                      </div>
-                      <p className="text-muted-foreground text-xs">
-                        {formatDateTime(tripPickupReferenceDate(t))}
-                      </p>
-                      <Separator />
-                      <TripRouteStops
-                        pickup={t.pickupAddressLine || "Pickup location not set"}
-                        dropoff={t.dropoffAddressLine || "Destination not set"}
-                      />
+                  <div
+                    key={t.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleTripSelection(t.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleTripSelection(t.id);
+                      }
+                    }}
+                    className={cn(
+                      "border-border hover:bg-muted/60 flex w-full cursor-pointer flex-col gap-3 border-b p-4 text-left transition-colors",
+                      selectedTripId === t.id && "bg-muted"
+                    )}>
+                    <div className="flex items-start justify-between gap-2">
+                      {t.driverID ? (
+                        <Link
+                          href={`/dashboard/drivers/${t.driverID}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-foreground text-sm font-medium hover:underline">
+                          {chauffeurLabel(t)}
+                        </Link>
+                      ) : (
+                        <span className="text-foreground text-sm font-medium">Unassigned</span>
+                      )}
+                      <TripStatusBadge status={t.status} />
                     </div>
-                  ))
+                    <p className="text-muted-foreground text-xs">
+                      {formatDateTime(tripPickupReferenceDate(t))}
+                    </p>
+                    <Separator />
+                    <TripRouteStops
+                      pickup={t.pickupAddressLine || "Pickup location not set"}
+                      dropoff={t.dropoffAddressLine || "Destination not set"}
+                    />
+                  </div>
+                ))
               )}
             </div>
           </CardContent>
@@ -367,10 +372,7 @@ function RouteStopDot({ variant }: { variant: "pickup" | "dropoff" }) {
         isPickup ? "border-primary" : "border-muted-foreground/50"
       )}>
       <span
-        className={cn(
-          "size-1 rounded-full",
-          isPickup ? "bg-primary" : "bg-muted-foreground/50"
-        )}
+        className={cn("size-1 rounded-full", isPickup ? "bg-primary" : "bg-muted-foreground/50")}
       />
     </span>
   );

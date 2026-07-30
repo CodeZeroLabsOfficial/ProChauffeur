@@ -61,10 +61,10 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   );
 
   const vehicleClassLabel = useMemo(() => {
-    if (!vehicle?.vehicleClassId) return null;
+    if (!vehicle?.details?.vehicleClassId) return null;
     return (
-      vehicleClasses.find((c) => c.id === vehicle.vehicleClassId)?.displayName ??
-      vehicle.vehicleClassId
+      vehicleClasses.find((c) => c.id === vehicle.details?.vehicleClassId)?.displayName ??
+      vehicle.details.vehicleClassId
     );
   }, [vehicle, vehicleClasses]);
 

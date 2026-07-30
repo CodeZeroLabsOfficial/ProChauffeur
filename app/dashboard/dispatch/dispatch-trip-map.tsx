@@ -44,8 +44,7 @@ export function DispatchTripMap({
     [driverLocation]
   );
 
-  const overviewValid =
-    hasValidCoordinate(trip.pickup) && hasValidCoordinate(trip.dropoff);
+  const overviewValid = hasValidCoordinate(trip.pickup) && hasValidCoordinate(trip.dropoff);
   const pickupValid = hasValidCoordinate(trip.pickup);
   const dropoffValid = hasValidCoordinate(trip.dropoff);
 
@@ -57,8 +56,7 @@ export function DispatchTripMap({
   const routeEnabled =
     mode === "overview"
       ? overviewValid
-      : Boolean(driverCoordinate) &&
-        (mode === "to_pickup" ? pickupValid : dropoffValid);
+      : Boolean(driverCoordinate) && (mode === "to_pickup" ? pickupValid : dropoffValid);
 
   const liveDebounce = mode === "overview" ? 0 : 1000;
 
@@ -85,8 +83,7 @@ export function DispatchTripMap({
     return companyDefaultView ?? DEFAULT_VIEW;
   }, [fitPoints, companyDefaultView]);
 
-  const waitingForGps =
-    (mode === "to_pickup" || mode === "to_dropoff") && !driverCoordinate;
+  const waitingForGps = (mode === "to_pickup" || mode === "to_dropoff") && !driverCoordinate;
 
   const coordinatesUnavailable =
     (mode === "overview" && !overviewValid) ||
@@ -165,10 +162,16 @@ export function DispatchTripMap({
 
         {mode === "overview" && (
           <>
-            <Marker longitude={trip.pickup.longitude} latitude={trip.pickup.latitude} anchor="bottom">
+            <Marker
+              longitude={trip.pickup.longitude}
+              latitude={trip.pickup.latitude}
+              anchor="bottom">
               <MapPinIcon className="size-7 text-green-600 drop-shadow" />
             </Marker>
-            <Marker longitude={trip.dropoff.longitude} latitude={trip.dropoff.latitude} anchor="bottom">
+            <Marker
+              longitude={trip.dropoff.longitude}
+              latitude={trip.dropoff.latitude}
+              anchor="bottom">
               <MapPinIcon
                 className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}
               />
@@ -183,7 +186,10 @@ export function DispatchTripMap({
         )}
 
         {mode === "to_dropoff" && dropoffValid && (
-          <Marker longitude={trip.dropoff.longitude} latitude={trip.dropoff.latitude} anchor="bottom">
+          <Marker
+            longitude={trip.dropoff.longitude}
+            latitude={trip.dropoff.latitude}
+            anchor="bottom">
             <MapPinIcon
               className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}
             />
@@ -194,7 +200,7 @@ export function DispatchTripMap({
           <AnimatedDriverMarker
             location={driverLocation}
             title={driverName ?? "Driver"}
-            vehicleMake={trip.vehicleSnapshot?.make}
+            vehicleMake={trip.vehicleSnapshot?.details?.make}
           />
         )}
       </MapGL>

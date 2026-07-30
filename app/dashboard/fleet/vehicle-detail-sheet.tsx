@@ -18,7 +18,9 @@ import {
 
 import {
   effectiveChauffeurUserId,
-  luggageSpecificationLabel,
+  emptyVehicleCapacity,
+  emptyVehicleDetails,
+  emptyVehicleSpecifications,
   vehicleDisplayName,
   type Vehicle
 } from "@/lib/models";
@@ -63,11 +65,38 @@ function VehicleOverviewFields({
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  const classValue = vehicle.vehicleClassId ?? "";
-  const makeValue = vehicleMakeSelectValue(vehicle.make);
+  const details = vehicle.details ?? emptyVehicleDetails();
+  const capacity = vehicle.capacity ?? emptyVehicleCapacity();
+  const specifications = vehicle.specifications ?? emptyVehicleSpecifications();
+  const classValue = details.vehicleClassId ?? "";
+  const makeValue = vehicleMakeSelectValue(details.make);
 
   async function saveVehicle(patch: Partial<Vehicle>) {
     return saveVehicleFields(vehicle, patch);
+  }
+
+  function patchDetails(partial: Partial<typeof details>) {
+    return saveVehicle({ details: { ...details, ...partial } });
+  }
+
+  function patchCapacity(partial: {
+    passengerCount?: number;
+    smallCount?: number;
+    largeCount?: number;
+  }) {
+    return saveVehicle({
+      capacity: {
+        passengerCount: partial.passengerCount ?? capacity.passengerCount,
+        luggage: {
+          smallCount: partial.smallCount ?? capacity.luggage.smallCount,
+          largeCount: partial.largeCount ?? capacity.luggage.largeCount
+        }
+      }
+    });
+  }
+
+  function patchSpecifications(partial: Partial<typeof specifications>) {
+    return saveVehicle({ specifications: { ...specifications, ...partial } });
   }
 
   return (
@@ -86,7 +115,7 @@ function VehicleOverviewFields({
                 options={classOptions}
                 editLabel="service class"
                 placeholder="Select class"
-                onSave={async (next) => saveVehicle({ vehicleClassId: next })}
+                onSave={async (next) => patchDetails({ vehicleClassId: next || null })}
               />
             </dd>
           </div>
@@ -97,11 +126,11 @@ function VehicleOverviewFields({
                 fieldId="vin"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.vehicleIdentificationNumber?.trim() ?? ""}
+                value={details.vehicleIdentificationNumber?.trim() ?? ""}
                 editLabel="vehicle ID / VIN"
                 placeholder="VIN number"
                 onSave={async (next) =>
-                  saveVehicle({ vehicleIdentificationNumber: nullableTrim(next) })
+                  patchDetails({ vehicleIdentificationNumber: nullableTrim(next) })
                 }
               />
             </dd>
@@ -121,7 +150,7 @@ function VehicleOverviewFields({
                   if (!next.trim()) {
                     return { ok: false, message: "Make is required." };
                   }
-                  return saveVehicle({ make: next.trim() });
+                  return patchDetails({ make: next.trim() });
                 }}
               />
             </dd>
@@ -133,7 +162,7 @@ function VehicleOverviewFields({
                 fieldId="model"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.model?.trim() ?? ""}
+                value={details.model?.trim() ?? ""}
                 editLabel="model"
                 placeholder="Model"
                 onSave={async (next) => {
@@ -141,7 +170,7 @@ function VehicleOverviewFields({
                   if (!trimmed) {
                     return { ok: false, message: "Model is required." };
                   }
-                  return saveVehicle({ model: trimmed });
+                  return patchDetails({ model: trimmed });
                 }}
               />
             </dd>
@@ -153,13 +182,13 @@ function VehicleOverviewFields({
                 fieldId="year"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.manufactureYear != null ? String(vehicle.manufactureYear) : ""}
+                value={details.manufactureYear != null ? String(details.manufactureYear) : ""}
                 editLabel="year"
                 placeholder={String(new Date().getFullYear())}
                 onSave={async (next) => {
                   const trimmed = next.trim();
                   if (!trimmed) {
-                    return saveVehicle({ manufactureYear: null });
+                    return patchDetails({ manufactureYear: null });
                   }
                   const year = Number.parseInt(trimmed, 10);
                   if (
@@ -172,7 +201,7 @@ function VehicleOverviewFields({
                       message: `Enter a year between ${MIN_MANUFACTURE_YEAR} and ${maxManufactureYear}.`
                     };
                   }
-                  return saveVehicle({ manufactureYear: year });
+                  return patchDetails({ manufactureYear: year });
                 }}
               />
             </dd>
@@ -184,10 +213,10 @@ function VehicleOverviewFields({
                 fieldId="color"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.color?.trim() ?? ""}
+                value={details.color?.trim() ?? ""}
                 editLabel="colour"
                 placeholder="Colour"
-                onSave={async (next) => saveVehicle({ color: next.trim() })}
+                onSave={async (next) => patchDetails({ color: next.trim() })}
               />
             </dd>
           </div>
@@ -198,10 +227,10 @@ function VehicleOverviewFields({
                 fieldId="engineType"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.engineTypeDescription?.trim() ?? ""}
+                value={specifications.engineType?.trim() ?? ""}
                 editLabel="engine type"
                 placeholder="Petrol, Diesel, Electric…"
-                onSave={async (next) => saveVehicle({ engineTypeDescription: nullableTrim(next) })}
+                onSave={async (next) => patchSpecifications({ engineType: nullableTrim(next) })}
               />
             </dd>
           </div>
@@ -212,11 +241,11 @@ function VehicleOverviewFields({
                 fieldId="transmission"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.gearTypeDescription?.trim() ?? ""}
+                value={specifications.transmission?.trim() ?? ""}
                 editLabel="transmission"
                 placeholder="Automatic"
                 onSave={async (next) =>
-                  saveVehicle({ gearTypeDescription: nullableTrim(next) ?? "" })
+                  patchSpecifications({ transmission: nullableTrim(next) ?? "" })
                 }
               />
             </dd>
@@ -234,11 +263,11 @@ function VehicleOverviewFields({
                 fieldId="capacity"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.passengerCapacity}
+                value={capacity.passengerCount}
                 min={MIN_PASSENGER_CAPACITY}
                 max={MAX_PASSENGER_CAPACITY}
                 editLabel="capacity"
-                onSave={async (next) => saveVehicle({ passengerCapacity: next })}
+                onSave={async (next) => patchCapacity({ passengerCount: next })}
               />
             </dd>
           </div>
@@ -250,16 +279,11 @@ function VehicleOverviewFields({
                 fieldId="smallBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.smallLuggageCount}
+                value={capacity.luggage.smallCount}
                 min={MIN_LUGGAGE_COUNT}
                 max={MAX_LUGGAGE_COUNT}
                 editLabel="small bags"
-                onSave={async (small) =>
-                  saveVehicle({
-                    smallLuggageCount: small,
-                    luggageDescription: luggageSpecificationLabel(small, vehicle.largeLuggageCount)
-                  })
-                }
+                onSave={async (small) => patchCapacity({ smallCount: small })}
               />
             </dd>
           </div>
@@ -270,16 +294,11 @@ function VehicleOverviewFields({
                 fieldId="largeBags"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={vehicle.largeLuggageCount}
+                value={capacity.luggage.largeCount}
                 min={MIN_LUGGAGE_COUNT}
                 max={MAX_LUGGAGE_COUNT}
                 editLabel="large bags"
-                onSave={async (large) =>
-                  saveVehicle({
-                    largeLuggageCount: large,
-                    luggageDescription: luggageSpecificationLabel(vehicle.smallLuggageCount, large)
-                  })
-                }
+                onSave={async (large) => patchCapacity({ largeCount: large })}
               />
             </dd>
           </div>
@@ -340,7 +359,7 @@ export function VehicleDetailSheet({
 
         <div className="space-y-4 px-4">
           <div className="inline-flex items-center gap-4 align-top">
-            <VehicleMakeAvatar make={displayVehicle.make} />
+            <VehicleMakeAvatar make={displayVehicle.details?.make} />
             <div className="space-y-2">
               <p className="text-lg font-semibold">{name}</p>
               <div className="flex flex-wrap items-center gap-2">

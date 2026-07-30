@@ -66,7 +66,10 @@ export function VehicleProfileOperationsTab({
             label="Registration Number"
             value={vehicle.registration?.registrationNumber?.trim() || "—"}
           />
-          <DetailRow label="Capacity" value={String(vehicle.passengerCapacity)} />
+          <DetailRow
+            label="Capacity"
+            value={String(vehicle.capacity?.passengerCount ?? 0)}
+          />
           <DetailRow
             label="Registration expiry"
             value={formatDate(vehicle.registration?.registrationExpiry)}

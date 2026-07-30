@@ -75,7 +75,8 @@ import {
   type UserRole,
   type Vehicle,
   type VehicleClass,
-  type CorporateAccount
+  type CorporateAccount,
+  vehicleDisplayName
 } from "@/lib/models";
 import {
   mapActivityNotification,
@@ -98,7 +99,11 @@ import {
   mapVehicleClass
 } from "@/lib/services/mappers";
 import { ConfigError } from "@/lib/pricing/errors";
-import { validateOperatorLocale, validatePricingConfig, validateVehicleClass } from "@/lib/pricing/validate";
+import {
+  validateOperatorLocale,
+  validatePricingConfig,
+  validateVehicleClass
+} from "@/lib/pricing/validate";
 import { getActiveBranchId, setActiveBranchId } from "@/lib/branch/active-branch-store";
 import {
   branchCollectionRef,
@@ -116,7 +121,15 @@ import {
   type Branch,
   type BranchDriver
 } from "@/lib/models/branch";
-import { canCreateLocation, clampPreferredPayment, normalizeAllowedPaymentMethods, normalizeAllowedVehicleClassIds, normalizeCorporateJoinCode, normalizePromoCode, rtdbBranchLiveLocationsPath } from "@/lib/models";
+import {
+  canCreateLocation,
+  clampPreferredPayment,
+  normalizeAllowedPaymentMethods,
+  normalizeAllowedVehicleClassIds,
+  normalizeCorporateJoinCode,
+  normalizePromoCode,
+  rtdbBranchLiveLocationsPath
+} from "@/lib/models";
 
 type Unsub = () => void;
 
@@ -124,7 +137,10 @@ function db() {
   return firestore();
 }
 
-function snapToList<T>(snap: QuerySnapshot<DocumentData>, map: (id: string, d: DocumentData) => T): T[] {
+function snapToList<T>(
+  snap: QuerySnapshot<DocumentData>,
+  map: (id: string, d: DocumentData) => T
+): T[] {
   return snap.docs.map((dc) => map(dc.id, dc.data()));
 }
 
@@ -151,22 +167,30 @@ async function resolveActor(): Promise<{ actorId?: string; actorName?: string }>
 }
 
 /** Best-effort activity notification write; never throws to callers. */
-export async function createActivityNotification(input: CreateActivityNotificationInput): Promise<void> {
+export async function createActivityNotification(
+  input: CreateActivityNotificationInput
+): Promise<void> {
   try {
     const actor = await resolveActor();
-    await addDoc(collection(db(), Collections.notifications), stripUndefined({
-      ...input,
-      actorId: input.actorId ?? actor.actorId,
-      actorName: input.actorName ?? actor.actorName,
-      readAt: null,
-      createdAt: serverTimestamp()
-    }));
+    await addDoc(
+      collection(db(), Collections.notifications),
+      stripUndefined({
+        ...input,
+        actorId: input.actorId ?? actor.actorId,
+        actorName: input.actorName ?? actor.actorName,
+        readAt: null,
+        createdAt: serverTimestamp()
+      })
+    );
   } catch (err) {
     console.error("Failed to write activity notification:", err);
   }
 }
 
-export function listenNotifications(onUpdate: (rows: ActivityNotification[]) => void, max = 50): Unsub {
+export function listenNotifications(
+  onUpdate: (rows: ActivityNotification[]) => void,
+  max = 50
+): Unsub {
   const q = query(
     collection(db(), Collections.notifications),
     orderBy("createdAt", "desc"),
@@ -279,7 +303,9 @@ export async function syncOfficeFleetLocation(
       longitude: office.longitude,
       isDefault: true,
       timeZoneIdentifier: office.timeZoneIdentifier ?? null,
-      createdAt: existing.exists() ? existing.data()?.createdAt ?? serverTimestamp() : serverTimestamp()
+      createdAt: existing.exists()
+        ? (existing.data()?.createdAt ?? serverTimestamp())
+        : serverTimestamp()
     }),
     { merge: true }
   );
@@ -335,10 +361,7 @@ export async function createLocationWithScaffold(
     });
   }
 
-  const settingsToCopy = [
-    BranchSettingsDocs.pricing,
-    BranchSettingsDocs.operatingHours
-  ] as const;
+  const settingsToCopy = [BranchSettingsDocs.pricing, BranchSettingsDocs.operatingHours] as const;
   for (const docId of settingsToCopy) {
     const source = await getDoc(branchSettingsDocRef(db(), docId, sourceBranchId));
     if (source.exists()) {
@@ -474,7 +497,10 @@ export async function fetchTrips(max = 800): Promise<Trip[]> {
   return snapToList(await getDocs(nested), mapTrip);
 }
 
-export async function fetchTrip(id: string, branchId: string = getActiveBranchId()): Promise<Trip | null> {
+export async function fetchTrip(
+  id: string,
+  branchId: string = getActiveBranchId()
+): Promise<Trip | null> {
   const nested = await getDoc(branchDocRef(db(), "trips", id, branchId));
   return nested.exists() ? mapTrip(nested.id, nested.data()) : null;
 }
@@ -581,8 +607,8 @@ export function listenPromotions(onUpdate: (rows: Promotion[]) => void): Unsub {
   return onSnapshot(
     collection(db(), Collections.promotions),
     (snap) => {
-      const rows = snapToList(snap, mapPromotion).sort((a, b) =>
-        a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
+      const rows = snapToList(snap, mapPromotion).sort(
+        (a, b) => a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
       );
       onUpdate(rows);
     },
@@ -592,8 +618,8 @@ export function listenPromotions(onUpdate: (rows: Promotion[]) => void): Unsub {
 
 export async function fetchPromotions(): Promise<Promotion[]> {
   const snap = await getDocs(collection(db(), Collections.promotions));
-  return snapToList(snap, mapPromotion).sort((a, b) =>
-    a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
+  return snapToList(snap, mapPromotion).sort(
+    (a, b) => a.title.localeCompare(b.title) || a.code.localeCompare(b.code)
   );
 }
 
@@ -630,7 +656,9 @@ export async function savePromotion(promo: Promotion): Promise<void> {
   }
 
   const existing = await fetchPromotions();
-  const clash = existing.find((row) => row.id !== promo.id && normalizePromoCode(row.code) === code);
+  const clash = existing.find(
+    (row) => row.id !== promo.id && normalizePromoCode(row.code) === code
+  );
   if (clash) throw new Error(`Promo code "${code}" is already in use.`);
 
   const now = new Date();
@@ -842,9 +870,7 @@ export async function linkCustomerToCorporateAccount(
   }
   await updateDoc(doc(db(), Collections.users, userId), {
     corporateAccountId: corporateAccountId || deleteField(),
-    ...(corporateAccountId
-      ? {}
-      : { preferredPaymentMethod: deleteField() })
+    ...(corporateAccountId ? {} : { preferredPaymentMethod: deleteField() })
   });
 }
 
@@ -1037,10 +1063,7 @@ export async function uploadBranchImage(branchId: string, file: File): Promise<s
   return body.imageUrl;
 }
 
-export async function uploadCorporateAccountLogo(
-  accountId: string,
-  file: File
-): Promise<string> {
+export async function uploadCorporateAccountLogo(accountId: string, file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch(`/api/accounts/${encodeURIComponent(accountId)}/logo`, {
@@ -1170,9 +1193,7 @@ export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
     nested,
     (snap) => {
       const rows = snapToList(snap, (_, d) => mapVehicle(d));
-      rows.sort((a, b) =>
-        `${a.color} ${a.make} ${a.model}`.localeCompare(`${b.color} ${b.make} ${b.model}`)
-      );
+      rows.sort((a, b) => vehicleDisplayName(a).localeCompare(vehicleDisplayName(b)));
       return rows;
     },
     onUpdate,
@@ -1219,7 +1240,8 @@ export async function assignFleetVehicle(
   let found = false;
   for (const v of vehicles) {
     if (v.driverID === vehicleDocumentId) found = true;
-    const linked = v.assignedChauffeurUserId == null ? v.driverID : v.assignedChauffeurUserId || null;
+    const linked =
+      v.assignedChauffeurUserId == null ? v.driverID : v.assignedChauffeurUserId || null;
     if (linked === toChauffeurUserId && v.driverID !== vehicleDocumentId) {
       batch.update(branchDocRef(db(), "vehicles", v.driverID), { assignedChauffeurUserId: "" });
     }
@@ -1339,9 +1361,7 @@ export async function deleteFleetLocation(id: string): Promise<void> {
   if (!snap.exists()) return;
   const location = mapFleetLocation(snap.id, snap.data());
   if (location.isDefault) {
-    throw new Error(
-      "Cannot delete the default office. Set another office as default first."
-    );
+    throw new Error("Cannot delete the default office. Set another office as default first.");
   }
   await deleteDoc(ref);
   void createActivityNotification(locationNotification("deleted", location.name, id));
@@ -1526,7 +1546,9 @@ export async function fetchInvoice(id: string): Promise<Invoice | null> {
   return nested.exists() ? mapInvoice(nested.id, nested.data()) : null;
 }
 
-export async function createInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<string> {
+export async function createInvoice(
+  invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">
+): Promise<string> {
   const ref = await addDoc(branchCollectionRef(db(), "invoices"), {
     ...stripUndefined(invoice),
     createdAt: serverTimestamp(),
@@ -1541,9 +1563,7 @@ export async function updateInvoice(id: string, patch: Partial<Invoice>): Promis
     ...stripUndefined(patch),
     updatedAt: serverTimestamp()
   });
-  void createActivityNotification(
-    invoiceNotification("updated", patch.invoiceNumber ?? id, id)
-  );
+  void createActivityNotification(invoiceNotification("updated", patch.invoiceNumber ?? id, id));
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
@@ -1561,5 +1581,7 @@ export async function fetchSettingDoc<T extends DocumentData>(docId: string): Pr
 
 /** Merges data into an `app_settings/{docId}` document. */
 export async function saveSettingDoc(docId: string, data: DocumentData): Promise<void> {
-  await setDoc(doc(db(), Collections.appSettings, docId), stripUndefined({ ...data }), { merge: true });
+  await setDoc(doc(db(), Collections.appSettings, docId), stripUndefined({ ...data }), {
+    merge: true
+  });
 }

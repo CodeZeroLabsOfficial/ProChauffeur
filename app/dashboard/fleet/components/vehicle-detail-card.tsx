@@ -22,7 +22,7 @@ export function VehicleDetailCard({
 }) {
   const displayName = vehicleDisplayName(vehicle) || "Vehicle";
   const assigned = Boolean(effectiveChauffeurUserId(vehicle));
-  const classLabel = vehicleClassLabel ?? vehicle.vehicleClassId;
+  const classLabel = vehicleClassLabel ?? vehicle.details?.vehicleClassId;
 
   return (
     <ProfileHeroCard
@@ -34,7 +34,7 @@ export function VehicleDetailCard({
       editAriaLabel="Edit vehicle"
       avatar={
         <VehicleMakeAvatar
-          make={vehicle.make}
+          make={vehicle.details?.make}
           className="size-full rounded-none [&_[data-slot=avatar-fallback]]:rounded-none"
         />
       }

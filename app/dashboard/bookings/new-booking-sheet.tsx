@@ -241,10 +241,10 @@ function isValidCustomer(customer: User | null): customer is User {
   return Boolean(customer && customer.role === "customer");
 }
 
-function isValidAddressSelection(selection: AddressSuggestion | null): selection is AddressSuggestion {
-  return Boolean(
-    selection?.addressLine.trim() && hasValidCoordinate(selection.coordinate)
-  );
+function isValidAddressSelection(
+  selection: AddressSuggestion | null
+): selection is AddressSuggestion {
+  return Boolean(selection?.addressLine.trim() && hasValidCoordinate(selection.coordinate));
 }
 
 function isValidScheduledPickup(scheduledPickupAt: Date | null): scheduledPickupAt is Date {
@@ -291,31 +291,29 @@ function addressFromTrip(
   };
 }
 
-function resetFormFields(
-  setters: {
-    setFieldErrors: (errors: FieldErrors) => void;
-    setCustomer: (customer: User | null) => void;
-    setPickup: (pickup: AddressSuggestion | null) => void;
-    setDropoff: (dropoff: AddressSuggestion | null) => void;
-    setSelectedAddonIds: (ids: string[]) => void;
-    setPassengerCount: (count: number) => void;
-    setSmallLuggageCount: (count: number) => void;
-    setLargeLuggageCount: (count: number) => void;
-    setScheduledPickupAt: (date: Date | null) => void;
-    setScheduledReturnAt: (date: Date | null) => void;
-    setBookingMode: (mode: BookingTripMode) => void;
-    setBookedHours: (hours: number) => void;
-    setNotes: (notes: string) => void;
-    setVehicleClassId: (id: string | null) => void;
-    setQuotedTotal: (total: number | null) => void;
-    setAppliedPromo: (promo: QuotePromoApplication | null) => void;
-    setPromoCodeInput: (code: string) => void;
-    setPromoError: (error: string | null) => void;
-    setPromoExpanded: (expanded: boolean) => void;
-    setCorporateAccount: (account: CorporateAccount | null) => void;
-    setCorporateSettlement: (value: CorporateAllowedPayment | null) => void;
-  }
-) {
+function resetFormFields(setters: {
+  setFieldErrors: (errors: FieldErrors) => void;
+  setCustomer: (customer: User | null) => void;
+  setPickup: (pickup: AddressSuggestion | null) => void;
+  setDropoff: (dropoff: AddressSuggestion | null) => void;
+  setSelectedAddonIds: (ids: string[]) => void;
+  setPassengerCount: (count: number) => void;
+  setSmallLuggageCount: (count: number) => void;
+  setLargeLuggageCount: (count: number) => void;
+  setScheduledPickupAt: (date: Date | null) => void;
+  setScheduledReturnAt: (date: Date | null) => void;
+  setBookingMode: (mode: BookingTripMode) => void;
+  setBookedHours: (hours: number) => void;
+  setNotes: (notes: string) => void;
+  setVehicleClassId: (id: string | null) => void;
+  setQuotedTotal: (total: number | null) => void;
+  setAppliedPromo: (promo: QuotePromoApplication | null) => void;
+  setPromoCodeInput: (code: string) => void;
+  setPromoError: (error: string | null) => void;
+  setPromoExpanded: (expanded: boolean) => void;
+  setCorporateAccount: (account: CorporateAccount | null) => void;
+  setCorporateSettlement: (value: CorporateAllowedPayment | null) => void;
+}) {
   setters.setFieldErrors({});
   setters.setCustomer(null);
   setters.setPickup(null);
@@ -390,8 +388,10 @@ export function NewBookingSheet({
   const [promoExpanded, setPromoExpanded] = useState(false);
   const [applyingPromo, setApplyingPromo] = useState(false);
   const lastQuoteRef = useRef<
-    { fingerprint: string; quote: QuoteResult } | { fingerprint: string; outbound: QuoteResult; returnLeg: QuoteResult }
-  | null>(null);
+    | { fingerprint: string; quote: QuoteResult }
+    | { fingerprint: string; outbound: QuoteResult; returnLeg: QuoteResult }
+    | null
+  >(null);
   const wasOpenRef = useRef(false);
 
   const isEdit = Boolean(editTrip);
@@ -436,11 +436,17 @@ export function NewBookingSheet({
   );
 
   const eligibleVehiclesInClass = useMemo(() => {
-    const eligible = filterEligibleFleetVehicles(vehicles, classesById, bookingRequirements, "admin", {
-      requireChauffeur: false
-    });
+    const eligible = filterEligibleFleetVehicles(
+      vehicles,
+      classesById,
+      bookingRequirements,
+      "admin",
+      {
+        requireChauffeur: false
+      }
+    );
     if (!vehicleClassId) return eligible;
-    return eligible.filter((vehicle) => vehicle.vehicleClassId === vehicleClassId);
+    return eligible.filter((vehicle) => vehicle.details?.vehicleClassId === vehicleClassId);
   }, [vehicles, classesById, bookingRequirements, vehicleClassId]);
 
   const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
@@ -697,7 +703,9 @@ export function NewBookingSheet({
       );
       setBookedHours(trip.bookedHours ?? 2);
       setNotes(trip.notes ?? "");
-      setVehicleClassId(trip.vehicleClassId ?? trip.vehicleSnapshot?.vehicleClassId ?? null);
+      setVehicleClassId(
+        trip.vehicleClassId ?? trip.vehicleSnapshot?.details?.vehicleClassId ?? null
+      );
       setQuotedTotal(trip.quotedTotal ?? null);
       setPromoError(null);
       const existingCode = trip.promoCode?.trim() ?? "";
@@ -807,11 +815,7 @@ export function NewBookingSheet({
           );
           const fingerprint = roundTripQuoteFingerprint(outboundRequest, returnRequest);
           const cached = lastQuoteRef.current;
-          if (
-            cached &&
-            "outbound" in cached &&
-            cached.fingerprint === fingerprint
-          ) {
+          if (cached && "outbound" in cached && cached.fingerprint === fingerprint) {
             if (!cancelled) {
               setQuotedTotal(cached.outbound.displayTotal + cached.returnLeg.displayTotal);
             }
@@ -977,7 +981,8 @@ export function NewBookingSheet({
 
     const editBookedHours = editTrip?.bookedHours ?? bookedHours;
     const submitTripType = isEditMode ? quoteTripType : quoteTripTypeForBookingMode(bookingMode);
-    const submitBookedHours = submitTripType === "hourly" ? (isEditMode ? editBookedHours : bookedHours) : null;
+    const submitBookedHours =
+      submitTripType === "hourly" ? (isEditMode ? editBookedHours : bookedHours) : null;
 
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
     const sharedBookingFields = {
@@ -1144,10 +1149,10 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
-            {
-              customerId: customer?.id ?? null,
-              settlement: corporateSettlement
-            }
+              {
+                customerId: customer?.id ?? null,
+                settlement: corporateSettlement
+              }
             );
 
       const quoteFields = quoteFieldsFromResult(
@@ -1216,329 +1221,329 @@ export function NewBookingSheet({
       {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
       <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>
-            {isEdit ? "Edit booking" : isRebook ? "Rebook" : "New booking"}
-          </SheetTitle>
+          <SheetTitle>{isEdit ? "Edit booking" : isRebook ? "Rebook" : "New booking"}</SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
-          {!isEdit ? (
-            <div className="space-y-2">
-              <Label htmlFor="bookingMode">Trip type</Label>
-              <Select
-                value={bookingMode}
-                onValueChange={(value) => {
-                  setBookingMode(value as BookingTripMode);
-                  setFieldErrors((prev) => ({
-                    ...prev,
-                    scheduledReturnAt: false
-                  }));
-                }}
-                disabled={saving}>
-                <SelectTrigger id="bookingMode">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BOOKING_TRIP_MODES.map((mode) => (
-                    <SelectItem key={mode} value={mode}>
-                      {bookingTripModeTitle[mode]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
-              <CustomerAutocomplete
-                id="customer"
-                value={customer}
-                onChange={(value) => {
-                  setCustomer(value);
-                  clearFieldError("customer");
-                }}
-                placeholder="Search customers…"
-                invalid={fieldErrors.customer}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scheduledPickupAt">
-                {bookingMode === "round_trip" && !isEdit ? "Outbound pickup time" : "Pickup time"}
-              </Label>
-              <DateTimePicker
-                id="scheduledPickupAt"
-                value={scheduledPickupAt}
-                onChange={(value) => {
-                  setScheduledPickupAt(value);
-                  clearFieldError("scheduledPickupAt");
-                }}
-                placeholder="Pick pickup time"
-                disabled={saving}
-                invalid={fieldErrors.scheduledPickupAt}
-              />
-            </div>
-          </div>
-
-          {activeCorporateAccount && !isEdit ? (
-            <div className="space-y-2">
-              <Label>Payment method</Label>
-              <div className="flex flex-col gap-2">
-                {accountAllowsPayment(activeCorporateAccount, "on_account") ? (
-                  <label className="flex items-center gap-2 text-sm font-normal">
-                    <Checkbox
-                      id="settlement-on-account"
-                      checked={corporateSettlement === "on_account"}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) setCorporateSettlement("on_account");
-                      }}
-                      disabled={
-                        saving ||
-                        (!accountAllowsPayment(activeCorporateAccount, "card") &&
-                          corporateSettlement === "on_account")
-                      }
-                    />
-                    <span>
-                      {corporatePreferredPaymentTitle.on_account} ({activeCorporateAccount.name})
-                    </span>
-                  </label>
-                ) : null}
-                {accountAllowsPayment(activeCorporateAccount, "card") ? (
-                  <label className="flex items-center gap-2 text-sm font-normal">
-                    <Checkbox
-                      id="settlement-card"
-                      checked={corporateSettlement === "card"}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) setCorporateSettlement("card");
-                      }}
-                      disabled={
-                        saving ||
-                        (!accountAllowsPayment(activeCorporateAccount, "on_account") &&
-                          corporateSettlement === "card")
-                      }
-                    />
-                    <span>{corporatePreferredPaymentTitle.card}</span>
-                  </label>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          {!isEdit && bookingMode === "round_trip" ? (
-            <div className="space-y-2">
-              <Label htmlFor="scheduledReturnAt">Return pickup time</Label>
-              <DateTimePicker
-                id="scheduledReturnAt"
-                value={scheduledReturnAt}
-                onChange={(value) => {
-                  setScheduledReturnAt(value);
-                  clearFieldError("scheduledReturnAt");
-                }}
-                placeholder="Pick return pickup time"
-                disabled={saving}
-                invalid={fieldErrors.scheduledReturnAt}
-              />
-            </div>
-          ) : null}
-
-          {!isEdit && bookingMode === "hourly" ? (
-            <NumberStepper
-              id="bookedHours"
-              label="Booked hours"
-              value={bookedHours}
-              onChange={setBookedHours}
-              min={1}
-              max={24}
-              disabled={saving}
-            />
-          ) : null}
-
-          {isEdit && editTrip?.tripType === "hourly" ? (
-            <NumberStepper
-              id="bookedHours"
-              label="Booked hours"
-              value={bookedHours}
-              onChange={setBookedHours}
-              min={1}
-              max={24}
-              disabled={saving}
-            />
-          ) : null}
-
-          <div className="space-y-2">
-            <Label htmlFor="pickupAddressLine">Pickup address</Label>
-            <AddressAutocomplete
-              id="pickupAddressLine"
-              value={pickup}
-              onChange={(value) => {
-                setPickup(value);
-                clearFieldError("pickup");
-              }}
-              placeholder="Search pickup address…"
-              invalid={fieldErrors.pickup}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dropoffAddressLine">Drop-off address</Label>
-            <AddressAutocomplete
-              id="dropoffAddressLine"
-              value={dropoff}
-              onChange={(value) => {
-                setDropoff(value);
-                clearFieldError("dropoff");
-              }}
-              placeholder="Search drop-off address…"
-              invalid={fieldErrors.dropoff}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="vehicleClassId">Service class</Label>
-              <Select
-                value={vehicleClassId ?? undefined}
-                onValueChange={(value) => {
-                  setVehicleClassId(value);
-                  clearFieldError("vehicleClassId");
-                }}
-                disabled={saving}>
-                <SelectTrigger
-                  id="vehicleClassId"
-                  className={cn("w-full", fieldErrors.vehicleClassId && "border-destructive")}>
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicleClasses
-                    .filter((vehicleClass) => vehicleClass.isEnabled)
-                    .filter((vehicleClass) =>
-                      accountAllowsVehicleClass(activeCorporateAccount, vehicleClass.id)
-                    )
-                    .map((vehicleClass) => (
-                      <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
-                        {vehicleClass.displayName}
+            {!isEdit ? (
+              <div className="space-y-2">
+                <Label htmlFor="bookingMode">Trip type</Label>
+                <Select
+                  value={bookingMode}
+                  onValueChange={(value) => {
+                    setBookingMode(value as BookingTripMode);
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      scheduledReturnAt: false
+                    }));
+                  }}
+                  disabled={saving}>
+                  <SelectTrigger id="bookingMode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOOKING_TRIP_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode}>
+                        {bookingTripModeTitle[mode]}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="customer">Customer</Label>
+                <CustomerAutocomplete
+                  id="customer"
+                  value={customer}
+                  onChange={(value) => {
+                    setCustomer(value);
+                    clearFieldError("customer");
+                  }}
+                  placeholder="Search customers…"
+                  invalid={fieldErrors.customer}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduledPickupAt">
+                  {bookingMode === "round_trip" && !isEdit ? "Outbound pickup time" : "Pickup time"}
+                </Label>
+                <DateTimePicker
+                  id="scheduledPickupAt"
+                  value={scheduledPickupAt}
+                  onChange={(value) => {
+                    setScheduledPickupAt(value);
+                    clearFieldError("scheduledPickupAt");
+                  }}
+                  placeholder="Pick pickup time"
+                  disabled={saving}
+                  invalid={fieldErrors.scheduledPickupAt}
+                />
+              </div>
             </div>
+
+            {activeCorporateAccount && !isEdit ? (
+              <div className="space-y-2">
+                <Label>Payment method</Label>
+                <div className="flex flex-col gap-2">
+                  {accountAllowsPayment(activeCorporateAccount, "on_account") ? (
+                    <label className="flex items-center gap-2 text-sm font-normal">
+                      <Checkbox
+                        id="settlement-on-account"
+                        checked={corporateSettlement === "on_account"}
+                        onCheckedChange={(checked) => {
+                          if (checked === true) setCorporateSettlement("on_account");
+                        }}
+                        disabled={
+                          saving ||
+                          (!accountAllowsPayment(activeCorporateAccount, "card") &&
+                            corporateSettlement === "on_account")
+                        }
+                      />
+                      <span>
+                        {corporatePreferredPaymentTitle.on_account} ({activeCorporateAccount.name})
+                      </span>
+                    </label>
+                  ) : null}
+                  {accountAllowsPayment(activeCorporateAccount, "card") ? (
+                    <label className="flex items-center gap-2 text-sm font-normal">
+                      <Checkbox
+                        id="settlement-card"
+                        checked={corporateSettlement === "card"}
+                        onCheckedChange={(checked) => {
+                          if (checked === true) setCorporateSettlement("card");
+                        }}
+                        disabled={
+                          saving ||
+                          (!accountAllowsPayment(activeCorporateAccount, "on_account") &&
+                            corporateSettlement === "card")
+                        }
+                      />
+                      <span>{corporatePreferredPaymentTitle.card}</span>
+                    </label>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {!isEdit && bookingMode === "round_trip" ? (
+              <div className="space-y-2">
+                <Label htmlFor="scheduledReturnAt">Return pickup time</Label>
+                <DateTimePicker
+                  id="scheduledReturnAt"
+                  value={scheduledReturnAt}
+                  onChange={(value) => {
+                    setScheduledReturnAt(value);
+                    clearFieldError("scheduledReturnAt");
+                  }}
+                  placeholder="Pick return pickup time"
+                  disabled={saving}
+                  invalid={fieldErrors.scheduledReturnAt}
+                />
+              </div>
+            ) : null}
+
+            {!isEdit && bookingMode === "hourly" ? (
+              <NumberStepper
+                id="bookedHours"
+                label="Booked hours"
+                value={bookedHours}
+                onChange={setBookedHours}
+                min={1}
+                max={24}
+                disabled={saving}
+              />
+            ) : null}
+
+            {isEdit && editTrip?.tripType === "hourly" ? (
+              <NumberStepper
+                id="bookedHours"
+                label="Booked hours"
+                value={bookedHours}
+                onChange={setBookedHours}
+                min={1}
+                max={24}
+                disabled={saving}
+              />
+            ) : null}
+
             <div className="space-y-2">
-              <Label htmlFor="bookingAddons">Add-ons</Label>
-              <MultiSelectField
-                id="bookingAddons"
-                options={addonOptions}
-                selected={selectedAddonIds}
-                onSelectedChange={setSelectedAddonIds}
-                placeholder="Select add-ons"
-                emptyMessage="No add-ons configured."
+              <Label htmlFor="pickupAddressLine">Pickup address</Label>
+              <AddressAutocomplete
+                id="pickupAddressLine"
+                value={pickup}
+                onChange={(value) => {
+                  setPickup(value);
+                  clearFieldError("pickup");
+                }}
+                placeholder="Search pickup address…"
+                invalid={fieldErrors.pickup}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dropoffAddressLine">Drop-off address</Label>
+              <AddressAutocomplete
+                id="dropoffAddressLine"
+                value={dropoff}
+                onChange={(value) => {
+                  setDropoff(value);
+                  clearFieldError("dropoff");
+                }}
+                placeholder="Search drop-off address…"
+                invalid={fieldErrors.dropoff}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="vehicleClassId">Service class</Label>
+                <Select
+                  value={vehicleClassId ?? undefined}
+                  onValueChange={(value) => {
+                    setVehicleClassId(value);
+                    clearFieldError("vehicleClassId");
+                  }}
+                  disabled={saving}>
+                  <SelectTrigger
+                    id="vehicleClassId"
+                    className={cn("w-full", fieldErrors.vehicleClassId && "border-destructive")}>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleClasses
+                      .filter((vehicleClass) => vehicleClass.isEnabled)
+                      .filter((vehicleClass) =>
+                        accountAllowsVehicleClass(activeCorporateAccount, vehicleClass.id)
+                      )
+                      .map((vehicleClass) => (
+                        <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
+                          {vehicleClass.displayName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bookingAddons">Add-ons</Label>
+                <MultiSelectField
+                  id="bookingAddons"
+                  options={addonOptions}
+                  selected={selectedAddonIds}
+                  onSelectedChange={setSelectedAddonIds}
+                  placeholder="Select add-ons"
+                  emptyMessage="No add-ons configured."
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            {loyaltyPromosEnabled && !applyCorporateRates ? (
+              <div className="space-y-2">
+                <Label>Promo code</Label>
+                {appliedPromo ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="font-mono">
+                      {appliedPromo.code}
+                    </Badge>
+                    <span className="text-muted-foreground text-sm truncate">
+                      {appliedPromo.title}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto"
+                      disabled={saving}
+                      onClick={clearPromo}>
+                      Remove
+                    </Button>
+                  </div>
+                ) : promoExpanded ? (
+                  <div className="flex gap-2">
+                    <Input
+                      id="bookingPromoCode"
+                      value={promoCodeInput}
+                      onChange={(e) => {
+                        setPromoCodeInput(e.target.value.toUpperCase());
+                        setPromoError(null);
+                      }}
+                      placeholder="Enter code"
+                      className="font-mono uppercase"
+                      disabled={saving || applyingPromo}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={saving || applyingPromo}
+                      onClick={() => void applyPromoCode()}>
+                      {applyingPromo ? "…" : "Apply"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto px-0"
+                    disabled={saving}
+                    onClick={() => setPromoExpanded(true)}>
+                    Add promo code
+                  </Button>
+                )}
+                {promoError ? <p className="text-destructive text-sm">{promoError}</p> : null}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-3 gap-3">
+              <NumberStepper
+                id="bookingPassengerCount"
+                label="Passengers"
+                value={passengerCount}
+                onChange={setPassengerCount}
+                min={1}
+                max={20}
+                disabled={saving}
+              />
+              <NumberStepper
+                id="bookingSmallLuggageCount"
+                label="Small"
+                value={smallLuggageCount}
+                onChange={setSmallLuggageCount}
+                min={0}
+                max={20}
+                disabled={saving}
+              />
+              <NumberStepper
+                id="bookingLargeLuggageCount"
+                label="Large"
+                value={largeLuggageCount}
+                onChange={setLargeLuggageCount}
+                min={0}
+                max={20}
                 disabled={saving}
               />
             </div>
-          </div>
 
-          {loyaltyPromosEnabled && !applyCorporateRates ? (
+            {vehicleClassId && eligibleVehiclesInClass.length > 0 ? (
+              <p className="text-muted-foreground text-xs">
+                {eligibleVehiclesInClass.length} fleet vehicle
+                {eligibleVehiclesInClass.length === 1 ? "" : "s"} in this class match passengers and
+                luggage.
+              </p>
+            ) : null}
+
             <div className="space-y-2">
-              <Label>Promo code</Label>
-              {appliedPromo ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="font-mono">
-                    {appliedPromo.code}
-                  </Badge>
-                  <span className="text-muted-foreground text-sm truncate">{appliedPromo.title}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto"
-                    disabled={saving}
-                    onClick={clearPromo}>
-                    Remove
-                  </Button>
-                </div>
-              ) : promoExpanded ? (
-                <div className="flex gap-2">
-                  <Input
-                    id="bookingPromoCode"
-                    value={promoCodeInput}
-                    onChange={(e) => {
-                      setPromoCodeInput(e.target.value.toUpperCase());
-                      setPromoError(null);
-                    }}
-                    placeholder="Enter code"
-                    className="font-mono uppercase"
-                    disabled={saving || applyingPromo}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={saving || applyingPromo}
-                    onClick={() => void applyPromoCode()}>
-                    {applyingPromo ? "…" : "Apply"}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto px-0"
-                  disabled={saving}
-                  onClick={() => setPromoExpanded(true)}>
-                  Add promo code
-                </Button>
-              )}
-              {promoError ? <p className="text-destructive text-sm">{promoError}</p> : null}
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
             </div>
-          ) : null}
-
-          <div className="grid grid-cols-3 gap-3">
-            <NumberStepper
-              id="bookingPassengerCount"
-              label="Passengers"
-              value={passengerCount}
-              onChange={setPassengerCount}
-              min={1}
-              max={20}
-              disabled={saving}
-            />
-            <NumberStepper
-              id="bookingSmallLuggageCount"
-              label="Small"
-              value={smallLuggageCount}
-              onChange={setSmallLuggageCount}
-              min={0}
-              max={20}
-              disabled={saving}
-            />
-            <NumberStepper
-              id="bookingLargeLuggageCount"
-              label="Large"
-              value={largeLuggageCount}
-              onChange={setLargeLuggageCount}
-              min={0}
-              max={20}
-              disabled={saving}
-            />
-          </div>
-
-          {vehicleClassId && eligibleVehiclesInClass.length > 0 ? (
-            <p className="text-muted-foreground text-xs">
-              {eligibleVehiclesInClass.length} fleet vehicle
-              {eligibleVehiclesInClass.length === 1 ? "" : "s"} in this class match passengers
-              and luggage.
-            </p>
-          ) : null}
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
           </div>
 
           <div className="shrink-0 space-y-3 border-t px-4 pt-4 pb-4">

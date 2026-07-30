@@ -28,7 +28,12 @@ import {
   deleteVehicle,
   unassignFleetVehicle
 } from "@/lib/services/firebase-service";
-import { effectiveChauffeurUserId, vehicleDisplayName, vehicleRegistrationNumber, type Vehicle } from "@/lib/models";
+import {
+  effectiveChauffeurUserId,
+  vehicleDisplayName,
+  vehicleRegistrationNumber,
+  type Vehicle
+} from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { ListFilterPopover } from "@/components/list-filter-popover";
@@ -209,7 +214,7 @@ export function FleetDataTable({
         header: "Vehicle",
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <VehicleMakeAvatar make={row.original.make} className="size-9" />
+            <VehicleMakeAvatar make={row.original.details?.make} className="size-9" />
             <div className="font-medium">{vehicleDisplayName(row.original) || "Vehicle"}</div>
           </div>
         ),
@@ -235,10 +240,10 @@ export function FleetDataTable({
       },
       {
         id: "vehicleClass",
-        accessorFn: (row) => row.vehicleClassId ?? "",
+        accessorFn: (row) => row.details?.vehicleClassId ?? "",
         header: "Class",
         cell: ({ row }) => {
-          const classId = row.original.vehicleClassId;
+          const classId = row.original.details?.vehicleClassId;
           const label = classId ? (classesById.get(classId)?.displayName ?? classId) : null;
           return label ? (
             <IconBadge
@@ -254,10 +259,13 @@ export function FleetDataTable({
         filterFn: multiSelectFilter
       },
       {
-        accessorKey: "passengerCapacity",
+        id: "passengerCapacity",
+        accessorFn: (row) => row.capacity?.passengerCount ?? 0,
         header: "Capacity",
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue("passengerCapacity")}</span>
+          <span className="text-muted-foreground">
+            {row.original.capacity?.passengerCount ?? 0}
+          </span>
         )
       },
       {

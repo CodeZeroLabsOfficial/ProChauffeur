@@ -4,7 +4,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { useRosterChauffeurs, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
-import { effectiveChauffeurUserId, luggageSpecificationLabel, type Vehicle } from "@/lib/models";
+import {
+  effectiveChauffeurUserId,
+  emptyVehicleCapacity,
+  emptyVehicleDetails,
+  emptyVehicleSpecifications,
+  type Vehicle
+} from "@/lib/models";
 import {
   assignFleetVehicle,
   unassignFleetVehicle,
@@ -34,21 +40,12 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   driverID,
   assignedChauffeurUserId: driverID,
   isEnabled: true,
-  make: "",
-  model: "",
-  color: "",
-  passengerCapacity: 4,
-  manufactureYear: null,
+  details: emptyVehicleDetails(),
+  capacity: emptyVehicleCapacity(),
+  specifications: emptyVehicleSpecifications(),
   registration: null,
   insurancePolicies: [],
-  roadworthy: null,
-  vehicleClassId: null,
-  vehicleIdentificationNumber: null,
-  engineTypeDescription: null,
-  luggageDescription: luggageSpecificationLabel(0, 2),
-  smallLuggageCount: 0,
-  largeLuggageCount: 2,
-  gearTypeDescription: ""
+  roadworthy: null
 });
 
 function SectionHeading({ children }: { children: string }) {
@@ -75,10 +72,10 @@ export function VehicleEditSheet({
   const initialChauffeurId = vehicle
     ? (effectiveChauffeurUserId(vehicle) ?? UNASSIGNED)
     : (defaultCreateDriverId ?? UNASSIGNED);
-  const [vehicleClassId, setVehicleClassId] = useState(vehicle?.vehicleClassId ?? "");
-  const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.make));
+  const [vehicleClassId, setVehicleClassId] = useState(vehicle?.details?.vehicleClassId ?? "");
+  const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.details?.make));
   const [manufactureYear, setManufactureYear] = useState(
-    vehicle?.manufactureYear ?? new Date().getFullYear()
+    vehicle?.details?.manufactureYear ?? new Date().getFullYear()
   );
   const [assignedChauffeurId, setAssignedChauffeurId] = useState(initialChauffeurId);
   const [status, setStatus] = useState(vehicle?.isEnabled === false ? "disabled" : "enabled");
@@ -88,9 +85,9 @@ export function VehicleEditSheet({
 
   if (currentKey !== seededId) {
     setSeededId(currentKey);
-    setVehicleClassId(vehicle?.vehicleClassId ?? "");
-    setMake(vehicleMakeSelectValue(vehicle?.make));
-    setManufactureYear(vehicle?.manufactureYear ?? new Date().getFullYear());
+    setVehicleClassId(vehicle?.details?.vehicleClassId ?? "");
+    setMake(vehicleMakeSelectValue(vehicle?.details?.make));
+    setManufactureYear(vehicle?.details?.manufactureYear ?? new Date().getFullYear());
     setAssignedChauffeurId(
       vehicle
         ? (effectiveChauffeurUserId(vehicle) ?? UNASSIGNED)
@@ -134,13 +131,19 @@ export function VehicleEditSheet({
           ? assignedChauffeurId
           : base.assignedChauffeurUserId,
       isEnabled: status === "enabled",
-      vehicleClassId,
-      manufactureYear,
-      make,
-      model: get("model"),
-      color: get("color"),
-      gearTypeDescription: get("gearTypeDescription"),
-      engineTypeDescription: get("engineTypeDescription") || null
+      details: {
+        ...(base.details ?? emptyVehicleDetails()),
+        vehicleClassId,
+        manufactureYear,
+        make,
+        model: get("model"),
+        color: get("color")
+      },
+      specifications: {
+        ...(base.specifications ?? emptyVehicleSpecifications()),
+        transmission: get("transmission"),
+        engineType: get("engineType") || null
+      }
     };
 
     setSaving(true);
@@ -216,31 +219,31 @@ export function VehicleEditSheet({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
-                <Input id="model" name="model" required defaultValue={vehicle?.model} />
+                <Input id="model" name="model" required defaultValue={vehicle?.details?.model} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="color">Colour</Label>
-                <Input id="color" name="color" defaultValue={vehicle?.color} />
+                <Input id="color" name="color" defaultValue={vehicle?.details?.color} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="gearTypeDescription">Transmission</Label>
+                <Label htmlFor="transmission">Transmission</Label>
                 <Input
-                  id="gearTypeDescription"
-                  name="gearTypeDescription"
+                  id="transmission"
+                  name="transmission"
                   placeholder="Automatic"
-                  defaultValue={vehicle?.gearTypeDescription ?? ""}
+                  defaultValue={vehicle?.specifications?.transmission ?? ""}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="engineTypeDescription">Engine details</Label>
+              <Label htmlFor="engineType">Engine details</Label>
               <Input
-                id="engineTypeDescription"
-                name="engineTypeDescription"
+                id="engineType"
+                name="engineType"
                 placeholder="Petrol, Diesel, Electric…"
-                defaultValue={vehicle?.engineTypeDescription ?? ""}
+                defaultValue={vehicle?.specifications?.engineType ?? ""}
               />
             </div>
           </div>

@@ -143,7 +143,7 @@ function BookingVehicleCard({
         ) : undefined
       }>
       <div className="flex items-center gap-4">
-        <VehicleMakeAvatar make={vehicleSnapshot.make} className="size-12" />
+        <VehicleMakeAvatar make={vehicleSnapshot.details?.make} className="size-12" />
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold">{vehicleName || "Vehicle"}</h3>
           {plate ? <p className="text-muted-foreground text-sm">{plate}</p> : null}

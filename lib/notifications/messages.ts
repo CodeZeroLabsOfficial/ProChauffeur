@@ -191,15 +191,17 @@ export function adminNotification(
 }
 
 export function vehicleDisplayTitle(vehicle: {
-  manufactureYear?: number | null;
-  make?: string;
-  model?: string;
+  details?: {
+    manufactureYear?: number | null;
+    make?: string;
+    model?: string;
+  } | null;
   registration?: { registrationNumber?: string } | null;
 }): string {
   const parts = [
-    vehicle.manufactureYear ? String(vehicle.manufactureYear) : "",
-    vehicle.make,
-    vehicle.model
+    vehicle.details?.manufactureYear ? String(vehicle.details.manufactureYear) : "",
+    vehicle.details?.make,
+    vehicle.details?.model
   ].filter(Boolean);
   const label = parts.join(" ").trim();
   if (label) return label;

@@ -23,6 +23,7 @@ export function tripsForVehicle(trips: Trip[], vehicle: Vehicle): Trip[] {
 
 export function vehicleProfileCompleteness(vehicle: Vehicle): number {
   const registration = vehicle.registration;
+  const details = vehicle.details;
   const policies = vehicle.insurancePolicies ?? [];
   const hasInsurancePolicy = policies.some(
     (policy) =>
@@ -30,12 +31,12 @@ export function vehicleProfileCompleteness(vehicle: Vehicle): number {
       Boolean(policy.policyExpiry)
   );
   const checks = [
-    Boolean(vehicle.make?.trim()),
-    Boolean(vehicle.model?.trim()),
-    Boolean(vehicle.color?.trim()),
+    Boolean(details?.make?.trim()),
+    Boolean(details?.model?.trim()),
+    Boolean(details?.color?.trim()),
     Boolean(registration?.registrationNumber?.trim()),
-    Boolean(vehicle.vehicleClassId),
-    Boolean(vehicle.vehicleIdentificationNumber?.trim()),
+    Boolean(details?.vehicleClassId),
+    Boolean(details?.vehicleIdentificationNumber?.trim()),
     Boolean(registration?.registrationExpiry),
     Boolean(registration?.jurisdictionCode?.trim()),
     hasInsurancePolicy,

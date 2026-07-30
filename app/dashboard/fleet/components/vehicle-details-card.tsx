@@ -17,8 +17,8 @@ export function VehicleDetailsCard({
   vehicle: Vehicle;
   assignedChauffeur: User | undefined;
 }) {
-  const gear = vehicle.gearTypeDescription?.trim();
-  const engine = vehicle.engineTypeDescription?.trim();
+  const gear = vehicle.specifications?.transmission?.trim();
+  const engine = vehicle.specifications?.engineType?.trim();
   const plate = vehicle.registration?.registrationNumber?.trim();
   const expiry = vehicle.registration?.registrationExpiry;
 

@@ -42,7 +42,9 @@ export function DispatchFleetMap({
 
   const fitPoints = useMemo(() => {
     const driverPoints = locations.map((loc) => coordinateFromLatLng(loc.lat, loc.lng));
-    const pickupPoints = activeTrips.filter((t) => hasValidCoordinate(t.pickup)).map((t) => t.pickup);
+    const pickupPoints = activeTrips
+      .filter((t) => hasValidCoordinate(t.pickup))
+      .map((t) => t.pickup);
     return [...driverPoints, ...pickupPoints];
   }, [locations, activeTrips]);
 
@@ -94,7 +96,7 @@ export function DispatchFleetMap({
           title={driverNameById.get(loc.driverId) ?? loc.driverId}
           vehicleMake={
             vehicleMakeByDriverId.get(loc.driverId) ??
-            activeTrips.find((t) => t.id === loc.tripId)?.vehicleSnapshot?.make
+            activeTrips.find((t) => t.id === loc.tripId)?.vehicleSnapshot?.details?.make
           }
         />
       ))}
