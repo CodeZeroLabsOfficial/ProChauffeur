@@ -94,13 +94,18 @@ export function VehicleProfileComplianceTab({
         </CardContent>
       </Card>
 
-      <VehicleRegistrationEditSheet
-        vehicle={vehicle}
-        open={registrationOpen}
-        onOpenChange={setRegistrationOpen}
-        onSaved={onVehicleUpdated}
-        nested={nested}
-      />
+      <Card className="relative">
+        <ComplianceEditButton label="Edit roadworthy" onClick={() => setRoadworthyOpen(true)} />
+        <CardHeader>
+          <CardTitle>Roadworthy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DetailRow label="Certificate no." value={roadworthy?.certificateNumber?.trim() || "—"} />
+          <DetailRow label="Issued by" value={roadworthy?.issuingAuthority?.trim() || "—"} />
+          <DetailRow label="State" value={roadworthy?.jurisdictionCode?.trim() || "—"} />
+          <ValidityTermFooter start={roadworthy?.issueDate} expiry={roadworthy?.expiryDate} />
+        </CardContent>
+      </Card>
 
       <Card className="relative lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -127,6 +132,14 @@ export function VehicleProfileComplianceTab({
         </CardContent>
       </Card>
 
+      <VehicleRegistrationEditSheet
+        vehicle={vehicle}
+        open={registrationOpen}
+        onOpenChange={setRegistrationOpen}
+        onSaved={onVehicleUpdated}
+        nested={nested}
+      />
+
       <VehicleInsuranceEditSheet
         vehicle={vehicle}
         policy={editingPolicy}
@@ -138,19 +151,6 @@ export function VehicleProfileComplianceTab({
         onSaved={onVehicleUpdated}
         nested={nested}
       />
-
-      <Card className="relative">
-        <ComplianceEditButton label="Edit roadworthy" onClick={() => setRoadworthyOpen(true)} />
-        <CardHeader>
-          <CardTitle>Roadworthy</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DetailRow label="Certificate no." value={roadworthy?.certificateNumber?.trim() || "—"} />
-          <DetailRow label="Issued by" value={roadworthy?.issuingAuthority?.trim() || "—"} />
-          <DetailRow label="State" value={roadworthy?.jurisdictionCode?.trim() || "—"} />
-          <ValidityTermFooter start={roadworthy?.issueDate} expiry={roadworthy?.expiryDate} />
-        </CardContent>
-      </Card>
 
       <VehicleRoadworthyEditSheet
         vehicle={vehicle}
