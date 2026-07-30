@@ -85,11 +85,14 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent>
-          <DetailRow label="Jurisdiction" value={registration?.jurisdictionCode?.trim() || "—"} />
-          <DetailRow label="Registration Number" value={registration?.registrationNumber?.trim() || "—"} />
           <DetailRow
             label="Issuing Authority"
             value={registration?.issuingAuthority?.trim() || "—"}
+          />
+          <DetailRow label="Jurisdiction" value={registration?.jurisdictionCode?.trim() || "—"} />
+          <DetailRow
+            label="Registration Number"
+            value={registration?.registrationNumber?.trim() || "—"}
           />
           <ValidityTermFooter
             start={registration?.registrationStart}
@@ -104,9 +107,9 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Roadworthy</CardTitle>
         </CardHeader>
         <CardContent>
+          <DetailRow label="Issuing Authority" value={roadworthy?.issuingAuthority?.trim() || "—"} />
+          <DetailRow label="Jurisdiction" value={roadworthy?.jurisdictionCode?.trim() || "—"} />
           <DetailRow label="Certificate no." value={roadworthy?.certificateNumber?.trim() || "—"} />
-          <DetailRow label="Issued by" value={roadworthy?.issuingAuthority?.trim() || "—"} />
-          <DetailRow label="State" value={roadworthy?.jurisdictionCode?.trim() || "—"} />
           <ValidityTermFooter start={roadworthy?.issueDate} expiry={roadworthy?.expiryDate} />
         </CardContent>
       </Card>

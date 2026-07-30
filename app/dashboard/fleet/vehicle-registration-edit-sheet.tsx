@@ -81,6 +81,16 @@ export function VehicleRegistrationEditSheet({
           <SheetTitle>Edit registration</SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4">
+          <div className="space-y-2">
+            <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+            <Input
+              id="issuingAuthority"
+              name="issuingAuthority"
+              placeholder="e.g. Transport for NSW"
+              defaultValue={vehicle.registration?.issuingAuthority ?? ""}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="jurisdictionCode">Jurisdiction</Label>
@@ -100,16 +110,6 @@ export function VehicleRegistrationEditSheet({
                 defaultValue={vehicle.registration?.registrationNumber ?? ""}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="issuingAuthority">Issuing Authority</Label>
-            <Input
-              id="issuingAuthority"
-              name="issuingAuthority"
-              placeholder="e.g. Transport for NSW"
-              defaultValue={vehicle.registration?.issuingAuthority ?? ""}
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

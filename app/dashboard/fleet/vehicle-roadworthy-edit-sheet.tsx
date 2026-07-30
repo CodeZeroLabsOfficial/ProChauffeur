@@ -78,7 +78,26 @@ export function VehicleRoadworthyEditSheet({
           <SheetTitle>Edit roadworthy</SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4">
+          <div className="space-y-2">
+            <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+            <Input
+              id="issuingAuthority"
+              name="issuingAuthority"
+              placeholder="Issuing authority"
+              defaultValue={vehicle.roadworthy?.issuingAuthority ?? ""}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="jurisdictionCode">Jurisdiction</Label>
+              <Input
+                id="jurisdictionCode"
+                name="jurisdictionCode"
+                placeholder="VIC"
+                defaultValue={vehicle.roadworthy?.jurisdictionCode ?? ""}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="certificateNumber">Certificate no.</Label>
               <Input
@@ -88,25 +107,6 @@ export function VehicleRoadworthyEditSheet({
                 defaultValue={vehicle.roadworthy?.certificateNumber ?? ""}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="jurisdictionCode">State</Label>
-              <Input
-                id="jurisdictionCode"
-                name="jurisdictionCode"
-                placeholder="VIC"
-                defaultValue={vehicle.roadworthy?.jurisdictionCode ?? ""}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="issuingAuthority">Issued by</Label>
-            <Input
-              id="issuingAuthority"
-              name="issuingAuthority"
-              placeholder="Issuing authority"
-              defaultValue={vehicle.roadworthy?.issuingAuthority ?? ""}
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
