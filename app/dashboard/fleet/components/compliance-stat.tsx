@@ -25,16 +25,13 @@ export function ComplianceStat({
   label,
   secondary,
   start,
-  expiry,
-  size = "sm"
+  expiry
 }: {
   label: string;
   secondary?: string | null;
   start?: Date | null;
   expiry?: Date | null;
-  size?: "sm" | "lg";
 }) {
-  const isLarge = size === "lg";
   const warning = expiryWarning(expiry);
   const elapsed = validityProgress(start, expiry);
   const remainingTerm = elapsed == null ? 0 : 100 - elapsed;
@@ -49,14 +46,11 @@ export function ComplianceStat({
   return (
     <div className="flex items-center gap-4">
       <div className="relative flex shrink-0 items-center justify-center">
-        <ChartContainer
-          config={chartConfig}
-          className={cn("aspect-square", isLarge ? "size-[150px]" : "size-20")}>
+        <ChartContainer config={chartConfig} className="aspect-square size-[150px]">
           <RadialBarChart
             data={[{ remaining: remainingTerm }]}
-            innerRadius={isLarge ? "82%" : 29}
-            outerRadius={isLarge ? "97%" : 35}
-            barSize={isLarge ? undefined : 6}
+            innerRadius="82%"
+            outerRadius="97%"
             startAngle={90}
             endAngle={-270}>
             <PolarAngleAxis
@@ -69,7 +63,7 @@ export function ComplianceStat({
             <RadialBar
               dataKey="remaining"
               background
-              cornerRadius={remainingTerm > 0 ? (isLarge ? 6 : 10) : 0}
+              cornerRadius={remainingTerm > 0 ? 6 : 0}
               fill={fill}
               angleAxisId={0}
             />
@@ -77,29 +71,21 @@ export function ComplianceStat({
         </ChartContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
           <span
-            className={cn(
-              "font-semibold",
-              isLarge ? "text-lg" : "text-base",
-              warning === "expired" && "text-destructive"
-            )}>
+            className={cn("text-lg font-semibold", warning === "expired" && "text-destructive")}>
             {daysRemaining ?? "—"}
           </span>
           {daysRemaining != null ? (
-            <span className={cn("text-muted-foreground mt-1", isLarge ? "text-sm" : "text-[10px]")}>
-              days
-            </span>
+            <span className="text-muted-foreground mt-1 text-sm">days</span>
           ) : null}
         </div>
       </div>
 
-      <div className={cn("min-w-0", isLarge && "space-y-1")}>
-        <p className={cn("truncate", isLarge ? "font-display text-xl" : "text-sm font-semibold")}>
-          {label.trim() || "—"}
-        </p>
+      <div className="min-w-0 space-y-1">
+        <p className="font-display truncate text-xl">{label.trim() || "—"}</p>
         <p className="text-muted-foreground truncate text-sm">{secondary?.trim() || "—"}</p>
         <p
           className={cn(
-            isLarge ? "text-sm" : "mt-1 text-xs",
+            "text-sm",
             warning === "expired"
               ? "text-destructive"
               : warning === "soon"
@@ -109,7 +95,7 @@ export function ComplianceStat({
           {expiry ? `Expires ${formatDate(expiry)}` : "No expiry set"}
         </p>
         {warning ? (
-          <div className={isLarge ? "pt-1" : "mt-2"}>
+          <div className="pt-1">
             <ExpiryBadge level={warning} className="ms-0" />
           </div>
         ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRightIcon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
 import type { Vehicle, VehicleInsurancePolicy } from "@/lib/models";
 import { vehicleInsuranceCoverTypeLabel } from "@/lib/vehicle-insurance";
@@ -10,60 +10,9 @@ import { VehicleRegistrationEditSheet } from "@/app/dashboard/fleet/vehicle-regi
 import { VehicleInsuranceEditSheet } from "@/app/dashboard/fleet/vehicle-insurance-edit-sheet";
 import { VehicleRoadworthyEditSheet } from "@/app/dashboard/fleet/vehicle-roadworthy-edit-sheet";
 import { ComplianceDetailsSheet } from "@/app/dashboard/fleet/components/compliance-details-sheet";
-import { ComplianceEditButton } from "@/app/dashboard/fleet/components/compliance-edit-button";
-import { ComplianceStat } from "@/app/dashboard/fleet/components/compliance-stat";
+import { ComplianceTile } from "@/app/dashboard/fleet/components/compliance-tile";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-
-function ViewDetailsFooter({ onClick }: { onClick: () => void }) {
-  return (
-    <CardFooter className="border-border mt-auto flex items-center justify-end border-t p-0!">
-      <button
-        type="button"
-        onClick={onClick}
-        className="text-primary hover:text-primary/90 flex items-center px-6 py-3 text-sm font-medium">
-        View details
-        <ArrowRightIcon className="ms-1 size-4" />
-      </button>
-    </CardFooter>
-  );
-}
-
-function InsurancePolicyCard({
-  policy,
-  onEdit,
-  onViewDetails
-}: {
-  policy: VehicleInsurancePolicy;
-  onEdit: () => void;
-  onViewDetails: () => void;
-}) {
-  return (
-    <Card className="relative gap-4 py-4 pb-0 shadow-none">
-      <ComplianceEditButton
-        label="Edit insurance policy"
-        onClick={onEdit}
-        className="absolute top-3 right-3"
-      />
-      <CardContent className="pe-14">
-        <ComplianceStat
-          label={vehicleInsuranceCoverTypeLabel[policy.coverType]}
-          secondary={policy.insurerName}
-          start={policy.policyStart}
-          expiry={policy.policyExpiry}
-        />
-      </CardContent>
-      <ViewDetailsFooter onClick={onViewDetails} />
-    </Card>
-  );
-}
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function VehicleProfileComplianceTab({
   vehicle,
@@ -97,45 +46,38 @@ export function VehicleProfileComplianceTab({
 
   return (
     <div className={cn("grid gap-4", nested ? "grid-cols-1" : "lg:grid-cols-2")}>
-      <Card className="pb-0">
+      <Card>
         <CardHeader>
           <CardTitle>Registration</CardTitle>
-          <CardAction>
-            <ComplianceEditButton
-              label="Edit registration"
-              onClick={() => setRegistrationOpen(true)}
-            />
-          </CardAction>
         </CardHeader>
         <CardContent>
-          <ComplianceStat
+          <ComplianceTile
             label={registration?.registrationNumber ?? ""}
             secondary={registration?.jurisdictionCode}
             start={registration?.registrationStart}
             expiry={registration?.registrationExpiry}
-            size="lg"
+            editLabel="Edit registration"
+            onEdit={() => setRegistrationOpen(true)}
+            onViewDetails={() => setRegistrationDetailsOpen(true)}
           />
         </CardContent>
-        <ViewDetailsFooter onClick={() => setRegistrationDetailsOpen(true)} />
       </Card>
 
-      <Card className="pb-0">
+      <Card>
         <CardHeader>
           <CardTitle>Roadworthy</CardTitle>
-          <CardAction>
-            <ComplianceEditButton label="Edit roadworthy" onClick={() => setRoadworthyOpen(true)} />
-          </CardAction>
         </CardHeader>
         <CardContent>
-          <ComplianceStat
+          <ComplianceTile
             label={roadworthy?.certificateNumber ?? ""}
             secondary={roadworthy?.jurisdictionCode}
             start={roadworthy?.issueDate}
             expiry={roadworthy?.expiryDate}
-            size="lg"
+            editLabel="Edit roadworthy"
+            onEdit={() => setRoadworthyOpen(true)}
+            onViewDetails={() => setRoadworthyDetailsOpen(true)}
           />
         </CardContent>
-        <ViewDetailsFooter onClick={() => setRoadworthyDetailsOpen(true)} />
       </Card>
 
       <Card className={nested ? undefined : "lg:col-span-2"}>
@@ -154,9 +96,13 @@ export function VehicleProfileComplianceTab({
           ) : (
             <div className={cn("grid gap-3", nested ? "grid-cols-1" : "md:grid-cols-2")}>
               {policies.map((policy) => (
-                <InsurancePolicyCard
+                <ComplianceTile
                   key={policy.id}
-                  policy={policy}
+                  label={vehicleInsuranceCoverTypeLabel[policy.coverType]}
+                  secondary={policy.insurerName}
+                  start={policy.policyStart}
+                  expiry={policy.policyExpiry}
+                  editLabel="Edit insurance policy"
                   onEdit={() => openEditPolicy(policy)}
                   onViewDetails={() => setDetailsPolicy(policy)}
                 />
