@@ -51,7 +51,7 @@ export function ComplianceStat({
       <div className="relative flex shrink-0 items-center justify-center">
         <ChartContainer
           config={chartConfig}
-          className={cn("aspect-square", isLarge ? "size-72" : "size-20")}>
+          className={cn("aspect-square", isLarge ? "size-[150px]" : "size-20")}>
           <RadialBarChart
             data={[{ remaining: remainingTerm }]}
             innerRadius={isLarge ? "82%" : 29}
@@ -69,7 +69,7 @@ export function ComplianceStat({
             <RadialBar
               dataKey="remaining"
               background
-              cornerRadius={remainingTerm > 0 ? (isLarge ? 11 : 10) : 0}
+              cornerRadius={remainingTerm > 0 ? (isLarge ? 6 : 10) : 0}
               fill={fill}
               angleAxisId={0}
             />
@@ -78,7 +78,8 @@ export function ComplianceStat({
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
           <span
             className={cn(
-              isLarge ? "text-3xl font-semibold" : "text-base font-semibold",
+              "font-semibold",
+              isLarge ? "text-lg" : "text-base",
               warning === "expired" && "text-destructive"
             )}>
             {daysRemaining ?? "—"}
@@ -92,7 +93,7 @@ export function ComplianceStat({
       </div>
 
       <div className={cn("min-w-0", isLarge && "space-y-1")}>
-        <p className={cn("truncate", isLarge ? "text-3xl font-bold" : "text-sm font-semibold")}>
+        <p className={cn("truncate", isLarge ? "font-display text-xl" : "text-sm font-semibold")}>
           {label.trim() || "—"}
         </p>
         <p className="text-muted-foreground truncate text-sm">{secondary?.trim() || "—"}</p>
