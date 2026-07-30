@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { ClipboardCheckIcon, FileTextIcon, PlusIcon, ShieldIcon } from "lucide-react";
 
 import type { Vehicle, VehicleInsurancePolicy } from "@/lib/models";
 import { vehicleInsuranceCoverTypeLabel } from "@/lib/vehicle-insurance";
@@ -10,6 +10,8 @@ import { VehicleRegistrationEditSheet } from "@/app/dashboard/fleet/vehicle-regi
 import { VehicleInsuranceEditSheet } from "@/app/dashboard/fleet/vehicle-insurance-edit-sheet";
 import { VehicleRoadworthyEditSheet } from "@/app/dashboard/fleet/vehicle-roadworthy-edit-sheet";
 import { ComplianceDetailsSheet } from "@/app/dashboard/fleet/components/compliance-details-sheet";
+import { ComplianceEmpty } from "@/app/dashboard/fleet/components/compliance-empty";
+import { hasComplianceDetails } from "@/app/dashboard/fleet/components/compliance-stat";
 import { ComplianceTile } from "@/app/dashboard/fleet/components/compliance-tile";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,15 +53,25 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent>
-          <ComplianceTile
-            label={registration?.registrationNumber ?? ""}
-            secondary={registration?.jurisdictionCode}
-            start={registration?.registrationStart}
-            expiry={registration?.registrationExpiry}
-            editLabel="Edit registration"
-            onEdit={() => setRegistrationOpen(true)}
-            onViewDetails={() => setRegistrationDetailsOpen(true)}
-          />
+          {hasComplianceDetails(registration) ? (
+            <ComplianceTile
+              label={registration?.registrationNumber ?? ""}
+              secondary={registration?.jurisdictionCode}
+              start={registration?.registrationStart}
+              expiry={registration?.registrationExpiry}
+              editLabel="Edit registration"
+              onEdit={() => setRegistrationOpen(true)}
+              onViewDetails={() => setRegistrationDetailsOpen(true)}
+            />
+          ) : (
+            <ComplianceEmpty
+              icon={FileTextIcon}
+              title="No registration details"
+              description="You haven't added any registration details yet."
+              actionLabel="Add registration"
+              onAction={() => setRegistrationOpen(true)}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -68,31 +80,49 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Roadworthy</CardTitle>
         </CardHeader>
         <CardContent>
-          <ComplianceTile
-            label={roadworthy?.certificateNumber ?? ""}
-            secondary={roadworthy?.jurisdictionCode}
-            start={roadworthy?.issueDate}
-            expiry={roadworthy?.expiryDate}
-            editLabel="Edit roadworthy"
-            onEdit={() => setRoadworthyOpen(true)}
-            onViewDetails={() => setRoadworthyDetailsOpen(true)}
-          />
+          {hasComplianceDetails(roadworthy) ? (
+            <ComplianceTile
+              label={roadworthy?.certificateNumber ?? ""}
+              secondary={roadworthy?.jurisdictionCode}
+              start={roadworthy?.issueDate}
+              expiry={roadworthy?.expiryDate}
+              editLabel="Edit roadworthy"
+              onEdit={() => setRoadworthyOpen(true)}
+              onViewDetails={() => setRoadworthyDetailsOpen(true)}
+            />
+          ) : (
+            <ComplianceEmpty
+              icon={ClipboardCheckIcon}
+              title="No roadworthy details"
+              description="You haven't added any roadworthy details yet."
+              actionLabel="Add Roadworthy"
+              onAction={() => setRoadworthyOpen(true)}
+            />
+          )}
         </CardContent>
       </Card>
 
       <Card className={nested ? undefined : "lg:col-span-2"}>
         <CardHeader>
           <CardTitle>Insurance</CardTitle>
-          <CardAction>
-            <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
-              <PlusIcon />
-              Add policy
-            </Button>
-          </CardAction>
+          {policies.length > 0 ? (
+            <CardAction>
+              <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
+                <PlusIcon />
+                Add policy
+              </Button>
+            </CardAction>
+          ) : null}
         </CardHeader>
         <CardContent>
           {policies.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No insurance policies yet.</p>
+            <ComplianceEmpty
+              icon={ShieldIcon}
+              title="No insurance policies"
+              description="You haven't added any insurance details yet."
+              actionLabel="Add policy"
+              onAction={openAddPolicy}
+            />
           ) : (
             <div className={cn("grid gap-3", nested ? "grid-cols-1" : "md:grid-cols-2")}>
               {policies.map((policy) => (

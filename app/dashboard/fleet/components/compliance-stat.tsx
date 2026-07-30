@@ -4,6 +4,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { formatDate } from "@/lib/format";
+import type { VehicleRegistration, VehicleRoadworthy } from "@/lib/models";
 import { validityProgress } from "@/lib/vehicle-insurance";
 import { cn } from "@/lib/utils";
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
@@ -19,6 +20,16 @@ export function complianceDaysRemaining(
 ): number | null {
   if (!expiry) return null;
   return Math.max(0, differenceInCalendarDays(expiry, now));
+}
+
+/** True when the record has any non-blank string or non-null date. */
+export function hasComplianceDetails(
+  record: VehicleRegistration | VehicleRoadworthy | null | undefined
+): boolean {
+  if (!record) return false;
+  return Object.values(record).some((value) =>
+    value instanceof Date ? true : typeof value === "string" && value.trim() !== ""
+  );
 }
 
 export function ComplianceStat({
