@@ -16,6 +16,7 @@ import { CustomerProfileOverviewTab } from "@/app/dashboard/customers/components
 import { CustomerProfileTripsTab } from "@/app/dashboard/customers/components/customer-profile-trips-tab";
 import { CustomerProfileBillingTab } from "@/app/dashboard/customers/components/customer-profile-billing-tab";
 import { CustomerEditSheet } from "@/app/dashboard/customers/customer-edit-sheet";
+import { ProfilePageShell } from "@/components/layout/profile-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -66,12 +67,16 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
   };
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading customer profile…</p>;
+    return (
+      <ProfilePageShell>
+        <p className="text-muted-foreground text-sm">Loading customer profile…</p>
+      </ProfilePageShell>
+    );
   }
 
   if (!user || user.role !== "customer") {
     return (
-      <div className="space-y-4">
+      <ProfilePageShell>
         <p className="text-muted-foreground text-sm">Customer not found.</p>
         <Button variant="outline" asChild>
           <Link href="/dashboard/customers">
@@ -79,7 +84,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
             Back to customers
           </Link>
         </Button>
-      </div>
+      </ProfilePageShell>
     );
   }
 
@@ -90,13 +95,10 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
 
   return (
     <>
-      <div className="space-y-4">
+      <ProfilePageShell>
         <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Customer profile</h1>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setTab(v as ProfileTab)}
-          className="gap-4">
+        <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="trips">Trips</TabsTrigger>
@@ -133,7 +135,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
             </div>
           </div>
         </Tabs>
-      </div>
+      </ProfilePageShell>
 
       <CustomerEditSheet
         user={user}

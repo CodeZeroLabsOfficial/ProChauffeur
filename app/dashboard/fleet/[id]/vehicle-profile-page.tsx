@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
-import { useInvoices, useTrips, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import {
+  useInvoices,
+  useTrips,
+  useUsers,
+  useVehicleClasses,
+  useVehicles
+} from "@/hooks/use-collections";
 import { effectiveChauffeurUserId } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
@@ -16,16 +22,11 @@ import { VehicleProfileFinancialsTab } from "@/app/dashboard/fleet/components/ve
 import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
 import { VehicleProfileOperationsTab } from "@/app/dashboard/fleet/components/vehicle-profile-operations-tab";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
+import { ProfilePageShell } from "@/components/layout/profile-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-const PROFILE_TABS = [
-  "overview",
-  "trips",
-  "financials",
-  "compliance",
-  "operations"
-] as const;
+const PROFILE_TABS = ["overview", "trips", "financials", "compliance", "operations"] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
@@ -61,7 +62,10 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
 
   const vehicleClassLabel = useMemo(() => {
     if (!vehicle?.vehicleClassId) return null;
-    return vehicleClasses.find((c) => c.id === vehicle.vehicleClassId)?.displayName ?? vehicle.vehicleClassId;
+    return (
+      vehicleClasses.find((c) => c.id === vehicle.vehicleClassId)?.displayName ??
+      vehicle.vehicleClassId
+    );
   }, [vehicle, vehicleClasses]);
 
   const assignedChauffeur = useMemo(() => {
@@ -80,29 +84,30 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   };
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading vehicle profile…</p>;
+    return (
+      <ProfilePageShell>
+        <p className="text-muted-foreground text-sm">Loading vehicle profile…</p>
+      </ProfilePageShell>
+    );
   }
 
   if (!vehicle || !metrics) {
     return (
-      <div className="space-y-4">
+      <ProfilePageShell>
         <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/fleet" aria-label="Back to fleet">
             <ChevronLeftIcon />
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Vehicle not found.</p>
-      </div>
+      </ProfilePageShell>
     );
   }
 
   return (
     <>
-      <div className="space-y-4">
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setTab(v as ProfileTab)}
-          className="gap-4">
+      <ProfilePageShell>
+        <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <VehicleDetailCard
             vehicle={vehicle}
             vehicleClassLabel={vehicleClassLabel}
@@ -134,13 +139,10 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
           </TabsContent>
 
           <TabsContent value="operations" className="mt-0 space-y-4">
-            <VehicleProfileOperationsTab
-              vehicle={vehicle}
-              assignedChauffeur={assignedChauffeur}
-            />
+            <VehicleProfileOperationsTab vehicle={vehicle} assignedChauffeur={assignedChauffeur} />
           </TabsContent>
         </Tabs>
-      </div>
+      </ProfilePageShell>
 
       <VehicleEditSheet
         vehicle={vehicle}

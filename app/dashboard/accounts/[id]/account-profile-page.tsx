@@ -16,6 +16,7 @@ import {
   invoicesForCorporateAccount,
   tripsForCorporateAccount
 } from "@/app/dashboard/accounts/lib/account-profile-metrics";
+import { ProfilePageShell } from "@/components/layout/profile-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useInvoices, useTrips, useUsers } from "@/hooks/use-collections";
@@ -149,36 +150,40 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
   };
 
   if (!ready || loading) {
-    return <p className="text-muted-foreground text-sm">Loading account…</p>;
+    return (
+      <ProfilePageShell>
+        <p className="text-muted-foreground text-sm">Loading account…</p>
+      </ProfilePageShell>
+    );
   }
 
   if (!enabled) {
     return (
-      <div className="space-y-4">
+      <ProfilePageShell>
         <p className="text-muted-foreground text-sm">Accounts are not enabled on this license.</p>
         <Button variant="outline" asChild>
           <Link href="/dashboard/settings/license">Open License</Link>
         </Button>
-      </div>
+      </ProfilePageShell>
     );
   }
 
   if (!account) {
     return (
-      <div className="space-y-4">
+      <ProfilePageShell>
         <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/accounts" aria-label="Back to accounts">
             <ChevronLeftIcon />
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Account not found.</p>
-      </div>
+      </ProfilePageShell>
     );
   }
 
   return (
     <>
-      <div className="space-y-4">
+      <ProfilePageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <AccountDetailCard account={account} onEditClick={() => setEditOpen(true)} />
 
@@ -218,7 +223,7 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
             <AccountRatesTab account={account} onSaved={setAccount} />
           </TabsContent>
         </Tabs>
-      </div>
+      </ProfilePageShell>
 
       <AccountEditSheet
         account={account}

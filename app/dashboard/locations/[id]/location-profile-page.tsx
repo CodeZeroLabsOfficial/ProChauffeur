@@ -14,6 +14,7 @@ import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-op
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
+import { ProfilePageShell } from "@/components/layout/profile-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { Branch } from "@/lib/models";
@@ -63,25 +64,29 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading location…</p>;
+    return (
+      <ProfilePageShell>
+        <p className="text-muted-foreground text-sm">Loading location…</p>
+      </ProfilePageShell>
+    );
   }
 
   if (!branch) {
     return (
-      <div className="space-y-4">
+      <ProfilePageShell>
         <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/locations" aria-label="Back to locations">
             <ChevronLeftIcon />
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Location not found.</p>
-      </div>
+      </ProfilePageShell>
     );
   }
 
   return (
     <>
-      <div className="space-y-4">
+      <ProfilePageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
           <LocationDetailCard branch={branch} onEditClick={() => setEditOpen(true)} />
 
@@ -96,10 +101,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
           </TabsContent>
 
           <TabsContent value="service-area" className="mt-0 space-y-4">
-            <LocationServiceAreaPanel
-              branch={branch}
-              onSaved={(updated) => setBranch(updated)}
-            />
+            <LocationServiceAreaPanel branch={branch} onSaved={(updated) => setBranch(updated)} />
           </TabsContent>
 
           <TabsContent value="hours" className="mt-0 space-y-4">
@@ -114,7 +116,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
             <LocationPricingPanel branchId={branch.id} />
           </TabsContent>
         </Tabs>
-      </div>
+      </ProfilePageShell>
 
       <LocationEditSheet
         open={editOpen}
