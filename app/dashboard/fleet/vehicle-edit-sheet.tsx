@@ -1,29 +1,21 @@
 "use client";
 
-import { CalendarIcon } from "@radix-ui/react-icons";
-import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { useVehicleClasses } from "@/hooks/use-collections";
-import { upsertVehicle } from "@/lib/services/firebase-service";
+import { useRosterChauffeurs, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import { effectiveChauffeurUserId, luggageSpecificationLabel, type Vehicle } from "@/lib/models";
 import {
-  luggageSpecificationLabel,
-  type Vehicle
-} from "@/lib/models";
+  assignFleetVehicle,
+  unassignFleetVehicle,
+  upsertVehicle
+} from "@/lib/services/firebase-service";
 import { cn } from "@/lib/utils";
-import {
-  parseVehicleInsurancePolicyType,
-  VEHICLE_INSURANCE_POLICY_TYPE_OPTIONS,
-  type VehicleInsurancePolicyType
-} from "@/lib/vehicle-insurance";
 import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
 import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -32,37 +24,24 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
+const UNASSIGNED = "__unassigned__";
+const MIN_MANUFACTURE_YEAR = 1980;
+const maxManufactureYear = new Date().getFullYear() + 1;
 
 const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   driverID,
   assignedChauffeurUserId: driverID,
+  isEnabled: true,
   make: "",
   model: "",
   color: "",
-  licensePlate: "",
   passengerCapacity: 4,
   manufactureYear: null,
-  registrationJurisdictionCode: null,
-  registrationExpiry: null,
-  ctpProviderName: null,
-  ctpPolicyNumber: null,
-  ctpClassOrType: null,
-  ctpExpiry: null,
-  ctpIncludedWithRegistration: null,
-  insurancePolicyType: null,
-  insuranceProviderName: null,
-  insurancePolicyNumber: null,
-  insuranceExpiry: null,
-  roadworthyCertificateNumber: null,
-  roadworthyIssuingAuthority: null,
-  roadworthyExpiry: null,
+  registration: null,
+  insurancePolicies: [],
+  roadworthy: null,
   vehicleClassId: null,
   vehicleIdentificationNumber: null,
   engineTypeDescription: null,
@@ -71,9 +50,6 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   largeLuggageCount: 2,
   gearTypeDescription: ""
 });
-
-const MIN_MANUFACTURE_YEAR = 1980;
-const maxManufactureYear = new Date().getFullYear() + 1;
 
 function SectionHeading({ children }: { children: string }) {
   return <h4 className="text-sm font-medium">{children}</h4>;
@@ -94,65 +70,48 @@ export function VehicleEditSheet({
 }) {
   const isNew = !vehicle;
   const { vehicleClasses } = useVehicleClasses();
+  const { chauffeurs } = useRosterChauffeurs();
+  const { vehicles } = useVehicles();
+  const initialChauffeurId = vehicle
+    ? (effectiveChauffeurUserId(vehicle) ?? UNASSIGNED)
+    : (defaultCreateDriverId ?? UNASSIGNED);
   const [vehicleClassId, setVehicleClassId] = useState(vehicle?.vehicleClassId ?? "");
   const [make, setMake] = useState(() => vehicleMakeSelectValue(vehicle?.make));
   const [manufactureYear, setManufactureYear] = useState(
     vehicle?.manufactureYear ?? new Date().getFullYear()
   );
-  const [passengerCapacity, setPassengerCapacity] = useState(vehicle?.passengerCapacity ?? 4);
-  const [smallBags, setSmallBags] = useState(vehicle?.smallLuggageCount ?? 0);
-  const [largeBags, setLargeBags] = useState(vehicle?.largeLuggageCount ?? 2);
-  const [registrationExpiry, setRegistrationExpiry] = useState<Date | undefined>(
-    vehicle?.registrationExpiry ?? undefined
-  );
-  const [ctpExpiry, setCtpExpiry] = useState<Date | undefined>(vehicle?.ctpExpiry ?? undefined);
-  const [ctpIncludedWithRegistration, setCtpIncludedWithRegistration] = useState(
-    vehicle?.ctpIncludedWithRegistration === true
-      ? "yes"
-      : vehicle?.ctpIncludedWithRegistration === false
-        ? "no"
-        : ""
-  );
-  const [insurancePolicyType, setInsurancePolicyType] = useState(
-    vehicle?.insurancePolicyType ?? ""
-  );
-  const [insuranceExpiry, setInsuranceExpiry] = useState<Date | undefined>(
-    vehicle?.insuranceExpiry ?? undefined
-  );
-  const [roadworthyExpiry, setRoadworthyExpiry] = useState<Date | undefined>(
-    vehicle?.roadworthyExpiry ?? undefined
-  );
+  const [assignedChauffeurId, setAssignedChauffeurId] = useState(initialChauffeurId);
+  const [status, setStatus] = useState(vehicle?.isEnabled === false ? "disabled" : "enabled");
   const [saving, setSaving] = useState(false);
-
   const [seededId, setSeededId] = useState<string | null>("__init__");
   const currentKey = vehicle?.driverID ?? defaultCreateDriverId ?? "__new__";
+
   if (currentKey !== seededId) {
     setSeededId(currentKey);
     setVehicleClassId(vehicle?.vehicleClassId ?? "");
     setMake(vehicleMakeSelectValue(vehicle?.make));
     setManufactureYear(vehicle?.manufactureYear ?? new Date().getFullYear());
-    setPassengerCapacity(vehicle?.passengerCapacity ?? 4);
-    setSmallBags(vehicle?.smallLuggageCount ?? 0);
-    setLargeBags(vehicle?.largeLuggageCount ?? 2);
-    setRegistrationExpiry(vehicle?.registrationExpiry ?? undefined);
-    setCtpExpiry(vehicle?.ctpExpiry ?? undefined);
-    setCtpIncludedWithRegistration(
-      vehicle?.ctpIncludedWithRegistration === true
-        ? "yes"
-        : vehicle?.ctpIncludedWithRegistration === false
-          ? "no"
-          : ""
+    setAssignedChauffeurId(
+      vehicle
+        ? (effectiveChauffeurUserId(vehicle) ?? UNASSIGNED)
+        : (defaultCreateDriverId ?? UNASSIGNED)
     );
-    setInsurancePolicyType(vehicle?.insurancePolicyType ?? "");
-    setInsuranceExpiry(vehicle?.insuranceExpiry ?? undefined);
-    setRoadworthyExpiry(vehicle?.roadworthyExpiry ?? undefined);
+    setStatus(vehicle?.isEnabled === false ? "disabled" : "enabled");
   }
+
+  const chauffeurOptions = isNew
+    ? chauffeurs.filter(
+        (chauffeur) =>
+          chauffeur.user.id === defaultCreateDriverId ||
+          !vehicles.some((item) => effectiveChauffeurUserId(item) === chauffeur.user.id)
+      )
+    : chauffeurs;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const driverID = vehicle?.driverID ?? defaultCreateDriverId ?? "";
     if (!driverID) {
-      toast.error("No chauffeur is available to link this vehicle to.");
+      toast.error("No chauffeur is available to create this vehicle record.");
       return;
     }
     if (!make) {
@@ -165,48 +124,37 @@ export function VehicleEditSheet({
     }
 
     const form = new FormData(e.currentTarget);
-    const get = (k: string) => String(form.get(k) ?? "").trim();
-
+    const get = (key: string) => String(form.get(key) ?? "").trim();
     const base = vehicle ?? EMPTY_VEHICLE(driverID);
     const next: Vehicle = {
       ...base,
       driverID,
-      assignedChauffeurUserId: base.assignedChauffeurUserId ?? driverID,
+      assignedChauffeurUserId:
+        isNew && assignedChauffeurId !== UNASSIGNED
+          ? assignedChauffeurId
+          : base.assignedChauffeurUserId,
+      isEnabled: status === "enabled",
+      vehicleClassId,
+      manufactureYear,
       make,
       model: get("model"),
       color: get("color"),
-      licensePlate: get("licensePlate"),
-      passengerCapacity,
-      manufactureYear,
-      registrationJurisdictionCode: get("registrationJurisdictionCode") || null,
-      registrationExpiry: registrationExpiry ?? null,
-      ctpProviderName: get("ctpProviderName") || null,
-      ctpPolicyNumber: get("ctpPolicyNumber") || null,
-      ctpClassOrType: get("ctpClassOrType") || null,
-      ctpExpiry: ctpExpiry ?? null,
-      ctpIncludedWithRegistration:
-        ctpIncludedWithRegistration === "yes"
-          ? true
-          : ctpIncludedWithRegistration === "no"
-            ? false
-            : null,
-      insurancePolicyType: parseVehicleInsurancePolicyType(insurancePolicyType),
-      insuranceProviderName: get("insuranceProviderName") || null,
-      insurancePolicyNumber: get("insurancePolicyNumber") || null,
-      insuranceExpiry: insuranceExpiry ?? null,
-      roadworthyCertificateNumber: get("roadworthyCertificateNumber") || null,
-      roadworthyIssuingAuthority: get("roadworthyIssuingAuthority") || null,
-      roadworthyExpiry: roadworthyExpiry ?? null,
-      vehicleClassId,
       gearTypeDescription: get("gearTypeDescription"),
-      smallLuggageCount: smallBags,
-      largeLuggageCount: largeBags,
-      luggageDescription: luggageSpecificationLabel(smallBags, largeBags)
+      engineTypeDescription: get("engineTypeDescription") || null
     };
 
     setSaving(true);
     try {
       await upsertVehicle(next);
+      if (!isNew && assignedChauffeurId !== initialChauffeurId) {
+        if (assignedChauffeurId === UNASSIGNED) {
+          await unassignFleetVehicle(driverID);
+        } else {
+          await assignFleetVehicle(vehicles, driverID, assignedChauffeurId);
+        }
+      } else if (isNew && assignedChauffeurId === UNASSIGNED) {
+        await unassignFleetVehicle(driverID);
+      }
       toast.success(isNew ? "Vehicle added." : "Vehicle updated.");
       onOpenChange(false);
     } catch {
@@ -222,8 +170,7 @@ export function VehicleEditSheet({
         <SheetHeader>
           <SheetTitle>{isNew ? "Add vehicle" : "Edit vehicle"}</SheetTitle>
         </SheetHeader>
-        <Separator />
-        <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-6 px-4" key={currentKey}>
           <div className="space-y-4">
             <SectionHeading>Vehicle details</SectionHeading>
             <div className="grid grid-cols-2 gap-3">
@@ -287,323 +234,52 @@ export function VehicleEditSheet({
                 />
               </div>
             </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <SectionHeading>Registration details</SectionHeading>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="registrationJurisdictionCode">Rego state</Label>
-                <Input
-                  id="registrationJurisdictionCode"
-                  name="registrationJurisdictionCode"
-                  placeholder="NSW"
-                  defaultValue={vehicle?.registrationJurisdictionCode ?? ""}
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <Label>Rego expiry</Label>
-                <Popover modal>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !registrationExpiry && "text-muted-foreground"
-                      )}>
-                      {registrationExpiry ? format(registrationExpiry, "PPP") : <span>Pick a date</span>}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className={cn(
-                      "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                      nested && "z-[110]"
-                    )}
-                    align="start">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown"
-                      fromYear={new Date().getFullYear() - 10}
-                      toYear={new Date().getFullYear() + 20}
-                      selected={registrationExpiry}
-                      onSelect={setRegistrationExpiry}
-                      defaultMonth={registrationExpiry}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="licensePlate">Plate</Label>
-              <Input id="licensePlate" name="licensePlate" defaultValue={vehicle?.licensePlate} />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <SectionHeading>Compulsory Third Party</SectionHeading>
-            <div className="space-y-2">
-              <Label htmlFor="ctpProviderName">CTP insurer / scheme</Label>
+              <Label htmlFor="engineTypeDescription">Engine details</Label>
               <Input
-                id="ctpProviderName"
-                name="ctpProviderName"
-                placeholder="Insurer or scheme"
-                defaultValue={vehicle?.ctpProviderName ?? ""}
+                id="engineTypeDescription"
+                name="engineTypeDescription"
+                placeholder="Petrol, Diesel, Electric…"
+                defaultValue={vehicle?.engineTypeDescription ?? ""}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="ctpPolicyNumber">Policy / ref.</Label>
-                <Input
-                  id="ctpPolicyNumber"
-                  name="ctpPolicyNumber"
-                  placeholder="Policy or Green Slip ref."
-                  defaultValue={vehicle?.ctpPolicyNumber ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ctpClassOrType">CTP class</Label>
-                <Input
-                  id="ctpClassOrType"
-                  name="ctpClassOrType"
-                  placeholder="e.g. Class 26"
-                  defaultValue={vehicle?.ctpClassOrType ?? ""}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Included with rego</Label>
-                <Select
-                  value={ctpIncludedWithRegistration || undefined}
-                  onValueChange={setCtpIncludedWithRegistration}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                    <SelectItem value="yes">Yes</SelectItem>
-                    <SelectItem value="no">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col space-y-2">
-                <Label>CTP expiry</Label>
-                <Popover modal>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !ctpExpiry && "text-muted-foreground"
-                      )}>
-                      {ctpExpiry ? format(ctpExpiry, "PPP") : <span>Pick a date</span>}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className={cn(
-                      "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                      nested && "z-[110]"
-                    )}
-                    align="start">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown"
-                      fromYear={new Date().getFullYear() - 10}
-                      toYear={new Date().getFullYear() + 20}
-                      selected={ctpExpiry}
-                      onSelect={setCtpExpiry}
-                      defaultMonth={ctpExpiry}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
           </div>
 
           <Separator />
 
           <div className="space-y-4">
-            <SectionHeading>Vehicle insurance</SectionHeading>
-            <p className="text-muted-foreground text-sm">
-              Optional cover for the vehicle. CTP is tracked separately.
-            </p>
+            <SectionHeading>Assignment and status</SectionHeading>
             <div className="space-y-2">
-              <Label>Policy type</Label>
-              <Select
-                value={insurancePolicyType || undefined}
-                onValueChange={(value) =>
-                  setInsurancePolicyType(value as VehicleInsurancePolicyType)
-                }>
+              <Label>Assigned driver</Label>
+              <Select value={assignedChauffeurId} onValueChange={setAssignedChauffeurId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select policy type" />
+                  <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                  {VEHICLE_INSURANCE_POLICY_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                  {chauffeurOptions.map((chauffeur) => (
+                    <SelectItem key={chauffeur.user.id} value={chauffeur.user.id}>
+                      {chauffeur.user.profile.displayName || chauffeur.user.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="insuranceProviderName">Insurer</Label>
-                <Input
-                  id="insuranceProviderName"
-                  name="insuranceProviderName"
-                  placeholder="Insurer name"
-                  defaultValue={vehicle?.insuranceProviderName ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="insurancePolicyNumber">Policy no.</Label>
-                <Input
-                  id="insurancePolicyNumber"
-                  name="insurancePolicyNumber"
-                  placeholder="Policy number"
-                  defaultValue={vehicle?.insurancePolicyNumber ?? ""}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <Label>Insurance expiry</Label>
-              <Popover modal>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full pl-3 text-left font-normal",
-                      !insuranceExpiry && "text-muted-foreground"
-                    )}>
-                    {insuranceExpiry ? format(insuranceExpiry, "PPP") : <span>Pick a date</span>}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className={cn(
-                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                    nested && "z-[110]"
-                  )}
-                  align="start">
-                  <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    fromYear={new Date().getFullYear() - 10}
-                    toYear={new Date().getFullYear() + 20}
-                    selected={insuranceExpiry}
-                    onSelect={setInsuranceExpiry}
-                    defaultMonth={insuranceExpiry}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="space-y-2">
+              <Label>Vehicle status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" className={cn(nested && "z-[110]")}>
+                  <SelectItem value="enabled">Enabled</SelectItem>
+                  <SelectItem value="disabled">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <Separator />
-
-          <div className="space-y-4">
-            <SectionHeading>Roadworthy</SectionHeading>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="roadworthyCertificateNumber">Certificate no.</Label>
-                <Input
-                  id="roadworthyCertificateNumber"
-                  name="roadworthyCertificateNumber"
-                  placeholder="Certificate number"
-                  defaultValue={vehicle?.roadworthyCertificateNumber ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="roadworthyIssuingAuthority">Issued by</Label>
-                <Input
-                  id="roadworthyIssuingAuthority"
-                  name="roadworthyIssuingAuthority"
-                  placeholder="Issuing authority"
-                  defaultValue={vehicle?.roadworthyIssuingAuthority ?? ""}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <Label>Roadworthy expiry</Label>
-              <Popover modal>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full pl-3 text-left font-normal",
-                      !roadworthyExpiry && "text-muted-foreground"
-                    )}>
-                    {roadworthyExpiry ? format(roadworthyExpiry, "PPP") : <span>Pick a date</span>}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className={cn(
-                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                    nested && "z-[110]"
-                  )}
-                  align="start">
-                  <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    fromYear={new Date().getFullYear() - 10}
-                    toYear={new Date().getFullYear() + 20}
-                    selected={roadworthyExpiry}
-                    onSelect={setRoadworthyExpiry}
-                    defaultMonth={roadworthyExpiry}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <SectionHeading>Vehicle capacity</SectionHeading>
-            <div className="grid grid-cols-3 gap-3">
-              <NumberStepper
-                id="passengerCapacity"
-                label="Capacity"
-                value={passengerCapacity}
-                onChange={setPassengerCapacity}
-                min={1}
-                max={20}
-              />
-              <NumberStepper
-                id="smallBags"
-                label="Small bags"
-                value={smallBags}
-                onChange={setSmallBags}
-                min={0}
-                max={12}
-              />
-              <NumberStepper
-                id="largeBags"
-                label="Large bags"
-                value={largeBags}
-                onChange={setLargeBags}
-                min={0}
-                max={12}
-              />
-            </div>
-          </div>
-
-          <SheetFooter className="px-0">
+          <SheetFooter className="mt-auto px-0">
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : isNew ? "Add vehicle" : "Save changes"}
             </Button>

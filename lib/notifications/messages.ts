@@ -1,4 +1,7 @@
-import type { CreateActivityNotificationInput, NotificationAction } from "@/lib/models/notification";
+import type {
+  CreateActivityNotificationInput,
+  NotificationAction
+} from "@/lib/models/notification";
 
 const HREF = {
   customers: "/dashboard/customers",
@@ -71,7 +74,10 @@ export function vehicleNotification(
   };
 }
 
-export function profileNotification(title: string, entityId?: string): CreateActivityNotificationInput {
+export function profileNotification(
+  title: string,
+  entityId?: string
+): CreateActivityNotificationInput {
   return {
     category: "profile",
     action: "updated",
@@ -82,7 +88,10 @@ export function profileNotification(title: string, entityId?: string): CreateAct
   };
 }
 
-export function profilePhotoNotification(title: string, entityId?: string): CreateActivityNotificationInput {
+export function profilePhotoNotification(
+  title: string,
+  entityId?: string
+): CreateActivityNotificationInput {
   return {
     category: "profile",
     action: "updated",
@@ -185,7 +194,7 @@ export function vehicleDisplayTitle(vehicle: {
   manufactureYear?: number | null;
   make?: string;
   model?: string;
-  licensePlate?: string;
+  registration?: { registrationNumber?: string } | null;
 }): string {
   const parts = [
     vehicle.manufactureYear ? String(vehicle.manufactureYear) : "",
@@ -194,5 +203,5 @@ export function vehicleDisplayTitle(vehicle: {
   ].filter(Boolean);
   const label = parts.join(" ").trim();
   if (label) return label;
-  return vehicle.licensePlate?.trim() || "Fleet vehicle";
+  return vehicle.registration?.registrationNumber?.trim() || "Fleet vehicle";
 }

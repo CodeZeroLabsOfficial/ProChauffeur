@@ -55,9 +55,60 @@ import {
 } from "@/lib/models/license";
 import { parseOperatorLocale, parsePricingConfig, parseVehicleClass } from "@/lib/pricing/validate";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
-import { parseVehicleInsurancePolicyType } from "@/lib/vehicle-insurance";
+import type {
+  VehicleInsurancePolicy,
+  VehicleRegistration,
+  VehicleRoadworthy
+} from "@/lib/models/vehicle";
+import { parseVehicleInsuranceCoverType } from "@/lib/vehicle-insurance";
 
 /** Pure mappers from raw Firestore document data into typed app models. */
+
+function mapVehicleRegistration(raw: unknown): VehicleRegistration | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    registrationNumber: typeof d.registrationNumber === "string" ? d.registrationNumber : "",
+    jurisdictionCode: typeof d.jurisdictionCode === "string" ? d.jurisdictionCode : "",
+    registrationStart: toDate(d.registrationStart),
+    registrationExpiry: toDate(d.registrationExpiry)
+  };
+}
+
+function mapVehicleInsurancePolicy(raw: unknown): VehicleInsurancePolicy | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  const coverType = parseVehicleInsuranceCoverType(d.coverType);
+  if (!coverType || typeof d.id !== "string" || !d.id.trim()) return null;
+  return {
+    id: d.id,
+    coverType,
+    insurerName: typeof d.insurerName === "string" ? d.insurerName : "",
+    policyReferenceNumber:
+      typeof d.policyReferenceNumber === "string" ? d.policyReferenceNumber : "",
+    policyStart: toDate(d.policyStart),
+    policyExpiry: toDate(d.policyExpiry)
+  };
+}
+
+function mapVehicleInsurancePolicies(raw: unknown): VehicleInsurancePolicy[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => mapVehicleInsurancePolicy(entry))
+    .filter((entry): entry is VehicleInsurancePolicy => entry != null);
+}
+
+function mapVehicleRoadworthy(raw: unknown): VehicleRoadworthy | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    certificateNumber: typeof d.certificateNumber === "string" ? d.certificateNumber : "",
+    issuingAuthority: typeof d.issuingAuthority === "string" ? d.issuingAuthority : "",
+    jurisdictionCode: typeof d.jurisdictionCode === "string" ? d.jurisdictionCode : "",
+    issueDate: toDate(d.issueDate),
+    expiryDate: toDate(d.expiryDate)
+  };
+}
 
 function mapUserProfile(d: DocumentData | undefined): UserProfile {
   const p = d ?? {};
@@ -191,27 +242,15 @@ export function mapVehicle(d: DocumentData): Vehicle {
   return {
     driverID: d.driverID,
     assignedChauffeurUserId: d.assignedChauffeurUserId ?? null,
+    isEnabled: d.isEnabled !== false,
     make: d.make ?? "",
     model: d.model ?? "",
     color: d.color ?? "",
-    licensePlate: d.licensePlate ?? "",
     passengerCapacity: toInt(d.passengerCapacity, 0),
     manufactureYear: d.manufactureYear != null ? toInt(d.manufactureYear, 0) : null,
-    registrationJurisdictionCode: d.registrationJurisdictionCode ?? null,
-    registrationExpiry: toDate(d.registrationExpiry),
-    ctpProviderName: d.ctpProviderName ?? null,
-    ctpPolicyNumber: d.ctpPolicyNumber ?? null,
-    ctpClassOrType: d.ctpClassOrType ?? null,
-    ctpExpiry: toDate(d.ctpExpiry),
-    ctpIncludedWithRegistration:
-      typeof d.ctpIncludedWithRegistration === "boolean" ? d.ctpIncludedWithRegistration : null,
-    insurancePolicyType: parseVehicleInsurancePolicyType(d.insurancePolicyType),
-    insuranceProviderName: d.insuranceProviderName ?? null,
-    insurancePolicyNumber: d.insurancePolicyNumber ?? null,
-    insuranceExpiry: toDate(d.insuranceExpiry),
-    roadworthyCertificateNumber: d.roadworthyCertificateNumber ?? null,
-    roadworthyIssuingAuthority: d.roadworthyIssuingAuthority ?? null,
-    roadworthyExpiry: toDate(d.roadworthyExpiry),
+    registration: mapVehicleRegistration(d.registration),
+    insurancePolicies: mapVehicleInsurancePolicies(d.insurancePolicies),
+    roadworthy: mapVehicleRoadworthy(d.roadworthy),
     vehicleClassId: d.vehicleClassId ?? null,
     vehicleIdentificationNumber: d.vehicleIdentificationNumber ?? null,
     engineTypeDescription: d.engineTypeDescription ?? null,
@@ -424,9 +463,7 @@ export function mapPlansCatalog(d: DocumentData): AppPlansCatalog {
       if (!planId.trim() || !value || typeof value !== "object" || Array.isArray(value)) continue;
       const entry = value as Record<string, unknown>;
       const label =
-        typeof entry.label === "string" && entry.label.trim()
-          ? entry.label.trim()
-          : planId;
+        typeof entry.label === "string" && entry.label.trim() ? entry.label.trim() : planId;
       plans[planId] = {
         label,
         features: mapPlanFeatures(entry.features)
@@ -519,7 +556,9 @@ function mapPromotionConditions(d: DocumentData): PromotionConditions {
     branchIds: Array.isArray(d.branchIds) ? (d.branchIds as string[]) : null,
     startsAt: toDate(d.startsAt),
     endsAt: toDate(d.endsAt),
-    tripTypes: Array.isArray(d.tripTypes) ? (d.tripTypes as PromotionConditions["tripTypes"]) : null,
+    tripTypes: Array.isArray(d.tripTypes)
+      ? (d.tripTypes as PromotionConditions["tripTypes"])
+      : null,
     vehicleClassIds: Array.isArray(d.vehicleClassIds) ? (d.vehicleClassIds as string[]) : null,
     maxRedemptions: typeof d.maxRedemptions === "number" ? d.maxRedemptions : null,
     perCustomerLimit: typeof d.perCustomerLimit === "number" ? d.perCustomerLimit : null,
@@ -529,9 +568,7 @@ function mapPromotionConditions(d: DocumentData): PromotionConditions {
 
 export function mapPromotion(id: string, d: DocumentData): Promotion {
   const conditionsRaw =
-    d.conditions && typeof d.conditions === "object"
-      ? (d.conditions as DocumentData)
-      : d;
+    d.conditions && typeof d.conditions === "object" ? (d.conditions as DocumentData) : d;
   return {
     id,
     title: typeof d.title === "string" ? d.title : "",

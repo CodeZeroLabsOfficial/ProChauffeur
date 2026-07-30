@@ -22,18 +22,24 @@ export function tripsForVehicle(trips: Trip[], vehicle: Vehicle): Trip[] {
 }
 
 export function vehicleProfileCompleteness(vehicle: Vehicle): number {
+  const registration = vehicle.registration;
+  const policies = vehicle.insurancePolicies ?? [];
+  const hasInsurancePolicy = policies.some(
+    (policy) =>
+      Boolean(policy.insurerName.trim() || policy.policyReferenceNumber.trim()) &&
+      Boolean(policy.policyExpiry)
+  );
   const checks = [
     Boolean(vehicle.make?.trim()),
     Boolean(vehicle.model?.trim()),
     Boolean(vehicle.color?.trim()),
-    Boolean(vehicle.licensePlate?.trim()),
+    Boolean(registration?.registrationNumber?.trim()),
     Boolean(vehicle.vehicleClassId),
     Boolean(vehicle.vehicleIdentificationNumber?.trim()),
-    Boolean(vehicle.registrationExpiry),
-    Boolean(vehicle.registrationJurisdictionCode?.trim()),
-    Boolean(vehicle.ctpExpiry),
-    Boolean(vehicle.ctpProviderName?.trim() || vehicle.ctpPolicyNumber?.trim()),
-    Boolean(vehicle.roadworthyExpiry)
+    Boolean(registration?.registrationExpiry),
+    Boolean(registration?.jurisdictionCode?.trim()),
+    hasInsurancePolicy,
+    Boolean(vehicle.roadworthy?.expiryDate)
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
@@ -61,9 +67,7 @@ export function vehicleOverviewMetrics(
   const monthTripIds = new Set(monthTrips.map((t) => t.id));
   const monthInvoices = invoicesForDriver(invoices, monthTripIds);
   const monthRevenue = invoiceRevenueInRange(monthInvoices, thisMonth.start, thisMonth.end);
-  const totalRevenue = paidRevenueForInvoices(
-    vehicleInvoices.filter((i) => i.status === "paid")
-  );
+  const totalRevenue = paidRevenueForInvoices(vehicleInvoices.filter((i) => i.status === "paid"));
 
   return {
     totalTrips: vehicleTrips.length,

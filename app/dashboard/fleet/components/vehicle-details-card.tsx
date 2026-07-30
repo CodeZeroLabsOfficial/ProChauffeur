@@ -19,8 +19,8 @@ export function VehicleDetailsCard({
 }) {
   const gear = vehicle.gearTypeDescription?.trim();
   const engine = vehicle.engineTypeDescription?.trim();
-  const plate = vehicle.licensePlate?.trim();
-  const expiry = vehicle.registrationExpiry;
+  const plate = vehicle.registration?.registrationNumber?.trim();
+  const expiry = vehicle.registration?.registrationExpiry;
 
   return (
     <Card>

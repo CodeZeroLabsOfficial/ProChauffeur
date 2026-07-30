@@ -77,9 +77,7 @@ export function DriverProfileOperationsTab({
   const vehicle = assignedVehicle(vehicles, user.id);
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(
-    null
-  );
+  const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(null);
 
   const classesById = useMemo(
     () => new Map(vehicleClasses.map((c) => [c.id, c.displayName])),
@@ -166,10 +164,7 @@ export function DriverProfileOperationsTab({
             <CardTitle>Fleet vehicle</CardTitle>
             <CardAction>
               {vehicle ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void handleUnassign()}>
+                <Button size="sm" variant="outline" onClick={() => void handleUnassign()}>
                   <MinusIcon /> Unassign
                 </Button>
               ) : (
@@ -182,12 +177,12 @@ export function DriverProfileOperationsTab({
                   <DropdownMenuContent align="end">
                     {availableVehicles.length ? (
                       availableVehicles.map((v) => (
-                        <DropdownMenuItem
-                          key={v.driverID}
-                          onClick={() => handleAssign(v.driverID)}>
+                        <DropdownMenuItem key={v.driverID} onClick={() => handleAssign(v.driverID)}>
                           {vehicleMakeModel(v)}
-                          {v.licensePlate?.trim() ? (
-                            <span className="text-muted-foreground ml-2">{v.licensePlate}</span>
+                          {v.registration?.registrationNumber?.trim() ? (
+                            <span className="text-muted-foreground ml-2">
+                              {v.registration.registrationNumber}
+                            </span>
                           ) : null}
                         </DropdownMenuItem>
                       ))
@@ -237,9 +232,7 @@ export function DriverProfileOperationsTab({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 font-medium">
                           {schedule.name?.trim() || "Schedule"}
-                          {!schedule.isEnabled ? (
-                            <Badge variant="outline">Disabled</Badge>
-                          ) : null}
+                          {!schedule.isEnabled ? <Badge variant="outline">Disabled</Badge> : null}
                         </div>
                         <p className="text-muted-foreground mt-1">
                           {formatScheduleDays(schedule.weekdayNumbers)}

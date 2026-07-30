@@ -1,11 +1,11 @@
 "use client";
 
+import { effectiveChauffeurUserId, vehicleDisplayName, type Vehicle } from "@/lib/models";
 import {
-  effectiveChauffeurUserId,
-  vehicleDisplayName,
-  type Vehicle
-} from "@/lib/models";
-import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
+  assignmentBadgeIcon,
+  vehicleStatusBadgeIcon,
+  vehicleTierBadgeIcon
+} from "@/lib/vehicle-badge-icons";
 import { ProfileHeroCard } from "@/components/layout/profile-hero-card";
 import { ProfileV2TabTrigger } from "@/components/layout/profile-tab-bar";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
@@ -33,7 +33,10 @@ export function VehicleDetailCard({
       onEditClick={onEditClick}
       editAriaLabel="Edit vehicle"
       avatar={
-        <VehicleMakeAvatar make={vehicle.make} className="size-full rounded-none [&_[data-slot=avatar-fallback]]:rounded-none" />
+        <VehicleMakeAvatar
+          make={vehicle.make}
+          className="size-full rounded-none [&_[data-slot=avatar-fallback]]:rounded-none"
+        />
       }
       title={displayName}
       meta={
@@ -43,6 +46,9 @@ export function VehicleDetailCard({
           ) : null}
           <DetailSheetIconBadge icon={assignmentBadgeIcon(assigned)}>
             {assigned ? "Assigned" : "Unassigned"}
+          </DetailSheetIconBadge>
+          <DetailSheetIconBadge icon={vehicleStatusBadgeIcon(vehicle.isEnabled !== false)}>
+            {vehicle.isEnabled === false ? "Disabled" : "Enabled"}
           </DetailSheetIconBadge>
         </div>
       }

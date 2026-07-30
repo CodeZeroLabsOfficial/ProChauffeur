@@ -24,16 +24,10 @@ import {
 } from "@/lib/models";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
-import { assignmentBadgeIcon } from "@/lib/vehicle-badge-icons";
-import { VehicleComplianceFields } from "@/app/dashboard/fleet/components/vehicle-compliance-fields";
-import {
-  nullableTrim,
-  saveVehicleFields
-} from "@/app/dashboard/fleet/lib/save-vehicle-fields";
-import {
-  LUXURY_VEHICLE_MAKES,
-  vehicleMakeSelectValue
-} from "@/lib/vehicle-makes";
+import { assignmentBadgeIcon, vehicleStatusBadgeIcon } from "@/lib/vehicle-badge-icons";
+import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
+import { nullableTrim, saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
+import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
@@ -41,12 +35,7 @@ import { InlineEditableStepperField } from "@/components/inline-editable-stepper
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import {
   ProfileV2TabTrigger,
@@ -164,9 +153,7 @@ function VehicleOverviewFields({
                 fieldId="year"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={
-                  vehicle.manufactureYear != null ? String(vehicle.manufactureYear) : ""
-                }
+                value={vehicle.manufactureYear != null ? String(vehicle.manufactureYear) : ""}
                 editLabel="year"
                 placeholder={String(new Date().getFullYear())}
                 onSave={async (next) => {
@@ -214,9 +201,7 @@ function VehicleOverviewFields({
                 value={vehicle.engineTypeDescription?.trim() ?? ""}
                 editLabel="engine type"
                 placeholder="Petrol, Diesel, Electric…"
-                onSave={async (next) =>
-                  saveVehicle({ engineTypeDescription: nullableTrim(next) })
-                }
+                onSave={async (next) => saveVehicle({ engineTypeDescription: nullableTrim(next) })}
               />
             </dd>
           </div>
@@ -362,6 +347,10 @@ export function VehicleDetailSheet({
                 <DetailSheetIconBadge icon={assignmentBadgeIcon(assigned)}>
                   {assigned ? "Assigned" : "Unassigned"}
                 </DetailSheetIconBadge>
+                <DetailSheetIconBadge
+                  icon={vehicleStatusBadgeIcon(displayVehicle.isEnabled !== false)}>
+                  {displayVehicle.isEnabled === false ? "Disabled" : "Enabled"}
+                </DetailSheetIconBadge>
               </div>
             </div>
           </div>
@@ -382,7 +371,7 @@ export function VehicleDetailSheet({
               <VehicleTabPlaceholder label="Features" />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
-              <VehicleComplianceFields vehicle={displayVehicle} />
+              <VehicleProfileComplianceTab vehicle={displayVehicle} nested />
             </TabsContent>
             <TabsContent value="maintenance" className="mt-0">
               <VehicleTabPlaceholder label="Maintenance" />

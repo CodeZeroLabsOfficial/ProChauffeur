@@ -1,4 +1,28 @@
-import type { VehicleInsurancePolicyType } from "@/lib/vehicle-insurance";
+import type { VehicleInsuranceCoverType } from "@/lib/vehicle-insurance";
+
+export interface VehicleRegistration {
+  registrationNumber: string;
+  jurisdictionCode: string;
+  registrationStart: Date | null;
+  registrationExpiry: Date | null;
+}
+
+export interface VehicleInsurancePolicy {
+  id: string;
+  coverType: VehicleInsuranceCoverType;
+  insurerName: string;
+  policyReferenceNumber: string;
+  policyStart: Date | null;
+  policyExpiry: Date | null;
+}
+
+export interface VehicleRoadworthy {
+  certificateNumber: string;
+  issuingAuthority: string;
+  jurisdictionCode: string;
+  issueDate: Date | null;
+  expiryDate: Date | null;
+}
 
 /**
  * Vehicle.swift — `vehicles/{driverID}` document.
@@ -7,31 +31,16 @@ import type { VehicleInsurancePolicyType } from "@/lib/vehicle-insurance";
 export interface Vehicle {
   driverID: string;
   assignedChauffeurUserId?: string | null;
+  /** Whether this vehicle can be used in fleet operations. Defaults to true. */
+  isEnabled?: boolean;
   make: string;
   model: string;
   color: string;
-  licensePlate: string;
   passengerCapacity: number;
   manufactureYear?: number | null;
-  registrationJurisdictionCode?: string | null;
-  registrationExpiry?: Date | null;
-  /** CTP insurer or government scheme name. */
-  ctpProviderName?: string | null;
-  /** CTP policy / Green Slip / reference number. */
-  ctpPolicyNumber?: string | null;
-  /** CTP class or category (e.g. booked-hire class); varies by jurisdiction. */
-  ctpClassOrType?: string | null;
-  ctpExpiry?: Date | null;
-  /** When true, CTP is commonly bundled with registration. */
-  ctpIncludedWithRegistration?: boolean | null;
-  /** Optional vehicle insurance policy type (not CTP). */
-  insurancePolicyType?: VehicleInsurancePolicyType | null;
-  insuranceProviderName?: string | null;
-  insurancePolicyNumber?: string | null;
-  insuranceExpiry?: Date | null;
-  roadworthyCertificateNumber?: string | null;
-  roadworthyIssuingAuthority?: string | null;
-  roadworthyExpiry?: Date | null;
+  registration?: VehicleRegistration | null;
+  insurancePolicies?: VehicleInsurancePolicy[];
+  roadworthy?: VehicleRoadworthy | null;
   vehicleClassId?: string | null;
   /** VIN or internal fleet vehicle identifier. */
   vehicleIdentificationNumber?: string | null;
@@ -46,6 +55,10 @@ export interface Vehicle {
 /** "Colour Make Model" display string (matches Vehicle.displayName). */
 export function vehicleDisplayName(v: Pick<Vehicle, "color" | "make" | "model">): string {
   return `${v.color} ${v.make} ${v.model}`.trim();
+}
+
+export function vehicleRegistrationNumber(v: Pick<Vehicle, "registration">): string {
+  return v.registration?.registrationNumber?.trim() || "";
 }
 
 /** Resolves the chauffeur linked to a fleet row (assignedChauffeurUserId, else driverID). */

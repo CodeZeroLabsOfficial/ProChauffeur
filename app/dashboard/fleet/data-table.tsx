@@ -17,17 +17,18 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useRosterChauffeurs, useUsers, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
+import {
+  useRosterChauffeurs,
+  useUsers,
+  useVehicleClasses,
+  useVehicles
+} from "@/hooks/use-collections";
 import {
   assignFleetVehicle,
   deleteVehicle,
   unassignFleetVehicle
 } from "@/lib/services/firebase-service";
-import {
-  effectiveChauffeurUserId,
-  vehicleDisplayName,
-  type Vehicle
-} from "@/lib/models";
+import { effectiveChauffeurUserId, vehicleDisplayName, vehicleRegistrationNumber, type Vehicle } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { assignmentBadgeIcon, vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { ListFilterPopover } from "@/components/list-filter-popover";
@@ -64,7 +65,11 @@ type FleetRow = Vehicle & {
   assignmentStatus: "assigned" | "unassigned";
 };
 
-function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown) {
+function multiSelectFilter(
+  row: { getValue: (id: string) => unknown },
+  columnId: string,
+  filterValue: unknown
+) {
   const values = filterValue as string[] | undefined;
   if (!values?.length) return true;
   return values.includes(String(row.getValue(columnId) ?? ""));
@@ -164,11 +169,14 @@ export function FleetDataTable({
     [selectedId]
   );
 
-  const openVehicleEdit = useCallback((v: Vehicle) => {
-    onCreateOpenChange?.(false);
-    setSelectedId(v.driverID);
-    setEditOpen(true);
-  }, [onCreateOpenChange]);
+  const openVehicleEdit = useCallback(
+    (v: Vehicle) => {
+      onCreateOpenChange?.(false);
+      setSelectedId(v.driverID);
+      setEditOpen(true);
+    },
+    [onCreateOpenChange]
+  );
 
   const columns = useMemo<ColumnDef<FleetRow>[]>(
     () => [
@@ -210,16 +218,19 @@ export function FleetDataTable({
             .trim()
             .toLowerCase();
           if (!q) return true;
-          return [vehicleDisplayName(row.original), row.original.licensePlate].some((s) =>
-            s.toLowerCase().includes(q)
+          return [vehicleDisplayName(row.original), vehicleRegistrationNumber(row.original)].some(
+            (s) => s.toLowerCase().includes(q)
           );
         }
       },
       {
-        accessorKey: "licensePlate",
+        id: "registrationNumber",
+        accessorFn: (row) => vehicleRegistrationNumber(row),
         header: "Plate",
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue("licensePlate") || "—"}</span>
+          <span className="text-muted-foreground">
+            {vehicleRegistrationNumber(row.original) || "—"}
+          </span>
         )
       },
       {
@@ -272,11 +283,11 @@ export function FleetDataTable({
       },
       {
         id: "registrationExpiry",
-        accessorFn: (row) => formatDate(row.registrationExpiry ?? null),
+        accessorFn: (row) => formatDate(row.registration?.registrationExpiry ?? null),
         header: "Rego expiry",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {formatDate(row.original.registrationExpiry ?? null)}
+            {formatDate(row.original.registration?.registrationExpiry ?? null)}
           </span>
         )
       },
@@ -327,7 +338,9 @@ export function FleetDataTable({
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => handleDeleteVehicle(vehicle)}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => handleDeleteVehicle(vehicle)}>
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -366,7 +379,7 @@ export function FleetDataTable({
   });
 
   const selectedVehicle = useMemo(
-    () => (selectedId ? vehicles.find((v) => v.driverID === selectedId) ?? null : null),
+    () => (selectedId ? (vehicles.find((v) => v.driverID === selectedId) ?? null) : null),
     [selectedId, vehicles]
   );
 
@@ -479,7 +492,9 @@ export function FleetDataTable({
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}>
+                        onClick={
+                          cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined
+                        }>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}

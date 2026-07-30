@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 
-import { effectiveChauffeurUserId, vehicleDisplayName, type User, type Vehicle } from "@/lib/models";
+import {
+  effectiveChauffeurUserId,
+  vehicleDisplayName,
+  type User,
+  type Vehicle
+} from "@/lib/models";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -24,9 +29,7 @@ export function VehicleProfileOperationsTab({
 }) {
   const chauffeurId = effectiveChauffeurUserId(vehicle);
   const chauffeurName =
-    assignedChauffeur?.profile.displayName.trim() ||
-    assignedChauffeur?.email ||
-    null;
+    assignedChauffeur?.profile.displayName.trim() || assignedChauffeur?.email || null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -35,10 +38,7 @@ export function VehicleProfileOperationsTab({
           <CardTitle>Assignment</CardTitle>
         </CardHeader>
         <CardContent>
-          <DetailRow
-            label="Status"
-            value={chauffeurId ? "Assigned" : "Unassigned"}
-          />
+          <DetailRow label="Status" value={chauffeurId ? "Assigned" : "Unassigned"} />
           <DetailRow
             label="Chauffeur"
             value={
@@ -62,11 +62,14 @@ export function VehicleProfileOperationsTab({
         </CardHeader>
         <CardContent>
           <DetailRow label="Vehicle" value={vehicleDisplayName(vehicle) || "—"} />
-          <DetailRow label="Plate" value={vehicle.licensePlate?.trim() || "—"} />
+          <DetailRow
+            label="Plate"
+            value={vehicle.registration?.registrationNumber?.trim() || "—"}
+          />
           <DetailRow label="Capacity" value={String(vehicle.passengerCapacity)} />
           <DetailRow
             label="Registration expiry"
-            value={formatDate(vehicle.registrationExpiry)}
+            value={formatDate(vehicle.registration?.registrationExpiry)}
           />
         </CardContent>
       </Card>

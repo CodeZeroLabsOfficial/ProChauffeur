@@ -55,13 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle
-} from "@/components/ui/item";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { BookingJourneyMap } from "@/app/dashboard/bookings/[id]/booking-journey-map";
 
 const ACTIVE_STATUSES = TRIP_STATUSES.filter((s) => s !== "cancelled");
@@ -136,7 +130,7 @@ function BookingVehicleCard({
   }
 
   const vehicleName = vehicleDisplayName(vehicleSnapshot);
-  const plate = vehicleSnapshot.licensePlate?.trim() || null;
+  const plate = vehicleSnapshot.registration?.registrationNumber?.trim() || null;
 
   return (
     <SectionCard
@@ -208,7 +202,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const { invoices } = useInvoices();
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
-  const currentStepIndex = trip ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number]) : -1;
+  const currentStepIndex = trip
+    ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number])
+    : -1;
   const progressValue =
     trip && trip.status !== "cancelled" && currentStepIndex >= 0
       ? (currentStepIndex / (ACTIVE_STATUSES.length - 1)) * 100
@@ -242,8 +238,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       ? chauffeur.email
       : "No chauffeur assigned to this booking";
 
-  const customerName =
-    trip?.customerDisplayName || customer?.profile.displayName || null;
+  const customerName = trip?.customerDisplayName || customer?.profile.displayName || null;
   const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
   const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
   const isCorporateCustomer = Boolean(
@@ -265,8 +260,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       await createInvoiceForTrip(trip.id);
       toast.success("Invoice sent to the customer.");
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not send the invoice.";
+      const message = error instanceof Error ? error.message : "Could not send the invoice.";
       toast.error(message);
     } finally {
       setIsSendingInvoice(false);
@@ -336,7 +330,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               <DropdownMenuLabel>Set status</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {TRIP_STATUSES.map((s) => (
-                <DropdownMenuItem key={s} disabled={s === trip.status} onClick={() => changeStatus(s)}>
+                <DropdownMenuItem
+                  key={s}
+                  disabled={s === trip.status}
+                  onClick={() => changeStatus(s)}>
                   {tripStatusTitle[s]}
                 </DropdownMenuItem>
               ))}
@@ -430,10 +427,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               label="Trip type:"
               value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
             />
-            <DetailRow
-              label="Completed:"
-              value={completedAt ? formatDateTime(completedAt) : "—"}
-            />
+            <DetailRow label="Completed:" value={completedAt ? formatDateTime(completedAt) : "—"} />
             <DetailRow label="Journey time:" value={journeyTime} />
           </SectionCard>
 
@@ -450,17 +444,12 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             vehicleClassLabel={vehicleClassLabel}
           />
 
-          <SectionCard
-            title="Payment"
-            headerAction={<PaymentStatusBadge status={paymentStatus} />}>
+          <SectionCard title="Payment" headerAction={<PaymentStatusBadge status={paymentStatus} />}>
             <DetailRow
               label="Source:"
               value={trip.paymentSource ? paymentSourceTitle[trip.paymentSource] : "—"}
             />
-            <DetailRow
-              label="Paid at:"
-              value={trip.paidAt ? formatDateTime(trip.paidAt) : "—"}
-            />
+            <DetailRow label="Paid at:" value={trip.paidAt ? formatDateTime(trip.paidAt) : "—"} />
             {linkedInvoice ? (
               <DetailRow
                 label="Invoice:"
@@ -482,7 +471,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               label="Base Fare:"
               value={
                 trip.quotedSubtotal != null
-                  ? formatCurrency(trip.quotedSubtotal, trip.quotedCurrencyCode ?? appConfig.currency)
+                  ? formatCurrency(
+                      trip.quotedSubtotal,
+                      trip.quotedCurrencyCode ?? appConfig.currency
+                    )
                   : "—"
               }
             />
@@ -490,7 +482,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               label="GST:"
               value={
                 trip.quotedTaxAmount != null
-                  ? formatCurrency(trip.quotedTaxAmount, trip.quotedCurrencyCode ?? appConfig.currency)
+                  ? formatCurrency(
+                      trip.quotedTaxAmount,
+                      trip.quotedCurrencyCode ?? appConfig.currency
+                    )
                   : "—"
               }
             />
