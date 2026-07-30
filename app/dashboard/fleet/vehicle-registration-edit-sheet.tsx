@@ -46,6 +46,7 @@ export function VehicleRegistrationEditSheet({
     const get = (key: string) => String(form.get(key) ?? "").trim();
     const registrationNumber = get("registrationNumber");
     const jurisdictionCode = get("jurisdictionCode");
+    const issuingAuthority = get("issuingAuthority");
 
     if (isStartAfterExpiry(registrationStart, registrationExpiry)) {
       toast.error("Registration start cannot be after expiry.");
@@ -57,6 +58,7 @@ export function VehicleRegistrationEditSheet({
       registration: {
         registrationNumber,
         jurisdictionCode,
+        issuingAuthority,
         registrationStart: registrationStart ?? null,
         registrationExpiry: registrationExpiry ?? null
       }
@@ -81,7 +83,7 @@ export function VehicleRegistrationEditSheet({
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="jurisdictionCode">Rego state</Label>
+              <Label htmlFor="jurisdictionCode">Jurisdiction</Label>
               <Input
                 id="jurisdictionCode"
                 name="jurisdictionCode"
@@ -90,14 +92,24 @@ export function VehicleRegistrationEditSheet({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="registrationNumber">Plate</Label>
+              <Label htmlFor="registrationNumber">Registration Number</Label>
               <Input
                 id="registrationNumber"
                 name="registrationNumber"
-                placeholder="Plate number"
+                placeholder="Registration number"
                 defaultValue={vehicle.registration?.registrationNumber ?? ""}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+            <Input
+              id="issuingAuthority"
+              name="issuingAuthority"
+              placeholder="e.g. Transport for NSW"
+              defaultValue={vehicle.registration?.issuingAuthority ?? ""}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

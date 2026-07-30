@@ -3,6 +3,7 @@ import type { VehicleInsuranceCoverType } from "@/lib/vehicle-insurance";
 export interface VehicleRegistration {
   registrationNumber: string;
   jurisdictionCode: string;
+  issuingAuthority: string;
   registrationStart: Date | null;
   registrationExpiry: Date | null;
 }

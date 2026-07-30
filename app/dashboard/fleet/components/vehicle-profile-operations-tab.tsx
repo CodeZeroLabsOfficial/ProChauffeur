@@ -63,7 +63,7 @@ export function VehicleProfileOperationsTab({
         <CardContent>
           <DetailRow label="Vehicle" value={vehicleDisplayName(vehicle) || "—"} />
           <DetailRow
-            label="Plate"
+            label="Registration Number"
             value={vehicle.registration?.registrationNumber?.trim() || "—"}
           />
           <DetailRow label="Capacity" value={String(vehicle.passengerCapacity)} />

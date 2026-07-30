@@ -70,6 +70,7 @@ function mapVehicleRegistration(raw: unknown): VehicleRegistration | null {
   return {
     registrationNumber: typeof d.registrationNumber === "string" ? d.registrationNumber : "",
     jurisdictionCode: typeof d.jurisdictionCode === "string" ? d.jurisdictionCode : "",
+    issuingAuthority: typeof d.issuingAuthority === "string" ? d.issuingAuthority : "",
     registrationStart: toDate(d.registrationStart),
     registrationExpiry: toDate(d.registrationExpiry)
   };

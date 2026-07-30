@@ -226,7 +226,7 @@ export function FleetDataTable({
       {
         id: "registrationNumber",
         accessorFn: (row) => vehicleRegistrationNumber(row),
-        header: "Plate",
+        header: "Registration Number",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
             {vehicleRegistrationNumber(row.original) || "—"}

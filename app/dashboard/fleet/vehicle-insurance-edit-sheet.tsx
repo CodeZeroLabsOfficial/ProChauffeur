@@ -193,19 +193,22 @@ export function VehicleInsuranceEditSheet({
               />
             </div>
 
-            <SheetFooter className="mt-auto flex-col gap-2 px-0 sm:flex-col">
-              <Button type="submit" disabled={saving || deleting}>
-                {saving ? "Saving…" : isNew ? "Add policy" : "Save changes"}
-              </Button>
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
               {!isNew ? (
                 <Button
                   type="button"
-                  variant="destructive"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   disabled={saving || deleting}
                   onClick={() => setConfirmDeleteOpen(true)}>
-                  Remove policy
+                  Delete
                 </Button>
-              ) : null}
+              ) : (
+                <span />
+              )}
+              <Button type="submit" disabled={saving || deleting}>
+                {saving ? "Saving…" : isNew ? "Add policy" : "Save"}
+              </Button>
             </SheetFooter>
           </form>
         </SheetContent>

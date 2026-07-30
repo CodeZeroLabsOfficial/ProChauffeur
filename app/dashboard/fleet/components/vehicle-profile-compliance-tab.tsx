@@ -85,8 +85,12 @@ export function VehicleProfileComplianceTab({
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent>
-          <DetailRow label="Rego state" value={registration?.jurisdictionCode?.trim() || "—"} />
-          <DetailRow label="Plate" value={registration?.registrationNumber?.trim() || "—"} />
+          <DetailRow label="Jurisdiction" value={registration?.jurisdictionCode?.trim() || "—"} />
+          <DetailRow label="Registration Number" value={registration?.registrationNumber?.trim() || "—"} />
+          <DetailRow
+            label="Issuing Authority"
+            value={registration?.issuingAuthority?.trim() || "—"}
+          />
           <ValidityTermFooter
             start={registration?.registrationStart}
             expiry={registration?.registrationExpiry}
