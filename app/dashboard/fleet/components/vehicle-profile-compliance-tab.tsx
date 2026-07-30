@@ -113,6 +113,7 @@ export function VehicleProfileComplianceTab({
             secondary={registration?.jurisdictionCode}
             start={registration?.registrationStart}
             expiry={registration?.registrationExpiry}
+            size="lg"
           />
         </CardContent>
         <ViewDetailsFooter onClick={() => setRegistrationDetailsOpen(true)} />
@@ -131,6 +132,7 @@ export function VehicleProfileComplianceTab({
             secondary={roadworthy?.jurisdictionCode}
             start={roadworthy?.issueDate}
             expiry={roadworthy?.expiryDate}
+            size="lg"
           />
         </CardContent>
         <ViewDetailsFooter onClick={() => setRoadworthyDetailsOpen(true)} />
