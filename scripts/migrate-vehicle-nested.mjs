@@ -10,8 +10,8 @@
  * Migrates branches/{branchId}/vehicles/{vehicleId} only (not trip snapshots).
  */
 
-const { cert, getApps, initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
