@@ -5,6 +5,7 @@ import { SearchIcon } from "lucide-react";
 
 import { InvoiceDetailSheet } from "@/app/dashboard/billing/invoice-detail-sheet";
 import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions";
+import { BillingStatCard } from "@/components/billing-stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,24 +75,9 @@ export function AccountInvoicesTab({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Outstanding</p>
-            <p className="text-2xl font-bold">{formatCurrency(outstanding)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Paid (all time)</p>
-            <p className="text-2xl font-bold">{formatCurrency(paidTotal)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Invoices</p>
-            <p className="text-2xl font-bold">{invoices.length}</p>
-          </CardContent>
-        </Card>
+        <BillingStatCard label="Outstanding" value={formatCurrency(outstanding)} />
+        <BillingStatCard label="Paid (all time)" value={formatCurrency(paidTotal)} />
+        <BillingStatCard label="Invoices" value={invoices.length} />
       </div>
 
       <Card>

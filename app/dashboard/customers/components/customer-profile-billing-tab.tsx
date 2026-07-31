@@ -7,6 +7,7 @@ import { ReceiptIcon } from "lucide-react";
 import { invoiceStatusTitle, type Invoice, type InvoiceStatus } from "@/lib/models";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { paidRevenueForInvoices } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
+import { BillingStatCard } from "@/components/billing-stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -55,24 +56,9 @@ export function CustomerProfileBillingTab({ invoices }: { invoices: Invoice[] })
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Paid</p>
-            <p className="text-2xl font-bold tabular-nums">{formatCurrency(paid)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Outstanding</p>
-            <p className="text-2xl font-bold tabular-nums">{formatCurrency(outstanding)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Invoices</p>
-            <p className="text-2xl font-bold tabular-nums">{invoices.length}</p>
-          </CardContent>
-        </Card>
+        <BillingStatCard label="Paid" value={formatCurrency(paid)} />
+        <BillingStatCard label="Outstanding" value={formatCurrency(outstanding)} />
+        <BillingStatCard label="Invoices" value={invoices.length} />
       </div>
 
       <Card>

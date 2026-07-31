@@ -6,6 +6,7 @@ import { SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AccountInvoicesTab } from "@/app/dashboard/accounts/components/account-invoices-tab";
+import { BillingStatCard } from "@/components/billing-stat-card";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,32 +143,18 @@ export function AccountBillingTab({
 
       <TabsContent value="unbilled" className="mt-0 space-y-4">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-muted-foreground text-sm">Yet to invoice</p>
-              <p className="text-2xl font-bold">{formatCurrency(unbilledTotal)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-muted-foreground text-sm">Unbilled trips</p>
-              <p className="text-2xl font-bold">{unbilled.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-muted-foreground text-sm">
-                {budget != null ? "Budget remaining" : "Monthly budget"}
-              </p>
-              <p className="text-2xl font-bold">
-                {budgetRemaining != null
-                  ? formatCurrency(budgetRemaining)
-                  : budget != null
-                    ? formatCurrency(budget)
-                    : "—"}
-              </p>
-            </CardContent>
-          </Card>
+          <BillingStatCard label="Yet to invoice" value={formatCurrency(unbilledTotal)} />
+          <BillingStatCard label="Unbilled trips" value={unbilled.length} />
+          <BillingStatCard
+            label={budget != null ? "Budget remaining" : "Monthly budget"}
+            value={
+              budgetRemaining != null
+                ? formatCurrency(budgetRemaining)
+                : budget != null
+                  ? formatCurrency(budget)
+                  : "—"
+            }
+          />
         </div>
 
         <Card>
