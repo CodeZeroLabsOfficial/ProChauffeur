@@ -79,13 +79,7 @@ export function isValidPostalAddress(address: PostalAddress | null | undefined):
 }
 
 export function postalAddressFromProfile(profile: UserProfile): PostalAddress {
-  return {
-    street: profile.address?.street ?? null,
-    city: profile.address?.city ?? null,
-    state: profile.address?.state ?? null,
-    postcode: profile.address?.postcode ?? null,
-    country: profile.address?.country ?? null
-  };
+  return profile.address ?? {};
 }
 
 export function customerAddressSnapshotFromProfile(
