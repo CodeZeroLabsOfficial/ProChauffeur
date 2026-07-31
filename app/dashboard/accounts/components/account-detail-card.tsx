@@ -6,10 +6,10 @@ import {
   corporateAccountStatusTitle,
   type CorporateAccount
 } from "@/lib/models";
+import { visibilityBadgeIcon } from "@/lib/chauffeur-badge-icons";
 import { ProfileHeroCard } from "@/components/layout/profile-hero-card";
 import { ProfileV2TabTrigger } from "@/components/layout/profile-tab-bar";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 
 export function AccountDetailCard({
   account,
@@ -18,6 +18,8 @@ export function AccountDetailCard({
   account: CorporateAccount;
   onEditClick: () => void;
 }) {
+  const isActive = account.status === "active";
+
   return (
     <ProfileHeroCard
       backHref="/dashboard/accounts"
@@ -38,16 +40,9 @@ export function AccountDetailCard({
       }
       title={account.name}
       meta={
-        <Badge
-          variant="outline"
-          className={cn(
-            "font-medium",
-            account.status === "active"
-              ? "border-green-300 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"
-              : "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-          )}>
+        <DetailSheetIconBadge icon={visibilityBadgeIcon(isActive)}>
           {corporateAccountStatusTitle[account.status]}
-        </Badge>
+        </DetailSheetIconBadge>
       }
       tabs={
         <>

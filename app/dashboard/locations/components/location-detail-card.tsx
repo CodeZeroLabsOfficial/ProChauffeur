@@ -3,9 +3,13 @@
 import { Building2 } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
-import { LocationStatusBadge } from "@/components/location-status-badge";
+import {
+  visibilityBadgeIcon,
+  visibilityStatusLabel
+} from "@/lib/chauffeur-badge-icons";
 import { ProfileHeroCard } from "@/components/layout/profile-hero-card";
 import { ProfileV2TabTrigger } from "@/components/layout/profile-tab-bar";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 
 export function LocationDetailCard({
   branch,
@@ -15,6 +19,7 @@ export function LocationDetailCard({
   onEditClick: () => void;
 }) {
   const imageUrl = branch.imageUrl?.trim() || null;
+  const isActive = branch.isActive !== false;
 
   return (
     <ProfileHeroCard
@@ -37,7 +42,11 @@ export function LocationDetailCard({
         )
       }
       title={branch.name}
-      meta={<LocationStatusBadge isActive={branch.isActive !== false} />}
+      meta={
+        <DetailSheetIconBadge icon={visibilityBadgeIcon(isActive)}>
+          {visibilityStatusLabel(isActive)}
+        </DetailSheetIconBadge>
+      }
       tabs={
         <>
           <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>

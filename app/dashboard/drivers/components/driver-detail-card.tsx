@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  chauffeurCategoryTitle,
-  type BranchDriver,
-  type User
-} from "@/lib/models";
+import type { BranchDriver, User } from "@/lib/models";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import {
   dispatchBadgeIcon,
@@ -44,15 +40,12 @@ export function DriverDetailCard({
       title={displayName}
       meta={
         <div className="flex flex-wrap items-center gap-2">
-          <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
-            {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
-          </DetailSheetIconBadge>
           <DetailSheetIconBadge icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
             {visibilityStatusLabel(profile.visibleOnCustomerApp)}
           </DetailSheetIconBadge>
-          <span className="text-muted-foreground text-sm">
-            {chauffeurCategoryTitle[profile.chauffeurCategory]}
-          </span>
+          <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
+            {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
+          </DetailSheetIconBadge>
         </div>
       }
       tabs={

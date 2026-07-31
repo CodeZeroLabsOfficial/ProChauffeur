@@ -24,7 +24,6 @@ import {
   unassignFleetVehicle,
   saveDriverProfile
 } from "@/lib/services/firebase-service";
-import { visibilityStatusLabel } from "@/lib/chauffeur-badge-icons";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -36,15 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b py-3 last:border-0">
-      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
-      <span className="text-end text-sm">{value}</span>
-    </div>
-  );
-}
 
 function vehicleMakeModel(vehicle: Vehicle): string {
   return vehicleDisplayName(vehicle) || "Vehicle";
@@ -141,22 +131,48 @@ export function DriverProfileOperationsTab({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dispatch & visibility</CardTitle>
+            <CardTitle>Availability schedules</CardTitle>
+            <CardAction>
+              <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
+                <PlusIcon /> Add schedule
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
-            <DetailRow
-              label="Accepts dispatch"
-              value={profile.acceptsDispatchAssignments ? "Yes" : "No"}
-            />
-            <DetailRow
-              label="Customer app"
-              value={visibilityStatusLabel(profile.visibleOnCustomerApp)}
-            />
-            <DetailRow label="Time zone" value={profile.timeZoneIdentifier?.trim() || "—"} />
-            <DetailRow
-              label="Preferred office"
-              value={profile.preferredOfficeLocationId?.trim() || "—"}
-            />
+            {profile.availabilitySchedules.length ? (
+              <ul className="space-y-3">
+                {profile.availabilitySchedules.map((schedule) => {
+                  const hours = formatScheduleHours(schedule.startTime, schedule.endTime);
+                  return (
+                    <li
+                      key={schedule.id}
+                      className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 font-medium">
+                          {schedule.name?.trim() || "Schedule"}
+                          {!schedule.isEnabled ? <Badge variant="outline">Disabled</Badge> : null}
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                          {formatScheduleDays(schedule.weekdayNumbers)}
+                          {hours ? ` · ${hours}` : ""}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => openEditSheet(schedule)}
+                        aria-label="Edit schedule">
+                        <PencilIcon />
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">No availability schedules configured.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -208,53 +224,6 @@ export function DriverProfileOperationsTab({
               </Link>
             ) : (
               <p className="text-muted-foreground text-sm">No fleet vehicle assigned.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Availability schedules</CardTitle>
-            <CardAction>
-              <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
-                <PlusIcon /> Add schedule
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {profile.availabilitySchedules.length ? (
-              <ul className="space-y-3">
-                {profile.availabilitySchedules.map((schedule) => {
-                  const hours = formatScheduleHours(schedule.startTime, schedule.endTime);
-                  return (
-                    <li
-                      key={schedule.id}
-                      className="flex items-start gap-3 rounded-md border p-3 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 font-medium">
-                          {schedule.name?.trim() || "Schedule"}
-                          {!schedule.isEnabled ? <Badge variant="outline">Disabled</Badge> : null}
-                        </div>
-                        <p className="text-muted-foreground mt-1">
-                          {formatScheduleDays(schedule.weekdayNumbers)}
-                          {hours ? ` · ${hours}` : ""}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0"
-                        onClick={() => openEditSheet(schedule)}
-                        aria-label="Edit schedule">
-                        <PencilIcon />
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground text-sm">No availability schedules configured.</p>
             )}
           </CardContent>
         </Card>
