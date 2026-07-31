@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Empty,
   EmptyContent,
@@ -26,19 +27,21 @@ export function ComplianceEmpty({
   onAction: () => void;
 }) {
   return (
-    <Empty className="border-0 py-12 md:py-16">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Icon />
-        </EmptyMedia>
-        <EmptyTitle className="text-xl">{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button type="button" size="sm" onClick={onAction}>
-          {actionLabel}
-        </Button>
-      </EmptyContent>
-    </Empty>
+    <Card className="shadow-none">
+      <Empty className="border-0 flex-none gap-4 py-8 md:py-10">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Icon />
+          </EmptyMedia>
+          <EmptyTitle className="text-xl">{title}</EmptyTitle>
+          <EmptyDescription>{description}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button type="button" size="sm" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        </EmptyContent>
+      </Empty>
+    </Card>
   );
 }
