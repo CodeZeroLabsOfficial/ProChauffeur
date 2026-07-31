@@ -13,21 +13,26 @@ export function FleetDateField({
   label,
   value,
   onChange,
-  nested = false
+  nested = false,
+  invalid = false,
+  error
 }: {
   label: string;
   value: Date | undefined;
   onChange: (value: Date | undefined) => void;
   nested?: boolean;
+  invalid?: boolean;
+  error?: string;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="*:not-first:mt-2">
       <Label>{label}</Label>
       <Popover modal>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
+            aria-invalid={invalid || undefined}
             className={cn("w-full pl-3 text-left font-normal", !value && "text-muted-foreground")}>
             {value ? format(value, "PPP") : <span>Pick a date</span>}
             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -51,6 +56,11 @@ export function FleetDateField({
           />
         </PopoverContent>
       </Popover>
+      {error ? (
+        <p aria-live="polite" className="text-destructive text-xs" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

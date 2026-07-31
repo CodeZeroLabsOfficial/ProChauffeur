@@ -35,6 +35,18 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+type FieldErrors = Partial<
+  Record<
+    | "coverType"
+    | "insurerName"
+    | "policyReferenceNumber"
+    | "policyStart"
+    | "policyExpiry"
+    | "startAfterExpiry",
+    boolean
+  >
+>;
+
 export function VehicleInsuranceEditSheet({
   vehicle,
   policy,
@@ -58,6 +70,7 @@ export function VehicleInsuranceEditSheet({
   const [policyExpiry, setPolicyExpiry] = useState<Date | undefined>(
     policy?.policyExpiry ?? undefined
   );
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -69,27 +82,47 @@ export function VehicleInsuranceEditSheet({
     setCoverType(policy?.coverType ?? "");
     setPolicyStart(policy?.policyStart ?? undefined);
     setPolicyExpiry(policy?.policyExpiry ?? undefined);
+    setFieldErrors({});
+  }
+
+  function clearFieldError(field: keyof FieldErrors) {
+    setFieldErrors((prev) => ({ ...prev, [field]: false }));
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const get = (key: string) => String(form.get(key) ?? "").trim();
+    const insurerName = get("insurerName");
+    const policyReferenceNumber = get("policyReferenceNumber");
     const parsedCoverType = parseVehicleInsuranceCoverType(coverType);
-    if (!parsedCoverType) {
-      toast.error("Select a cover type.");
-      return;
-    }
-    if (isStartAfterExpiry(policyStart, policyExpiry)) {
-      toast.error("Policy start cannot be after expiry.");
+    const startAfterExpiry = isStartAfterExpiry(policyStart, policyExpiry);
+
+    const errors: FieldErrors = {
+      coverType: !parsedCoverType,
+      insurerName: !insurerName,
+      policyReferenceNumber: !policyReferenceNumber,
+      policyStart: !policyStart,
+      policyExpiry: !policyExpiry,
+      startAfterExpiry
+    };
+    setFieldErrors(errors);
+    if (
+      errors.coverType ||
+      errors.insurerName ||
+      errors.policyReferenceNumber ||
+      errors.policyStart ||
+      errors.policyExpiry ||
+      errors.startAfterExpiry
+    ) {
       return;
     }
 
     const nextPolicy: VehicleInsurancePolicy = {
       id: policy?.id ?? uuidv4(),
-      coverType: parsedCoverType,
-      insurerName: get("insurerName"),
-      policyReferenceNumber: get("policyReferenceNumber"),
+      coverType: parsedCoverType!,
+      insurerName,
+      policyReferenceNumber,
       policyStart: policyStart ?? null,
       policyExpiry: policyExpiry ?? null
     };
@@ -140,12 +173,20 @@ export function VehicleInsuranceEditSheet({
           </SheetHeader>
           <form
             onSubmit={onSubmit}
+            noValidate
             className="flex flex-1 flex-col space-y-4 px-4"
             key={policy?.id ?? "new"}>
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label>Cover type</Label>
-              <Select value={coverType || undefined} onValueChange={setCoverType}>
-                <SelectTrigger className="w-full">
+              <Select
+                value={coverType || undefined}
+                onValueChange={(value) => {
+                  setCoverType(value);
+                  clearFieldError("coverType");
+                }}>
+                <SelectTrigger
+                  className="peer w-full"
+                  aria-invalid={fieldErrors.coverType || undefined}>
                   <SelectValue placeholder="Select cover type" />
                 </SelectTrigger>
                 <SelectContent position="popper" className={cn(nested && "z-[110]")}>
@@ -156,40 +197,88 @@ export function VehicleInsuranceEditSheet({
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.coverType ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Cover type is required
+                </p>
+              ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label htmlFor="insurerName">Insurer</Label>
               <Input
                 id="insurerName"
                 name="insurerName"
                 placeholder="Insurer name"
                 defaultValue={policy?.insurerName ?? ""}
+                className="peer"
+                aria-invalid={fieldErrors.insurerName || undefined}
+                onChange={() => clearFieldError("insurerName")}
               />
+              {fieldErrors.insurerName ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Insurer is required
+                </p>
+              ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label htmlFor="policyReferenceNumber">Policy reference</Label>
               <Input
                 id="policyReferenceNumber"
                 name="policyReferenceNumber"
                 placeholder="Policy number"
                 defaultValue={policy?.policyReferenceNumber ?? ""}
+                className="peer"
+                aria-invalid={fieldErrors.policyReferenceNumber || undefined}
+                onChange={() => clearFieldError("policyReferenceNumber")}
               />
+              {fieldErrors.policyReferenceNumber ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Policy reference is required
+                </p>
+              ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <FleetDateField
                 label="Policy start"
                 value={policyStart}
-                onChange={setPolicyStart}
+                onChange={(value) => {
+                  setPolicyStart(value);
+                  clearFieldError("policyStart");
+                  clearFieldError("startAfterExpiry");
+                }}
                 nested={nested}
+                invalid={!!fieldErrors.policyStart || !!fieldErrors.startAfterExpiry}
+                error={
+                  fieldErrors.policyStart
+                    ? "Policy start is required"
+                    : fieldErrors.startAfterExpiry
+                      ? "Policy start cannot be after expiry"
+                      : undefined
+                }
               />
               <FleetDateField
                 label="Policy expiry"
                 value={policyExpiry}
-                onChange={setPolicyExpiry}
+                onChange={(value) => {
+                  setPolicyExpiry(value);
+                  clearFieldError("policyExpiry");
+                  clearFieldError("startAfterExpiry");
+                }}
                 nested={nested}
+                invalid={!!fieldErrors.policyExpiry}
+                error={fieldErrors.policyExpiry ? "Policy expiry is required" : undefined}
               />
             </div>
 
