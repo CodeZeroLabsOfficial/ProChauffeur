@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-
 import type { User } from "@/lib/models";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
-import { fetchCorporateAccount } from "@/lib/services/firebase-service";
 import { generateAvatarFallback, cn } from "@/lib/utils";
 import { ProfileHeroCard } from "@/components/layout/profile-hero-card";
 import { ProfileV2TabTrigger } from "@/components/layout/profile-tab-bar";
@@ -22,27 +18,7 @@ export function CustomerDetailCard({
 }) {
   const displayName = customerDisplayName(user);
   const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
-  const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
   const isCorporate = corporateAccountsEnabled && Boolean(user.corporateAccountId?.trim());
-
-  useEffect(() => {
-    const accountId = user.corporateAccountId?.trim();
-    if (!accountId || !corporateAccountsEnabled) {
-      setCorporateAccountName(null);
-      return;
-    }
-    let cancelled = false;
-    fetchCorporateAccount(accountId)
-      .then((account) => {
-        if (!cancelled) setCorporateAccountName(account?.name?.trim() || null);
-      })
-      .catch(() => {
-        if (!cancelled) setCorporateAccountName(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user.corporateAccountId, corporateAccountsEnabled]);
 
   return (
     <ProfileHeroCard
@@ -69,15 +45,6 @@ export function CustomerDetailCard({
             )}>
             {isCorporate ? "Corporate" : "Individual"}
           </Badge>
-          {isCorporate && user.corporateAccountId && corporateAccountName ? (
-            <Badge variant="outline" asChild>
-              <Link
-                href={`/dashboard/accounts/${user.corporateAccountId}`}
-                className="font-medium">
-                {corporateAccountName}
-              </Link>
-            </Badge>
-          ) : null}
         </div>
       }
       tabs={

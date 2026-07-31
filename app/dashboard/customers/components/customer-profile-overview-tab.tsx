@@ -79,6 +79,16 @@ export function CustomerProfileOverviewTab({
               {memberSince ? (
                 <ContactRow icon={Calendar}>Member since {memberSince}</ContactRow>
               ) : null}
+              {isCorporate && user.corporateAccountId && corporateAccountName ? (
+                <ContactRow icon={Building2}>
+                  <Link
+                    href={`/dashboard/accounts/${user.corporateAccountId}`}
+                    className="hover:text-primary hover:underline">
+                    {corporateAccountName}
+                  </Link>
+                </ContactRow>
+              ) : null}
+              {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
               <ContactRow icon={Mail}>
                 <a href={`mailto:${user.email}`} className="hover:text-primary hover:underline">
                   {user.email}
@@ -91,16 +101,6 @@ export function CustomerProfileOverviewTab({
                     className="hover:text-primary hover:underline">
                     {user.profile.phoneNumber}
                   </a>
-                </ContactRow>
-              ) : null}
-              {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
-              {isCorporate && user.corporateAccountId && corporateAccountName ? (
-                <ContactRow icon={Building2}>
-                  <Link
-                    href={`/dashboard/accounts/${user.corporateAccountId}`}
-                    className="hover:text-primary hover:underline">
-                    {corporateAccountName}
-                  </Link>
                 </ContactRow>
               ) : null}
             </div>
