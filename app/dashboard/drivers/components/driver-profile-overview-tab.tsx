@@ -1,12 +1,13 @@
 "use client";
 
-import { Link2Icon, Mail, MapPin, PhoneCall } from "lucide-react";
+import { Calendar, Mail, MapPin, PhoneCall } from "lucide-react";
 
 import type { Invoice } from "@/lib/models/invoice";
 import type { BranchDriver, Trip, User } from "@/lib/models";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { formatPostalAddress } from "@/lib/models/postal-address";
 import { driverProfileCompleteness } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
+import { formatDate } from "@/lib/format";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { ContactRow } from "@/components/contact-row";
 import { ProfileBookingActivityChart } from "@/components/profile/profile-booking-activity-chart";
@@ -42,6 +43,7 @@ export function DriverProfileOverviewTab({
   const profile = branchDriverToProfile(roster);
   const progressValue = driverProfileCompleteness(user, profile);
   const address = formatPostalAddress(user.profile);
+  const joinDate = formatDate(user.createdAt);
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -52,6 +54,10 @@ export function DriverProfileOverviewTab({
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-y-4">
+              {joinDate ? (
+                <ContactRow icon={Calendar}>Joined {joinDate}</ContactRow>
+              ) : null}
+              {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
               <ContactRow icon={Mail}>
                 <a href={`mailto:${user.email}`} className="hover:text-primary hover:underline">
                   {user.email}
@@ -64,12 +70,6 @@ export function DriverProfileOverviewTab({
                     className="hover:text-primary hover:underline">
                     {user.profile.phoneNumber}
                   </a>
-                </ContactRow>
-              ) : null}
-              {address ? <ContactRow icon={MapPin}>{address}</ContactRow> : null}
-              {profile.bioStatement.trim() ? (
-                <ContactRow icon={Link2Icon}>
-                  <span className="text-muted-foreground line-clamp-3">{profile.bioStatement}</span>
                 </ContactRow>
               ) : null}
             </div>

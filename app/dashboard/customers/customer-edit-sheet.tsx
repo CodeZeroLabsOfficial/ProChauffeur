@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
-import type { CorporateAccount, User } from "@/lib/models";
+import type { CorporateAccount, User, UserProfile } from "@/lib/models";
 import {
   isValidPostalAddress,
   postalAddressFromProfile,
@@ -41,6 +41,23 @@ type CustomerKind = "individual" | "corporate";
 
 function kindFromUser(user: User | null): CustomerKind {
   return user?.corporateAccountId?.trim() ? "corporate" : "individual";
+}
+
+function splitDisplayName(displayName: string): { firstName: string; lastName: string } {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function nameParts(profile: UserProfile): { firstName: string; lastName: string } {
+  if (profile.firstName || profile.lastName) {
+    return {
+      firstName: profile.firstName ?? "",
+      lastName: profile.lastName ?? ""
+    };
+  }
+  return splitDisplayName(profile.displayName);
 }
 
 export function CustomerEditSheet({
@@ -67,6 +84,8 @@ export function CustomerEditSheet({
   );
   const [addressInvalid, setAddressInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const names = user ? nameParts(user.profile) : { firstName: "", lastName: "" };
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
   const currentKey = user?.id ?? "__new__";
@@ -100,7 +119,10 @@ export function CustomerEditSheet({
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const get = (k: string) => String(form.get(k) ?? "").trim();
-    const displayName = get("displayName");
+    const firstName = get("firstName");
+    const lastName = get("lastName");
+    const displayName =
+      `${firstName} ${lastName}`.trim() || user?.profile.displayName?.trim() || "";
     const email = get("email");
     const phoneNumber = get("phoneNumber") || undefined;
 
@@ -148,6 +170,13 @@ export function CustomerEditSheet({
           phoneNumber,
           ...addressFields
         });
+        await updateUserProfile(uid, {
+          displayName,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          phoneNumber: phoneNumber || null,
+          ...addressFields
+        });
         if (nextAccountId) {
           await linkCustomerToCorporateAccount(uid, nextAccountId);
         }
@@ -156,6 +185,8 @@ export function CustomerEditSheet({
         const profile = {
           ...user.profile,
           displayName,
+          firstName: firstName || null,
+          lastName: lastName || null,
           phoneNumber: phoneNumber || null,
           ...addressFields
         };
@@ -181,13 +212,13 @@ export function CustomerEditSheet({
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add customer" : "Edit customer"}</SheetTitle>
-          <SheetDescription>
-            {isNew
-              ? "Create a new customer account with email and password."
-              : user?.email}
-          </SheetDescription>
+          {isNew ? (
+            <SheetDescription>
+              Create a new customer account with email and password.
+            </SheetDescription>
+          ) : null}
         </SheetHeader>
-        <form onSubmit={onSubmit} className="space-y-4 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={currentKey}>
           {corporateAccountsEnabled ? (
             <div className="space-y-2">
               <Label>Customer type</Label>
@@ -231,27 +262,51 @@ export function CustomerEditSheet({
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Name</Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              required
-              defaultValue={user?.profile.displayName ?? ""}
-              placeholder="Full name"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                autoComplete="given-name"
+                placeholder="Jane"
+                defaultValue={names.firstName}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                autoComplete="family-name"
+                placeholder="Smith"
+                defaultValue={names.lastName}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              defaultValue={user?.email ?? ""}
-              placeholder="email@example.com"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone</Label>
+              <Input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                defaultValue={user?.profile.phoneNumber ?? ""}
+                placeholder="Phone number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                defaultValue={user?.email ?? ""}
+                placeholder="email@example.com"
+              />
+            </div>
           </div>
 
           {isNew ? (
@@ -268,17 +323,6 @@ export function CustomerEditSheet({
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Phone</Label>
-            <Input
-              id="phoneNumber"
-              name="phoneNumber"
-              type="tel"
-              defaultValue={user?.profile.phoneNumber ?? ""}
-              placeholder="Phone number"
-            />
-          </div>
-
           <ProfileAddressField
             value={address}
             onChange={(next) => {
@@ -291,9 +335,9 @@ export function CustomerEditSheet({
             disabled={saving}
           />
 
-          <SheetFooter className="px-0">
+          <SheetFooter className="mt-auto flex-row items-center justify-end gap-2 px-0 sm:justify-end">
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Add customer" : "Save changes"}
+              {saving ? "Saving…" : isNew ? "Add customer" : "Save"}
             </Button>
           </SheetFooter>
         </form>

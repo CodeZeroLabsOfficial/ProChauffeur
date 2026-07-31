@@ -24,9 +24,14 @@ import {
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import {
   isValidPostalAddress,
+  postalAddressFromProfile,
   toProfilePostalFields,
   type PostalAddress
 } from "@/lib/models/postal-address";
+import {
+  ProfileAddressField,
+  PROFILE_ADDRESS_VALIDATION_MESSAGE
+} from "@/components/profile-address-field";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,6 +52,7 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 
 function splitDisplayName(displayName: string): { firstName: string; lastName: string } {
   const parts = displayName.trim().split(/\s+/).filter(Boolean);
@@ -64,26 +70,6 @@ function nameParts(profile: UserProfile): { firstName: string; lastName: string 
   }
   return splitDisplayName(profile.displayName);
 }
-
-/** Persist optional Line 2 in `street` using a newline (no separate profile field). */
-function splitStreetLines(street: string | null | undefined): { line1: string; line2: string } {
-  const raw = street ?? "";
-  const idx = raw.indexOf("\n");
-  if (idx === -1) return { line1: raw, line2: "" };
-  return { line1: raw.slice(0, idx), line2: raw.slice(idx + 1) };
-}
-
-function joinStreetLines(line1: string, line2: string): string | null {
-  const a = line1.trim();
-  const b = line2.trim();
-  if (!a && !b) return null;
-  if (!b) return a;
-  if (!a) return b;
-  return `${a}\n${b}`;
-}
-
-const ADDRESS_VALIDATION_MESSAGE =
-  "Enter a complete address, or leave all address fields empty.";
 
 export function DriverEditSheet({
   user,
@@ -109,11 +95,19 @@ export function DriverEditSheet({
     : defaultDriverProfile();
   const userProfile = activeUser?.profile;
   const names = userProfile ? nameParts(userProfile) : { firstName: "", lastName: "" };
-  const streetLines = splitStreetLines(userProfile?.street);
 
   const [category, setCategory] = useState<ChauffeurCategory>(driverProfile.chauffeurCategory);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     userProfile?.dateOfBirth ?? undefined
+  );
+  const [address, setAddress] = useState<PostalAddress>(() =>
+    userProfile ? postalAddressFromProfile(userProfile) : {}
+  );
+  const [visibleOnCustomerApp, setVisibleOnCustomerApp] = useState(
+    driverProfile.visibleOnCustomerApp
+  );
+  const [acceptsDispatchAssignments, setAcceptsDispatchAssignments] = useState(
+    driverProfile.acceptsDispatchAssignments
   );
   const [saving, setSaving] = useState(false);
   const [addressInvalid, setAddressInvalid] = useState(false);
@@ -124,6 +118,9 @@ export function DriverEditSheet({
     setSeededId(currentKey);
     setCategory(driverProfile.chauffeurCategory);
     setDateOfBirth(userProfile?.dateOfBirth ?? undefined);
+    setAddress(userProfile ? postalAddressFromProfile(userProfile) : {});
+    setVisibleOnCustomerApp(driverProfile.visibleOnCustomerApp);
+    setAcceptsDispatchAssignments(driverProfile.acceptsDispatchAssignments);
     setAddressInvalid(false);
   }
 
@@ -141,17 +138,10 @@ export function DriverEditSheet({
     const lastName = get("lastName");
     const phoneNumber = get("phoneNumber");
     const email = get("email");
-    const address: PostalAddress = {
-      street: joinStreetLines(get("addressLine1"), get("addressLine2")),
-      city: get("city") || null,
-      state: get("state") || null,
-      postcode: get("postcode") || null,
-      country: get("country") || null
-    };
 
     if (!isValidPostalAddress(address)) {
       setAddressInvalid(true);
-      toast.error(ADDRESS_VALIDATION_MESSAGE);
+      toast.error(PROFILE_ADDRESS_VALIDATION_MESSAGE);
       return;
     }
     setAddressInvalid(false);
@@ -164,7 +154,9 @@ export function DriverEditSheet({
     const nextDriverProfile = {
       ...defaultDriverProfile(),
       ...driverProfile,
-      chauffeurCategory: category
+      chauffeurCategory: category,
+      visibleOnCustomerApp,
+      acceptsDispatchAssignments
     };
 
     const displayName =
@@ -341,70 +333,51 @@ export function DriverEditSheet({
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <Label>Address</Label>
-            <div className="space-y-3">
-              <Input
-                id="addressLine1"
-                name="addressLine1"
-                autoComplete="address-line1"
-                placeholder="Line 1"
-                defaultValue={streetLines.line1}
-                aria-invalid={addressInvalid || undefined}
-              />
-              <Input
-                id="addressLine2"
-                name="addressLine2"
-                autoComplete="address-line2"
-                placeholder="Line 2"
-                defaultValue={streetLines.line2}
-                aria-invalid={addressInvalid || undefined}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  id="city"
-                  name="city"
-                  autoComplete="address-level2"
-                  placeholder="City"
-                  defaultValue={userProfile?.city ?? ""}
-                  aria-invalid={addressInvalid || undefined}
-                />
-                <Input
-                  id="state"
-                  name="state"
-                  autoComplete="address-level1"
-                  placeholder="State"
-                  defaultValue={userProfile?.state ?? ""}
-                  aria-invalid={addressInvalid || undefined}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  id="postcode"
-                  name="postcode"
-                  autoComplete="postal-code"
-                  placeholder="Postal code"
-                  defaultValue={userProfile?.postcode ?? ""}
-                  aria-invalid={addressInvalid || undefined}
-                />
-                <Input
-                  id="country"
-                  name="country"
-                  autoComplete="country-name"
-                  placeholder="Country"
-                  defaultValue={userProfile?.country ?? ""}
-                  aria-invalid={addressInvalid || undefined}
-                />
-              </div>
-              {addressInvalid ? (
-                <p className="text-destructive text-sm">{ADDRESS_VALIDATION_MESSAGE}</p>
-              ) : null}
+          <ProfileAddressField
+            value={address}
+            onChange={(next) => {
+              setAddress(next);
+              if (addressInvalid && isValidPostalAddress(next)) {
+                setAddressInvalid(false);
+              }
+            }}
+            invalid={addressInvalid}
+            disabled={saving}
+          />
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="visibleOnCustomerApp">Active</Label>
+              <p className="text-muted-foreground text-xs">
+                Show this chauffeur on the customer app when active.
+              </p>
             </div>
+            <Switch
+              id="visibleOnCustomerApp"
+              checked={visibleOnCustomerApp}
+              onCheckedChange={setVisibleOnCustomerApp}
+              disabled={saving}
+            />
           </div>
 
-          <SheetFooter className="mt-auto px-0">
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="acceptsDispatchAssignments">Accepting dispatch</Label>
+              <p className="text-muted-foreground text-xs">
+                Allow this chauffeur to receive dispatch assignments.
+              </p>
+            </div>
+            <Switch
+              id="acceptsDispatchAssignments"
+              checked={acceptsDispatchAssignments}
+              onCheckedChange={setAcceptsDispatchAssignments}
+              disabled={saving}
+            />
+          </div>
+
+          <SheetFooter className="mt-auto flex-row items-center justify-end gap-2 px-0 sm:justify-end">
             <Button type="submit" disabled={saving || (isNew && candidates.length === 0)}>
-              {saving ? "Saving…" : isNew ? "Add driver" : "Save changes"}
+              {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
             </Button>
           </SheetFooter>
         </form>

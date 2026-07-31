@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Building2,
-  CalendarPlus,
-  Clock,
   ExternalLink,
   Mail,
   MapPin,
@@ -17,11 +15,9 @@ import { z } from "zod";
 import type { User } from "@/lib/models";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
-import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import {
   fetchCorporateAccount,
-  fetchUserLastSignIn,
   updateUserEmail,
   updateUserProfile
 } from "@/lib/services/firebase-service";
@@ -41,19 +37,13 @@ import {
 
 function CustomerOverviewFields({
   user,
-  lastSignInAt,
-  tripCount,
   corporateAccountName
 }: {
   user: User;
-  lastSignInAt: Date | null | undefined;
-  tripCount: number;
   corporateAccountName: string | null;
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = customerDisplayName(user);
-  const lastActivityLabel =
-    lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
   const isCorporate = Boolean(user.corporateAccountId?.trim());
 
   async function saveProfile(
@@ -167,30 +157,6 @@ function CustomerOverviewFields({
           ) : null}
         </dl>
       </div>
-
-      <div className="space-y-4">
-        <SectionHeading>Account</SectionHeading>
-        <dl className="grid grid-cols-2 gap-4">
-          <LabeledDetailValue
-            icon={CalendarPlus}
-            label="Member since"
-            value={formatDate(user.createdAt)}
-            className="pb-4"
-          />
-          <LabeledDetailValue
-            icon={Clock}
-            label="Last sign-in"
-            value={lastActivityLabel}
-            className="pb-4"
-          />
-          <LabeledDetailValue
-            icon={CalendarPlus}
-            label="Bookings"
-            value={String(tripCount)}
-            className="pb-4"
-          />
-        </dl>
-      </div>
     </div>
   );
 }
@@ -198,35 +164,15 @@ function CustomerOverviewFields({
 export function CustomerDetailSheet({
   user,
   open,
-  onOpenChange,
-  tripCount = 0
+  onOpenChange
 }: {
   user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tripCount?: number;
 }) {
   const displayUser = useSheetDisplayItem(user, open);
   const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
-  const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
   const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open || !displayUser?.id) {
-      setLastSignInAt(undefined);
-      return;
-    }
-
-    let cancelled = false;
-    setLastSignInAt(undefined);
-    void fetchUserLastSignIn(displayUser.id).then((date) => {
-      if (!cancelled) setLastSignInAt(date);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, displayUser?.id]);
 
   useEffect(() => {
     const accountId = displayUser?.corporateAccountId?.trim();
@@ -301,8 +247,6 @@ export function CustomerDetailSheet({
 
           <CustomerOverviewFields
             user={displayUser}
-            lastSignInAt={lastSignInAt}
-            tripCount={tripCount}
             corporateAccountName={corporateAccountName}
           />
         </div>

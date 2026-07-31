@@ -362,8 +362,6 @@ export function CustomersDataTable({
     [selectedId, users]
   );
 
-  const selectedTripCount = selectedId ? tripCounts.get(selectedId) ?? 0 : 0;
-
   useEffect(() => {
     if (createOpen) {
       setDetailOpen(false);
@@ -489,7 +487,6 @@ export function CustomersDataTable({
         user={selectedUser}
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
-        tripCount={selectedTripCount}
       />
 
       <CustomerEditSheet

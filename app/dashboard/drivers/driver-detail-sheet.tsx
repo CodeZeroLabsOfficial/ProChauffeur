@@ -7,8 +7,6 @@ import {
   Building2,
   Cake,
   Calendar,
-  CalendarPlus,
-  Clock,
   ExternalLink,
   IdCard,
   ImagePlusIcon,
@@ -34,11 +32,9 @@ import { InlineEditableDateField } from "@/components/inline-editable-date-field
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
 import { InlineEditableToggleField } from "@/components/inline-editable-toggle-field";
-import { DetailLabel, LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
+import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
-import { formatDate, formatDateTime } from "@/lib/format";
 import {
-  fetchUserLastSignIn,
   saveDriverProfile,
   updateUserEmail,
   updateUserProfile,
@@ -69,17 +65,13 @@ import {
 
 function DriverOverviewFields({
   user,
-  profile,
-  lastSignInAt
+  profile
 }: {
   user: User;
   profile: DriverProfile;
-  lastSignInAt: Date | null | undefined;
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = user.profile.displayName.trim() || user.email || "";
-  const lastActivityLabel =
-    lastSignInAt === undefined ? "…" : formatDateTime(lastSignInAt);
   const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
 
   async function saveProfile(
@@ -237,18 +229,6 @@ function DriverOverviewFields({
               />
             </dd>
           </div>
-          <LabeledDetailValue
-            icon={CalendarPlus}
-            label="Join date"
-            value={formatDate(user.createdAt)}
-            className="pb-4"
-          />
-          <LabeledDetailValue
-            icon={Clock}
-            label="Last activity"
-            value={lastActivityLabel}
-            className="pb-4"
-          />
         </dl>
       </div>
     </div>
@@ -499,24 +479,6 @@ export function DriverDetailSheet({
 }) {
   const displayUser = useSheetDisplayItem(user, open);
   const displayRoster = useSheetDisplayItem(roster, open);
-  const [lastSignInAt, setLastSignInAt] = useState<Date | null | undefined>(undefined);
-
-  useEffect(() => {
-    if (!open || !displayUser?.id) {
-      setLastSignInAt(undefined);
-      return;
-    }
-
-    let cancelled = false;
-    setLastSignInAt(undefined);
-    void fetchUserLastSignIn(displayUser.id).then((date) => {
-      if (!cancelled) setLastSignInAt(date);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, displayUser?.id]);
 
   if (!displayUser || !displayRoster) return null;
 
@@ -563,11 +525,7 @@ export function DriverDetailSheet({
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
-              <DriverOverviewFields
-                user={displayUser}
-                profile={profile}
-                lastSignInAt={lastSignInAt}
-              />
+              <DriverOverviewFields user={displayUser} profile={profile} />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
               <DriverComplianceFields user={displayUser} profile={profile} />
