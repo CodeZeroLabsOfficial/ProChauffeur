@@ -198,7 +198,7 @@ function DriverOverviewFields({
         <SectionHeading>Status</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <DetailLabel icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
+            <DetailLabel icon={dispatchBadgeIcon(profile.visibility.acceptsDispatchAssignments)}>
               Dispatch
             </DetailLabel>
             <dd>
@@ -206,15 +206,22 @@ function DriverOverviewFields({
                 fieldId="dispatch"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.acceptsDispatchAssignments}
+                value={profile.visibility.acceptsDispatchAssignments}
                 formatValue={(v) => (v ? "Accepting dispatch" : "Dispatch paused")}
                 editLabel="dispatch"
-                onSave={async (next) => saveDriver({ acceptsDispatchAssignments: next })}
+                onSave={async (next) =>
+                  saveDriver({
+                    visibility: {
+                      ...profile.visibility,
+                      acceptsDispatchAssignments: next
+                    }
+                  })
+                }
               />
             </dd>
           </div>
           <div className="space-y-1">
-            <DetailLabel icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
+            <DetailLabel icon={visibilityBadgeIcon(profile.visibility.visibleOnCustomerApp)}>
               Visibility
             </DetailLabel>
             <dd>
@@ -222,10 +229,17 @@ function DriverOverviewFields({
                 fieldId="visibility"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.visibleOnCustomerApp}
+                value={profile.visibility.visibleOnCustomerApp}
                 formatValue={(v) => visibilityStatusLabel(v)}
                 editLabel="visibility"
-                onSave={async (next) => saveDriver({ visibleOnCustomerApp: next })}
+                onSave={async (next) =>
+                  saveDriver({
+                    visibility: {
+                      ...profile.visibility,
+                      visibleOnCustomerApp: next
+                    }
+                  })
+                }
               />
             </dd>
           </div>
@@ -250,8 +264,10 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
     }
   }
 
-  const licenceExpiryWarn = expiryWarning(profile.driversLicenseExpiry);
-  const accreditationExpiryWarn = expiryWarning(profile.operatorAccreditationExpiry);
+  const licenceExpiryWarn = expiryWarning(profile.driversLicense?.expiry);
+  const accreditationExpiryWarn = expiryWarning(profile.operatorAccreditation?.expiry);
+  const license = profile.driversLicense ?? {};
+  const accreditation = profile.operatorAccreditation ?? {};
 
   return (
     <div className="space-y-6">
@@ -265,11 +281,13 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="licenceNo"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.driversLicenseNumber?.trim() ?? ""}
+                value={license.number?.trim() ?? ""}
                 editLabel="licence number"
                 placeholder="Licence number"
                 onSave={async (next) =>
-                  saveDriver({ driversLicenseNumber: next.trim() || null })
+                  saveDriver({
+                    driversLicense: { ...license, number: next.trim() || null }
+                  })
                 }
               />
             </dd>
@@ -281,11 +299,13 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="licenceClass"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.driversLicenseClassOrType?.trim() ?? ""}
+                value={license.classOrType?.trim() ?? ""}
                 editLabel="licence class"
                 placeholder="Class / type"
                 onSave={async (next) =>
-                  saveDriver({ driversLicenseClassOrType: next.trim() || null })
+                  saveDriver({
+                    driversLicense: { ...license, classOrType: next.trim() || null }
+                  })
                 }
               />
             </dd>
@@ -297,11 +317,13 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="licenceState"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.driversLicenseJurisdictionCode?.trim() ?? ""}
+                value={license.jurisdictionCode?.trim() ?? ""}
                 editLabel="licence state"
                 placeholder="NSW"
                 onSave={async (next) =>
-                  saveDriver({ driversLicenseJurisdictionCode: next.trim() || null })
+                  saveDriver({
+                    driversLicense: { ...license, jurisdictionCode: next.trim() || null }
+                  })
                 }
               />
             </dd>
@@ -313,11 +335,13 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="licenceConditions"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.driversLicenseConditions?.trim() ?? ""}
+                value={license.conditions?.trim() ?? ""}
                 editLabel="licence conditions"
                 placeholder="Conditions"
                 onSave={async (next) =>
-                  saveDriver({ driversLicenseConditions: next.trim() || null })
+                  saveDriver({
+                    driversLicense: { ...license, conditions: next.trim() || null }
+                  })
                 }
               />
             </dd>
@@ -329,13 +353,15 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="licenceExpiry"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.driversLicenseExpiry}
+                value={license.expiry}
                 editLabel="licence expiry"
                 dateRange="expiry"
                 trailingContent={
                   licenceExpiryWarn ? <ExpiryBadge level={licenceExpiryWarn} /> : null
                 }
-                onSave={async (next) => saveDriver({ driversLicenseExpiry: next })}
+                onSave={async (next) =>
+                  saveDriver({ driversLicense: { ...license, expiry: next } })
+                }
               />
             </dd>
           </div>
@@ -352,11 +378,16 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="accreditationNo"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.operatorAccreditationNumber?.trim() ?? ""}
+                value={accreditation.number?.trim() ?? ""}
                 editLabel="accreditation number"
                 placeholder="Accreditation no."
                 onSave={async (next) =>
-                  saveDriver({ operatorAccreditationNumber: next.trim() || null })
+                  saveDriver({
+                    operatorAccreditation: {
+                      ...accreditation,
+                      number: next.trim() || null
+                    }
+                  })
                 }
               />
             </dd>
@@ -368,11 +399,16 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="accreditationAuthority"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.operatorAccreditationIssuingAuthority?.trim() ?? ""}
+                value={accreditation.issuingAuthority?.trim() ?? ""}
                 editLabel="issuing authority"
                 placeholder="Issuing authority"
                 onSave={async (next) =>
-                  saveDriver({ operatorAccreditationIssuingAuthority: next.trim() || null })
+                  saveDriver({
+                    operatorAccreditation: {
+                      ...accreditation,
+                      issuingAuthority: next.trim() || null
+                    }
+                  })
                 }
               />
             </dd>
@@ -384,7 +420,7 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                 fieldId="accreditationExpiry"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={profile.operatorAccreditationExpiry}
+                value={accreditation.expiry}
                 editLabel="accreditation expiry"
                 dateRange="expiry"
                 trailingContent={
@@ -392,7 +428,11 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
                     <ExpiryBadge level={accreditationExpiryWarn} />
                   ) : null
                 }
-                onSave={async (next) => saveDriver({ operatorAccreditationExpiry: next })}
+                onSave={async (next) =>
+                  saveDriver({
+                    operatorAccreditation: { ...accreditation, expiry: next }
+                  })
+                }
               />
             </dd>
           </div>

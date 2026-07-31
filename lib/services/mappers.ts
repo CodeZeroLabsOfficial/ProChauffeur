@@ -153,6 +153,18 @@ function mapVehicleRoadworthy(raw: unknown): VehicleRoadworthy | null {
   };
 }
 
+function mapPostalAddress(raw: unknown): UserProfile["address"] {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    street: typeof d.street === "string" ? d.street : null,
+    city: typeof d.city === "string" ? d.city : null,
+    state: typeof d.state === "string" ? d.state : null,
+    postcode: typeof d.postcode === "string" ? d.postcode : null,
+    country: typeof d.country === "string" ? d.country : null
+  };
+}
+
 function mapUserProfile(d: DocumentData | undefined): UserProfile {
   const p = d ?? {};
   return {
@@ -161,12 +173,40 @@ function mapUserProfile(d: DocumentData | undefined): UserProfile {
     lastName: p.lastName ?? null,
     phoneNumber: p.phoneNumber ?? null,
     photoURL: p.photoURL ?? null,
-    street: p.street ?? null,
-    city: p.city ?? null,
-    state: p.state ?? null,
-    postcode: p.postcode ?? null,
-    country: p.country ?? null,
+    address: mapPostalAddress(p.address),
     dateOfBirth: toDate(p.dateOfBirth)
+  };
+}
+
+function mapDriversLicense(raw: unknown): DriverProfile["driversLicense"] {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    summary: typeof d.summary === "string" ? d.summary : null,
+    number: typeof d.number === "string" ? d.number : null,
+    classOrType: typeof d.classOrType === "string" ? d.classOrType : null,
+    conditions: typeof d.conditions === "string" ? d.conditions : null,
+    conditionCodes: typeof d.conditionCodes === "string" ? d.conditionCodes : null,
+    jurisdictionCode: typeof d.jurisdictionCode === "string" ? d.jurisdictionCode : null,
+    expiry: toDate(d.expiry)
+  };
+}
+
+function mapOperatorAccreditation(raw: unknown): DriverProfile["operatorAccreditation"] {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as DocumentData;
+  return {
+    number: typeof d.number === "string" ? d.number : null,
+    issuingAuthority: typeof d.issuingAuthority === "string" ? d.issuingAuthority : null,
+    expiry: toDate(d.expiry)
+  };
+}
+
+function mapDriverVisibility(raw: unknown): DriverProfile["visibility"] {
+  const d = raw && typeof raw === "object" ? (raw as DocumentData) : {};
+  return {
+    visibleOnCustomerApp: d.visibleOnCustomerApp !== false,
+    acceptsDispatchAssignments: d.acceptsDispatchAssignments !== false
   };
 }
 
@@ -189,20 +229,10 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
     })),
     timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     preferredOfficeLocationId:
-      (typeof d.preferredOfficeLocationId === "string" ? d.preferredOfficeLocationId : null) ??
-      (typeof d.preferredGarageLocationId === "string" ? d.preferredGarageLocationId : null),
-    driversLicenseSummary: d.driversLicenseSummary ?? null,
-    driversLicenseNumber: d.driversLicenseNumber ?? null,
-    driversLicenseClassOrType: d.driversLicenseClassOrType ?? null,
-    driversLicenseConditions: d.driversLicenseConditions ?? null,
-    driversLicenseConditionCodes: d.driversLicenseConditionCodes ?? null,
-    driversLicenseJurisdictionCode: d.driversLicenseJurisdictionCode ?? null,
-    driversLicenseExpiry: toDate(d.driversLicenseExpiry),
-    operatorAccreditationNumber: d.operatorAccreditationNumber ?? null,
-    operatorAccreditationIssuingAuthority: d.operatorAccreditationIssuingAuthority ?? null,
-    operatorAccreditationExpiry: toDate(d.operatorAccreditationExpiry),
-    visibleOnCustomerApp: d.visibleOnCustomerApp ?? true,
-    acceptsDispatchAssignments: d.acceptsDispatchAssignments ?? true
+      typeof d.preferredOfficeLocationId === "string" ? d.preferredOfficeLocationId : null,
+    driversLicense: mapDriversLicense(d.driversLicense),
+    operatorAccreditation: mapOperatorAccreditation(d.operatorAccreditation),
+    visibility: mapDriverVisibility(d.visibility)
   };
 }
 

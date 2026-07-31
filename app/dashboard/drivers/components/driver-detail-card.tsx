@@ -40,11 +40,11 @@ export function DriverDetailCard({
       title={displayName}
       meta={
         <div className="flex flex-wrap items-center gap-2">
-          <DetailSheetIconBadge icon={visibilityBadgeIcon(profile.visibleOnCustomerApp)}>
-            {visibilityStatusLabel(profile.visibleOnCustomerApp)}
+          <DetailSheetIconBadge icon={visibilityBadgeIcon(profile.visibility.visibleOnCustomerApp)}>
+            {visibilityStatusLabel(profile.visibility.visibleOnCustomerApp)}
           </DetailSheetIconBadge>
-          <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.acceptsDispatchAssignments)}>
-            {profile.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
+          <DetailSheetIconBadge icon={dispatchBadgeIcon(profile.visibility.acceptsDispatchAssignments)}>
+            {profile.visibility.acceptsDispatchAssignments ? "Accepting dispatch" : "Dispatch paused"}
           </DetailSheetIconBadge>
         </div>
       }

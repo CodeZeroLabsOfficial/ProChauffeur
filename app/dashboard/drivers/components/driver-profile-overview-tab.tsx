@@ -42,7 +42,7 @@ export function DriverProfileOverviewTab({
 }) {
   const profile = branchDriverToProfile(roster);
   const progressValue = driverProfileCompleteness(user, profile);
-  const address = formatPostalAddress(user.profile);
+  const address = formatPostalAddress(user.profile.address);
   const joinDate = formatDate(user.createdAt);
 
   return (

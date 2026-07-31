@@ -39,7 +39,7 @@ export function InlineProfileAddressField({
   activeFieldId: string | null;
   onActiveFieldIdChange: (fieldId: string | null) => void;
   profile: UserProfile;
-  onSave: (fields: Pick<UserProfile, "street" | "city" | "state" | "postcode" | "country">) => Promise<{
+  onSave: (fields: Pick<UserProfile, "address">) => Promise<{
     ok: boolean;
     message?: string;
   }>;

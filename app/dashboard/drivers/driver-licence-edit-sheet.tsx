@@ -56,14 +56,15 @@ export function DriverLicenceEditSheet({
   nested?: boolean;
 }) {
   const profile = branchDriverToProfile(roster);
+  const license = profile.driversLicense;
   const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
-    profile.driversLicenseExpiry ?? undefined
+    license?.expiry ?? undefined
   );
   const [licenceClasses, setLicenceClasses] = useState<string[]>(() =>
-    parseLicenceClasses(profile.driversLicenseClassOrType)
+    parseLicenceClasses(license?.classOrType)
   );
   const [jurisdictionCode, setJurisdictionCode] = useState(
-    () => profile.driversLicenseJurisdictionCode?.trim() ?? ""
+    () => license?.jurisdictionCode?.trim() ?? ""
   );
   const [licenceCountry, setLicenceCountry] = useState(DEFAULT_DRIVER_LICENCE_COUNTRY);
   const [saving, setSaving] = useState(false);
@@ -71,9 +72,9 @@ export function DriverLicenceEditSheet({
   const [seededId, setSeededId] = useState<string | null>("__init__");
   if (user.id !== seededId) {
     setSeededId(user.id);
-    setDriversLicenseExpiry(profile.driversLicenseExpiry ?? undefined);
-    setLicenceClasses(parseLicenceClasses(profile.driversLicenseClassOrType));
-    setJurisdictionCode(profile.driversLicenseJurisdictionCode?.trim() ?? "");
+    setDriversLicenseExpiry(profile.driversLicense?.expiry ?? undefined);
+    setLicenceClasses(parseLicenceClasses(profile.driversLicense?.classOrType));
+    setJurisdictionCode(profile.driversLicense?.jurisdictionCode?.trim() ?? "");
   }
 
   useEffect(() => {
@@ -116,12 +117,15 @@ export function DriverLicenceEditSheet({
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverProfile = {
       ...profile,
-      driversLicenseNumber: get("driversLicenseNumber") || null,
-      driversLicenseClassOrType: formatLicenceClasses(licenceClasses),
-      driversLicenseJurisdictionCode: jurisdictionCode.trim() || null,
-      driversLicenseConditions: get("driversLicenseConditions") || null,
-      driversLicenseSummary: get("driversLicenseSummary") || null,
-      driversLicenseExpiry: driversLicenseExpiry ?? null
+      driversLicense: {
+        number: get("driversLicenseNumber") || null,
+        classOrType: formatLicenceClasses(licenceClasses),
+        jurisdictionCode: jurisdictionCode.trim() || null,
+        conditions: get("driversLicenseConditions") || null,
+        summary: get("driversLicenseSummary") || null,
+        conditionCodes: profile.driversLicense?.conditionCodes ?? null,
+        expiry: driversLicenseExpiry ?? null
+      }
     };
 
     setSaving(true);
@@ -151,7 +155,7 @@ export function DriverLicenceEditSheet({
               <Input
                 id="licence-driversLicenseNumber"
                 name="driversLicenseNumber"
-                defaultValue={profile.driversLicenseNumber ?? ""}
+                defaultValue={profile.driversLicense?.number ?? ""}
               />
             </div>
             <div className="space-y-2">
@@ -233,7 +237,7 @@ export function DriverLicenceEditSheet({
               id="licence-driversLicenseConditions"
               name="driversLicenseConditions"
               rows={2}
-              defaultValue={profile.driversLicenseConditions ?? ""}
+              defaultValue={profile.driversLicense?.conditions ?? ""}
             />
           </div>
 
@@ -243,7 +247,7 @@ export function DriverLicenceEditSheet({
               id="licence-driversLicenseSummary"
               name="driversLicenseSummary"
               rows={3}
-              defaultValue={profile.driversLicenseSummary ?? ""}
+              defaultValue={profile.driversLicense?.summary ?? ""}
             />
           </div>
 

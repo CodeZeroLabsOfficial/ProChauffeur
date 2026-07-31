@@ -104,10 +104,10 @@ export function DriverEditSheet({
     userProfile ? postalAddressFromProfile(userProfile) : {}
   );
   const [visibleOnCustomerApp, setVisibleOnCustomerApp] = useState(
-    driverProfile.visibleOnCustomerApp
+    driverProfile.visibility.visibleOnCustomerApp
   );
   const [acceptsDispatchAssignments, setAcceptsDispatchAssignments] = useState(
-    driverProfile.acceptsDispatchAssignments
+    driverProfile.visibility.acceptsDispatchAssignments
   );
   const [saving, setSaving] = useState(false);
   const [addressInvalid, setAddressInvalid] = useState(false);
@@ -119,8 +119,8 @@ export function DriverEditSheet({
     setCategory(driverProfile.chauffeurCategory);
     setDateOfBirth(userProfile?.dateOfBirth ?? undefined);
     setAddress(userProfile ? postalAddressFromProfile(userProfile) : {});
-    setVisibleOnCustomerApp(driverProfile.visibleOnCustomerApp);
-    setAcceptsDispatchAssignments(driverProfile.acceptsDispatchAssignments);
+    setVisibleOnCustomerApp(driverProfile.visibility.visibleOnCustomerApp);
+    setAcceptsDispatchAssignments(driverProfile.visibility.acceptsDispatchAssignments);
     setAddressInvalid(false);
   }
 
@@ -155,8 +155,10 @@ export function DriverEditSheet({
       ...defaultDriverProfile(),
       ...driverProfile,
       chauffeurCategory: category,
-      visibleOnCustomerApp,
-      acceptsDispatchAssignments
+      visibility: {
+        visibleOnCustomerApp,
+        acceptsDispatchAssignments
+      }
     };
 
     const displayName =

@@ -46,7 +46,7 @@ export function CustomerProfileOverviewTab({
   const [corporateAccountName, setCorporateAccountName] = useState<string | null>(null);
   const isCorporate = corporateAccountsEnabled && Boolean(user.corporateAccountId?.trim());
   const memberSince = formatDate(user.createdAt);
-  const address = formatPostalAddress(user.profile);
+  const address = formatPostalAddress(user.profile.address);
 
   useEffect(() => {
     const accountId = user.corporateAccountId?.trim();

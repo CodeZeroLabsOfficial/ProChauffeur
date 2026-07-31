@@ -1,3 +1,4 @@
+import type { PostalAddress } from "@/lib/models/postal-address";
 import type { ChauffeurCategory, UserRole } from "@/lib/models/enums";
 
 /** One recurring weekly operating window (FleetWeeklyOperatingSchedule.swift). */
@@ -13,6 +14,30 @@ export interface FleetWeeklyOperatingSchedule {
   endTime?: string | null;
 }
 
+/** Nested driver licence fields on `branches/{id}/drivers/{uid}`. */
+export interface DriversLicense {
+  summary?: string | null;
+  number?: string | null;
+  classOrType?: string | null;
+  conditions?: string | null;
+  conditionCodes?: string | null;
+  jurisdictionCode?: string | null;
+  expiry?: Date | null;
+}
+
+/** Nested operator accreditation on `branches/{id}/drivers/{uid}`. */
+export interface OperatorAccreditation {
+  number?: string | null;
+  issuingAuthority?: string | null;
+  expiry?: Date | null;
+}
+
+/** Customer-app and dispatch visibility on the Location roster. */
+export interface DriverVisibility {
+  visibleOnCustomerApp: boolean;
+  acceptsDispatchAssignments: boolean;
+}
+
 /** UserProfile.swift — human-facing identity envelope embedded on the user. */
 export interface UserProfile {
   displayName: string;
@@ -20,16 +45,12 @@ export interface UserProfile {
   lastName?: string | null;
   phoneNumber?: string | null;
   photoURL?: string | null;
-  street?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postcode?: string | null;
-  country?: string | null;
+  address?: PostalAddress | null;
   /** Calendar date only (time ignored). */
   dateOfBirth?: Date | null;
 }
 
-/** DriverProfile.swift — operations-facing chauffeur profile. */
+/** DriverProfile.swift — operations-facing chauffeur profile on the Location roster. */
 export interface DriverProfile {
   chauffeurCategory: ChauffeurCategory;
   qualifications: string[];
@@ -40,18 +61,9 @@ export interface DriverProfile {
   timeZoneIdentifier?: string | null;
   /** Preferred office FleetLocation id for this chauffeur. */
   preferredOfficeLocationId?: string | null;
-  driversLicenseSummary?: string | null;
-  driversLicenseNumber?: string | null;
-  driversLicenseClassOrType?: string | null;
-  driversLicenseConditions?: string | null;
-  driversLicenseConditionCodes?: string | null;
-  driversLicenseJurisdictionCode?: string | null;
-  driversLicenseExpiry?: Date | null;
-  operatorAccreditationNumber?: string | null;
-  operatorAccreditationIssuingAuthority?: string | null;
-  operatorAccreditationExpiry?: Date | null;
-  visibleOnCustomerApp: boolean;
-  acceptsDispatchAssignments: boolean;
+  driversLicense?: DriversLicense | null;
+  operatorAccreditation?: OperatorAccreditation | null;
+  visibility: DriverVisibility;
 }
 
 /** Dashboard UI preferences on `users/{uid}`. */
@@ -99,7 +111,9 @@ export function defaultDriverProfile(): DriverProfile {
     availabilitySchedules: [
       { id: "primary", isEnabled: true, weekdayNumbers: [2, 3, 4, 5, 6], startTime: null, endTime: null }
     ],
-    visibleOnCustomerApp: true,
-    acceptsDispatchAssignments: true
+    visibility: {
+      visibleOnCustomerApp: true,
+      acceptsDispatchAssignments: true
+    }
   };
 }

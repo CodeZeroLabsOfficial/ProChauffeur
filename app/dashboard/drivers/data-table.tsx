@@ -113,10 +113,10 @@ export function DriversDataTable({
           .filter(Boolean)
           .join(" "),
         category: chauffeurCategoryTitle[c.roster.chauffeurCategory],
-        dispatchStatus: (c.roster.acceptsDispatchAssignments ? "accepting" : "paused") as
+        dispatchStatus: (c.roster.visibility.acceptsDispatchAssignments ? "accepting" : "paused") as
           | "accepting"
           | "paused",
-        visibilityStatus: (c.roster.visibleOnCustomerApp ? "active" : "inactive") as
+        visibilityStatus: (c.roster.visibility.visibleOnCustomerApp ? "active" : "inactive") as
           | "active"
           | "inactive"
       })),
@@ -130,11 +130,17 @@ export function DriversDataTable({
 
   const setDriverVisibility = useCallback(
     async (c: RosterChauffeur, active: boolean) => {
-      if (c.roster.visibleOnCustomerApp === active) return;
+      if (c.roster.visibility.visibleOnCustomerApp === active) return;
       try {
         await saveDriverProfile(
           c.user.id,
-          { ...branchDriverToProfile(c.roster), visibleOnCustomerApp: active },
+          {
+            ...branchDriverToProfile(c.roster),
+            visibility: {
+              ...c.roster.visibility,
+              visibleOnCustomerApp: active
+            }
+          },
           { driverTitle: driverTitle(c) }
         );
         toast.success(
@@ -149,11 +155,17 @@ export function DriversDataTable({
 
   const setDispatchAcceptance = useCallback(
     async (c: RosterChauffeur, accepting: boolean) => {
-      if (c.roster.acceptsDispatchAssignments === accepting) return;
+      if (c.roster.visibility.acceptsDispatchAssignments === accepting) return;
       try {
         await saveDriverProfile(
           c.user.id,
-          { ...branchDriverToProfile(c.roster), acceptsDispatchAssignments: accepting },
+          {
+            ...branchDriverToProfile(c.roster),
+            visibility: {
+              ...c.roster.visibility,
+              acceptsDispatchAssignments: accepting
+            }
+          },
           { driverTitle: driverTitle(c) }
         );
         toast.success(
@@ -250,11 +262,11 @@ export function DriversDataTable({
       },
       {
         id: "licenceExpiry",
-        accessorFn: (row) => formatDate(row.roster.driversLicenseExpiry ?? null),
+        accessorFn: (row) => formatDate(row.roster.driversLicense?.expiry ?? null),
         header: "Licence expiry",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {formatDate(row.original.roster.driversLicenseExpiry ?? null)}
+            {formatDate(row.original.roster.driversLicense?.expiry ?? null)}
           </span>
         )
       },
@@ -263,7 +275,7 @@ export function DriversDataTable({
         accessorKey: "dispatchStatus",
         header: "Dispatch",
         cell: ({ row }) => (
-          <DriverDispatchListBadge accepting={row.original.roster.acceptsDispatchAssignments} />
+          <DriverDispatchListBadge accepting={row.original.roster.visibility.acceptsDispatchAssignments} />
         ),
         filterFn: multiSelectFilter
       },
@@ -272,7 +284,7 @@ export function DriversDataTable({
         accessorKey: "visibilityStatus",
         header: "Visibility",
         cell: ({ row }) => (
-          <DriverVisibilityListBadge active={row.original.roster.visibleOnCustomerApp} />
+          <DriverVisibilityListBadge active={row.original.roster.visibility.visibleOnCustomerApp} />
         ),
         filterFn: multiSelectFilter
       },
@@ -300,12 +312,12 @@ export function DriversDataTable({
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem
-                          disabled={c.roster.visibleOnCustomerApp}
+                          disabled={c.roster.visibility.visibleOnCustomerApp}
                           onClick={() => setDriverVisibility(c, true)}>
                           Set active
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!c.roster.visibleOnCustomerApp}
+                          disabled={!c.roster.visibility.visibleOnCustomerApp}
                           onClick={() => setDriverVisibility(c, false)}>
                           Set inactive
                         </DropdownMenuItem>
@@ -317,12 +329,12 @@ export function DriversDataTable({
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem
-                          disabled={c.roster.acceptsDispatchAssignments}
+                          disabled={c.roster.visibility.acceptsDispatchAssignments}
                           onClick={() => setDispatchAcceptance(c, true)}>
                           Accept dispatch
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={!c.roster.acceptsDispatchAssignments}
+                          disabled={!c.roster.visibility.acceptsDispatchAssignments}
                           onClick={() => setDispatchAcceptance(c, false)}>
                           Pause dispatch
                         </DropdownMenuItem>

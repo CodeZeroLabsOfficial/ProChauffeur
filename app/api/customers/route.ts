@@ -20,11 +20,13 @@ export async function POST(request: Request) {
     password?: string;
     displayName?: string;
     phoneNumber?: string;
-    street?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postcode?: string | null;
-    country?: string | null;
+    address?: {
+      street?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postcode?: string | null;
+      country?: string | null;
+    } | null;
   };
   try {
     body = await request.json();
@@ -47,11 +49,16 @@ export async function POST(request: Request) {
   }
 
   const phoneNumber = body.phoneNumber?.trim() || null;
-  const street = body.street?.trim() || null;
-  const city = body.city?.trim() || null;
-  const state = body.state?.trim() || null;
-  const postcode = body.postcode?.trim() || null;
-  const country = body.country?.trim() || null;
+  const addressRaw = body.address;
+  const address = addressRaw
+    ? {
+        street: addressRaw.street?.trim() || null,
+        city: addressRaw.city?.trim() || null,
+        state: addressRaw.state?.trim() || null,
+        postcode: addressRaw.postcode?.trim() || null,
+        country: addressRaw.country?.trim() || null
+      }
+    : null;
 
   try {
     const authUser = await adminAuth().createUser({
@@ -70,11 +77,7 @@ export async function POST(request: Request) {
         profile: {
           displayName,
           phoneNumber,
-          street,
-          city,
-          state,
-          postcode,
-          country
+          ...(address ? { address } : {})
         },
         createdAt: FieldValue.serverTimestamp()
       });

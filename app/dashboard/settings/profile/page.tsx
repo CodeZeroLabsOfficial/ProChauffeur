@@ -107,7 +107,7 @@ export default function ProfileSettingsPage() {
             />
             <DetailField label="First name" value={user.profile.firstName} />
             <DetailField label="Last name" value={user.profile.lastName} />
-            <DetailField label="Address" value={formatPostalAddress(user.profile)} />
+            <DetailField label="Address" value={formatPostalAddress(user.profile.address)} />
             <DetailField label="Date of birth" value={formatDate(user.profile.dateOfBirth)} />
           </div>
         </CardContent>

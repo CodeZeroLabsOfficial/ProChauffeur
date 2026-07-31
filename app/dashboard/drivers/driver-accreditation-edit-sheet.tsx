@@ -39,14 +39,14 @@ export function DriverAccreditationEditSheet({
 }) {
   const profile = branchDriverToProfile(roster);
   const [accreditationExpiry, setAccreditationExpiry] = useState<Date | undefined>(
-    profile.operatorAccreditationExpiry ?? undefined
+    profile.operatorAccreditation?.expiry ?? undefined
   );
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
   if (user.id !== seededId) {
     setSeededId(user.id);
-    setAccreditationExpiry(profile.operatorAccreditationExpiry ?? undefined);
+    setAccreditationExpiry(profile.operatorAccreditation?.expiry ?? undefined);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,9 +55,11 @@ export function DriverAccreditationEditSheet({
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const driverProfile = {
       ...profile,
-      operatorAccreditationNumber: get("operatorAccreditationNumber") || null,
-      operatorAccreditationIssuingAuthority: get("operatorAccreditationIssuingAuthority") || null,
-      operatorAccreditationExpiry: accreditationExpiry ?? null
+      operatorAccreditation: {
+        number: get("operatorAccreditationNumber") || null,
+        issuingAuthority: get("operatorAccreditationIssuingAuthority") || null,
+        expiry: accreditationExpiry ?? null
+      }
     };
 
     setSaving(true);
@@ -86,7 +88,7 @@ export function DriverAccreditationEditSheet({
             <Input
               id="accreditation-number"
               name="operatorAccreditationNumber"
-              defaultValue={profile.operatorAccreditationNumber ?? ""}
+              defaultValue={profile.operatorAccreditation?.number ?? ""}
             />
           </div>
 
@@ -95,7 +97,7 @@ export function DriverAccreditationEditSheet({
             <Input
               id="accreditation-authority"
               name="operatorAccreditationIssuingAuthority"
-              defaultValue={profile.operatorAccreditationIssuingAuthority ?? ""}
+              defaultValue={profile.operatorAccreditation?.issuingAuthority ?? ""}
             />
           </div>
 

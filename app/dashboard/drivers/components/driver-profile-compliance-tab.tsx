@@ -48,8 +48,8 @@ export function DriverProfileComplianceTab({
   onUserUpdated?: () => void;
 }) {
   const profile = branchDriverToProfile(roster);
-  const licenceWarn = expiryWarning(profile.driversLicenseExpiry);
-  const accWarn = expiryWarning(profile.operatorAccreditationExpiry);
+  const licenceWarn = expiryWarning(profile.driversLicense?.expiry);
+  const accWarn = expiryWarning(profile.operatorAccreditation?.expiry);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
   const [accreditationEditOpen, setAccreditationEditOpen] = useState(false);
 
@@ -69,18 +69,18 @@ export function DriverProfileComplianceTab({
           <CardTitle>Driver licence</CardTitle>
         </CardHeader>
         <CardContent>
-          <DetailRow label="Licence no." value={profile.driversLicenseNumber?.trim() || "—"} />
-          <DetailRow label="Class / type" value={profile.driversLicenseClassOrType?.trim() || "—"} />
-          <DetailRow label="State" value={profile.driversLicenseJurisdictionCode?.trim() || "—"} />
+          <DetailRow label="Licence no." value={profile.driversLicense?.number?.trim() || "—"} />
+          <DetailRow label="Class / type" value={profile.driversLicense?.classOrType?.trim() || "—"} />
+          <DetailRow label="State" value={profile.driversLicense?.jurisdictionCode?.trim() || "—"} />
           <DetailRow
             label="Conditions"
-            value={profile.driversLicenseConditions?.trim() || "—"}
+            value={profile.driversLicense?.conditions?.trim() || "—"}
           />
-          <DetailRow label="Summary" value={profile.driversLicenseSummary?.trim() || "—"} />
+          <DetailRow label="Summary" value={profile.driversLicense?.summary?.trim() || "—"} />
           <div className="flex items-start justify-between gap-4 py-3">
             <span className="text-muted-foreground shrink-0 text-sm">Expiry</span>
             <span className="text-end text-sm">
-              {formatDate(profile.driversLicenseExpiry)}
+              {formatDate(profile.driversLicense?.expiry)}
               {licenceWarn ? <ExpiryBadge level={licenceWarn} /> : null}
             </span>
           </div>
@@ -111,16 +111,16 @@ export function DriverProfileComplianceTab({
         <CardContent>
           <DetailRow
             label="Accreditation no."
-            value={profile.operatorAccreditationNumber?.trim() || "—"}
+            value={profile.operatorAccreditation?.number?.trim() || "—"}
           />
           <DetailRow
             label="Issuing authority"
-            value={profile.operatorAccreditationIssuingAuthority?.trim() || "—"}
+            value={profile.operatorAccreditation?.issuingAuthority?.trim() || "—"}
           />
           <div className="flex items-start justify-between gap-4 py-3">
             <span className="text-muted-foreground text-sm shrink-0">Expiry</span>
             <span className="text-end text-sm">
-              {formatDate(profile.operatorAccreditationExpiry)}
+              {formatDate(profile.operatorAccreditation?.expiry)}
               {accWarn ? <ExpiryBadge level={accWarn} /> : null}
             </span>
           </div>

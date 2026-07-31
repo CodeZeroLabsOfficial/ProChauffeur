@@ -274,11 +274,11 @@ export function CustomersDataTable({
       },
       {
         id: "address",
-        accessorFn: (row) => formatPostalAddress(row.profile) ?? "",
+        accessorFn: (row) => formatPostalAddress(row.profile.address) ?? "",
         header: "Address",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {truncateAddress(formatPostalAddress(row.original.profile))}
+            {truncateAddress(formatPostalAddress(row.original.profile.address))}
           </span>
         )
       },

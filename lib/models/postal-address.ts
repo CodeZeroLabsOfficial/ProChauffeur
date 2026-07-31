@@ -80,23 +80,24 @@ export function isValidPostalAddress(address: PostalAddress | null | undefined):
 
 export function postalAddressFromProfile(profile: UserProfile): PostalAddress {
   return {
-    street: profile.street ?? null,
-    city: profile.city ?? null,
-    state: profile.state ?? null,
-    postcode: profile.postcode ?? null,
-    country: profile.country ?? null
+    street: profile.address?.street ?? null,
+    city: profile.address?.city ?? null,
+    state: profile.address?.state ?? null,
+    postcode: profile.address?.postcode ?? null,
+    country: profile.address?.country ?? null
   };
 }
 
 export function customerAddressSnapshotFromProfile(
   profile: UserProfile
 ): CustomerAddressSnapshot {
+  const address = postalAddressFromProfile(profile);
   return {
-    customerStreet: profile.street ?? null,
-    customerCity: profile.city ?? null,
-    customerState: profile.state ?? null,
-    customerPostcode: profile.postcode ?? null,
-    customerCountry: profile.country ?? null
+    customerStreet: address.street ?? null,
+    customerCity: address.city ?? null,
+    customerState: address.state ?? null,
+    customerPostcode: address.postcode ?? null,
+    customerCountry: address.country ?? null
   };
 }
 
@@ -113,14 +114,15 @@ export function postalAddressFromTripSnapshot(
   };
 }
 
-export function toProfilePostalFields(
-  address: PostalAddress
-): Pick<UserProfile, "street" | "city" | "state" | "postcode" | "country"> {
+/** Nested `profile.address` patch for user profile writes. */
+export function toProfilePostalFields(address: PostalAddress): Pick<UserProfile, "address"> {
   return {
-    street: address.street?.trim() || null,
-    city: address.city?.trim() || null,
-    state: address.state?.trim() || null,
-    postcode: address.postcode?.trim() || null,
-    country: address.country?.trim() || null
+    address: {
+      street: address.street?.trim() || null,
+      city: address.city?.trim() || null,
+      state: address.state?.trim() || null,
+      postcode: address.postcode?.trim() || null,
+      country: address.country?.trim() || null
+    }
   };
 }

@@ -938,11 +938,13 @@ export type CreateCustomerInput = {
   password: string;
   displayName: string;
   phoneNumber?: string;
-  street?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postcode?: string | null;
-  country?: string | null;
+  address?: {
+    street?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    country?: string | null;
+  } | null;
 };
 
 export async function createCustomer(input: CreateCustomerInput): Promise<{ uid: string }> {
@@ -1176,7 +1178,6 @@ export async function upsertBranchDriver(
       id: uid,
       userId: uid,
       ...profile,
-      preferredGarageLocationId: deleteField(),
       createdAt: existing.exists() ? (existing.data()?.createdAt ?? now) : now,
       updatedAt: now
     }),

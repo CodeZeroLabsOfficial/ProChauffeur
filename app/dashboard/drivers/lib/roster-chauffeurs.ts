@@ -18,18 +18,12 @@ export function branchDriverToProfile(driver: BranchDriver): DriverProfile {
     availabilitySchedules: driver.availabilitySchedules,
     timeZoneIdentifier: driver.timeZoneIdentifier,
     preferredOfficeLocationId: driver.preferredOfficeLocationId,
-    driversLicenseSummary: driver.driversLicenseSummary,
-    driversLicenseNumber: driver.driversLicenseNumber,
-    driversLicenseClassOrType: driver.driversLicenseClassOrType,
-    driversLicenseConditions: driver.driversLicenseConditions,
-    driversLicenseConditionCodes: driver.driversLicenseConditionCodes,
-    driversLicenseJurisdictionCode: driver.driversLicenseJurisdictionCode,
-    driversLicenseExpiry: driver.driversLicenseExpiry,
-    operatorAccreditationNumber: driver.operatorAccreditationNumber,
-    operatorAccreditationIssuingAuthority: driver.operatorAccreditationIssuingAuthority,
-    operatorAccreditationExpiry: driver.operatorAccreditationExpiry,
-    visibleOnCustomerApp: driver.visibleOnCustomerApp,
-    acceptsDispatchAssignments: driver.acceptsDispatchAssignments
+    driversLicense: driver.driversLicense ?? null,
+    operatorAccreditation: driver.operatorAccreditation ?? null,
+    visibility: {
+      visibleOnCustomerApp: driver.visibility.visibleOnCustomerApp,
+      acceptsDispatchAssignments: driver.visibility.acceptsDispatchAssignments
+    }
   };
 }
 

@@ -23,7 +23,7 @@ export function customerProfileCompleteness(user: User): number {
     Boolean(user.profile.displayName?.trim()),
     Boolean(user.profile.phoneNumber?.trim()),
     Boolean(user.email?.trim()),
-    Boolean(isCompletePostalAddress(user.profile))
+    Boolean(isCompletePostalAddress(user.profile.address))
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
