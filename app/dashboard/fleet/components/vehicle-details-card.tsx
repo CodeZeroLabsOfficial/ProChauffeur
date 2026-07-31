@@ -6,10 +6,12 @@ import type { Vehicle } from "@/lib/models";
 import { ContactRow } from "@/components/contact-row";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function IconValue({ value }: { value: string | null | undefined }) {
+function LabeledValue({ label, value }: { label: string; value: string | null | undefined }) {
   const trimmed = value?.trim();
   return (
-    <span className={trimmed ? undefined : "text-muted-foreground"}>{trimmed || "—"}</span>
+    <span className={trimmed ? undefined : "text-muted-foreground"}>
+      {label}: {trimmed || "—"}
+    </span>
   );
 }
 
@@ -25,22 +27,22 @@ export function VehicleDetailsCard({ vehicle }: { vehicle: Vehicle }) {
       <CardContent>
         <div className="flex flex-col gap-y-4">
           <ContactRow icon={Calendar}>
-            <IconValue value={year} />
+            <LabeledValue label="Year" value={year} />
           </ContactRow>
           <ContactRow icon={Car}>
-            <IconValue value={vehicle.details?.make} />
+            <LabeledValue label="Make" value={vehicle.details?.make} />
           </ContactRow>
           <ContactRow icon={CarFront}>
-            <IconValue value={vehicle.details?.model} />
+            <LabeledValue label="Model" value={vehicle.details?.model} />
           </ContactRow>
           <ContactRow icon={Palette}>
-            <IconValue value={vehicle.details?.color} />
+            <LabeledValue label="Colour" value={vehicle.details?.color} />
           </ContactRow>
           <ContactRow icon={Fuel}>
-            <IconValue value={vehicle.specifications?.engineType} />
+            <LabeledValue label="Engine" value={vehicle.specifications?.engineType} />
           </ContactRow>
           <ContactRow icon={Cog}>
-            <IconValue value={vehicle.specifications?.transmission} />
+            <LabeledValue label="Transmission" value={vehicle.specifications?.transmission} />
           </ContactRow>
         </div>
       </CardContent>

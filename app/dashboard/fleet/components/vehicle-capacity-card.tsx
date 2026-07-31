@@ -6,11 +6,22 @@ import type { Vehicle } from "@/lib/models";
 import { ContactRow } from "@/components/contact-row";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function VehicleCapacityCard({ vehicle }: { vehicle: Vehicle }) {
-  const passengers = vehicle.capacity?.passengerCount;
-  const smallLuggage = vehicle.capacity?.luggage.smallCount;
-  const largeLuggage = vehicle.capacity?.luggage.largeCount;
+function LabeledValue({
+  label,
+  value
+}: {
+  label: string;
+  value: number | null | undefined;
+}) {
+  const hasValue = value != null;
+  return (
+    <span className={hasValue ? undefined : "text-muted-foreground"}>
+      {label}: {hasValue ? String(value) : "—"}
+    </span>
+  );
+}
 
+export function VehicleCapacityCard({ vehicle }: { vehicle: Vehicle }) {
   return (
     <Card>
       <CardHeader>
@@ -19,19 +30,13 @@ export function VehicleCapacityCard({ vehicle }: { vehicle: Vehicle }) {
       <CardContent>
         <div className="flex flex-col gap-y-4">
           <ContactRow icon={Users}>
-            <span className={passengers != null ? undefined : "text-muted-foreground"}>
-              {passengers != null ? String(passengers) : "—"}
-            </span>
+            <LabeledValue label="Passengers" value={vehicle.capacity?.passengerCount} />
           </ContactRow>
           <ContactRow icon={Briefcase}>
-            <span className={smallLuggage != null ? undefined : "text-muted-foreground"}>
-              {smallLuggage != null ? String(smallLuggage) : "—"}
-            </span>
+            <LabeledValue label="Small Luggage" value={vehicle.capacity?.luggage.smallCount} />
           </ContactRow>
           <ContactRow icon={Luggage}>
-            <span className={largeLuggage != null ? undefined : "text-muted-foreground"}>
-              {largeLuggage != null ? String(largeLuggage) : "—"}
-            </span>
+            <LabeledValue label="Large Luggage" value={vehicle.capacity?.luggage.largeCount} />
           </ContactRow>
         </div>
       </CardContent>
