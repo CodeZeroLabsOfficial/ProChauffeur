@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 
-import {
-  effectiveChauffeurUserId,
-  vehicleDisplayName,
-  type User,
-  type Vehicle
-} from "@/lib/models";
-import { formatDate } from "@/lib/format";
+import { effectiveChauffeurUserId, type User, type Vehicle } from "@/lib/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -57,27 +51,6 @@ export function VehicleProfileOperationsTab({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Vehicle summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DetailRow label="Vehicle" value={vehicleDisplayName(vehicle) || "—"} />
-          <DetailRow
-            label="Registration Number"
-            value={vehicle.registration?.registrationNumber?.trim() || "—"}
-          />
-          <DetailRow
-            label="Capacity"
-            value={String(vehicle.capacity?.passengerCount ?? 0)}
-          />
-          <DetailRow
-            label="Registration expiry"
-            value={formatDate(vehicle.registration?.registrationExpiry)}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Maintenance &amp; operations</CardTitle>
         </CardHeader>

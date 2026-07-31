@@ -7,12 +7,13 @@ import { ChevronLeftIcon } from "lucide-react";
 
 import {
   useInvoices,
+  useRosterChauffeurs,
   useTrips,
   useUsers,
   useVehicleClasses,
   useVehicles
 } from "@/hooks/use-collections";
-import { effectiveChauffeurUserId } from "@/lib/models";
+import { chauffeurCategoryTitle, effectiveChauffeurUserId } from "@/lib/models";
 import { vehicleOverviewMetrics } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
@@ -43,6 +44,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   const { trips } = useTrips();
   const { invoices } = useInvoices();
   const { users } = useUsers();
+  const { chauffeurs } = useRosterChauffeurs();
   const { vehicles, loading: vehiclesLoading } = useVehicles();
   const { vehicleClasses } = useVehicleClasses();
 
@@ -72,8 +74,18 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
     if (!vehicle) return undefined;
     const chauffeurId = effectiveChauffeurUserId(vehicle);
     if (!chauffeurId) return undefined;
+    const fromRoster = chauffeurs.find((c) => c.user.id === chauffeurId);
+    if (fromRoster) return fromRoster.user;
     return users.find((u) => u.id === chauffeurId);
-  }, [vehicle, users]);
+  }, [vehicle, chauffeurs, users]);
+
+  const assignedChauffeurCategoryLabel = useMemo(() => {
+    if (!vehicle) return null;
+    const chauffeurId = effectiveChauffeurUserId(vehicle);
+    if (!chauffeurId) return null;
+    const fromRoster = chauffeurs.find((c) => c.user.id === chauffeurId);
+    return fromRoster ? chauffeurCategoryTitle[fromRoster.roster.chauffeurCategory] : null;
+  }, [vehicle, chauffeurs]);
 
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -118,6 +130,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
             <VehicleProfileOverviewTab
               vehicle={vehicle}
               assignedChauffeur={assignedChauffeur}
+              assignedChauffeurCategoryLabel={assignedChauffeurCategoryLabel}
               trips={metrics.vehicleTrips}
               invoices={metrics.vehicleInvoices}
               vehicleDocumentId={vehicleDocumentId}
