@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
 import { driverOverviewMetrics } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
-import { DriverProfileSidebar } from "@/app/dashboard/drivers/components/driver-profile-sidebar";
+import { DriverDetailCard } from "@/app/dashboard/drivers/components/driver-detail-card";
 import { DriverProfileOverviewTab } from "@/app/dashboard/drivers/components/driver-profile-overview-tab";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
 import { DriverProfileFinancialsTab } from "@/app/dashboard/drivers/components/driver-profile-financials-tab";
@@ -26,7 +26,7 @@ import { DriverProfileOperationsTab } from "@/app/dashboard/drivers/components/d
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
 import { ProfilePageShell } from "@/components/layout/profile-page-shell";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 const PROFILE_TABS = ["overview", "trips", "financials", "compliance", "operations"] as const;
 
@@ -118,62 +118,48 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   return (
     <>
       <ProfilePageShell>
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Driver profile</h1>
-
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
-          <TabsList className="[&_[data-slot=tabs-trigger]]:flex-none">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="trips">Trips</TabsTrigger>
-            <TabsTrigger value="financials">Financials</TabsTrigger>
-            <TabsTrigger value="compliance">Compliance</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-          </TabsList>
+          <DriverDetailCard
+            user={displayUser}
+            roster={roster}
+            onEditClick={() => setEditOpen(true)}
+          />
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <div className="space-y-4 xl:col-span-1 xl:sticky xl:top-4 xl:self-start">
-              <DriverProfileSidebar
-                user={displayUser}
-                roster={roster}
-                statTrips={metrics.totalTrips}
-                statCompleted={metrics.completed}
-                statRevenueLabel={revenueLabel}
-                onEditClick={() => setEditOpen(true)}
-              />
-            </div>
-
-            <div className="space-y-4 xl:col-span-2">
-              <TabsContent value="overview" className="mt-0">
-                <DriverProfileOverviewTab
-                  trips={metrics.driverTrips}
-                  invoices={metrics.driverInvoices}
-                  driverId={driverId}
-                  period={overviewPeriod}
-                  onPeriodChange={setOverviewPeriod}
-                />
-              </TabsContent>
-              <TabsContent value="trips" className="mt-0">
-                <DriverProfileTripsTab trips={metrics.driverTrips} />
-              </TabsContent>
-              <TabsContent value="financials" className="mt-0">
-                <DriverProfileFinancialsTab invoices={metrics.driverInvoices} />
-              </TabsContent>
-              <TabsContent value="compliance" className="mt-0">
-                <DriverProfileComplianceTab
-                  user={displayUser}
-                  roster={roster}
-                  onUserUpdated={() => void loadUser()}
-                />
-              </TabsContent>
-              <TabsContent value="operations" className="mt-0">
-                <DriverProfileOperationsTab
-                  user={displayUser}
-                  roster={roster}
-                  vehicles={vehicles}
-                  onUserUpdated={() => void loadUser()}
-                />
-              </TabsContent>
-            </div>
-          </div>
+          <TabsContent value="overview" className="mt-0 space-y-4">
+            <DriverProfileOverviewTab
+              user={displayUser}
+              roster={roster}
+              trips={metrics.driverTrips}
+              invoices={metrics.driverInvoices}
+              driverId={driverId}
+              statTrips={metrics.totalTrips}
+              statCompleted={metrics.completed}
+              statRevenueLabel={revenueLabel}
+              period={overviewPeriod}
+              onPeriodChange={setOverviewPeriod}
+            />
+          </TabsContent>
+          <TabsContent value="trips" className="mt-0 space-y-4">
+            <DriverProfileTripsTab trips={metrics.driverTrips} />
+          </TabsContent>
+          <TabsContent value="financials" className="mt-0 space-y-4">
+            <DriverProfileFinancialsTab invoices={metrics.driverInvoices} />
+          </TabsContent>
+          <TabsContent value="compliance" className="mt-0 space-y-4">
+            <DriverProfileComplianceTab
+              user={displayUser}
+              roster={roster}
+              onUserUpdated={() => void loadUser()}
+            />
+          </TabsContent>
+          <TabsContent value="operations" className="mt-0 space-y-4">
+            <DriverProfileOperationsTab
+              user={displayUser}
+              roster={roster}
+              vehicles={vehicles}
+              onUserUpdated={() => void loadUser()}
+            />
+          </TabsContent>
         </Tabs>
       </ProfilePageShell>
 

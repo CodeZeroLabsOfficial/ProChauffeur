@@ -8,9 +8,9 @@ import { ProfileV2TabBar } from "@/components/layout/profile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const PROFILE_HERO_BANNER_URL = "/images/profile-header.png";
+
 export function ProfileHeroCard({
-  bannerImageUrl,
-  bannerClassName,
   backHref,
   backAriaLabel,
   onEditClick,
@@ -21,8 +21,6 @@ export function ProfileHeroCard({
   tabs,
   className
 }: {
-  bannerImageUrl: string;
-  bannerClassName?: string;
   backHref: string;
   backAriaLabel: string;
   onEditClick: () => void;
@@ -37,11 +35,8 @@ export function ProfileHeroCard({
     <div className={cn("overflow-hidden rounded-2xl border bg-card shadow-sm", className)}>
       <div className="relative">
         <div
-          className={cn(
-            "bg-muted relative aspect-3/1 w-full bg-cover bg-center md:max-h-[160px]",
-            bannerClassName
-          )}
-          style={{ backgroundImage: `url('${bannerImageUrl}')` }}
+          className="bg-muted relative aspect-auto h-[160px] max-h-[160px] w-full bg-cover bg-center"
+          style={{ backgroundImage: `url('${PROFILE_HERO_BANNER_URL}')` }}
           aria-hidden
         />
         <div className="absolute start-4 top-4 z-10">

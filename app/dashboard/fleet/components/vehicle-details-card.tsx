@@ -5,10 +5,8 @@ import { Calendar, Cog, Fuel, RectangleHorizontal, UserRound } from "lucide-reac
 
 import type { User, Vehicle } from "@/lib/models";
 import { formatDate } from "@/lib/format";
-import { vehicleProfileCompleteness } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import { ContactRow } from "@/components/contact-row";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 export function VehicleDetailsCard({
   vehicle,
@@ -57,22 +55,6 @@ export function VehicleDetailsCard({
             </span>
           </ContactRow>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function VehicleProfileCompletenessCard({ vehicle }: { vehicle: Vehicle }) {
-  const progressValue = vehicleProfileCompleteness(vehicle);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Complete profile</CardTitle>
-      </CardHeader>
-      <CardContent className="flex items-center gap-4">
-        <Progress value={progressValue} className="flex-1" />
-        <div className="text-muted-foreground text-sm">%{progressValue}</div>
       </CardContent>
     </Card>
   );

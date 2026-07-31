@@ -20,7 +20,6 @@ export function AccountDetailCard({
 }) {
   return (
     <ProfileHeroCard
-      bannerImageUrl="/images/location-header-world-map.png"
       backHref="/dashboard/accounts"
       backAriaLabel="Back to accounts"
       onEditClick={onEditClick}

@@ -18,7 +18,6 @@ export function LocationDetailCard({
 
   return (
     <ProfileHeroCard
-      bannerImageUrl="/images/location-header-world-map.png"
       backHref="/dashboard/locations"
       backAriaLabel="Back to locations"
       onEditClick={onEditClick}

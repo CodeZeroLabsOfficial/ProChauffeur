@@ -3,13 +3,12 @@
 import type { Invoice } from "@/lib/models/invoice";
 import type { Trip, User, Vehicle } from "@/lib/models";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
+import { vehicleProfileCompleteness } from "@/app/dashboard/fleet/lib/vehicle-profile-metrics";
 import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
+import { ProfileCompletenessCard } from "@/components/profile/profile-completeness-card";
 import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
 import { VehicleProfileUtilizationChart } from "@/app/dashboard/fleet/components/vehicle-profile-utilization-chart";
-import {
-  VehicleDetailsCard,
-  VehicleProfileCompletenessCard
-} from "@/app/dashboard/fleet/components/vehicle-details-card";
+import { VehicleDetailsCard } from "@/app/dashboard/fleet/components/vehicle-details-card";
 
 export function VehicleProfileOverviewTab({
   vehicle,
@@ -32,7 +31,7 @@ export function VehicleProfileOverviewTab({
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
         <VehicleDetailsCard vehicle={vehicle} assignedChauffeur={assignedChauffeur} />
-        <VehicleProfileCompletenessCard vehicle={vehicle} />
+        <ProfileCompletenessCard value={vehicleProfileCompleteness(vehicle)} />
       </div>
 
       <div className="space-y-4 xl:col-span-2">
