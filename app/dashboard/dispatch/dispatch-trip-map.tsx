@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { MapPinIcon } from "lucide-react";
 
@@ -20,11 +20,17 @@ import type { Trip } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_VIEW = MAP_FALLBACK_VIEW;
+/** Throttle live camera refits so GPS pings don't constantly re-animate the map. */
+const LIVE_FIT_THROTTLE_MS = 1500;
+const FIT_PADDING = 64;
+const FIT_MAX_ZOOM = 15;
+const FIT_DURATION_MS = 700;
 
 export function DispatchTripMap({
   trip,
   driverLocation,
   driverName,
+  vehicleMake,
   companyDefaultView,
   token,
   mapStyle
@@ -32,31 +38,39 @@ export function DispatchTripMap({
   trip: Trip;
   driverLocation: DriverLiveLocation | null;
   driverName: string | null;
+  vehicleMake?: string | null;
   companyDefaultView: MapViewState | null;
   token: string;
   mapStyle: string;
 }) {
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
   const mode = dispatchMapMode(trip.status);
+  const lastFitAtRef = useRef(0);
+  const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fitContextRef = useRef(`${trip.id}-${mode}`);
 
   const driverCoordinate = useMemo(
-    () => (driverLocation ? coordinateFromLatLng(driverLocation.lat, driverLocation.lng) : null),
-    [driverLocation]
+    () =>
+      driverLocation
+        ? coordinateFromLatLng(driverLocation.lat, driverLocation.lng)
+        : null,
+    [driverLocation?.lat, driverLocation?.lng]
   );
 
   const overviewValid = hasValidCoordinate(trip.pickup) && hasValidCoordinate(trip.dropoff);
   const pickupValid = hasValidCoordinate(trip.pickup);
   const dropoffValid = hasValidCoordinate(trip.dropoff);
 
-  const routeFrom =
-    mode === "overview" ? trip.pickup : mode === "to_pickup" ? driverCoordinate : driverCoordinate;
-  const routeTo =
-    mode === "overview" ? trip.dropoff : mode === "to_pickup" ? trip.pickup : trip.dropoff;
+  const destination = mode === "to_pickup" ? trip.pickup : trip.dropoff;
+
+  const routeFrom = mode === "overview" ? trip.pickup : driverCoordinate;
+  const routeTo = mode === "overview" ? trip.dropoff : destination;
 
   const routeEnabled =
     mode === "overview"
       ? overviewValid
-      : Boolean(driverCoordinate) && (mode === "to_pickup" ? pickupValid : dropoffValid);
+      : Boolean(driverCoordinate) &&
+        (mode === "to_pickup" ? pickupValid : dropoffValid);
 
   const liveDebounce = mode === "overview" ? 0 : 1000;
 
@@ -76,7 +90,15 @@ export function DispatchTripMap({
       return driverCoordinate ? [driverCoordinate, trip.dropoff] : [trip.dropoff];
     }
     return [];
-  }, [mode, overviewValid, pickupValid, dropoffValid, trip, driverCoordinate]);
+  }, [
+    mode,
+    overviewValid,
+    pickupValid,
+    dropoffValid,
+    trip.pickup,
+    trip.dropoff,
+    driverCoordinate
+  ]);
 
   const initialViewState = useMemo(() => {
     if (fitPoints.length > 0) return centerFromPoints(fitPoints);
@@ -93,29 +115,70 @@ export function DispatchTripMap({
   useEffect(() => {
     if (!mapRef) return;
 
-    if (fitPoints.length === 0) {
-      const view = companyDefaultView ?? DEFAULT_VIEW;
-      mapRef.flyTo({
-        center: [view.longitude, view.latitude],
-        zoom: view.zoom,
-        duration: 500
+    const applyFit = () => {
+      lastFitAtRef.current = Date.now();
+
+      if (fitPoints.length === 0) {
+        const view = companyDefaultView ?? DEFAULT_VIEW;
+        mapRef.flyTo({
+          center: [view.longitude, view.latitude],
+          zoom: view.zoom,
+          duration: FIT_DURATION_MS
+        });
+        return;
+      }
+
+      if (fitPoints.length === 1) {
+        mapRef.flyTo({
+          center: [fitPoints[0].longitude, fitPoints[0].latitude],
+          zoom: 13,
+          duration: FIT_DURATION_MS
+        });
+        return;
+      }
+
+      mapRef.fitBounds(boundsFromPoints(fitPoints), {
+        padding: FIT_PADDING,
+        maxZoom: FIT_MAX_ZOOM,
+        duration: FIT_DURATION_MS
       });
+    };
+
+    const contextKey = `${trip.id}-${mode}`;
+    const contextChanged = fitContextRef.current !== contextKey;
+    if (contextChanged) {
+      fitContextRef.current = contextKey;
+      lastFitAtRef.current = 0;
+    }
+
+    const isLiveTracking =
+      (mode === "to_pickup" || mode === "to_dropoff") && Boolean(driverCoordinate);
+
+    if (!isLiveTracking || contextChanged || lastFitAtRef.current === 0) {
+      if (throttleTimerRef.current) {
+        clearTimeout(throttleTimerRef.current);
+        throttleTimerRef.current = null;
+      }
+      applyFit();
       return;
     }
 
-    if (fitPoints.length === 1) {
-      mapRef.flyTo({
-        center: [fitPoints[0].longitude, fitPoints[0].latitude],
-        zoom: 13,
-        duration: 500
-      });
+    const elapsed = Date.now() - lastFitAtRef.current;
+    if (elapsed >= LIVE_FIT_THROTTLE_MS) {
+      applyFit();
       return;
     }
-    mapRef.fitBounds(boundsFromPoints(fitPoints), {
-      padding: 64,
-      duration: 500
-    });
-  }, [mapRef, fitPoints, route, mode, companyDefaultView]);
+
+    if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
+    throttleTimerRef.current = setTimeout(applyFit, LIVE_FIT_THROTTLE_MS - elapsed);
+
+    return () => {
+      if (throttleTimerRef.current) {
+        clearTimeout(throttleTimerRef.current);
+        throttleTimerRef.current = null;
+      }
+    };
+  }, [mapRef, fitPoints, mode, trip.id, driverCoordinate, companyDefaultView]);
 
   if (coordinatesUnavailable) {
     return (
@@ -124,6 +187,8 @@ export function DispatchTripMap({
       </div>
     );
   }
+
+  const resolvedMake = vehicleMake || trip.vehicleSnapshot?.details?.make;
 
   return (
     <div className="relative h-full w-full">
@@ -200,7 +265,7 @@ export function DispatchTripMap({
           <AnimatedDriverMarker
             location={driverLocation}
             title={driverName ?? "Driver"}
-            vehicleMake={trip.vehicleSnapshot?.details?.make}
+            vehicleMake={resolvedMake}
           />
         )}
       </MapGL>

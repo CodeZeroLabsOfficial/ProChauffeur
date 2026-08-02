@@ -103,7 +103,8 @@ export default function DispatchPage() {
     const map = new globalThis.Map<string, string>();
     for (const v of vehicles) {
       const driverId = effectiveChauffeurUserId(v) ?? v.driverID;
-      if (driverId) map.set(driverId, v.details?.make ?? "");
+      const make = v.details?.make?.trim();
+      if (driverId && make) map.set(driverId, make);
     }
     return map;
   }, [vehicles]);
@@ -158,6 +159,15 @@ export default function DispatchPage() {
     () => (selectedTrip ? resolveDriverLocation(selectedTrip, locations) : null),
     [selectedTrip, locations]
   );
+
+  const selectedVehicleMake = useMemo(() => {
+    if (!selectedTrip) return null;
+    if (selectedTrip.driverID) {
+      const fromFleet = vehicleMakeByDriverId.get(selectedTrip.driverID);
+      if (fromFleet) return fromFleet;
+    }
+    return selectedTrip.vehicleSnapshot?.details?.make ?? null;
+  }, [selectedTrip, vehicleMakeByDriverId]);
 
   const mapStyle =
     resolvedTheme === "dark"
@@ -267,6 +277,7 @@ export default function DispatchPage() {
                       ? (driverNameById.get(selectedTrip.driverID) ?? "Assigned")
                       : null
                   }
+                  vehicleMake={selectedVehicleMake}
                   companyDefaultView={companyDefaultView}
                   token={token}
                   mapStyle={mapStyle}
