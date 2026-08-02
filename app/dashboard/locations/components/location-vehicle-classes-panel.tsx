@@ -160,8 +160,9 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
                       </span>
                     </TableCell>
                     <TableCell>
-                      {vehicleClass.passengerCapacity} pax · {vehicleClass.smallLuggageCount} small ·{" "}
-                      {vehicleClass.largeLuggageCount} large
+                      {vehicleClass.capacity.passengerCount} pax ·{" "}
+                      {vehicleClass.capacity.luggage.smallCount} small ·{" "}
+                      {vehicleClass.capacity.luggage.largeCount} large
                     </TableCell>
                     <TableCell>{formatTripTypes(vehicleClass)}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>

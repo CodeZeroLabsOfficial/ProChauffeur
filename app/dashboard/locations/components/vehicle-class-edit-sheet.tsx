@@ -306,24 +306,48 @@ export function VehicleClassEditSheet({
                   <NumberStepper
                     id="passengerCapacity"
                     label="Passengers"
-                    value={draft.passengerCapacity}
-                    onChange={(value) => setDraft((c) => ({ ...c, passengerCapacity: value }))}
+                    value={draft.capacity.passengerCount}
+                    onChange={(value) =>
+                      setDraft((c) => ({
+                        ...c,
+                        capacity: {
+                          ...c.capacity,
+                          passengerCount: value
+                        }
+                      }))
+                    }
                     min={1}
                     max={60}
                   />
                   <NumberStepper
                     id="smallLuggageCount"
                     label="Small luggage"
-                    value={draft.smallLuggageCount}
-                    onChange={(value) => setDraft((c) => ({ ...c, smallLuggageCount: value }))}
+                    value={draft.capacity.luggage.smallCount}
+                    onChange={(value) =>
+                      setDraft((c) => ({
+                        ...c,
+                        capacity: {
+                          ...c.capacity,
+                          luggage: { ...c.capacity.luggage, smallCount: value }
+                        }
+                      }))
+                    }
                     min={0}
                     max={20}
                   />
                   <NumberStepper
                     id="largeLuggageCount"
                     label="Large luggage"
-                    value={draft.largeLuggageCount}
-                    onChange={(value) => setDraft((c) => ({ ...c, largeLuggageCount: value }))}
+                    value={draft.capacity.luggage.largeCount}
+                    onChange={(value) =>
+                      setDraft((c) => ({
+                        ...c,
+                        capacity: {
+                          ...c.capacity,
+                          luggage: { ...c.capacity.luggage, largeCount: value }
+                        }
+                      }))
+                    }
                     min={0}
                     max={20}
                   />

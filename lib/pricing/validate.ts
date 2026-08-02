@@ -25,7 +25,7 @@ import type {
   PricingZone,
   TransferPricingRates
 } from "@/lib/models/pricing";
-import type { VehicleClass } from "@/lib/models/vehicle-class";
+import type { VehicleClass, VehicleClassCapacity } from "@/lib/models/vehicle-class";
 import { ConfigError } from "@/lib/pricing/errors";
 
 function requireNumber(value: unknown, field: string): number {
@@ -172,6 +172,24 @@ function parseRule(d: DocumentData, index: number): PricingRule {
   };
 }
 
+function parseVehicleClassCapacity(raw: unknown, path: string): VehicleClassCapacity {
+  if (!raw || typeof raw !== "object") {
+    throw new ConfigError(`Invalid ${path}: expected a capacity object.`);
+  }
+  const d = raw as DocumentData;
+  const luggage = d.luggage && typeof d.luggage === "object" ? (d.luggage as DocumentData) : null;
+  if (!luggage) {
+    throw new ConfigError(`Invalid ${path}.luggage: expected a luggage object.`);
+  }
+  return {
+    passengerCount: requirePositive(d.passengerCount, `${path}.passengerCount`),
+    luggage: {
+      smallCount: requireNonNegative(luggage.smallCount, `${path}.luggage.smallCount`),
+      largeCount: requireNonNegative(luggage.largeCount, `${path}.luggage.largeCount`)
+    }
+  };
+}
+
 export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
   const path = `vehicle_classes/${id}`;
   const supportedTripTypes = Array.isArray(d.supportedTripTypes)
@@ -185,9 +203,7 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
     slug: requireString(d.slug, `${path}.slug`),
     displayName: requireString(d.displayName, `${path}.displayName`),
     sortOrder: requireNumber(d.sortOrder, `${path}.sortOrder`),
-    passengerCapacity: requirePositive(d.passengerCapacity, `${path}.passengerCapacity`),
-    smallLuggageCount: requireNonNegative(d.smallLuggageCount, `${path}.smallLuggageCount`),
-    largeLuggageCount: requireNonNegative(d.largeLuggageCount, `${path}.largeLuggageCount`),
+    capacity: parseVehicleClassCapacity(d.capacity, `${path}.capacity`),
     description: typeof d.description === "string" ? d.description : null,
     imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
     isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),

@@ -14,10 +14,11 @@ export function vehicleClassMeetsCapacity(
   vehicleClass: VehicleClass,
   req: BookingRequirements
 ): boolean {
+  const { passengerCount, luggage } = vehicleClass.capacity;
   return (
-    req.passengers <= vehicleClass.passengerCapacity &&
-    req.smallLuggage <= vehicleClass.smallLuggageCount &&
-    req.largeLuggage <= vehicleClass.largeLuggageCount
+    req.passengers <= passengerCount &&
+    req.smallLuggage <= luggage.smallCount &&
+    req.largeLuggage <= luggage.largeCount
   );
 }
 

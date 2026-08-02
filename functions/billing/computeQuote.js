@@ -90,9 +90,13 @@ function mapVehicleClass(id, d) {
     slug: data.slug || id,
     displayName: data.displayName || id,
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
-    passengerCapacity: data.passengerCapacity ?? 4,
-    smallLuggageCount: data.smallLuggageCount ?? 0,
-    largeLuggageCount: data.largeLuggageCount ?? 0,
+    capacity: {
+      passengerCount: data.capacity?.passengerCount ?? 4,
+      luggage: {
+        smallCount: data.capacity?.luggage?.smallCount ?? 0,
+        largeCount: data.capacity?.luggage?.largeCount ?? 0,
+      },
+    },
     description: data.description ?? null,
     imageUrl: data.imageUrl ?? null,
     isEnabled: data.isEnabled !== false,
