@@ -5,12 +5,8 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AssignedDriverCard } from "@/app/dashboard/fleet/components/assigned-driver-card";
-import {
-  effectiveChauffeurUserId,
-  type BranchDriver,
-  type User,
-  type Vehicle
-} from "@/lib/models";
+import type { RosterChauffeur } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
+import { effectiveChauffeurUserId, type User, type Vehicle } from "@/lib/models";
 import { assignFleetVehicle, unassignFleetVehicle } from "@/lib/services/firebase-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +17,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-function chauffeurLabel(chauffeur: BranchDriver): string {
+function chauffeurLabel(chauffeur: RosterChauffeur): string {
   return chauffeur.user.profile.displayName.trim() || chauffeur.user.email || "Driver";
 }
 
@@ -34,7 +30,7 @@ export function VehicleProfileOperationsTab({
 }: {
   vehicle: Vehicle;
   vehicles: Vehicle[];
-  chauffeurs: BranchDriver[];
+  chauffeurs: RosterChauffeur[];
   assignedChauffeur: User | undefined;
   assignedChauffeurCategoryLabel: string | null;
 }) {
