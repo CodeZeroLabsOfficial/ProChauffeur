@@ -18,6 +18,10 @@ import {
 } from "@/lib/services/firebase-service";
 import { cn } from "@/lib/utils";
 import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
+import {
+  VEHICLE_ENGINE_TYPES,
+  VEHICLE_TRANSMISSIONS
+} from "@/lib/vehicle-specifications";
 import { NumberStepper } from "@/components/number-stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +37,7 @@ import {
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const UNASSIGNED = "__unassigned__";
+const NONE = "__none__";
 const MIN_MANUFACTURE_YEAR = 1980;
 const maxManufactureYear = new Date().getFullYear() + 1;
 
@@ -77,6 +82,12 @@ export function VehicleEditSheet({
   const [manufactureYear, setManufactureYear] = useState(
     vehicle?.details?.manufactureYear ?? new Date().getFullYear()
   );
+  const [transmission, setTransmission] = useState(
+    () => vehicle?.specifications?.transmission?.trim() || NONE
+  );
+  const [engineType, setEngineType] = useState(
+    () => vehicle?.specifications?.engineType?.trim() || NONE
+  );
   const [assignedChauffeurId, setAssignedChauffeurId] = useState(initialChauffeurId);
   const [status, setStatus] = useState(vehicle?.isEnabled === false ? "disabled" : "enabled");
   const [saving, setSaving] = useState(false);
@@ -88,6 +99,8 @@ export function VehicleEditSheet({
     setVehicleClassId(vehicle?.details?.vehicleClassId ?? "");
     setMake(vehicleMakeSelectValue(vehicle?.details?.make));
     setManufactureYear(vehicle?.details?.manufactureYear ?? new Date().getFullYear());
+    setTransmission(vehicle?.specifications?.transmission?.trim() || NONE);
+    setEngineType(vehicle?.specifications?.engineType?.trim() || NONE);
     setAssignedChauffeurId(
       vehicle
         ? (effectiveChauffeurUserId(vehicle) ?? UNASSIGNED)
@@ -141,8 +154,8 @@ export function VehicleEditSheet({
       },
       specifications: {
         ...(base.specifications ?? emptyVehicleSpecifications()),
-        transmission: get("transmission"),
-        engineType: get("engineType") || null
+        transmission: transmission === NONE ? "" : transmission,
+        engineType: engineType === NONE ? null : engineType
       }
     };
 
@@ -229,22 +242,36 @@ export function VehicleEditSheet({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="transmission">Transmission</Label>
-                <Input
-                  id="transmission"
-                  name="transmission"
-                  placeholder="Automatic"
-                  defaultValue={vehicle?.specifications?.transmission ?? ""}
-                />
+                <Select value={transmission} onValueChange={setTransmission}>
+                  <SelectTrigger id="transmission" className="w-full">
+                    <SelectValue placeholder="Select transmission" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>None</SelectItem>
+                    {VEHICLE_TRANSMISSIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="engineType">Engine details</Label>
-              <Input
-                id="engineType"
-                name="engineType"
-                placeholder="Petrol, Diesel, Electric…"
-                defaultValue={vehicle?.specifications?.engineType ?? ""}
-              />
+              <Label htmlFor="engineType">Engine type</Label>
+              <Select value={engineType} onValueChange={setEngineType}>
+                <SelectTrigger id="engineType" className="w-full">
+                  <SelectValue placeholder="Select engine type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>None</SelectItem>
+                  {VEHICLE_ENGINE_TYPES.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

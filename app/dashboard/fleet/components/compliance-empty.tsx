@@ -23,9 +23,11 @@ export function ComplianceEmpty({
   icon: LucideIcon;
   title: string;
   description: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
+  const hasAction = Boolean(actionLabel && onAction);
+
   return (
     <Card className="shadow-none">
       <Empty className="border-0 flex-none gap-4 py-8 md:py-10">
@@ -36,11 +38,13 @@ export function ComplianceEmpty({
           <EmptyTitle className="text-xl">{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
-          <Button type="button" size="sm" onClick={onAction}>
-            {actionLabel}
-          </Button>
-        </EmptyContent>
+        {hasAction ? (
+          <EmptyContent>
+            <Button type="button" size="sm" onClick={onAction}>
+              {actionLabel}
+            </Button>
+          </EmptyContent>
+        ) : null}
       </Empty>
     </Card>
   );

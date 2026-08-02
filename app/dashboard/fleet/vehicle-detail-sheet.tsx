@@ -30,6 +30,10 @@ import { assignmentBadgeIcon, vehicleStatusBadgeIcon } from "@/lib/vehicle-badge
 import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
 import { nullableTrim, saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
 import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
+import {
+  VEHICLE_ENGINE_TYPE_OPTIONS,
+  VEHICLE_TRANSMISSION_OPTIONS
+} from "@/lib/vehicle-specifications";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
@@ -223,13 +227,14 @@ function VehicleOverviewFields({
           <div className="space-y-1">
             <DetailLabel icon={Fuel}>Engine type</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableSelectField
                 fieldId="engineType"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
                 value={specifications.engineType?.trim() ?? ""}
+                options={VEHICLE_ENGINE_TYPE_OPTIONS}
                 editLabel="engine type"
-                placeholder="Petrol, Diesel, Electric…"
+                placeholder="Select engine type"
                 onSave={async (next) => patchSpecifications({ engineType: nullableTrim(next) })}
               />
             </dd>
@@ -237,13 +242,14 @@ function VehicleOverviewFields({
           <div className="space-y-1">
             <DetailLabel icon={Cog}>Transmission</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableSelectField
                 fieldId="transmission"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
                 value={specifications.transmission?.trim() ?? ""}
+                options={VEHICLE_TRANSMISSION_OPTIONS}
                 editLabel="transmission"
-                placeholder="Automatic"
+                placeholder="Select transmission"
                 onSave={async (next) =>
                   patchSpecifications({ transmission: nullableTrim(next) ?? "" })
                 }
