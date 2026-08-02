@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { User } from "@/lib/models";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function AssignedDriverCard({
   assignedChauffeur,
-  categoryLabel
+  categoryLabel,
+  title = "Assigned driver",
+  headerAction
 }: {
   assignedChauffeur: User | undefined;
   categoryLabel: string | null;
+  title?: string;
+  headerAction?: ReactNode;
 }) {
   const name =
     assignedChauffeur?.profile.displayName.trim() || assignedChauffeur?.email || "Driver";
@@ -20,7 +25,8 @@ export function AssignedDriverCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Assigned driver</CardTitle>
+        <CardTitle>{title}</CardTitle>
+        {headerAction ? <CardAction>{headerAction}</CardAction> : null}
       </CardHeader>
       <CardContent>
         {assignedChauffeur ? (

@@ -35,8 +35,8 @@ import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
 import { InlineEditableStepperField } from "@/components/inline-editable-stepper-field";
+import { InlineEditableVehicleMakeField } from "@/components/inline-editable-vehicle-make-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
-import { VehicleMakeSelect } from "@/components/vehicle-make-select";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -114,12 +114,13 @@ function VehicleOverviewFields({
           <div className="space-y-1">
             <DetailLabel icon={Car}>Make</DetailLabel>
             <dd>
-              <VehicleMakeSelect
-                value={makeValue || null}
+              <InlineEditableVehicleMakeField
+                fieldId="make"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={makeValue}
                 nested
-                onChange={(make) => {
-                  void patchDetails({ make });
-                }}
+                onSave={async (make) => patchDetails({ make })}
               />
             </dd>
           </div>

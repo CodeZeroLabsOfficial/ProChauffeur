@@ -152,7 +152,13 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
           </TabsContent>
 
           <TabsContent value="operations" className="mt-0 space-y-4">
-            <VehicleProfileOperationsTab vehicle={vehicle} assignedChauffeur={assignedChauffeur} />
+            <VehicleProfileOperationsTab
+              vehicle={vehicle}
+              vehicles={vehicles}
+              chauffeurs={chauffeurs}
+              assignedChauffeur={assignedChauffeur}
+              assignedChauffeurCategoryLabel={assignedChauffeurCategoryLabel}
+            />
           </TabsContent>
         </Tabs>
       </ProfilePageShell>

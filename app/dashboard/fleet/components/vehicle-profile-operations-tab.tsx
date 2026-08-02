@@ -1,54 +1,104 @@
 "use client";
 
-import Link from "next/link";
+import { useCallback, useMemo } from "react";
+import { MinusIcon, PlusIcon } from "lucide-react";
+import { toast } from "sonner";
 
-import { effectiveChauffeurUserId, type User, type Vehicle } from "@/lib/models";
+import { AssignedDriverCard } from "@/app/dashboard/fleet/components/assigned-driver-card";
+import {
+  effectiveChauffeurUserId,
+  type BranchDriver,
+  type User,
+  type Vehicle
+} from "@/lib/models";
+import { assignFleetVehicle, unassignFleetVehicle } from "@/lib/services/firebase-service";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b py-3 last:border-0">
-      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
-      <span className="text-end text-sm">{value}</span>
-    </div>
-  );
+function chauffeurLabel(chauffeur: BranchDriver): string {
+  return chauffeur.user.profile.displayName.trim() || chauffeur.user.email || "Driver";
 }
 
 export function VehicleProfileOperationsTab({
   vehicle,
-  assignedChauffeur
+  vehicles,
+  chauffeurs,
+  assignedChauffeur,
+  assignedChauffeurCategoryLabel
 }: {
   vehicle: Vehicle;
+  vehicles: Vehicle[];
+  chauffeurs: BranchDriver[];
   assignedChauffeur: User | undefined;
+  assignedChauffeurCategoryLabel: string | null;
 }) {
-  const chauffeurId = effectiveChauffeurUserId(vehicle);
-  const chauffeurName =
-    assignedChauffeur?.profile.displayName.trim() || assignedChauffeur?.email || null;
+  const availableChauffeurs = useMemo(() => {
+    const assignedIds = new Set(
+      vehicles.map((v) => effectiveChauffeurUserId(v)).filter((id): id is string => Boolean(id))
+    );
+    return chauffeurs.filter((c) => !assignedIds.has(c.user.id));
+  }, [chauffeurs, vehicles]);
+
+  const handleAssign = useCallback(
+    async (chauffeurUserId: string) => {
+      try {
+        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId);
+        toast.success("Driver assigned.");
+      } catch {
+        toast.error("Could not assign the driver.");
+      }
+    },
+    [vehicle.driverID, vehicles]
+  );
+
+  const handleUnassign = useCallback(async () => {
+    try {
+      await unassignFleetVehicle(vehicle.driverID);
+      toast.success("Driver unassigned.");
+    } catch {
+      toast.error("Could not unassign the driver.");
+    }
+  }, [vehicle.driverID]);
+
+  const assignmentAction = assignedChauffeur ? (
+    <Button size="sm" variant="outline" onClick={() => void handleUnassign()}>
+      <MinusIcon /> Unassign
+    </Button>
+  ) : (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline">
+          <PlusIcon /> Assign
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {availableChauffeurs.length ? (
+          availableChauffeurs.map((c) => (
+            <DropdownMenuItem key={c.user.id} onClick={() => void handleAssign(c.user.id)}>
+              {chauffeurLabel(c)}
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <DropdownMenuItem disabled>No chauffeurs available</DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DetailRow label="Status" value={chauffeurId ? "Assigned" : "Unassigned"} />
-          <DetailRow
-            label="Chauffeur"
-            value={
-              chauffeurId && chauffeurName ? (
-                <Link
-                  href={`/dashboard/drivers/${chauffeurId}`}
-                  className="hover:text-primary hover:underline">
-                  {chauffeurName}
-                </Link>
-              ) : (
-                "—"
-              )
-            }
-          />
-        </CardContent>
-      </Card>
+      <AssignedDriverCard
+        title="Assignment"
+        assignedChauffeur={assignedChauffeur}
+        categoryLabel={assignedChauffeurCategoryLabel}
+        headerAction={assignmentAction}
+      />
 
       <Card>
         <CardHeader>
