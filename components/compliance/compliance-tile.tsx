@@ -1,7 +1,9 @@
 "use client";
 
-import { ComplianceEditButton } from "@/app/dashboard/fleet/components/compliance-edit-button";
-import { ComplianceStat } from "@/app/dashboard/fleet/components/compliance-stat";
+import type { ReactNode } from "react";
+
+import { ComplianceEditButton } from "@/components/compliance/compliance-edit-button";
+import { ComplianceStat } from "@/components/compliance/compliance-stat";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function ComplianceTile({
@@ -10,7 +12,8 @@ export function ComplianceTile({
   start,
   expiry,
   editLabel,
-  onEdit
+  onEdit,
+  children
 }: {
   label: string;
   secondary?: string | null;
@@ -18,6 +21,7 @@ export function ComplianceTile({
   expiry?: Date | null;
   editLabel?: string;
   onEdit?: () => void;
+  children?: ReactNode;
 }) {
   const editable = Boolean(editLabel && onEdit);
 
@@ -32,6 +36,7 @@ export function ComplianceTile({
       ) : null}
       <CardContent className={editable ? "pe-12" : undefined}>
         <ComplianceStat label={label} secondary={secondary} start={start} expiry={expiry} />
+        {children ? <div className="mt-3 space-y-0 border-t pt-1">{children}</div> : null}
       </CardContent>
     </Card>
   );

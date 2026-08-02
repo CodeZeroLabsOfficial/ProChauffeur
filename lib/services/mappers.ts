@@ -188,6 +188,7 @@ function mapDriversLicense(raw: unknown): DriverProfile["driversLicense"] {
     conditions: typeof d.conditions === "string" ? d.conditions : null,
     conditionCodes: typeof d.conditionCodes === "string" ? d.conditionCodes : null,
     jurisdictionCode: typeof d.jurisdictionCode === "string" ? d.jurisdictionCode : null,
+    issueDate: toDate(d.issueDate),
     expiry: toDate(d.expiry)
   };
 }

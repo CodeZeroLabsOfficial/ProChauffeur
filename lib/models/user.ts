@@ -22,6 +22,7 @@ export interface DriversLicense {
   conditions?: string | null;
   conditionCodes?: string | null;
   jurisdictionCode?: string | null;
+  issueDate?: Date | null;
   expiry?: Date | null;
 }
 

@@ -346,7 +346,23 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
               />
             </dd>
           </div>
-          <div className="col-span-2 space-y-1">
+          <div className="space-y-1">
+            <DetailLabel icon={Calendar}>Issue date</DetailLabel>
+            <dd>
+              <InlineEditableDateField
+                fieldId="licenceIssue"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={license.issueDate}
+                editLabel="licence issue date"
+                dateRange="past"
+                onSave={async (next) =>
+                  saveDriver({ driversLicense: { ...license, issueDate: next } })
+                }
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
             <DetailLabel icon={Calendar}>Expiry</DetailLabel>
             <dd>
               <InlineEditableDateField

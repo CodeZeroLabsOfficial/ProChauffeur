@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { PencilIcon } from "lucide-react";
+import { IdCard, PencilIcon } from "lucide-react";
 
 import { DriverAccreditationEditSheet } from "@/app/dashboard/drivers/driver-accreditation-edit-sheet";
 import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import type { BranchDriver, User } from "@/lib/models";
 import { formatDate } from "@/lib/format";
+import { ComplianceEmpty } from "@/components/compliance/compliance-empty";
+import { hasComplianceDetails } from "@/components/compliance/compliance-stat";
+import { ComplianceTile } from "@/components/compliance/compliance-tile";
+import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -18,23 +21,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
       <span className="text-end text-sm">{value}</span>
     </div>
-  );
-}
-
-function expiryWarning(date: Date | null | undefined): "expired" | "soon" | null {
-  if (!date) return null;
-  const now = new Date();
-  if (date < now) return "expired";
-  const days = (date.getTime() - now.getTime()) / 86400000;
-  if (days <= 60) return "soon";
-  return null;
-}
-
-function ExpiryBadge({ level }: { level: "expired" | "soon" }) {
-  return (
-    <Badge variant={level === "expired" ? "destructive" : "outline"} className="ms-2">
-      {level === "expired" ? "Expired" : "Expiring soon"}
-    </Badge>
   );
 }
 
@@ -48,43 +34,39 @@ export function DriverProfileComplianceTab({
   onUserUpdated?: () => void;
 }) {
   const profile = branchDriverToProfile(roster);
-  const licenceWarn = expiryWarning(profile.driversLicense?.expiry);
+  const license = profile.driversLicense;
   const accWarn = expiryWarning(profile.operatorAccreditation?.expiry);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
   const [accreditationEditOpen, setAccreditationEditOpen] = useState(false);
 
+  const licenceContent = hasComplianceDetails(license) ? (
+    <ComplianceTile
+      label={license?.number ?? ""}
+      secondary={license?.jurisdictionCode}
+      start={license?.issueDate}
+      expiry={license?.expiry}
+      editLabel="Edit driver licence"
+      onEdit={() => setLicenceEditOpen(true)}>
+      <DetailRow label="Class / type" value={license?.classOrType?.trim() || "—"} />
+      <DetailRow label="Conditions" value={license?.conditions?.trim() || "—"} />
+    </ComplianceTile>
+  ) : (
+    <ComplianceEmpty
+      icon={IdCard}
+      title="No driver's licence details"
+      description="You haven't added any licence details yet."
+      actionLabel="Add driver's licence"
+      onAction={() => setLicenceEditOpen(true)}
+    />
+  );
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="absolute top-4 right-4 z-10"
-          onClick={() => setLicenceEditOpen(true)}
-          aria-label="Edit driver licence">
-          <PencilIcon />
-        </Button>
+      <Card>
         <CardHeader>
-          <CardTitle>Driver licence</CardTitle>
+          <CardTitle>Driver&apos;s licence</CardTitle>
         </CardHeader>
-        <CardContent>
-          <DetailRow label="Licence no." value={profile.driversLicense?.number?.trim() || "—"} />
-          <DetailRow label="Class / type" value={profile.driversLicense?.classOrType?.trim() || "—"} />
-          <DetailRow label="State" value={profile.driversLicense?.jurisdictionCode?.trim() || "—"} />
-          <DetailRow
-            label="Conditions"
-            value={profile.driversLicense?.conditions?.trim() || "—"}
-          />
-          <DetailRow label="Summary" value={profile.driversLicense?.summary?.trim() || "—"} />
-          <div className="flex items-start justify-between gap-4 py-3">
-            <span className="text-muted-foreground shrink-0 text-sm">Expiry</span>
-            <span className="text-end text-sm">
-              {formatDate(profile.driversLicense?.expiry)}
-              {licenceWarn ? <ExpiryBadge level={licenceWarn} /> : null}
-            </span>
-          </div>
-        </CardContent>
+        <CardContent>{licenceContent}</CardContent>
       </Card>
 
       <DriverLicenceEditSheet
@@ -118,7 +100,7 @@ export function DriverProfileComplianceTab({
             value={profile.operatorAccreditation?.issuingAuthority?.trim() || "—"}
           />
           <div className="flex items-start justify-between gap-4 py-3">
-            <span className="text-muted-foreground text-sm shrink-0">Expiry</span>
+            <span className="text-muted-foreground shrink-0 text-sm">Expiry</span>
             <span className="text-end text-sm">
               {formatDate(profile.operatorAccreditation?.expiry)}
               {accWarn ? <ExpiryBadge level={accWarn} /> : null}

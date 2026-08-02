@@ -57,6 +57,9 @@ export function DriverLicenceEditSheet({
 }) {
   const profile = branchDriverToProfile(roster);
   const license = profile.driversLicense;
+  const [driversLicenseIssueDate, setDriversLicenseIssueDate] = useState<Date | undefined>(
+    license?.issueDate ?? undefined
+  );
   const [driversLicenseExpiry, setDriversLicenseExpiry] = useState<Date | undefined>(
     license?.expiry ?? undefined
   );
@@ -72,6 +75,7 @@ export function DriverLicenceEditSheet({
   const [seededId, setSeededId] = useState<string | null>("__init__");
   if (user.id !== seededId) {
     setSeededId(user.id);
+    setDriversLicenseIssueDate(profile.driversLicense?.issueDate ?? undefined);
     setDriversLicenseExpiry(profile.driversLicense?.expiry ?? undefined);
     setLicenceClasses(parseLicenceClasses(profile.driversLicense?.classOrType));
     setJurisdictionCode(profile.driversLicense?.jurisdictionCode?.trim() ?? "");
@@ -124,6 +128,7 @@ export function DriverLicenceEditSheet({
         conditions: get("driversLicenseConditions") || null,
         summary: get("driversLicenseSummary") || null,
         conditionCodes: profile.driversLicense?.conditionCodes ?? null,
+        issueDate: driversLicenseIssueDate ?? null,
         expiry: driversLicenseExpiry ?? null
       }
     };
@@ -190,6 +195,47 @@ export function DriverLicenceEditSheet({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col space-y-2">
+              <Label>Issue date</Label>
+              <Popover modal>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !driversLicenseIssueDate && "text-muted-foreground"
+                    )}>
+                    {driversLicenseIssueDate ? (
+                      format(driversLicenseIssueDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className={cn(
+                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                    nested && "z-[110]"
+                  )}
+                  align="start">
+                  <Calendar
+                    mode="single"
+                    captionLayout="dropdown"
+                    fromYear={new Date().getFullYear() - 40}
+                    toYear={new Date().getFullYear() + 1}
+                    selected={driversLicenseIssueDate}
+                    onSelect={setDriversLicenseIssueDate}
+                    defaultMonth={driversLicenseIssueDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex flex-col space-y-2">
               <Label>Expiry</Label>

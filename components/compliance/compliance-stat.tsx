@@ -4,7 +4,6 @@ import { differenceInCalendarDays } from "date-fns";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { formatDate } from "@/lib/format";
-import type { VehicleRegistration, VehicleRoadworthy } from "@/lib/models";
 import { validityProgress } from "@/lib/vehicle-insurance";
 import { cn } from "@/lib/utils";
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
@@ -23,11 +22,9 @@ export function complianceDaysRemaining(
 }
 
 /** True when the record has any non-blank string or non-null date. */
-export function hasComplianceDetails(
-  record: VehicleRegistration | VehicleRoadworthy | null | undefined
-): boolean {
-  if (!record) return false;
-  return Object.values(record).some((value) =>
+export function hasComplianceDetails(record: unknown): boolean {
+  if (!record || typeof record !== "object") return false;
+  return Object.values(record as Record<string, unknown>).some((value) =>
     value instanceof Date ? true : typeof value === "string" && value.trim() !== ""
   );
 }
