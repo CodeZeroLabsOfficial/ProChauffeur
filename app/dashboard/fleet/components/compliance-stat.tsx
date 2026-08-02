@@ -55,9 +55,9 @@ export function ComplianceStat({
         : "var(--primary)";
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       <div className="relative flex shrink-0 items-center justify-center">
-        <ChartContainer config={chartConfig} className="aspect-square size-[150px]">
+        <ChartContainer config={chartConfig} className="aspect-square size-[100px]">
           <RadialBarChart
             data={[{ remaining: remainingTerm }]}
             innerRadius="82%"
@@ -82,21 +82,21 @@ export function ComplianceStat({
         </ChartContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
           <span
-            className={cn("text-lg font-semibold", warning === "expired" && "text-destructive")}>
+            className={cn("text-base font-semibold", warning === "expired" && "text-destructive")}>
             {daysRemaining ?? "—"}
           </span>
           {daysRemaining != null ? (
-            <span className="text-muted-foreground mt-1 text-sm">days</span>
+            <span className="text-muted-foreground mt-0.5 text-xs">days</span>
           ) : null}
         </div>
       </div>
 
-      <div className="min-w-0 space-y-1">
-        <p className="font-display truncate text-xl">{label.trim() || "—"}</p>
-        <p className="text-muted-foreground truncate text-sm">{secondary?.trim() || "—"}</p>
+      <div className="min-w-0 space-y-0.5">
+        <p className="truncate text-sm font-medium">{label.trim() || "—"}</p>
+        <p className="text-muted-foreground truncate text-xs">{secondary?.trim() || "—"}</p>
         <p
           className={cn(
-            "text-sm",
+            "text-xs",
             warning === "expired"
               ? "text-destructive"
               : warning === "soon"
@@ -106,7 +106,7 @@ export function ComplianceStat({
           {expiry ? `Expires ${formatDate(expiry)}` : "No expiry set"}
         </p>
         {warning ? (
-          <div className="pt-1">
+          <div className="pt-0.5">
             <ExpiryBadge level={warning} className="ms-0" />
           </div>
         ) : null}

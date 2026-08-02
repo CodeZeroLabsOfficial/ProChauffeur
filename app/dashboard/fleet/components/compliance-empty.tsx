@@ -30,12 +30,12 @@ export function ComplianceEmpty({
 
   return (
     <Card className="shadow-none">
-      <Empty className="border-0 flex-none gap-4 py-8 md:py-10">
+      <Empty className="flex-none gap-3 border-0 py-5">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Icon />
           </EmptyMedia>
-          <EmptyTitle className="text-xl">{title}</EmptyTitle>
+          <EmptyTitle className="text-sm">{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
         </EmptyHeader>
         {hasAction ? (

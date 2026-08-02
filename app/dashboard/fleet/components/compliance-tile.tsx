@@ -22,15 +22,15 @@ export function ComplianceTile({
   const editable = Boolean(editLabel && onEdit);
 
   return (
-    <Card className="relative gap-4 py-4 shadow-none">
+    <Card className="relative gap-3 py-3 shadow-none">
       {editable ? (
         <ComplianceEditButton
           label={editLabel!}
           onClick={onEdit!}
-          className="absolute top-3 right-3"
+          className="absolute top-2.5 right-2.5"
         />
       ) : null}
-      <CardContent className={editable ? "pe-14" : undefined}>
+      <CardContent className={editable ? "pe-12" : undefined}>
         <ComplianceStat label={label} secondary={secondary} start={start} expiry={expiry} />
       </CardContent>
     </Card>
