@@ -34,16 +34,6 @@ export interface VehicleDetails {
   vehicleClassId: string | null;
 }
 
-export interface VehicleLuggageCapacity {
-  smallCount: number;
-  largeCount: number;
-}
-
-export interface VehicleCapacity {
-  passengerCount: number;
-  luggage: VehicleLuggageCapacity;
-}
-
 export interface VehicleSpecifications {
   engineType: string | null;
   transmission: string;
@@ -62,7 +52,6 @@ export interface Vehicle {
   /** Whether this vehicle can be used in fleet operations. Defaults to true. */
   isEnabled?: boolean;
   details?: VehicleDetails | null;
-  capacity?: VehicleCapacity | null;
   specifications?: VehicleSpecifications | null;
   registration?: VehicleRegistration | null;
   insurancePolicies?: VehicleInsurancePolicy[];
@@ -93,16 +82,6 @@ export function effectiveChauffeurUserId(v: Vehicle): string | null {
   return v.driverID;
 }
 
-export function luggageSpecificationLabel(small: number, large: number): string {
-  const s = Math.max(0, Math.min(12, small));
-  const l = Math.max(0, Math.min(12, large));
-  if (s === 0 && l === 0) return "No luggage";
-  const parts: string[] = [];
-  if (s > 0) parts.push(s === 1 ? "1 small" : `${s} small`);
-  if (l > 0) parts.push(l === 1 ? "1 large" : `${l} large`);
-  return parts.join(", ");
-}
-
 export function emptyVehicleDetails(): VehicleDetails {
   return {
     make: "",
@@ -111,13 +90,6 @@ export function emptyVehicleDetails(): VehicleDetails {
     manufactureYear: null,
     vehicleIdentificationNumber: null,
     vehicleClassId: null
-  };
-}
-
-export function emptyVehicleCapacity(): VehicleCapacity {
-  return {
-    passengerCount: 4,
-    luggage: { smallCount: 0, largeCount: 2 }
   };
 }
 

@@ -259,16 +259,6 @@ export function FleetDataTable({
         filterFn: multiSelectFilter
       },
       {
-        id: "passengerCapacity",
-        accessorFn: (row) => row.capacity?.passengerCount ?? 0,
-        header: "Capacity",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {row.original.capacity?.passengerCount ?? 0}
-          </span>
-        )
-      },
-      {
         accessorKey: "chauffeurName",
         header: "Assigned chauffeur",
         cell: ({ row }) => (

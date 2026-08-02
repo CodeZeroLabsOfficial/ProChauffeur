@@ -10,15 +10,12 @@ import {
   ExternalLink,
   Fuel,
   Hash,
-  Luggage,
   Palette,
-  Tags,
-  Users
+  Tags
 } from "lucide-react";
 
 import {
   effectiveChauffeurUserId,
-  emptyVehicleCapacity,
   emptyVehicleDetails,
   emptyVehicleSpecifications,
   vehicleDisplayName,
@@ -37,7 +34,6 @@ import {
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
-import { InlineEditableStepperField } from "@/components/inline-editable-stepper-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Button } from "@/components/ui/button";
@@ -50,10 +46,6 @@ import {
 
 const MIN_MANUFACTURE_YEAR = 1980;
 const maxManufactureYear = new Date().getFullYear() + 1;
-const MIN_PASSENGER_CAPACITY = 1;
-const MAX_PASSENGER_CAPACITY = 20;
-const MIN_LUGGAGE_COUNT = 0;
-const MAX_LUGGAGE_COUNT = 12;
 
 const MAKE_OPTIONS = LUXURY_VEHICLE_MAKES.map((entry) => ({
   value: entry.label,
@@ -70,7 +62,6 @@ function VehicleOverviewFields({
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   const details = vehicle.details ?? emptyVehicleDetails();
-  const capacity = vehicle.capacity ?? emptyVehicleCapacity();
   const specifications = vehicle.specifications ?? emptyVehicleSpecifications();
   const classValue = details.vehicleClassId ?? "";
   const makeValue = vehicleMakeSelectValue(details.make);
@@ -81,22 +72,6 @@ function VehicleOverviewFields({
 
   function patchDetails(partial: Partial<typeof details>) {
     return saveVehicle({ details: { ...details, ...partial } });
-  }
-
-  function patchCapacity(partial: {
-    passengerCount?: number;
-    smallCount?: number;
-    largeCount?: number;
-  }) {
-    return saveVehicle({
-      capacity: {
-        passengerCount: partial.passengerCount ?? capacity.passengerCount,
-        luggage: {
-          smallCount: partial.smallCount ?? capacity.luggage.smallCount,
-          largeCount: partial.largeCount ?? capacity.luggage.largeCount
-        }
-      }
-    });
   }
 
   function patchSpecifications(partial: Partial<typeof specifications>) {
@@ -253,58 +228,6 @@ function VehicleOverviewFields({
                 onSave={async (next) =>
                   patchSpecifications({ transmission: nullableTrim(next) ?? "" })
                 }
-              />
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="space-y-4">
-        <SectionHeading>Vehicle capacity</SectionHeading>
-        <dl className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <DetailLabel icon={Users}>Capacity</DetailLabel>
-            <dd>
-              <InlineEditableStepperField
-                fieldId="capacity"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={capacity.passengerCount}
-                min={MIN_PASSENGER_CAPACITY}
-                max={MAX_PASSENGER_CAPACITY}
-                editLabel="capacity"
-                onSave={async (next) => patchCapacity({ passengerCount: next })}
-              />
-            </dd>
-          </div>
-          <div aria-hidden="true" />
-          <div className="space-y-1">
-            <DetailLabel icon={Luggage}>Small bags</DetailLabel>
-            <dd>
-              <InlineEditableStepperField
-                fieldId="smallBags"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={capacity.luggage.smallCount}
-                min={MIN_LUGGAGE_COUNT}
-                max={MAX_LUGGAGE_COUNT}
-                editLabel="small bags"
-                onSave={async (small) => patchCapacity({ smallCount: small })}
-              />
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <DetailLabel icon={Luggage}>Large bags</DetailLabel>
-            <dd>
-              <InlineEditableStepperField
-                fieldId="largeBags"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={capacity.luggage.largeCount}
-                min={MIN_LUGGAGE_COUNT}
-                max={MAX_LUGGAGE_COUNT}
-                editLabel="large bags"
-                onSave={async (large) => patchCapacity({ largeCount: large })}
               />
             </dd>
           </div>

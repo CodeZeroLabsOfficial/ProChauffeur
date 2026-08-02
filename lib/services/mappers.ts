@@ -59,7 +59,6 @@ import type {
   VehicleInsurancePolicy,
   VehicleRegistration,
   VehicleRoadworthy,
-  VehicleCapacity,
   VehicleDetails,
   VehicleSpecifications
 } from "@/lib/models/vehicle";
@@ -78,19 +77,6 @@ function mapVehicleDetails(raw: unknown): VehicleDetails | null {
     vehicleIdentificationNumber:
       typeof d.vehicleIdentificationNumber === "string" ? d.vehicleIdentificationNumber : null,
     vehicleClassId: typeof d.vehicleClassId === "string" ? d.vehicleClassId : null
-  };
-}
-
-function mapVehicleCapacity(raw: unknown): VehicleCapacity | null {
-  if (!raw || typeof raw !== "object") return null;
-  const d = raw as DocumentData;
-  const luggage = d.luggage && typeof d.luggage === "object" ? (d.luggage as DocumentData) : {};
-  return {
-    passengerCount: toInt(d.passengerCount, 0),
-    luggage: {
-      smallCount: toInt(luggage.smallCount, 0),
-      largeCount: toInt(luggage.largeCount, 0)
-    }
   };
 }
 
@@ -318,7 +304,6 @@ export function mapVehicle(d: DocumentData): Vehicle {
     assignedChauffeurUserId: d.assignedChauffeurUserId ?? null,
     isEnabled: d.isEnabled !== false,
     details: mapVehicleDetails(d.details),
-    capacity: mapVehicleCapacity(d.capacity),
     specifications: mapVehicleSpecifications(d.specifications),
     registration: mapVehicleRegistration(d.registration),
     insurancePolicies: mapVehicleInsurancePolicies(d.insurancePolicies),

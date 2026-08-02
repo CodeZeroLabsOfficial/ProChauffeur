@@ -9,13 +9,13 @@ import { MultiSelectField } from "@/components/multi-select-field";
 import {
   useFleetLocations,
   useUsers,
-  useVehicleClasses,
-  useVehicles
+  useVehicleClasses
 } from "@/hooks/use-collections";
 import {
-  filterEligibleFleetVehicles,
+  filterEligibleVehicleClasses,
   vehicleClassesById
 } from "@/lib/bookings/booking-eligibility";
+import { validateTripAgainstVehicleClass } from "@/lib/bookings/validate-capacity";
 import {
   countCustomerPromoRedemptions,
   createRoundTripBookings,
@@ -352,7 +352,6 @@ export function NewBookingSheet({
   editTrip?: Trip | null;
 }) {
   const { users } = useUsers();
-  const { vehicles } = useVehicles();
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
   const { enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
@@ -436,24 +435,24 @@ export function NewBookingSheet({
     [quoteTripType, passengerCount, smallLuggageCount, largeLuggageCount]
   );
 
-  const eligibleVehiclesInClass = useMemo(() => {
-    const eligible = filterEligibleFleetVehicles(
-      vehicles,
-      classesById,
-      bookingRequirements,
-      "admin",
-      {
-        requireChauffeur: false
-      }
+  const activeCorporateAccount =
+    corporateFeatureOn && corporateAccount?.status === "active" ? corporateAccount : null;
+
+  const eligibleVehicleClasses = useMemo(() => {
+    return filterEligibleVehicleClasses(vehicleClasses, bookingRequirements, "admin").filter(
+      (vehicleClass) => accountAllowsVehicleClass(activeCorporateAccount, vehicleClass.id)
     );
-    if (!vehicleClassId) return eligible;
-    return eligible.filter((vehicle) => vehicle.details?.vehicleClassId === vehicleClassId);
-  }, [vehicles, classesById, bookingRequirements, vehicleClassId]);
+  }, [vehicleClasses, bookingRequirements, activeCorporateAccount]);
 
   const selectedVehicleClass = vehicleClassId ? classesById.get(vehicleClassId) : undefined;
 
-  const activeCorporateAccount =
-    corporateFeatureOn && corporateAccount?.status === "active" ? corporateAccount : null;
+  useEffect(() => {
+    if (!vehicleClassId) return;
+    if (!eligibleVehicleClasses.some((vehicleClass) => vehicleClass.id === vehicleClassId)) {
+      setVehicleClassId(null);
+    }
+  }, [vehicleClassId, eligibleVehicleClasses]);
+
   const applyCorporateRates = Boolean(activeCorporateAccount && corporateSettlement);
   const corporateAccountForQuote = applyCorporateRates ? activeCorporateAccount : null;
   const billToCorporate = corporateSettlement === "on_account";
@@ -962,6 +961,16 @@ export function NewBookingSheet({
       return;
     }
 
+    const capacityIssues = validateTripAgainstVehicleClass(
+      bookingRequirements,
+      selectedVehicleClass
+    );
+    if (capacityIssues.length > 0) {
+      setFieldErrors((prev) => ({ ...prev, vehicleClassId: true }));
+      toast.error(capacityIssues[0].message);
+      return;
+    }
+
     if (!isEditMode && bookingMode === "round_trip") {
       if (!isValidScheduledPickup(scheduledReturnAt)) {
         setFieldErrors((prev) => ({ ...prev, scheduledReturnAt: true }));
@@ -1414,16 +1423,11 @@ export function NewBookingSheet({
                     <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicleClasses
-                      .filter((vehicleClass) => vehicleClass.isEnabled)
-                      .filter((vehicleClass) =>
-                        accountAllowsVehicleClass(activeCorporateAccount, vehicleClass.id)
-                      )
-                      .map((vehicleClass) => (
-                        <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
-                          {vehicleClass.displayName}
-                        </SelectItem>
-                      ))}
+                    {eligibleVehicleClasses.map((vehicleClass) => (
+                      <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
+                        {vehicleClass.displayName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1526,14 +1530,6 @@ export function NewBookingSheet({
                 disabled={saving}
               />
             </div>
-
-            {vehicleClassId && eligibleVehiclesInClass.length > 0 ? (
-              <p className="text-muted-foreground text-xs">
-                {eligibleVehiclesInClass.length} fleet vehicle
-                {eligibleVehiclesInClass.length === 1 ? "" : "s"} in this class match passengers and
-                luggage.
-              </p>
-            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>

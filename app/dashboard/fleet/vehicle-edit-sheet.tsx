@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useRosterChauffeurs, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import {
   effectiveChauffeurUserId,
-  emptyVehicleCapacity,
   emptyVehicleDetails,
   emptyVehicleSpecifications,
   type Vehicle
@@ -46,7 +45,6 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   assignedChauffeurUserId: driverID,
   isEnabled: true,
   details: emptyVehicleDetails(),
-  capacity: emptyVehicleCapacity(),
   specifications: emptyVehicleSpecifications(),
   registration: null,
   insurancePolicies: [],

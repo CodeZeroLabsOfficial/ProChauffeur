@@ -8,7 +8,6 @@ import { AssignedDriverCard } from "@/app/dashboard/fleet/components/assigned-dr
 import { ProfileBookingsCard } from "@/components/profile/profile-bookings-card";
 import { ProfileCompletenessCard } from "@/components/profile/profile-completeness-card";
 import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
-import { VehicleCapacityCard } from "@/app/dashboard/fleet/components/vehicle-capacity-card";
 import { VehicleDetailsCard } from "@/app/dashboard/fleet/components/vehicle-details-card";
 import { VehicleProfileUtilizationChart } from "@/app/dashboard/fleet/components/vehicle-profile-utilization-chart";
 
@@ -35,7 +34,6 @@ export function VehicleProfileOverviewTab({
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
         <VehicleDetailsCard vehicle={vehicle} />
-        <VehicleCapacityCard vehicle={vehicle} />
         <AssignedDriverCard
           assignedChauffeur={assignedChauffeur}
           categoryLabel={assignedChauffeurCategoryLabel}
