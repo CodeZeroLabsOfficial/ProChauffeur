@@ -11,12 +11,13 @@ import {
   boundsFromPoints,
   centerFromPoints,
   coordinateFromLatLng,
+  coordinatesFromLngLatPairs,
   hasValidCoordinate,
   MAP_FALLBACK_VIEW,
   type MapViewState
 } from "@/lib/mapbox/coordinates";
 import { dispatchMapMode } from "@/lib/mapbox/dispatch-map-mode";
-import type { Trip } from "@/lib/models/trip";
+import type { CoordinateField, Trip } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_VIEW = MAP_FALLBACK_VIEW;
@@ -48,6 +49,7 @@ export function DispatchTripMap({
   const lastFitAtRef = useRef(0);
   const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fitContextRef = useRef(`${trip.id}-${mode}`);
+  const hadRoutePointsRef = useRef(false);
 
   const driverCoordinate = useMemo(
     () =>
@@ -80,16 +82,18 @@ export function DispatchTripMap({
   });
 
   const fitPoints = useMemo(() => {
+    let anchors: CoordinateField[] = [];
     if (mode === "overview" && overviewValid) {
-      return [trip.pickup, trip.dropoff];
+      anchors = [trip.pickup, trip.dropoff];
+    } else if (mode === "to_pickup" && pickupValid) {
+      anchors = driverCoordinate ? [driverCoordinate, trip.pickup] : [trip.pickup];
+    } else if (mode === "to_dropoff" && dropoffValid) {
+      anchors = driverCoordinate ? [driverCoordinate, trip.dropoff] : [trip.dropoff];
     }
-    if (mode === "to_pickup" && pickupValid) {
-      return driverCoordinate ? [driverCoordinate, trip.pickup] : [trip.pickup];
-    }
-    if (mode === "to_dropoff" && dropoffValid) {
-      return driverCoordinate ? [driverCoordinate, trip.dropoff] : [trip.dropoff];
-    }
-    return [];
+
+    const routePoints = coordinatesFromLngLatPairs(route?.geometry.coordinates);
+    if (routePoints.length === 0) return anchors;
+    return [...anchors, ...routePoints];
   }, [
     mode,
     overviewValid,
@@ -97,7 +101,8 @@ export function DispatchTripMap({
     dropoffValid,
     trip.pickup,
     trip.dropoff,
-    driverCoordinate
+    driverCoordinate,
+    route
   ]);
 
   const initialViewState = useMemo(() => {
@@ -149,12 +154,22 @@ export function DispatchTripMap({
     if (contextChanged) {
       fitContextRef.current = contextKey;
       lastFitAtRef.current = 0;
+      hadRoutePointsRef.current = false;
     }
+
+    const hasRoutePoints = Boolean(route?.geometry.coordinates?.length);
+    const routeJustArrived = hasRoutePoints && !hadRoutePointsRef.current;
+    if (hasRoutePoints) hadRoutePointsRef.current = true;
 
     const isLiveTracking =
       (mode === "to_pickup" || mode === "to_dropoff") && Boolean(driverCoordinate);
 
-    if (!isLiveTracking || contextChanged || lastFitAtRef.current === 0) {
+    if (
+      !isLiveTracking ||
+      contextChanged ||
+      lastFitAtRef.current === 0 ||
+      routeJustArrived
+    ) {
       if (throttleTimerRef.current) {
         clearTimeout(throttleTimerRef.current);
         throttleTimerRef.current = null;
@@ -178,7 +193,7 @@ export function DispatchTripMap({
         throttleTimerRef.current = null;
       }
     };
-  }, [mapRef, fitPoints, mode, trip.id, driverCoordinate, companyDefaultView]);
+  }, [mapRef, fitPoints, mode, trip.id, driverCoordinate, companyDefaultView, route]);
 
   if (coordinatesUnavailable) {
     return (

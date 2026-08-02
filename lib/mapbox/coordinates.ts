@@ -27,3 +27,19 @@ export function centerFromPoints(points: CoordinateField[], zoom = 11) {
 export function coordinateFromLatLng(lat: number, lng: number): CoordinateField {
   return { latitude: lat, longitude: lng };
 }
+
+/** Convert GeoJSON LineString `[lng, lat]` pairs into map fit points. */
+export function coordinatesFromLngLatPairs(
+  pairs: Array<[number, number] | number[]> | undefined
+): CoordinateField[] {
+  if (!pairs?.length) return [];
+  const out: CoordinateField[] = [];
+  for (const pair of pairs) {
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    const lng = Number(pair[0]);
+    const lat = Number(pair[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    out.push({ latitude: lat, longitude: lng });
+  }
+  return out;
+}
