@@ -1,9 +1,8 @@
 const admin = require("firebase-admin");
 const { HttpsError } = require("firebase-functions/v2/https");
-const { DEFAULT_BRANCH_ID, resolveInvoiceRef } = require("../lib/collections");
+const { DEFAULT_BRANCH_ID } = require("../lib/collections");
 const { requireAuth, requireAdmin } = require("../lib/auth");
-const { getStripe, toStripeAmount } = require("../stripe/client");
-const { syncUserStripeCustomer } = require("../stripe/customer");
+const { sendCustomerTripInvoice } = require("../stripe/invoices");
 const {
   lineItemsFromTrips,
   createFirestoreInvoice,
@@ -64,7 +63,7 @@ function assertTripInvoiceable(trip) {
   }
 }
 
-async function createInvoiceForTripHandler(request) {
+async function sendCustomerTripInvoiceHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
   await requireAdmin(db, uid);
@@ -99,8 +98,6 @@ async function createInvoiceForTripHandler(request) {
     throw new HttpsError("failed-precondition", "Trip has no customer.");
   }
 
-  const stripeCustomerId = await syncUserStripeCustomer(db, customerUid);
-  const stripe = getStripe();
   const currency = (primary.quotedCurrencyCode || "AUD").toLowerCase();
   const lineItems = lineItemsFromTrips(trips);
 
@@ -111,37 +108,14 @@ async function createInvoiceForTripHandler(request) {
     branchId,
   });
 
-  for (const line of lineItems) {
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      amount: toStripeAmount(line.amount, currency),
-      currency,
-      description: line.label,
-    });
-  }
-
-  const stripeInvoice = await stripe.invoices.create({
-    customer: stripeCustomerId,
-    collection_method: "send_invoice",
-    days_until_due: 14,
-    metadata: {
-      firebaseUid: customerUid,
-      tripId: primary.id,
-      tripIds: JSON.stringify(tripIds),
-      invoiceId: firestoreInvoice.id,
-      branchId,
-      source: "web",
-    },
-  });
-
-  const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
-  await stripe.invoices.sendInvoice(finalized.id);
-
-  const { ref: invoiceDoc } = await resolveInvoiceRef(db, firestoreInvoice.id, branchId);
-  await invoiceDoc.update({
-    stripeInvoiceId: finalized.id,
-    stripeHostedInvoiceUrl: finalized.hosted_invoice_url || null,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  const sent = await sendCustomerTripInvoice(db, {
+    customerUid,
+    branchId,
+    invoiceId: firestoreInvoice.id,
+    primaryTripId: primary.id,
+    tripIds,
+    lineItems,
+    currencyCode: currency,
   });
 
   const now = admin.firestore.FieldValue.serverTimestamp();
@@ -157,10 +131,10 @@ async function createInvoiceForTripHandler(request) {
   return {
     invoiceId: firestoreInvoice.id,
     invoiceNumber: firestoreInvoice.invoiceNumber,
-    stripeInvoiceId: finalized.id,
-    hostedInvoiceUrl: finalized.hosted_invoice_url || null,
+    stripeInvoiceId: sent.stripeInvoiceId,
+    hostedInvoiceUrl: sent.hostedInvoiceUrl,
     tripIds,
   };
 }
 
-module.exports = { createInvoiceForTripHandler };
+module.exports = { sendCustomerTripInvoiceHandler };

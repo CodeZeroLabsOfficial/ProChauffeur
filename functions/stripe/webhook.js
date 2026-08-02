@@ -10,7 +10,7 @@ const {
   createFirestoreInvoice,
   loadTripsForPaymentInvoice,
 } = require("../billing/invoiceFromTrip");
-const { syncPaymentMethodToFirestore } = require("../billing/paymentMethods");
+const { syncPaymentMethodToFirestore } = require("./saved-cards");
 const { getStripe, stripeWebhookSecret } = require("./client");
 
 async function recordPaymentEvent(db, event) {

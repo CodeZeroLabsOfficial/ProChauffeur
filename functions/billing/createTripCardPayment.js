@@ -3,15 +3,15 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const { tripRef } = require("../lib/collections");
 const { resolveBookingBranchId } = require("../lib/resolve-branch");
 const { requireAuth, requireCustomer } = require("../lib/auth");
-const { getStripe, toStripeAmount } = require("../stripe/client");
 const { syncUserStripeCustomer } = require("../stripe/customer");
+const {
+  paymentIntentAmountMatches,
+  retrieveReusablePaymentIntent,
+  cancelPaymentIntent,
+  createTripCardPaymentIntent,
+  toStripeAmount,
+} = require("../stripe/payments");
 const { runComputeQuote } = require("./computeQuote");
-
-const REUSABLE_PI_STATUSES = new Set([
-  "requires_payment_method",
-  "requires_confirmation",
-  "requires_action",
-]);
 
 function validateTripPayload(trip, customerUid) {
   if (!trip || typeof trip !== "object") {
@@ -221,7 +221,7 @@ async function upsertPendingTrips(db, tripsInput, branchId, stripePaymentIntentI
  * When the client retries with the same trip ids, reuse an open PaymentIntent
  * instead of creating a second charge for the same booking attempt.
  */
-async function findReusablePaymentIntent(stripe, db, primaryTripId, branchId) {
+async function findReusablePaymentIntent(db, primaryTripId, branchId) {
   const snap = await tripRef(db, primaryTripId, branchId).get();
   if (!snap.exists) return null;
 
@@ -232,33 +232,10 @@ async function findReusablePaymentIntent(stripe, db, primaryTripId, branchId) {
     typeof data.stripePaymentIntentId === "string" ? data.stripePaymentIntentId : null;
   if (!existingIntentId) return null;
 
-  let paymentIntent;
-  try {
-    paymentIntent = await stripe.paymentIntents.retrieve(existingIntentId);
-  } catch {
-    return null;
-  }
-
-  if (paymentIntent.status === "succeeded") {
-    throw new HttpsError("failed-precondition", "This booking is already paid.");
-  }
-
-  if (REUSABLE_PI_STATUSES.has(paymentIntent.status) && paymentIntent.client_secret) {
-    return paymentIntent;
-  }
-
-  return null;
+  return retrieveReusablePaymentIntent(existingIntentId);
 }
 
-function paymentIntentAmountMatches(paymentIntent, amountCents, currency) {
-  if (!paymentIntent) return false;
-  const piCurrency = String(paymentIntent.currency || "").toLowerCase();
-  const wantCurrency = String(currency || "").toLowerCase();
-  if (piCurrency !== wantCurrency) return false;
-  return Math.abs(Number(paymentIntent.amount) - amountCents) <= 1;
-}
-
-async function createBookingPaymentHandler(request) {
+async function createTripCardPaymentHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
   await requireCustomer(db, uid);
@@ -296,17 +273,11 @@ async function createBookingPaymentHandler(request) {
   }
 
   const stripeCustomerId = await syncUserStripeCustomer(db, uid);
-  const stripe = getStripe();
   const amountCents = toStripeAmount(total, currency);
   const primaryTripId = quotedTrips[0].id;
   const tripIds = quotedTrips.map((t) => t.id);
 
-  const reusableIntent = await findReusablePaymentIntent(
-    stripe,
-    db,
-    primaryTripId,
-    branchId
-  );
+  const reusableIntent = await findReusablePaymentIntent(db, primaryTripId, branchId);
 
   if (
     reusableIntent &&
@@ -324,40 +295,22 @@ async function createBookingPaymentHandler(request) {
   }
 
   if (reusableIntent) {
-    try {
-      await stripe.paymentIntents.cancel(reusableIntent.id);
-    } catch {
-      // Fall through and create a new intent for the server amount.
-    }
+    await cancelPaymentIntent(reusableIntent.id);
   }
 
   await upsertPendingTrips(db, quotedTrips, branchId, null);
 
-  const intentParams = {
-    amount: amountCents,
-    currency: String(currency).toLowerCase(),
-    customer: stripeCustomerId,
-    metadata: {
-      firebaseUid: uid,
-      tripId: primaryTripId,
-      tripIds: JSON.stringify(tripIds),
-      branchId,
-      source: "ios",
-    },
-  };
-
-  if (paymentMethodId) {
-    intentParams.payment_method = paymentMethodId;
-    intentParams.confirm = false;
-    intentParams.off_session = false;
-  } else if (saveCard) {
-    intentParams.setup_future_usage = "off_session";
-    intentParams.automatic_payment_methods = { enabled: true };
-  } else {
-    intentParams.automatic_payment_methods = { enabled: true };
-  }
-
-  const paymentIntent = await stripe.paymentIntents.create(intentParams);
+  const paymentIntent = await createTripCardPaymentIntent({
+    amount: total,
+    currency,
+    stripeCustomerId,
+    firebaseUid: uid,
+    primaryTripId,
+    tripIds,
+    branchId,
+    paymentMethodId,
+    saveCard,
+  });
 
   for (const tripId of tripIds) {
     await tripRef(db, tripId, branchId).update({
@@ -376,4 +329,4 @@ async function createBookingPaymentHandler(request) {
   };
 }
 
-module.exports = { createBookingPaymentHandler };
+module.exports = { createTripCardPaymentHandler };

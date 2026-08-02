@@ -2,16 +2,18 @@ import { httpsCallable } from "firebase/functions";
 
 import { firebaseFunctions } from "@/lib/firebase/client";
 
-export type CreateInvoiceForTripResult = {
+export type SendCustomerTripInvoiceResult = {
   invoiceId: string;
   stripeInvoiceId: string;
   hostedInvoiceUrl: string | null;
 };
 
-export async function createInvoiceForTrip(tripId: string): Promise<CreateInvoiceForTripResult> {
-  const callable = httpsCallable<{ tripId: string }, CreateInvoiceForTripResult>(
+export async function sendCustomerTripInvoice(
+  tripId: string
+): Promise<SendCustomerTripInvoiceResult> {
+  const callable = httpsCallable<{ tripId: string }, SendCustomerTripInvoiceResult>(
     firebaseFunctions(),
-    "createInvoiceForTrip"
+    "sendCustomerTripInvoice"
   );
   const result = await callable({ tripId });
   return result.data;
@@ -55,7 +57,7 @@ export async function generateCorporatePeriodInvoice(
   const callable = httpsCallable<
     { corporateAccountId: string; force: boolean },
     GenerateCorporatePeriodInvoiceResult
-  >(firebaseFunctions(), "consolidateCorporateInvoicesManual");
+  >(firebaseFunctions(), "generateCorporatePeriodInvoice");
   const result = await callable({ corporateAccountId, force: true });
   return result.data;
 }

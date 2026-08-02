@@ -6,14 +6,14 @@ const admin = require("firebase-admin");
 const { stripeSecretKey, stripeWebhookSecret } = require("./stripe/client");
 const { mapboxAccessToken } = require("./quoting/mapbox-token");
 const { stripeWebhookHandler } = require("./stripe/webhook");
-const { createBookingPaymentHandler } = require("./billing/createBookingPayment");
-const { createInvoiceForTripHandler } = require("./billing/createInvoiceForTrip");
-const { createSetupIntentHandler } = require("./billing/setupIntent");
+const { createTripCardPaymentHandler } = require("./billing/createTripCardPayment");
+const { sendCustomerTripInvoiceHandler } = require("./billing/sendCustomerTripInvoice");
+const { prepareSavedCardHandler } = require("./billing/prepareSavedCard");
 const {
-  detachPaymentMethodHandler,
-  setDefaultPaymentMethodHandler,
-  syncPaymentMethodsHandler,
-} = require("./billing/paymentMethods");
+  removeSavedCardHandler,
+  setDefaultSavedCardHandler,
+  syncSavedCardsHandler,
+} = require("./billing/savedCards");
 const { claimCorporateJoinCodeHandler } = require("./billing/claimCorporateJoinCode");
 const { computeQuoteHandler } = require("./billing/computeQuote");
 const {
@@ -37,12 +37,12 @@ const consolidateScheduleOptions = {
   secrets: [stripeSecretKey],
 };
 
-exports.createBookingPayment = onCall(callableOptions, createBookingPaymentHandler);
-exports.createSetupIntent = onCall(callableOptions, createSetupIntentHandler);
-exports.detachPaymentMethod = onCall(callableOptions, detachPaymentMethodHandler);
-exports.setDefaultPaymentMethod = onCall(callableOptions, setDefaultPaymentMethodHandler);
-exports.syncPaymentMethods = onCall(callableOptions, syncPaymentMethodsHandler);
-exports.createInvoiceForTrip = onCall(callableOptions, createInvoiceForTripHandler);
+exports.createTripCardPayment = onCall(callableOptions, createTripCardPaymentHandler);
+exports.prepareSavedCard = onCall(callableOptions, prepareSavedCardHandler);
+exports.removeSavedCard = onCall(callableOptions, removeSavedCardHandler);
+exports.setDefaultSavedCard = onCall(callableOptions, setDefaultSavedCardHandler);
+exports.syncSavedCards = onCall(callableOptions, syncSavedCardsHandler);
+exports.sendCustomerTripInvoice = onCall(callableOptions, sendCustomerTripInvoiceHandler);
 exports.syncCorporateStripeCustomer = onCall(
   callableOptions,
   syncCorporateStripeCustomerHandler
@@ -51,7 +51,7 @@ exports.markInvoicePaid = onCall(callableOptions, markInvoicePaidHandler);
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
 exports.computeQuote = onCall(computeQuoteOptions, computeQuoteHandler);
-exports.consolidateCorporateInvoicesManual = onCall(
+exports.generateCorporatePeriodInvoice = onCall(
   callableOptions,
   consolidateCorporateInvoicesCallableHandler
 );

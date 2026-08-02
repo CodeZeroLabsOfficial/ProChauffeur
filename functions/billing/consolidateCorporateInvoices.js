@@ -5,7 +5,7 @@ const {
   invoicesCollection,
 } = require("../lib/collections");
 const { requireAuth, requireAdmin } = require("../lib/auth");
-const { sendCorporateStripeInvoice } = require("./sendCorporateStripeInvoice");
+const { sendCorporateInvoice } = require("../stripe/invoices");
 
 function invoiceNumber() {
   return `INV-${Date.now().toString().slice(-6)}`;
@@ -152,7 +152,7 @@ async function createCorporateInvoice(db, {
   const stripeResult = {};
   if (sendStripe) {
     try {
-      const sent = await sendCorporateStripeInvoice(db, {
+      const sent = await sendCorporateInvoice(db, {
         account,
         branchId,
         invoiceId: ref.id,
@@ -166,7 +166,7 @@ async function createCorporateInvoice(db, {
       stripeResult.hostedInvoiceUrl = sent.hostedInvoiceUrl;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Stripe invoice send failed.";
-      console.error("sendCorporateStripeInvoice failed", {
+      console.error("sendCorporateInvoice failed", {
         invoiceId: ref.id,
         corporateAccountId: account.id,
         message,

@@ -1,13 +1,70 @@
 const admin = require("firebase-admin");
-const { getStripe, toStripeAmount } = require("../stripe/client");
-const { syncCorporateStripeCustomer } = require("../stripe/customer");
 const { resolveInvoiceRef } = require("../lib/collections");
+const { getStripe, toStripeAmount } = require("./client");
+const { syncUserStripeCustomer, syncCorporateStripeCustomer } = require("./customer");
+
+/**
+ * Create, finalize, and email a Stripe Invoice for a customer trip invoice.
+ * Updates the Firestore invoice doc with Stripe ids/URL.
+ * @returns {Promise<{ stripeInvoiceId: string, hostedInvoiceUrl: string|null }>}
+ */
+async function sendCustomerTripInvoice(db, {
+  customerUid,
+  branchId,
+  invoiceId,
+  primaryTripId,
+  tripIds,
+  lineItems,
+  currencyCode,
+}) {
+  const stripeCustomerId = await syncUserStripeCustomer(db, customerUid);
+  const stripe = getStripe();
+  const currency = String(currencyCode || "AUD").toLowerCase();
+
+  for (const line of lineItems) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      amount: toStripeAmount(line.amount, currency),
+      currency,
+      description: line.label,
+    });
+  }
+
+  const stripeInvoice = await stripe.invoices.create({
+    customer: stripeCustomerId,
+    collection_method: "send_invoice",
+    days_until_due: 14,
+    metadata: {
+      firebaseUid: customerUid,
+      tripId: primaryTripId,
+      tripIds: JSON.stringify(tripIds || []),
+      invoiceId,
+      branchId,
+      source: "web",
+    },
+  });
+
+  const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
+  await stripe.invoices.sendInvoice(finalized.id);
+
+  const { ref: invoiceDoc } = await resolveInvoiceRef(db, invoiceId, branchId);
+  await invoiceDoc.update({
+    stripeInvoiceId: finalized.id,
+    stripeHostedInvoiceUrl: finalized.hosted_invoice_url || null,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    stripeInvoiceId: finalized.id,
+    hostedInvoiceUrl: finalized.hosted_invoice_url || null,
+  };
+}
 
 /**
  * Create, finalize, and email a Stripe Invoice for a consolidated corporate invoice.
  * @returns {Promise<{ stripeInvoiceId: string, hostedInvoiceUrl: string|null }>}
  */
-async function sendCorporateStripeInvoice(db, {
+async function sendCorporateInvoice(db, {
   account,
   branchId,
   invoiceId,
@@ -73,4 +130,7 @@ async function sendCorporateStripeInvoice(db, {
   };
 }
 
-module.exports = { sendCorporateStripeInvoice };
+module.exports = {
+  sendCustomerTripInvoice,
+  sendCorporateInvoice,
+};

@@ -1,9 +1,7 @@
 const admin = require("firebase-admin");
-const { HttpsError } = require("firebase-functions/v2/https");
 const { PaymentMethodSubcollection } = require("../lib/collections");
-const { requireAuth, requireCustomer } = require("../lib/auth");
-const { getStripe } = require("../stripe/client");
-const { syncUserStripeCustomer } = require("../stripe/customer");
+const { getStripe } = require("./client");
+const { syncUserStripeCustomer } = require("./customer");
 
 function cardDisplayLabel(brand, last4) {
   const b = String(brand || "card").toUpperCase();
@@ -35,16 +33,7 @@ async function syncPaymentMethodToFirestore(db, uid, pm, isDefault) {
   });
 }
 
-async function detachPaymentMethodHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-  await requireCustomer(db, uid);
-
-  const paymentMethodId = request.data?.paymentMethodId;
-  if (typeof paymentMethodId !== "string" || !paymentMethodId) {
-    throw new HttpsError("invalid-argument", "paymentMethodId is required.");
-  }
-
+async function detachSavedCard(db, uid, paymentMethodId) {
   const stripe = getStripe();
   await stripe.paymentMethods.detach(paymentMethodId);
 
@@ -54,15 +43,9 @@ async function detachPaymentMethodHandler(request) {
     .collection(PaymentMethodSubcollection)
     .doc(paymentMethodId)
     .delete();
-
-  return { ok: true };
 }
 
-async function syncPaymentMethodsHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-  await requireCustomer(db, uid);
-
+async function syncSavedCardsFromStripe(db, uid) {
   const stripeCustomerId = await syncUserStripeCustomer(db, uid);
   const stripe = getStripe();
   const customer = await stripe.customers.retrieve(stripeCustomerId);
@@ -93,19 +76,10 @@ async function syncPaymentMethodsHandler(request) {
     await batch.commit();
   }
 
-  return { ok: true, synced: list.data.length };
+  return { synced: list.data.length };
 }
 
-async function setDefaultPaymentMethodHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-  await requireCustomer(db, uid);
-
-  const paymentMethodId = request.data?.paymentMethodId;
-  if (typeof paymentMethodId !== "string" || !paymentMethodId) {
-    throw new HttpsError("invalid-argument", "paymentMethodId is required.");
-  }
-
+async function setDefaultSavedCard(db, uid, paymentMethodId) {
   const stripeCustomerId = await syncUserStripeCustomer(db, uid);
   const stripe = getStripe();
 
@@ -123,13 +97,11 @@ async function setDefaultPaymentMethodHandler(request) {
     });
   }
   await batch.commit();
-
-  return { ok: true };
 }
 
 module.exports = {
-  detachPaymentMethodHandler,
-  setDefaultPaymentMethodHandler,
-  syncPaymentMethodsHandler,
   syncPaymentMethodToFirestore,
+  detachSavedCard,
+  syncSavedCardsFromStripe,
+  setDefaultSavedCard,
 };

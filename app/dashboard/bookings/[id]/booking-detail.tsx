@@ -19,7 +19,7 @@ import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canSendTripInvoice, effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import { updateTripStatus } from "@/lib/services/firebase-service";
-import { createInvoiceForTrip } from "@/lib/services/payment-service";
+import { sendCustomerTripInvoice } from "@/lib/services/payment-service";
 import {
   TRIP_STATUSES,
   chauffeurCategoryTitle,
@@ -257,7 +257,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
     if (!trip) return;
     setIsSendingInvoice(true);
     try {
-      await createInvoiceForTrip(trip.id);
+      await sendCustomerTripInvoice(trip.id);
       toast.success("Invoice sent to the customer.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not send the invoice.";
