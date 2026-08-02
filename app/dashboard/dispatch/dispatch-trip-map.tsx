@@ -5,7 +5,7 @@ import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "re
 import { MapPinIcon } from "lucide-react";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
-import type { LiveLocation } from "@/hooks/use-live-locations";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { useMapboxRoute } from "@/hooks/use-mapbox-route";
 import {
   boundsFromPoints,
@@ -30,7 +30,7 @@ export function DispatchTripMap({
   mapStyle
 }: {
   trip: Trip;
-  driverLocation: LiveLocation | null;
+  driverLocation: DriverLiveLocation | null;
   driverName: string | null;
   companyDefaultView: MapViewState | null;
   token: string;

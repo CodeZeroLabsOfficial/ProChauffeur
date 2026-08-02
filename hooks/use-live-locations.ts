@@ -5,38 +5,50 @@ import { onValue, ref } from "firebase/database";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { realtimeDb } from "@/lib/firebase/client";
-import { rtdbBranchLiveLocationsPath } from "@/lib/models";
+import { rtdbBranchLiveTripsPath } from "@/lib/models";
 
-/** One live driver/vehicle position from RTDB. */
-export interface LiveLocation {
+/** Ephemeral chauffeur GPS from RTDB `liveTrips/{branchId}/{tripId}`. */
+export interface DriverLiveLocation {
+  tripId: string;
   driverId: string;
+  customerId: string | null;
   lat: number;
   lng: number;
   heading: number | null;
   status: string | null;
-  tripId: string | null;
   updatedAt: number;
 }
 
-function parseLiveLocations(value: unknown): LiveLocation[] {
-  const record = (value ?? {}) as Record<string, Partial<LiveLocation>>;
+function parseLiveLocations(value: unknown): DriverLiveLocation[] {
+  const record = (value ?? {}) as Record<string, Record<string, unknown>>;
   return Object.entries(record)
-    .map(([driverId, v]) => ({
-      driverId,
-      lat: Number(v.lat),
-      lng: Number(v.lng),
-      heading: v.heading ?? null,
-      status: v.status ?? null,
-      tripId: v.tripId ?? null,
-      updatedAt: Number(v.updatedAt ?? 0)
-    }))
-    .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
+    .map(([tripId, v]) => {
+      const headingRaw = v.heading;
+      const heading =
+        typeof headingRaw === "number" && headingRaw >= 0 && headingRaw <= 360
+          ? headingRaw
+          : null;
+      return {
+        tripId,
+        driverId: typeof v.driverId === "string" ? v.driverId : "",
+        customerId: typeof v.customerId === "string" ? v.customerId : null,
+        lat: Number(v.lat),
+        lng: Number(v.lng),
+        heading,
+        status: typeof v.status === "string" ? v.status : null,
+        updatedAt: Number(v.updatedAt ?? 0)
+      };
+    })
+    .filter(
+      (r) =>
+        r.driverId.length > 0 && Number.isFinite(r.lat) && Number.isFinite(r.lng)
+    );
 }
 
-/** Subscribes to live driver positions for the active branch (nested RTDB path only). */
-export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean } {
+/** Subscribes to live trip positions for the active branch. */
+export function useLiveLocations(): { locations: DriverLiveLocation[]; ready: boolean } {
   const { branchId } = useActiveBranch();
-  const [locations, setLocations] = useState<LiveLocation[]>([]);
+  const [locations, setLocations] = useState<DriverLiveLocation[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -44,7 +56,7 @@ export function useLiveLocations(): { locations: LiveLocation[]; ready: boolean 
     let cancelled = false;
 
     try {
-      const node = ref(realtimeDb(), rtdbBranchLiveLocationsPath(branchId));
+      const node = ref(realtimeDb(), rtdbBranchLiveTripsPath(branchId));
       unsub = onValue(
         node,
         (snapshot) => {

@@ -66,7 +66,7 @@ Default branch id: `brisbane`.
 
 ### Live locations
 
-The Dispatch map reads `liveLocations/{branchId}/{driverId}` from Realtime Database.
+The Dispatch map reads `liveTrips/{branchId}/{tripId}` from Realtime Database.
 Payload shape: `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 
 When a trip is **completed** or **cancelled**, `tripId` is cleared on that node
@@ -82,7 +82,7 @@ must NOT be prefixed with `NEXT_PUBLIC_`.
 
 - `firestore.rules` — admin-gated Firestore access
 - `storage.rules` — profile photo uploads under `users/{uid}/`
-- `database.rules.json` — RTDB live-location rules
+- `database.rules.json` — RTDB `liveTrips` rules
 - `firestore.indexes.json` — composite indexes
 
 Deploy with the Firebase CLI:

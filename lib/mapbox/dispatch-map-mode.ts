@@ -1,4 +1,4 @@
-import type { LiveLocation } from "@/hooks/use-live-locations";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import type { TripStatus } from "@/lib/models/enums";
 import type { Trip } from "@/lib/models/trip";
 
@@ -11,10 +11,9 @@ export function dispatchMapMode(status: TripStatus): DispatchMapMode {
   return "overview";
 }
 
-export function resolveDriverLocation(trip: Trip, locations: LiveLocation[]): LiveLocation | null {
-  if (trip.driverID) {
-    const byDriver = locations.find((l) => l.driverId === trip.driverID);
-    if (byDriver) return byDriver;
-  }
+export function resolveDriverLocation(
+  trip: Trip,
+  locations: DriverLiveLocation[]
+): DriverLiveLocation | null {
   return locations.find((l) => l.tripId === trip.id) ?? null;
 }

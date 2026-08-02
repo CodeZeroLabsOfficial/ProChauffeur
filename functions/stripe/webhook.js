@@ -6,7 +6,10 @@ const {
   resolveTripRef,
   resolveInvoiceRef,
 } = require("../lib/collections");
-const { createFirestoreInvoice } = require("../billing/invoiceFromTrip");
+const {
+  createFirestoreInvoice,
+  loadTripsForPaymentInvoice,
+} = require("../billing/invoiceFromTrip");
 const { syncPaymentMethodToFirestore } = require("../billing/paymentMethods");
 const { getStripe, stripeWebhookSecret } = require("./client");
 
@@ -55,37 +58,43 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
   const metadata = paymentIntent.metadata || {};
   const uid = metadata.firebaseUid;
   const branchId = branchIdFromMetadata(metadata);
-  const tripIds = parseTripIdsFromMetadata(metadata);
-  if (metadata.tripId && !tripIds.includes(metadata.tripId)) {
-    tripIds.unshift(metadata.tripId);
+
+  const seedIds = parseTripIdsFromMetadata(metadata);
+  if (metadata.tripId && !seedIds.includes(metadata.tripId)) {
+    seedIds.unshift(metadata.tripId);
   }
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
-  const batch = db.batch();
-  const resolvedRefs = [];
+  if (seedIds.length === 0 || !uid) return;
 
-  for (const tripId of tripIds) {
-    const { ref } = await resolveTripRef(db, tripId, branchId);
-    resolvedRefs.push(ref);
-    batch.update(ref, {
+  const { trips, refs, tripIds } = await loadTripsForPaymentInvoice(
+    db,
+    seedIds,
+    branchId
+  );
+  if (trips.length === 0) return;
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const paymentSource = metadata.source === "web" ? "web" : "ios";
+
+  const paidBatch = db.batch();
+  for (const ref of refs) {
+    paidBatch.update(ref, {
       paymentStatus: "paid",
-      paymentSource: metadata.source === "web" ? "web" : "ios",
+      paymentSource,
       stripePaymentIntentId: paymentIntent.id,
       paidAt: now,
       updatedAt: now,
     });
   }
-  await batch.commit();
+  await paidBatch.commit();
 
-  const primaryTripId = tripIds[0];
-  if (!primaryTripId || !uid) return;
-
-  const { snap: tripSnap } = await resolveTripRef(db, primaryTripId, branchId);
-  if (!tripSnap.exists) return;
-  const trip = { id: tripSnap.id, ...tripSnap.data() };
-
-  if (trip.invoiceId) {
-    const { ref: invoiceDoc } = await resolveInvoiceRef(db, trip.invoiceId, branchId);
+  const primary = trips[0];
+  if (primary.invoiceId) {
+    const { ref: invoiceDoc } = await resolveInvoiceRef(
+      db,
+      primary.invoiceId,
+      branchId
+    );
     await invoiceDoc.update({
       status: "paid",
       paidAt: now,
@@ -95,9 +104,15 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
     return;
   }
 
-  const invoice = await createFirestoreInvoice(db, {
-    trip,
+  console.info("Creating invoice for payment intent", {
+    paymentIntentId: paymentIntent.id,
     tripIds,
+    tripCount: trips.length,
+    quotedTotals: trips.map((t) => Number(t.quotedTotal) || 0),
+  });
+
+  const invoice = await createFirestoreInvoice(db, {
+    trips,
     status: "paid",
     source: "ios",
     branchId,
@@ -105,7 +120,7 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
   });
 
   const invoiceLinkBatch = db.batch();
-  for (const ref of resolvedRefs) {
+  for (const ref of refs) {
     invoiceLinkBatch.update(ref, {
       invoiceId: invoice.id,
       updatedAt: now,

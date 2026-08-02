@@ -44,10 +44,15 @@ export const AppSettingsDocs = {
   locale: "locale"
 } as const;
 
-/** RTDB root for live driver positions (`liveLocations/{branchId}/{driverId}`). */
-export const rtdbLiveLocationsPath = "liveLocations";
+/** RTDB root for live trip positions (`liveTrips/{branchId}/{tripId}`). */
+export const rtdbLiveTripsPath = "liveTrips";
 
-/** RTDB path for one branch's live positions. */
-export function rtdbBranchLiveLocationsPath(branchId: string): string {
-  return `${rtdbLiveLocationsPath}/${branchId}`;
+/** RTDB path for one branch's live trip positions. */
+export function rtdbBranchLiveTripsPath(branchId: string): string {
+  return `${rtdbLiveTripsPath}/${branchId}`;
+}
+
+/** RTDB path for one trip's live position. */
+export function rtdbLiveTripPath(branchId: string, tripId: string): string {
+  return `${rtdbBranchLiveTripsPath(branchId)}/${tripId}`;
 }

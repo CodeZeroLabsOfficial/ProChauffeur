@@ -1,11 +1,11 @@
 {
   "rules": {
-    "liveLocations": {
+    "liveTrips": {
       ".read": "auth != null",
       "$branchId": {
-        "$driverId": {
-          ".write": "auth != null && auth.uid === $driverId",
-          ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt'])"
+        "$tripId": {
+          ".write": "auth != null && ((!newData.exists() && data.child('driverId').val() === auth.uid) || (newData.exists() && newData.child('driverId').val() === auth.uid))",
+          ".validate": "!newData.exists() || newData.hasChildren(['lat', 'lng', 'updatedAt', 'driverId', 'customerId', 'status'])"
         }
       }
     }

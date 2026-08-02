@@ -411,8 +411,6 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     journeyCompletedAt: toDate(d.journeyCompletedAt),
     journeyDurationSeconds:
       typeof d.journeyDurationSeconds === "number" ? d.journeyDurationSeconds : null,
-    liveLocation: toCoordinate(d.liveLocation),
-    liveHeadingDegrees: d.liveHeadingDegrees ?? null,
     tripType: d.tripType ?? null,
     vehicleClassId: d.vehicleClassId ?? null,
     vehicleClassDisplayName: d.vehicleClassDisplayName ?? null,

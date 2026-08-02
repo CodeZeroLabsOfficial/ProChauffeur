@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { clearLiveLocationTripId } from "@/lib/firebase/admin-live-location";
+import { removeLiveTripLocation } from "@/lib/firebase/admin-live-location";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { DEFAULT_BRANCH_ID, TRIP_STATUSES, type TripStatus } from "@/lib/models";
@@ -52,13 +52,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Trip not found." }, { status: 404 });
   }
 
-  const driverID = (resolved.snap.data()?.driverID as string | null | undefined) ?? null;
-
   await resolved.ref.update(tripStatusUpdateFields(status, resolved.snap.data()));
 
-  if ((status === "completed" || status === "cancelled") && driverID) {
+  if (status === "completed" || status === "cancelled") {
     try {
-      await clearLiveLocationTripId(driverID, branchId);
+      await removeLiveTripLocation(id, branchId);
     } catch {
       return NextResponse.json(
         { error: "Trip updated but live location could not be cleared." },

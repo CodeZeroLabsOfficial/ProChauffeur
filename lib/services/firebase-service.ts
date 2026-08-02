@@ -27,7 +27,6 @@ import { remove, ref as rtdbRef } from "firebase/database";
 import { firestore, firebaseAuth, realtimeDb } from "@/lib/firebase/client";
 import {
   coordinateToFirestoreField,
-  coordinateToGeoPoint,
   stripUndefined
 } from "@/lib/firebase/converters";
 import {
@@ -128,7 +127,7 @@ import {
   normalizeAllowedVehicleClassIds,
   normalizeCorporateJoinCode,
   normalizePromoCode,
-  rtdbBranchLiveLocationsPath
+  rtdbBranchLiveTripsPath
 } from "@/lib/models";
 
 type Unsub = () => void;
@@ -412,9 +411,9 @@ export async function deleteBranch(branchId: string): Promise<void> {
   await deleteDoc(branchMetaDocRef(db(), id));
 
   try {
-    await remove(rtdbRef(realtimeDb(), rtdbBranchLiveLocationsPath(id)));
+    await remove(rtdbRef(realtimeDb(), rtdbBranchLiveTripsPath(id)));
   } catch (err) {
-    console.error("Failed to clear live locations for deleted branch:", err);
+    console.error("Failed to clear live trip locations for deleted branch:", err);
   }
 
   const remaining = siblings.filter((b) => b.id !== id);
@@ -577,7 +576,6 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
     branchId,
     pickup: coordinateToFirestoreField(trip.pickup),
     dropoff: coordinateToFirestoreField(trip.dropoff),
-    liveLocation: trip.liveLocation ? coordinateToGeoPoint(trip.liveLocation) : undefined,
     createdAt: trip.createdAt ?? now,
     updatedAt: trip.updatedAt ?? now
   });

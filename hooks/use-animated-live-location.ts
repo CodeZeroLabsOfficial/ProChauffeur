@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { LiveLocation } from "@/hooks/use-live-locations";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 
 const MIN_ANIMATION_MS = 500;
 const MAX_ANIMATION_MS = 5000;
@@ -42,7 +42,7 @@ function lerpAngle(a: number, b: number, t: number): number {
  * Smoothly interpolates between successive RTDB live-location fixes for map markers.
  */
 export function useAnimatedLiveLocation(
-  location: LiveLocation | null
+  location: DriverLiveLocation | null
 ): AnimatedLiveLocation | null {
   const [display, setDisplay] = useState<AnimatedLiveLocation | null>(() =>
     location

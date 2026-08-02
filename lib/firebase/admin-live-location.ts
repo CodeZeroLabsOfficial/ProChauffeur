@@ -1,16 +1,13 @@
 import "server-only";
 
 import { adminDatabase } from "@/lib/firebase/admin";
-import { DEFAULT_BRANCH_ID, rtdbBranchLiveLocationsPath } from "@/lib/models";
+import { DEFAULT_BRANCH_ID, rtdbLiveTripPath } from "@/lib/models";
 
-/** Removes `tripId` from a driver's RTDB live-location node (keeps lat/lng). */
-export async function clearLiveLocationTripId(
-  driverId: string,
+/** Removes the RTDB live position node for a trip. */
+export async function removeLiveTripLocation(
+  tripId: string,
   branchId: string = DEFAULT_BRANCH_ID
 ): Promise<void> {
-  const nestedPath = `${rtdbBranchLiveLocationsPath(branchId)}/${driverId}`;
-  const nestedRef = adminDatabase().ref(nestedPath);
-  const nestedSnap = await nestedRef.get();
-  if (!nestedSnap.exists()) return;
-  await nestedRef.update({ tripId: null });
+  const path = rtdbLiveTripPath(branchId, tripId);
+  await adminDatabase().ref(path).remove();
 }

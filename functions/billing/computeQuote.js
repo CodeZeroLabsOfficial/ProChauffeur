@@ -212,43 +212,17 @@ function serializeQuoteResult(result) {
 }
 
 /**
- * Callable handler: compute a trip quote.
- * data: {
- *   branchId?, customerId, settlement: 'on_account'|'card',
- *   trip: { tripType, vehicleClassId, pickup, dropoff, ... },
- *   promoCode?
- * }
+ * Core quote computation used by the callable and booking payment re-quote.
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {customerId: string, settlement: string, trip: object, branchIdHint?: string|null, promoCode?: string|null} args
  */
-async function computeQuoteHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-
-  const data = request.data || {};
-  const customerId = typeof data.customerId === "string" ? data.customerId.trim() : "";
-  if (!customerId) {
-    throw new HttpsError("invalid-argument", "customerId is required.");
-  }
-
-  const settlement = data.settlement;
-  if (!ALLOWED_SETTLEMENTS.has(settlement)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "settlement must be 'on_account' or 'card'."
-    );
-  }
-
-  const trip = data.trip;
-  if (!trip || typeof trip !== "object") {
-    throw new HttpsError("invalid-argument", "trip is required.");
-  }
-
-  const callerSnap = await db.doc(`${Collections.users}/${uid}`).get();
-  const callerRole = callerSnap.exists ? callerSnap.get("role") : null;
-  const isAdmin = callerRole === "admin";
-  if (!isAdmin && customerId !== uid) {
-    throw new HttpsError("permission-denied", "Customers may only quote themselves.");
-  }
-
+async function runComputeQuote(db, {
+  customerId,
+  settlement,
+  trip,
+  branchIdHint = null,
+  promoCode = null,
+}) {
   const tripType = trip.tripType;
   if (tripType !== "transfer" && tripType !== "hourly") {
     throw new HttpsError("invalid-argument", "trip.tripType must be transfer or hourly.");
@@ -297,8 +271,8 @@ async function computeQuoteHandler(request) {
     : [];
 
   let branchId =
-    typeof data.branchId === "string" && data.branchId.trim()
-      ? data.branchId.trim()
+    typeof branchIdHint === "string" && branchIdHint.trim()
+      ? branchIdHint.trim()
       : null;
   if (!branchId) {
     try {
@@ -433,8 +407,8 @@ async function computeQuoteHandler(request) {
   }
 
   let appliedPromo = null;
-  if (data.promoCode && !corporateAccount) {
-    appliedPromo = await loadAppliedPromo(db, data.promoCode);
+  if (promoCode && !corporateAccount) {
+    appliedPromo = await loadAppliedPromo(db, promoCode);
   }
 
   const [onboard, officeToPickup, dropoffToOffice] = await Promise.all([
@@ -486,6 +460,58 @@ async function computeQuoteHandler(request) {
   };
 }
 
+/**
+ * Callable handler: compute a trip quote.
+ * data: {
+ *   branchId?, customerId, settlement: 'on_account'|'card',
+ *   trip: { tripType, vehicleClassId, pickup, dropoff, ... },
+ *   promoCode?
+ * }
+ */
+async function computeQuoteHandler(request) {
+  const uid = await requireAuth(request);
+  const db = admin.firestore();
+
+  const data = request.data || {};
+  const customerId = typeof data.customerId === "string" ? data.customerId.trim() : "";
+  if (!customerId) {
+    throw new HttpsError("invalid-argument", "customerId is required.");
+  }
+
+  const settlement = data.settlement;
+  if (!ALLOWED_SETTLEMENTS.has(settlement)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "settlement must be 'on_account' or 'card'."
+    );
+  }
+
+  const trip = data.trip;
+  if (!trip || typeof trip !== "object") {
+    throw new HttpsError("invalid-argument", "trip is required.");
+  }
+
+  const callerSnap = await db.doc(`${Collections.users}/${uid}`).get();
+  const callerRole = callerSnap.exists ? callerSnap.get("role") : null;
+  const isAdmin = callerRole === "admin";
+  if (!isAdmin && customerId !== uid) {
+    throw new HttpsError("permission-denied", "Customers may only quote themselves.");
+  }
+
+  return runComputeQuote(db, {
+    customerId,
+    settlement,
+    trip,
+    branchIdHint:
+      typeof data.branchId === "string" && data.branchId.trim()
+        ? data.branchId.trim()
+        : null,
+    promoCode: data.promoCode || null,
+  });
+}
+
+
 module.exports = {
   computeQuoteHandler,
+  runComputeQuote,
 };

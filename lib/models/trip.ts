@@ -53,9 +53,6 @@ export interface Trip {
   journeyCompletedAt?: Date | null;
   /** In-vehicle duration in seconds, set at completion when start is known. */
   journeyDurationSeconds?: number | null;
-  /** Live chauffeur GPS (Firestore GeoPoint -> lat/lng). */
-  liveLocation?: CoordinateField | null;
-  liveHeadingDegrees?: number | null;
   tripType?: TripType | null;
   vehicleClassId?: string | null;
   vehicleClassDisplayName?: string | null;

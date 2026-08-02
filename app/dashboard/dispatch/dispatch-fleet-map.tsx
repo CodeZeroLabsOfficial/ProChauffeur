@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import MapGL, { Marker, NavigationControl, type MapRef } from "react-map-gl/mapbox";
 import { MapPinIcon } from "lucide-react";
 
-import type { LiveLocation } from "@/hooks/use-live-locations";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import {
   boundsFromPoints,
@@ -30,7 +30,7 @@ export function DispatchFleetMap({
 }: {
   token: string;
   mapStyle: string;
-  locations: LiveLocation[];
+  locations: DriverLiveLocation[];
   activeTrips: Trip[];
   driverNameById: Map<string, string>;
   vehicleMakeByDriverId: Map<string, string>;
@@ -91,7 +91,7 @@ export function DispatchFleetMap({
       <NavigationControl position="top-right" />
       {locations.map((loc) => (
         <AnimatedDriverMarker
-          key={loc.driverId}
+          key={loc.tripId}
           location={loc}
           title={driverNameById.get(loc.driverId) ?? loc.driverId}
           vehicleMake={

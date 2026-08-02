@@ -5,6 +5,13 @@ const { resolveBookingBranchId } = require("../lib/resolve-branch");
 const { requireAuth, requireCustomer } = require("../lib/auth");
 const { getStripe, toStripeAmount } = require("../stripe/client");
 const { syncUserStripeCustomer } = require("../stripe/customer");
+const { runComputeQuote } = require("./computeQuote");
+
+const REUSABLE_PI_STATUSES = new Set([
+  "requires_payment_method",
+  "requires_confirmation",
+  "requires_action",
+]);
 
 function validateTripPayload(trip, customerUid) {
   if (!trip || typeof trip !== "object") {
@@ -19,9 +26,14 @@ function validateTripPayload(trip, customerUid) {
   if (!trip.pickup || !trip.dropoff) {
     throw new HttpsError("invalid-argument", "Trip pickup and dropoff are required.");
   }
-  const total = Number(trip.quotedTotal);
-  if (!Number.isFinite(total) || total <= 0) {
-    throw new HttpsError("invalid-argument", "A valid quoted total is required.");
+  if (typeof trip.vehicleClassId !== "string" || !trip.vehicleClassId.trim()) {
+    throw new HttpsError("invalid-argument", "Trip vehicleClassId is required.");
+  }
+  if (trip.paymentStatus === "on_account") {
+    throw new HttpsError(
+      "failed-precondition",
+      "On-account bookings cannot be charged via card payment."
+    );
   }
 }
 
@@ -33,6 +45,110 @@ function sumTripTotals(trips) {
     if (trip.quotedCurrencyCode) currency = trip.quotedCurrencyCode;
   }
   return { total, currency };
+}
+
+function scheduledPickupIso(value) {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  if (value instanceof admin.firestore.Timestamp) {
+    return value.toDate().toISOString();
+  }
+  if (typeof value === "object" && typeof value.seconds === "number") {
+    return new admin.firestore.Timestamp(value.seconds, value.nanoseconds || 0)
+      .toDate()
+      .toISOString();
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  return null;
+}
+
+function extractAddonIds(trip) {
+  if (Array.isArray(trip.addonIds)) {
+    return trip.addonIds.filter((id) => typeof id === "string" && id);
+  }
+  if (Array.isArray(trip.bookingAddons)) {
+    return trip.bookingAddons
+      .map((a) => (a && typeof a.id === "string" ? a.id : null))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function extractPostcode(line) {
+  if (typeof line !== "string") return "";
+  const match = line.match(/\b\d{4}\b/);
+  return match ? match[0] : "";
+}
+
+/**
+ * Recomputes each leg on the server and overwrites client quote fields.
+ */
+async function applyServerQuotes(db, uid, trips, branchId) {
+  const quoted = [];
+  for (const trip of trips) {
+    const scheduledPickupAt = scheduledPickupIso(trip.scheduledPickupAt);
+    if (!scheduledPickupAt) {
+      throw new HttpsError(
+        "invalid-argument",
+        "trip.scheduledPickupAt must be a valid date."
+      );
+    }
+    const pickupAddressLine =
+      typeof trip.pickupAddressLine === "string" ? trip.pickupAddressLine : "";
+    const dropoffAddressLine =
+      typeof trip.dropoffAddressLine === "string" ? trip.dropoffAddressLine : "";
+
+    const quote = await runComputeQuote(db, {
+      customerId: uid,
+      settlement: "card",
+      branchIdHint: branchId,
+      trip: {
+        tripType: trip.tripType || "transfer",
+        vehicleClassId: trip.vehicleClassId,
+        pickup: trip.pickup,
+        dropoff: trip.dropoff,
+        pickupAddressLine,
+        dropoffAddressLine,
+        pickupPostcode:
+          typeof trip.pickupPostcode === "string" && trip.pickupPostcode
+            ? trip.pickupPostcode
+            : extractPostcode(pickupAddressLine),
+        dropoffPostcode:
+          typeof trip.dropoffPostcode === "string" && trip.dropoffPostcode
+            ? trip.dropoffPostcode
+            : extractPostcode(dropoffAddressLine),
+        scheduledPickupAt,
+        addonIds: extractAddonIds(trip),
+      },
+    });
+
+    const total = Number(quote.total);
+    if (!Number.isFinite(total) || total <= 0) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Could not compute a valid fare for this booking."
+      );
+    }
+
+    quoted.push({
+      ...trip,
+      quotedSubtotal: quote.subtotal,
+      quotedTaxAmount: quote.taxAmount,
+      quotedTotal: quote.total,
+      quotedCurrencyCode: quote.currencyCode,
+      quotedTaxRate: quote.quotedTaxRate,
+      quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
+      quoteBreakdown: quote.breakdown,
+      quoteSnapshot: quote.snapshot,
+      quoteComputedAt: new Date().toISOString(),
+    });
+  }
+  return quoted;
 }
 
 const TRIP_DATE_FIELDS = [
@@ -74,6 +190,74 @@ function normalizeTripForFirestore(trip) {
   return out;
 }
 
+/**
+ * Upserts booking trip docs as pending card payment.
+ * @param {string|null} stripePaymentIntentId Existing PI to preserve, or null before creating one.
+ */
+async function upsertPendingTrips(db, tripsInput, branchId, stripePaymentIntentId) {
+  const batch = db.batch();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  for (const trip of tripsInput) {
+    const normalizedTrip = normalizeTripForFirestore(trip);
+    const ref = tripRef(db, trip.id, branchId);
+    batch.set(ref, {
+      ...normalizedTrip,
+      branchId,
+      status: normalizedTrip.status || "requested",
+      paymentStatus: "pending",
+      paymentSource: "ios",
+      stripePaymentIntentId: stripePaymentIntentId || null,
+      invoiceId: null,
+      paidAt: null,
+      createdAt: normalizedTrip.createdAt || now,
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+}
+
+/**
+ * When the client retries with the same trip ids, reuse an open PaymentIntent
+ * instead of creating a second charge for the same booking attempt.
+ */
+async function findReusablePaymentIntent(stripe, db, primaryTripId, branchId) {
+  const snap = await tripRef(db, primaryTripId, branchId).get();
+  if (!snap.exists) return null;
+
+  const data = snap.data() || {};
+  if (data.paymentStatus !== "pending") return null;
+
+  const existingIntentId =
+    typeof data.stripePaymentIntentId === "string" ? data.stripePaymentIntentId : null;
+  if (!existingIntentId) return null;
+
+  let paymentIntent;
+  try {
+    paymentIntent = await stripe.paymentIntents.retrieve(existingIntentId);
+  } catch {
+    return null;
+  }
+
+  if (paymentIntent.status === "succeeded") {
+    throw new HttpsError("failed-precondition", "This booking is already paid.");
+  }
+
+  if (REUSABLE_PI_STATUSES.has(paymentIntent.status) && paymentIntent.client_secret) {
+    return paymentIntent;
+  }
+
+  return null;
+}
+
+function paymentIntentAmountMatches(paymentIntent, amountCents, currency) {
+  if (!paymentIntent) return false;
+  const piCurrency = String(paymentIntent.currency || "").toLowerCase();
+  const wantCurrency = String(currency || "").toLowerCase();
+  if (piCurrency !== wantCurrency) return false;
+  return Math.abs(Number(paymentIntent.amount) - amountCents) <= 1;
+}
+
 async function createBookingPaymentHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
@@ -90,12 +274,6 @@ async function createBookingPaymentHandler(request) {
 
   for (const trip of tripsInput) {
     validateTripPayload(trip, uid);
-    if (trip.paymentStatus === "on_account") {
-      throw new HttpsError(
-        "failed-precondition",
-        "On-account bookings cannot be charged via card payment."
-      );
-    }
   }
 
   let branchId;
@@ -108,33 +286,52 @@ async function createBookingPaymentHandler(request) {
     throw err;
   }
 
-  const { total, currency } = sumTripTotals(tripsInput);
+  const quotedTrips = await applyServerQuotes(db, uid, tripsInput, branchId);
+  const { total, currency } = sumTripTotals(quotedTrips);
+  if (!Number.isFinite(total) || total <= 0) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Could not compute a valid fare for this booking."
+    );
+  }
+
   const stripeCustomerId = await syncUserStripeCustomer(db, uid);
   const stripe = getStripe();
   const amountCents = toStripeAmount(total, currency);
-  const primaryTripId = tripsInput[0].id;
-  const tripIds = tripsInput.map((t) => t.id);
+  const primaryTripId = quotedTrips[0].id;
+  const tripIds = quotedTrips.map((t) => t.id);
 
-  const batch = db.batch();
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const reusableIntent = await findReusablePaymentIntent(
+    stripe,
+    db,
+    primaryTripId,
+    branchId
+  );
 
-  for (const trip of tripsInput) {
-    const normalizedTrip = normalizeTripForFirestore(trip);
-    const ref = tripRef(db, trip.id, branchId);
-    batch.set(ref, {
-      ...normalizedTrip,
+  if (
+    reusableIntent &&
+    paymentIntentAmountMatches(reusableIntent, amountCents, currency)
+  ) {
+    await upsertPendingTrips(db, quotedTrips, branchId, reusableIntent.id);
+    return {
+      clientSecret: reusableIntent.client_secret,
+      paymentIntentId: reusableIntent.id,
+      tripId: primaryTripId,
+      tripIds,
       branchId,
-      status: normalizedTrip.status || "requested",
-      paymentStatus: "pending",
-      paymentSource: "ios",
-      stripePaymentIntentId: null,
-      invoiceId: null,
-      paidAt: null,
-      createdAt: normalizedTrip.createdAt || now,
-      updatedAt: now,
-    });
+      stripeCustomerId,
+    };
   }
-  await batch.commit();
+
+  if (reusableIntent) {
+    try {
+      await stripe.paymentIntents.cancel(reusableIntent.id);
+    } catch {
+      // Fall through and create a new intent for the server amount.
+    }
+  }
+
+  await upsertPendingTrips(db, quotedTrips, branchId, null);
 
   const intentParams = {
     amount: amountCents,

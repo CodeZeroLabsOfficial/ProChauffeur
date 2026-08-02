@@ -3,7 +3,7 @@
 import { Marker } from "react-map-gl/mapbox";
 
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
-import type { LiveLocation } from "@/hooks/use-live-locations";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { useAnimatedLiveLocation } from "@/hooks/use-animated-live-location";
 
 export function AnimatedDriverMarker({
@@ -11,7 +11,7 @@ export function AnimatedDriverMarker({
   title,
   vehicleMake
 }: {
-  location: LiveLocation;
+  location: DriverLiveLocation;
   title?: string;
   vehicleMake?: string | null;
 }) {
