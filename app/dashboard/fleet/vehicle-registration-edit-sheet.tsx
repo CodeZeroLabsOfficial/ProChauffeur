@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import type { Vehicle } from "@/lib/models";
+import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
 import { isStartAfterExpiry } from "@/components/expiry-badge";
 import { saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
 import { FleetDateField } from "@/app/dashboard/fleet/components/fleet-date-field";
@@ -47,6 +48,7 @@ export function VehicleRegistrationEditSheet({
   const [saving, setSaving] = useState(false);
   const [seededKey, setSeededKey] = useState<string | null>("__init__");
   const seedKey = `${vehicle.driverID}:${open ? "open" : "closed"}`;
+  const isNew = !hasComplianceDetails(vehicle.registration);
 
   if (seedKey !== seededKey) {
     setSeededKey(seedKey);
@@ -113,7 +115,12 @@ export function VehicleRegistrationEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Edit registration</SheetTitle>
+          <SheetTitle>
+            {complianceSheetTitle(isNew, {
+              add: "Add registration",
+              edit: "Edit registration"
+            })}
+          </SheetTitle>
         </SheetHeader>
         <form
           key={seedKey}

@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { IdCard, PencilIcon, PlusIcon } from "lucide-react";
+import { BadgeCheck, IdCard } from "lucide-react";
 
 import { DriverAccreditationEditSheet } from "@/app/dashboard/drivers/driver-accreditation-edit-sheet";
 import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import type { BranchDriver, User } from "@/lib/models";
-import { formatDate } from "@/lib/format";
-import { ComplianceEmpty } from "@/components/compliance/compliance-empty";
-import { hasComplianceDetails } from "@/components/compliance/compliance-stat";
-import { ComplianceTile } from "@/components/compliance/compliance-tile";
-import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ComplianceEmpty,
+  ComplianceSectionCard,
+  ComplianceTile,
+  hasComplianceDetails
+} from "@/components/compliance";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -35,8 +34,9 @@ export function DriverProfileComplianceTab({
 }) {
   const profile = branchDriverToProfile(roster);
   const license = profile.driversLicense;
+  const accreditation = profile.operatorAccreditation;
   const hasLicence = hasComplianceDetails(license);
-  const accWarn = expiryWarning(profile.operatorAccreditation?.expiry);
+  const hasAccreditation = hasComplianceDetails(accreditation);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
   const [accreditationEditOpen, setAccreditationEditOpen] = useState(false);
 
@@ -59,26 +59,31 @@ export function DriverProfileComplianceTab({
     />
   );
 
+  const accreditationContent = hasAccreditation ? (
+    <ComplianceTile
+      label={accreditation?.number?.trim() || "—"}
+      secondary={accreditation?.issuingAuthority}
+      start={null}
+      expiry={accreditation?.expiry ?? null}
+      editLabel="Edit operator accreditation"
+      onEdit={() => setAccreditationEditOpen(true)}
+    />
+  ) : (
+    <ComplianceEmpty
+      icon={BadgeCheck}
+      title="No operator accreditation details"
+      description="You haven't added any accreditation details yet."
+    />
+  );
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Driver&apos;s licence</CardTitle>
-          {!hasLicence ? (
-            <CardAction>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setLicenceEditOpen(true)}>
-                <PlusIcon />
-                Add driver&apos;s licence
-              </Button>
-            </CardAction>
-          ) : null}
-        </CardHeader>
-        <CardContent>{licenceContent}</CardContent>
-      </Card>
+      <ComplianceSectionCard
+        title="Driver's licence"
+        addLabel={!hasLicence ? "Add driver's licence" : undefined}
+        onAdd={!hasLicence ? () => setLicenceEditOpen(true) : undefined}>
+        {licenceContent}
+      </ComplianceSectionCard>
 
       <DriverLicenceEditSheet
         user={user}
@@ -88,37 +93,12 @@ export function DriverProfileComplianceTab({
         onSaved={onUserUpdated}
       />
 
-      <Card className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="absolute top-4 right-4 z-10"
-          onClick={() => setAccreditationEditOpen(true)}
-          aria-label="Edit operator accreditation">
-          <PencilIcon />
-        </Button>
-        <CardHeader>
-          <CardTitle>Operator accreditation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DetailRow
-            label="Accreditation no."
-            value={profile.operatorAccreditation?.number?.trim() || "—"}
-          />
-          <DetailRow
-            label="Issuing authority"
-            value={profile.operatorAccreditation?.issuingAuthority?.trim() || "—"}
-          />
-          <div className="flex items-start justify-between gap-4 py-3">
-            <span className="text-muted-foreground shrink-0 text-sm">Expiry</span>
-            <span className="text-end text-sm">
-              {formatDate(profile.operatorAccreditation?.expiry)}
-              {accWarn ? <ExpiryBadge level={accWarn} /> : null}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <ComplianceSectionCard
+        title="Operator accreditation"
+        addLabel={!hasAccreditation ? "Add accreditation" : undefined}
+        onAdd={!hasAccreditation ? () => setAccreditationEditOpen(true) : undefined}>
+        {accreditationContent}
+      </ComplianceSectionCard>
 
       <DriverAccreditationEditSheet
         user={user}

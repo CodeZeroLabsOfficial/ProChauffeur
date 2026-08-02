@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { saveDriverProfile } from "@/lib/services/firebase-service";
 import type { BranchDriver, User } from "@/lib/models";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
+import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -38,6 +39,7 @@ export function DriverAccreditationEditSheet({
   nested?: boolean;
 }) {
   const profile = branchDriverToProfile(roster);
+  const isNew = !hasComplianceDetails(profile.operatorAccreditation);
   const [accreditationExpiry, setAccreditationExpiry] = useState<Date | undefined>(
     profile.operatorAccreditation?.expiry ?? undefined
   );
@@ -80,7 +82,12 @@ export function DriverAccreditationEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Edit operator accreditation</SheetTitle>
+          <SheetTitle>
+            {complianceSheetTitle(isNew, {
+              add: "Add accreditation",
+              edit: "Edit operator accreditation"
+            })}
+          </SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
           <div className="space-y-2">

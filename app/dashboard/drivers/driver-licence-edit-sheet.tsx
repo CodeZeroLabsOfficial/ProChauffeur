@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { MultiSelectField } from "@/components/multi-select-field";
+import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
 import { saveDriverProfile } from "@/lib/services/firebase-service";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import {
@@ -56,6 +57,7 @@ export function DriverLicenceEditSheet({
   nested?: boolean;
 }) {
   const profile = branchDriverToProfile(roster);
+  const isNew = !hasComplianceDetails(profile.driversLicense);
   const license = profile.driversLicense;
   const [driversLicenseIssueDate, setDriversLicenseIssueDate] = useState<Date | undefined>(
     license?.issueDate ?? undefined
@@ -151,7 +153,12 @@ export function DriverLicenceEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Edit driver licence</SheetTitle>
+          <SheetTitle>
+            {complianceSheetTitle(isNew, {
+              add: "Add driver's licence",
+              edit: "Edit driver licence"
+            })}
+          </SheetTitle>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
           <div className="grid grid-cols-2 gap-3">
