@@ -26,7 +26,7 @@ import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { assignmentBadgeIcon, vehicleStatusBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
 import { nullableTrim, saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
-import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
+import { vehicleMakeSelectValue } from "@/lib/vehicle-makes";
 import {
   VEHICLE_ENGINE_TYPE_OPTIONS,
   VEHICLE_TRANSMISSION_OPTIONS
@@ -34,7 +34,9 @@ import {
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
+import { InlineEditableStepperField } from "@/components/inline-editable-stepper-field";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
+import { VehicleMakeSelect } from "@/components/vehicle-make-select";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -44,13 +46,8 @@ import {
   profileV2TabsListClassName
 } from "@/components/layout/profile-tab-bar";
 
-const MIN_MANUFACTURE_YEAR = 1980;
+const MIN_MANUFACTURE_YEAR = 2020;
 const maxManufactureYear = new Date().getFullYear() + 1;
-
-const MAKE_OPTIONS = LUXURY_VEHICLE_MAKES.map((entry) => ({
-  value: entry.label,
-  label: entry.label
-}));
 
 function VehicleOverviewFields({
   vehicle,
@@ -117,19 +114,11 @@ function VehicleOverviewFields({
           <div className="space-y-1">
             <DetailLabel icon={Car}>Make</DetailLabel>
             <dd>
-              <InlineEditableSelectField
-                fieldId="make"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={makeValue}
-                options={MAKE_OPTIONS}
-                editLabel="make"
-                placeholder="Select make"
-                onSave={async (next) => {
-                  if (!next.trim()) {
-                    return { ok: false, message: "Make is required." };
-                  }
-                  return patchDetails({ make: next.trim() });
+              <VehicleMakeSelect
+                value={makeValue || null}
+                nested
+                onChange={(make) => {
+                  void patchDetails({ make });
                 }}
               />
             </dd>
@@ -157,31 +146,15 @@ function VehicleOverviewFields({
           <div className="space-y-1">
             <DetailLabel icon={Calendar}>Year</DetailLabel>
             <dd>
-              <InlineEditableField
+              <InlineEditableStepperField
                 fieldId="year"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={details.manufactureYear != null ? String(details.manufactureYear) : ""}
+                value={details.manufactureYear ?? new Date().getFullYear()}
+                min={MIN_MANUFACTURE_YEAR}
+                max={maxManufactureYear}
                 editLabel="year"
-                placeholder={String(new Date().getFullYear())}
-                onSave={async (next) => {
-                  const trimmed = next.trim();
-                  if (!trimmed) {
-                    return patchDetails({ manufactureYear: null });
-                  }
-                  const year = Number.parseInt(trimmed, 10);
-                  if (
-                    !Number.isFinite(year) ||
-                    year < MIN_MANUFACTURE_YEAR ||
-                    year > maxManufactureYear
-                  ) {
-                    return {
-                      ok: false,
-                      message: `Enter a year between ${MIN_MANUFACTURE_YEAR} and ${maxManufactureYear}.`
-                    };
-                  }
-                  return patchDetails({ manufactureYear: year });
-                }}
+                onSave={async (year) => patchDetails({ manufactureYear: year })}
               />
             </dd>
           </div>
@@ -306,7 +279,6 @@ export function VehicleDetailSheet({
           <Tabs defaultValue="overview" className="gap-4">
             <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
               <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="features">Features</ProfileV2TabTrigger>
               <ProfileV2TabTrigger value="compliance">Compliance</ProfileV2TabTrigger>
               <ProfileV2TabTrigger value="maintenance">Maintenance</ProfileV2TabTrigger>
               <ProfileV2TabTrigger value="operations">Operations</ProfileV2TabTrigger>
@@ -314,9 +286,6 @@ export function VehicleDetailSheet({
 
             <TabsContent value="overview" className="mt-0">
               <VehicleOverviewFields vehicle={displayVehicle} classOptions={classOptions} />
-            </TabsContent>
-            <TabsContent value="features" className="mt-0">
-              <VehicleTabPlaceholder label="Features" />
             </TabsContent>
             <TabsContent value="compliance" className="mt-0">
               <VehicleProfileComplianceTab vehicle={displayVehicle} nested />

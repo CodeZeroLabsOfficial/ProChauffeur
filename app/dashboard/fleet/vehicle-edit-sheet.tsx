@@ -16,12 +16,13 @@ import {
   upsertVehicle
 } from "@/lib/services/firebase-service";
 import { cn } from "@/lib/utils";
-import { LUXURY_VEHICLE_MAKES, vehicleMakeSelectValue } from "@/lib/vehicle-makes";
+import { vehicleMakeSelectValue } from "@/lib/vehicle-makes";
 import {
   VEHICLE_ENGINE_TYPES,
   VEHICLE_TRANSMISSIONS
 } from "@/lib/vehicle-specifications";
 import { NumberStepper } from "@/components/number-stepper";
+import { VehicleMakeSelect } from "@/components/vehicle-make-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 
 const UNASSIGNED = "__unassigned__";
 const NONE = "__none__";
-const MIN_MANUFACTURE_YEAR = 1980;
+const MIN_MANUFACTURE_YEAR = 2020;
 const maxManufactureYear = new Date().getFullYear() + 1;
 
 const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
@@ -215,18 +216,12 @@ export function VehicleEditSheet({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Make</Label>
-                <Select value={make || undefined} onValueChange={setMake}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select make" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                    {LUXURY_VEHICLE_MAKES.map((entry) => (
-                      <SelectItem key={entry.id} value={entry.label}>
-                        {entry.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <VehicleMakeSelect
+                  value={make || null}
+                  onChange={setMake}
+                  disabled={saving}
+                  nested={nested}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
