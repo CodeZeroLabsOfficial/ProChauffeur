@@ -30,6 +30,7 @@ setGlobalOptions({ region: "australia-southeast1" });
 admin.initializeApp();
 
 const callableOptions = { secrets: [stripeSecretKey] };
+const tripCardPaymentOptions = { secrets: [stripeSecretKey, mapboxAccessToken] };
 const computeQuoteOptions = { secrets: [mapboxAccessToken] };
 const consolidateScheduleOptions = {
   schedule: "0 1 * * *",
@@ -37,7 +38,7 @@ const consolidateScheduleOptions = {
   secrets: [stripeSecretKey],
 };
 
-exports.createTripCardPayment = onCall(callableOptions, createTripCardPaymentHandler);
+exports.createTripCardPayment = onCall(tripCardPaymentOptions, createTripCardPaymentHandler);
 exports.prepareSavedCard = onCall(callableOptions, prepareSavedCardHandler);
 exports.removeSavedCard = onCall(callableOptions, removeSavedCardHandler);
 exports.setDefaultSavedCard = onCall(callableOptions, setDefaultSavedCardHandler);
