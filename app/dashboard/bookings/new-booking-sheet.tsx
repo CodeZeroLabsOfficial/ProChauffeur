@@ -79,6 +79,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger
@@ -1547,22 +1548,22 @@ export function NewBookingSheet({
           </div>
 
           <div className="shrink-0 space-y-3 border-t px-4 pt-4 pb-4">
-            <div className="grid grid-cols-2 gap-3">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
               <SheetClose asChild>
-                <Button type="button" variant="outline" className="w-full">
+                <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </SheetClose>
-              <Button type="submit" disabled={saving || quoting} className="w-full">
+              <Button type="submit" disabled={saving || quoting}>
                 {saving
                   ? isEdit
                     ? "Saving…"
                     : "Creating…"
                   : isEdit
-                    ? "Save changes"
+                    ? "Save"
                     : "Create booking"}
               </Button>
-            </div>
+            </SheetFooter>
 
             {quotedTotal != null ? (
               <div className="bg-muted rounded-lg px-3 py-2 text-sm">

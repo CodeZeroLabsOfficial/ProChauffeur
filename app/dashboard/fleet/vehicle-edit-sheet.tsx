@@ -309,9 +309,10 @@ export function VehicleEditSheet({
             </div>
           </div>
 
-          <SheetFooter className="mt-auto px-0">
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            <span />
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Add vehicle" : "Save changes"}
+              {saving ? "Saving…" : isNew ? "Add vehicle" : "Save"}
             </Button>
           </SheetFooter>
         </form>

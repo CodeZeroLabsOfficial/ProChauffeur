@@ -335,7 +335,8 @@ export function CustomerEditSheet({
             disabled={saving}
           />
 
-          <SheetFooter className="mt-auto flex-row items-center justify-end gap-2 px-0 sm:justify-end">
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            <span />
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : isNew ? "Add customer" : "Save"}
             </Button>

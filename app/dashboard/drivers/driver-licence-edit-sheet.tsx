@@ -251,9 +251,10 @@ export function DriverLicenceEditSheet({
             />
           </div>
 
-          <SheetFooter className="mt-auto px-0">
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            <span />
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? "Saving…" : "Save"}
             </Button>
           </SheetFooter>
         </form>

@@ -161,7 +161,8 @@ export function ChangePasswordSheet({
                   </FormItem>
                 )}
               />
-              <SheetFooter className="px-0">
+              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+                <span />
                 <Button type="submit" disabled={saving || resetting}>
                   {saving ? "Updating…" : "Update password"}
                 </Button>

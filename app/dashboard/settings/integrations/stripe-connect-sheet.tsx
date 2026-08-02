@@ -115,14 +115,14 @@ export function StripeConnectSheet({
               <Label htmlFor="webhookUrl">Notification webhook URL</Label>
               <Input id="webhookUrl" name="webhookUrl" defaultValue={config.webhookUrl} placeholder="https://…" />
             </div>
-            <SheetFooter className="flex-row justify-between px-0 sm:justify-between">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
               {connected ? (
                 <Button
                   type="button"
-                  variant="destructive"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   disabled={saving || disconnecting}
-                  onClick={() => setDisconnectOpen(true)}
-                >
+                  onClick={() => setDisconnectOpen(true)}>
                   Disconnect
                 </Button>
               ) : (

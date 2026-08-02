@@ -377,7 +377,8 @@ export function DriverEditSheet({
             />
           </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-end gap-2 px-0 sm:justify-end">
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            <span />
             <Button type="submit" disabled={saving || (isNew && candidates.length === 0)}>
               {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
             </Button>

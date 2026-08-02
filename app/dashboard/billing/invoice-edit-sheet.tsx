@@ -246,7 +246,8 @@ export function InvoiceEditSheet({
             <Textarea id="notes" name="notes" rows={2} />
           </div>
 
-          <SheetFooter className="px-0">
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            <span />
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Create invoice"}
             </Button>

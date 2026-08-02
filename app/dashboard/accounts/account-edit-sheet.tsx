@@ -678,25 +678,22 @@ export function AccountEditSheet({
             </TabsContent>
           </Tabs>
 
-          <SheetFooter className="mt-auto px-0">
-            {isNew ? (
-              <Button type="submit" disabled={saving} className="w-full">
-                {saving ? "Saving…" : "Create account"}
+          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
+            {!isNew ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={saving}
+                onClick={() => void handleDelete()}>
+                Delete
               </Button>
             ) : (
-              <div className="grid w-full grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={saving}
-                  onClick={() => void handleDelete()}>
-                  Delete
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </div>
+              <span />
             )}
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : isNew ? "Create account" : "Save"}
+            </Button>
           </SheetFooter>
         </form>
       </SheetContent>
