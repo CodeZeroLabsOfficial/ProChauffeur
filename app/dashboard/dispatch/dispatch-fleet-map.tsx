@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import MapGL, { Marker, NavigationControl, type MapRef } from "react-map-gl/mapbox";
 import { MapPinIcon } from "lucide-react";
 
-import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
+import type { DriverLiveLocation } from "@/hooks/use-live-locations";
+import { useThrottledMapFit } from "@/hooks/use-throttled-map-fit";
 import {
-  boundsFromPoints,
-  centerFromPoints,
-  coordinateFromLatLng,
   hasValidCoordinate,
+  includeLngLat,
+  includeCoordinate,
   MAP_FALLBACK_VIEW,
+  type LngLatBBox,
   type MapViewState
 } from "@/lib/mapbox/coordinates";
+import { initialViewFromBBox } from "@/lib/mapbox/fit-map-camera";
 import type { Trip } from "@/lib/models/trip";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +25,7 @@ export function DispatchFleetMap({
   locations,
   activeTrips,
   driverNameById,
-  vehicleMakeByDriverId,
+  vehicleMakeByTripId,
   companyDefaultView,
   selectedTripId,
   onSelectTrip
@@ -33,59 +35,41 @@ export function DispatchFleetMap({
   locations: DriverLiveLocation[];
   activeTrips: Trip[];
   driverNameById: Map<string, string>;
-  vehicleMakeByDriverId: Map<string, string>;
+  vehicleMakeByTripId: Map<string, string>;
   companyDefaultView: MapViewState | null;
   selectedTripId: string | null;
   onSelectTrip: (tripId: string) => void;
 }) {
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
+  const fallbackView = companyDefaultView ?? MAP_FALLBACK_VIEW;
 
-  const fitPoints = useMemo(() => {
-    const driverPoints = locations.map((loc) => coordinateFromLatLng(loc.lat, loc.lng));
-    const pickupPoints = activeTrips
-      .filter((t) => hasValidCoordinate(t.pickup))
-      .map((t) => t.pickup);
-    return [...driverPoints, ...pickupPoints];
+  const fitBBox = useMemo((): LngLatBBox | null => {
+    let bbox: LngLatBBox | null = null;
+    for (const loc of locations) {
+      bbox = includeLngLat(bbox, loc.lng, loc.lat);
+    }
+    for (const trip of activeTrips) {
+      if (hasValidCoordinate(trip.pickup)) {
+        bbox = includeCoordinate(bbox, trip.pickup);
+      }
+    }
+    return bbox;
   }, [locations, activeTrips]);
 
-  const initialViewState = useMemo(() => {
-    if (fitPoints.length > 0) return centerFromPoints(fitPoints);
-    return companyDefaultView ?? MAP_FALLBACK_VIEW;
-  }, [fitPoints, companyDefaultView]);
-
-  useEffect(() => {
-    if (!mapRef) return;
-
-    if (fitPoints.length === 0) {
-      const view = companyDefaultView ?? MAP_FALLBACK_VIEW;
-      mapRef.flyTo({
-        center: [view.longitude, view.latitude],
-        zoom: view.zoom,
-        duration: 500
-      });
-      return;
-    }
-
-    if (fitPoints.length === 1) {
-      mapRef.flyTo({
-        center: [fitPoints[0].longitude, fitPoints[0].latitude],
-        zoom: 13,
-        duration: 500
-      });
-      return;
-    }
-
-    mapRef.fitBounds(boundsFromPoints(fitPoints), {
-      padding: 64,
-      duration: 500
-    });
-  }, [mapRef, fitPoints, companyDefaultView]);
+  useThrottledMapFit({
+    map: mapRef,
+    bbox: fitBBox,
+    fallbackView,
+    throttle: locations.length > 0,
+    resetKey: "fleet",
+    flushKey: fitBBox && fitBBox.count > 0 ? "points" : ""
+  });
 
   return (
     <MapGL
       ref={setMapRef}
       mapboxAccessToken={token}
-      initialViewState={initialViewState}
+      initialViewState={initialViewFromBBox(fitBBox, fallbackView)}
       mapStyle={mapStyle}
       style={{ width: "100%", height: "100%" }}>
       <NavigationControl position="top-right" />
@@ -94,10 +78,7 @@ export function DispatchFleetMap({
           key={loc.tripId}
           location={loc}
           title={driverNameById.get(loc.driverId) ?? loc.driverId}
-          vehicleMake={
-            vehicleMakeByDriverId.get(loc.driverId) ??
-            activeTrips.find((t) => t.id === loc.tripId)?.vehicleSnapshot?.details?.make
-          }
+          vehicleMake={vehicleMakeByTripId.get(loc.tripId)}
         />
       ))}
       {activeTrips.map((t) => (

@@ -160,14 +160,18 @@ export default function DispatchPage() {
     [selectedTrip, locations]
   );
 
-  const selectedVehicleMake = useMemo(() => {
-    if (!selectedTrip) return null;
-    if (selectedTrip.driverID) {
-      const fromFleet = vehicleMakeByDriverId.get(selectedTrip.driverID);
-      if (fromFleet) return fromFleet;
+  const vehicleMakeByTripId = useMemo(() => {
+    const map = new globalThis.Map<string, string>();
+    for (const trip of filteredActiveTrips) {
+      const fromFleet = trip.driverID
+        ? vehicleMakeByDriverId.get(trip.driverID)
+        : undefined;
+      const fromSnapshot = trip.vehicleSnapshot?.details?.make?.trim();
+      const make = fromFleet || fromSnapshot;
+      if (make) map.set(trip.id, make);
     }
-    return selectedTrip.vehicleSnapshot?.details?.make ?? null;
-  }, [selectedTrip, vehicleMakeByDriverId]);
+    return map;
+  }, [filteredActiveTrips, vehicleMakeByDriverId]);
 
   const mapStyle =
     resolvedTheme === "dark"
@@ -277,7 +281,11 @@ export default function DispatchPage() {
                       ? (driverNameById.get(selectedTrip.driverID) ?? "Assigned")
                       : null
                   }
-                  vehicleMake={selectedVehicleMake}
+                  vehicleMake={
+                    selectedTrip
+                      ? (vehicleMakeByTripId.get(selectedTrip.id) ?? null)
+                      : null
+                  }
                   companyDefaultView={companyDefaultView}
                   token={token}
                   mapStyle={mapStyle}
@@ -289,7 +297,7 @@ export default function DispatchPage() {
                   locations={locations}
                   activeTrips={filteredActiveTrips}
                   driverNameById={driverNameById}
-                  vehicleMakeByDriverId={vehicleMakeByDriverId}
+                  vehicleMakeByTripId={vehicleMakeByTripId}
                   companyDefaultView={companyDefaultView}
                   selectedTripId={selectedTripId}
                   onSelectTrip={toggleTripSelection}
