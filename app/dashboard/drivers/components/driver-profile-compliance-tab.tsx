@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IdCard, PencilIcon } from "lucide-react";
+import { IdCard, PencilIcon, PlusIcon } from "lucide-react";
 
 import { DriverAccreditationEditSheet } from "@/app/dashboard/drivers/driver-accreditation-edit-sheet";
 import { DriverLicenceEditSheet } from "@/app/dashboard/drivers/driver-licence-edit-sheet";
@@ -13,7 +13,7 @@ import { hasComplianceDetails } from "@/components/compliance/compliance-stat";
 import { ComplianceTile } from "@/components/compliance/compliance-tile";
 import { ExpiryBadge, expiryWarning } from "@/components/expiry-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -35,11 +35,12 @@ export function DriverProfileComplianceTab({
 }) {
   const profile = branchDriverToProfile(roster);
   const license = profile.driversLicense;
+  const hasLicence = hasComplianceDetails(license);
   const accWarn = expiryWarning(profile.operatorAccreditation?.expiry);
   const [licenceEditOpen, setLicenceEditOpen] = useState(false);
   const [accreditationEditOpen, setAccreditationEditOpen] = useState(false);
 
-  const licenceContent = hasComplianceDetails(license) ? (
+  const licenceContent = hasLicence ? (
     <ComplianceTile
       label={license?.number ?? ""}
       secondary={license?.jurisdictionCode}
@@ -55,8 +56,6 @@ export function DriverProfileComplianceTab({
       icon={IdCard}
       title="No driver's licence details"
       description="You haven't added any licence details yet."
-      actionLabel="Add driver's licence"
-      onAction={() => setLicenceEditOpen(true)}
     />
   );
 
@@ -65,6 +64,18 @@ export function DriverProfileComplianceTab({
       <Card>
         <CardHeader>
           <CardTitle>Driver&apos;s licence</CardTitle>
+          {!hasLicence ? (
+            <CardAction>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLicenceEditOpen(true)}>
+                <PlusIcon />
+                Add driver&apos;s licence
+              </Button>
+            </CardAction>
+          ) : null}
         </CardHeader>
         <CardContent>{licenceContent}</CardContent>
       </Card>

@@ -32,6 +32,8 @@ export function VehicleProfileComplianceTab({
   const policies = vehicle.insurancePolicies ?? [];
   const registration = vehicle.registration;
   const roadworthy = vehicle.roadworthy;
+  const hasRegistration = hasComplianceDetails(registration);
+  const hasRoadworthy = hasComplianceDetails(roadworthy);
 
   function openAddPolicy() {
     setEditingPolicy(null);
@@ -43,7 +45,7 @@ export function VehicleProfileComplianceTab({
     setInsuranceOpen(true);
   }
 
-  const registrationContent = hasComplianceDetails(registration) ? (
+  const registrationContent = hasRegistration ? (
     <ComplianceTile
       label={registration?.registrationNumber ?? ""}
       secondary={registration?.jurisdictionCode}
@@ -57,12 +59,10 @@ export function VehicleProfileComplianceTab({
       icon={FileTextIcon}
       title="No registration details"
       description="You haven't added any registration details yet."
-      actionLabel={nested ? undefined : "Add registration"}
-      onAction={nested ? undefined : () => setRegistrationOpen(true)}
     />
   );
 
-  const roadworthyContent = hasComplianceDetails(roadworthy) ? (
+  const roadworthyContent = hasRoadworthy ? (
     <ComplianceTile
       label={roadworthy?.certificateNumber ?? ""}
       secondary={roadworthy?.jurisdictionCode}
@@ -76,8 +76,6 @@ export function VehicleProfileComplianceTab({
       icon={ClipboardCheckIcon}
       title="No roadworthy details"
       description="You haven't added any roadworthy details yet."
-      actionLabel={nested ? undefined : "Add Roadworthy"}
-      onAction={nested ? undefined : () => setRoadworthyOpen(true)}
     />
   );
 
@@ -87,8 +85,6 @@ export function VehicleProfileComplianceTab({
         icon={ShieldIcon}
         title="No insurance policies"
         description="You haven't added any insurance details yet."
-        actionLabel={nested ? undefined : "Add policy"}
-        onAction={nested ? undefined : openAddPolicy}
       />
     ) : (
       <div className={cn("grid gap-3", nested ? "grid-cols-1" : "md:grid-cols-2")}>
@@ -128,6 +124,18 @@ export function VehicleProfileComplianceTab({
           <Card>
             <CardHeader>
               <CardTitle>Registration</CardTitle>
+              {!hasRegistration ? (
+                <CardAction>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRegistrationOpen(true)}>
+                    <PlusIcon />
+                    Add registration
+                  </Button>
+                </CardAction>
+              ) : null}
             </CardHeader>
             <CardContent>{registrationContent}</CardContent>
           </Card>
@@ -135,6 +143,18 @@ export function VehicleProfileComplianceTab({
           <Card>
             <CardHeader>
               <CardTitle>Roadworthy</CardTitle>
+              {!hasRoadworthy ? (
+                <CardAction>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRoadworthyOpen(true)}>
+                    <PlusIcon />
+                    Add Roadworthy
+                  </Button>
+                </CardAction>
+              ) : null}
             </CardHeader>
             <CardContent>{roadworthyContent}</CardContent>
           </Card>
@@ -142,14 +162,12 @@ export function VehicleProfileComplianceTab({
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Insurance</CardTitle>
-              {policies.length > 0 ? (
-                <CardAction>
-                  <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
-                    <PlusIcon />
-                    Add policy
-                  </Button>
-                </CardAction>
-              ) : null}
+              <CardAction>
+                <Button type="button" variant="outline" size="sm" onClick={openAddPolicy}>
+                  <PlusIcon />
+                  Add policy
+                </Button>
+              </CardAction>
             </CardHeader>
             <CardContent>{insuranceContent}</CardContent>
           </Card>

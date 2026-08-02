@@ -2,24 +2,17 @@
 
 import type { LucideIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function ComplianceEmpty({
   icon: Icon,
   title,
-  description,
-  actionLabel,
-  onAction
+  description
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
-  actionLabel?: string;
-  onAction?: () => void;
 }) {
-  const hasAction = Boolean(actionLabel && onAction);
-
   return (
     <Card className="relative gap-3 py-3 shadow-none">
       <CardContent>
@@ -30,13 +23,6 @@ export function ComplianceEmpty({
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm font-medium">{title}</p>
             <p className="text-muted-foreground text-xs">{description}</p>
-            {hasAction ? (
-              <div className="pt-1.5">
-                <Button type="button" size="sm" onClick={onAction}>
-                  {actionLabel}
-                </Button>
-              </div>
-            ) : null}
           </div>
         </div>
       </CardContent>
