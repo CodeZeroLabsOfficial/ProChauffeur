@@ -7,7 +7,6 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { TripOnTimeBadge } from "@/components/trip-on-time-badge";
 import { TripProgressBar } from "@/components/trip-progress-bar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,12 +34,12 @@ export function DispatchActiveTripCard({
   waitingForGps: boolean;
   onSelect: () => void;
 }) {
-  const [addressesOpen, setAddressesOpen] = useState(false);
+  const [journeyOpen, setJourneyOpen] = useState(false);
 
   return (
     <Collapsible
-      open={addressesOpen}
-      onOpenChange={setAddressesOpen}
+      open={journeyOpen}
+      onOpenChange={setJourneyOpen}
       className={cn(
         "border-border hover:bg-muted/60 border-b transition-colors",
         selected && "bg-muted"
@@ -55,7 +54,7 @@ export function DispatchActiveTripCard({
             onSelect();
           }
         }}
-        className="flex w-full cursor-pointer flex-col gap-3 p-4 text-left">
+        className="flex w-full cursor-pointer flex-col gap-3 p-4 pb-2 text-left">
         <div className="flex items-start gap-3">
           <Avatar className="size-10 shrink-0">
             <AvatarImage src={chauffeurPhotoURL ?? undefined} alt={chauffeurName} />
@@ -81,31 +80,27 @@ export function DispatchActiveTripCard({
                   {formatDateTime(tripPickupReferenceDate(trip))}
                 </p>
               </div>
-
-              <div className="flex shrink-0 items-center gap-1">
-                <TripOnTimeBadge onTime={progress.onTime} />
-                <CollapsibleTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    aria-label="Toggle pickup and destination"
-                    aria-expanded={addressesOpen}
-                    onClick={(e) => e.stopPropagation()}>
-                    {addressesOpen ? (
-                      <ChevronDownIcon className="size-4" />
-                    ) : (
-                      <ChevronRightIcon className="size-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
+              <TripOnTimeBadge onTime={progress.onTime} />
             </div>
           </div>
         </div>
 
         <TripProgressBar progress={progress} waitingForGps={waitingForGps} />
+      </div>
+
+      <div className="px-4 pb-4">
+        <CollapsibleTrigger
+          type="button"
+          aria-expanded={journeyOpen}
+          className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 py-1 text-xs font-medium"
+          onClick={(e) => e.stopPropagation()}>
+          Journey
+          {journeyOpen ? (
+            <ChevronDownIcon className="size-4 shrink-0" />
+          ) : (
+            <ChevronRightIcon className="size-4 shrink-0" />
+          )}
+        </CollapsibleTrigger>
 
         <CollapsibleContent>
           <TripRouteStops
@@ -118,28 +113,17 @@ export function DispatchActiveTripCard({
   );
 }
 
-function RouteStopDot({ variant }: { variant: "pickup" | "dropoff" }) {
-  const isPickup = variant === "pickup";
-  return (
-    <span
-      className={cn(
-        "flex size-3 shrink-0 items-center justify-center rounded-full border-2",
-        isPickup ? "border-primary" : "border-muted-foreground/50"
-      )}>
-      <span
-        className={cn("size-1 rounded-full", isPickup ? "bg-primary" : "bg-muted-foreground/50")}
-      />
-    </span>
-  );
-}
-
 function TripRouteStops({ pickup, dropoff }: { pickup: string; dropoff: string }) {
   return (
-    <div className="flex gap-3 pt-1">
+    <div className="flex gap-3 pt-2">
       <div className="flex flex-col items-center pt-0.5">
-        <RouteStopDot variant="pickup" />
+        <span className="border-primary flex size-3 shrink-0 items-center justify-center rounded-full border-2">
+          <span className="bg-primary size-1 rounded-full" />
+        </span>
         <span className="border-border min-h-4 flex-1 border-l border-dashed" />
-        <RouteStopDot variant="dropoff" />
+        <span className="border-muted-foreground/50 flex size-3 shrink-0 items-center justify-center rounded-full border-2">
+          <span className="bg-muted-foreground/50 size-1 rounded-full" />
+        </span>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <p className="text-foreground text-sm font-semibold break-words">{pickup}</p>
