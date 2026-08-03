@@ -7,6 +7,7 @@ import type { QuoteLineItem, QuoteResult, TripQuoteSnapshot } from "@/lib/models
 import type { CoordinateField } from "@/lib/models/trip";
 import type { TripType } from "@/lib/models/enums";
 
+/** Flat quote inputs used by the dashboard; wrapped into nested journey/quote for the callable. */
 export type ComputeQuoteTripInput = {
   tripType: TripType;
   vehicleClassId: string;
@@ -29,11 +30,46 @@ export type ComputeQuoteRequest = {
   promoCode?: string | null;
 };
 
+/** Nested trip payload expected by the `computeQuote` Cloud Function. */
+type ComputeQuoteNestedTrip = {
+  journey: {
+    tripType: TripType;
+    pickup: CoordinateField;
+    dropoff: CoordinateField;
+    pickupAddressLine: string;
+    dropoffAddressLine: string;
+    scheduledPickupAt: string;
+    bookedHours: number | null;
+    addonIds: string[];
+  };
+  quote: {
+    vehicleClassId: string;
+  };
+};
+
 type ComputeQuoteRemoteResult = Omit<QuoteResult, "snapshot"> & {
   snapshot: Omit<TripQuoteSnapshot, "scheduledPickupAt"> & {
     scheduledPickupAt: string | Date;
   };
 };
+
+function nestedTripPayload(trip: ComputeQuoteTripInput): ComputeQuoteNestedTrip {
+  return {
+    journey: {
+      tripType: trip.tripType,
+      pickup: trip.pickup,
+      dropoff: trip.dropoff,
+      pickupAddressLine: trip.pickupAddressLine,
+      dropoffAddressLine: trip.dropoffAddressLine,
+      scheduledPickupAt: trip.scheduledPickupAt.toISOString(),
+      bookedHours: trip.bookedHours,
+      addonIds: trip.addonIds
+    },
+    quote: {
+      vehicleClassId: trip.vehicleClassId
+    }
+  };
+}
 
 function reviveQuoteResult(raw: ComputeQuoteRemoteResult): QuoteResult {
   const scheduled = raw.snapshot?.scheduledPickupAt;
@@ -60,7 +96,7 @@ export async function computeQuoteRemote(request: ComputeQuoteRequest): Promise<
       branchId: string;
       customerId: string;
       settlement: CorporateAllowedPayment;
-      trip: Omit<ComputeQuoteTripInput, "scheduledPickupAt"> & { scheduledPickupAt: string };
+      trip: ComputeQuoteNestedTrip;
       promoCode?: string | null;
     },
     ComputeQuoteRemoteResult
@@ -71,10 +107,7 @@ export async function computeQuoteRemote(request: ComputeQuoteRequest): Promise<
     customerId: request.customerId,
     settlement: request.settlement,
     promoCode: request.promoCode ?? null,
-    trip: {
-      ...request.trip,
-      scheduledPickupAt: request.trip.scheduledPickupAt.toISOString()
-    }
+    trip: nestedTripPayload(request.trip)
   });
   return reviveQuoteResult(result.data);
 }

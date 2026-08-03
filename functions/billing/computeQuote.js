@@ -39,7 +39,11 @@ function normalizePromoCode(code) {
 
 /** Addon ids selected for the leg, from `journey.bookingAddons`. */
 function extractAddonIds(journey) {
-  if (!journey || !Array.isArray(journey.bookingAddons)) return [];
+  if (!journey || typeof journey !== "object") return [];
+  if (Array.isArray(journey.addonIds)) {
+    return journey.addonIds.filter((id) => typeof id === "string" && id.trim());
+  }
+  if (!Array.isArray(journey.bookingAddons)) return [];
   return journey.bookingAddons
     .map((a) => (a && typeof a.id === "string" ? a.id : null))
     .filter(Boolean);
