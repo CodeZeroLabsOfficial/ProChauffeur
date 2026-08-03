@@ -76,7 +76,7 @@ export function DispatchActiveTripCard({
         }}
         className="flex w-full cursor-pointer flex-col gap-3 p-4 text-left">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-foreground text-sm font-semibold">
+          <p className="text-foreground text-xs font-semibold">
             {formatDateTime(tripPickupReferenceDate(trip))}
           </p>
           <CollapsibleTrigger
