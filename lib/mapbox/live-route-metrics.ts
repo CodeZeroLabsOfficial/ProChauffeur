@@ -21,20 +21,7 @@ function cacheKey(from: CoordinateField, to: CoordinateField): string {
   return `${quantize(from.latitude)},${quantize(from.longitude)}->${quantize(to.latitude)},${quantize(to.longitude)}`;
 }
 
-function touchKey(key: string) {
-  const idx = keyOrder.indexOf(key);
-  if (idx >= 0) keyOrder.splice(idx, 1);
-  keyOrder.push(key);
-  while (keyOrder.length > MAX_ENTRIES) {
-    const oldest = keyOrder.shift();
-    if (oldest) cache.delete(oldest);
-  }
-}
-
-export function getCachedLiveRouteMetrics(
-  from: CoordinateField,
-  to: CoordinateField
-): RouteMetrics | undefined {
+function getCached(from: CoordinateField, to: CoordinateField): RouteMetrics | undefined {
   const key = cacheKey(from, to);
   const entry = cache.get(key);
   if (!entry) return undefined;
@@ -47,14 +34,16 @@ export function getCachedLiveRouteMetrics(
   return entry.metrics;
 }
 
-export function setCachedLiveRouteMetrics(
-  from: CoordinateField,
-  to: CoordinateField,
-  metrics: RouteMetrics
-): void {
+function setCached(from: CoordinateField, to: CoordinateField, metrics: RouteMetrics): void {
   const key = cacheKey(from, to);
   cache.set(key, { metrics, expiresAt: Date.now() + TTL_MS });
-  touchKey(key);
+  const idx = keyOrder.indexOf(key);
+  if (idx >= 0) keyOrder.splice(idx, 1);
+  keyOrder.push(key);
+  while (keyOrder.length > MAX_ENTRIES) {
+    const oldest = keyOrder.shift();
+    if (oldest) cache.delete(oldest);
+  }
 }
 
 /** Live GPS → destination route metrics with short TTL + quantized coords. */
@@ -63,10 +52,10 @@ export async function fetchLiveRouteMetrics(
   to: CoordinateField,
   token: string
 ): Promise<RouteMetrics | null> {
-  const cached = getCachedLiveRouteMetrics(from, to);
+  const cached = getCached(from, to);
   if (cached) return cached;
 
   const metrics = await fetchRouteMetrics(from, to, token);
-  if (metrics) setCachedLiveRouteMetrics(from, to, metrics);
+  if (metrics) setCached(from, to, metrics);
   return metrics;
 }

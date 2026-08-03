@@ -17,7 +17,6 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { useLiveLocations } from "@/hooks/use-live-locations";
-import { useTripRouteMetrics } from "@/hooks/use-trip-route-metrics";
 import { useFleetLocations, useUsers, useVehicles } from "@/hooks/use-collections";
 import { getMapboxToken } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
@@ -71,12 +70,6 @@ export function BookingLiveSheet({
   );
 
   const driverLocation = trip ? resolveDriverLocation(trip, locations) : null;
-  const { progress } = useTripRouteMetrics(
-    open ? trip : null,
-    driverLocation,
-    token,
-    open && Boolean(trip) && Boolean(token) && !tokenError
-  );
 
   const mapStyle =
     resolvedTheme === "dark"
@@ -137,7 +130,7 @@ export function BookingLiveSheet({
             <div className="text-muted-foreground flex h-full min-h-[320px] items-center justify-center p-6 text-center text-sm">
               Set NEXT_PUBLIC_MAPBOX_TOKEN to enable the live map.
             </div>
-          ) : trip ? (
+          ) : trip && open ? (
             <div className="h-full min-h-[320px]">
               <LiveTripPanel
                 trip={trip}
@@ -147,7 +140,6 @@ export function BookingLiveSheet({
                 companyDefaultView={companyDefaultView}
                 token={token}
                 mapStyle={mapStyle}
-                progress={progress}
                 liveCount={locations.length}
                 liveReady={ready}
               />

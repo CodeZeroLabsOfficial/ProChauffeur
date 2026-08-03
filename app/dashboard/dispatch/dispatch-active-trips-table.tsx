@@ -8,8 +8,8 @@ import {
   type ColumnDef
 } from "@tanstack/react-table";
 
-import { TripProgressBar } from "@/components/trip-progress-bar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -89,17 +89,6 @@ export function DispatchActiveTripsTable({
       )
     },
     {
-      id: "route",
-      header: "Route",
-      cell: ({ row }) => (
-        <div className="max-w-[280px] truncate text-sm">
-          {row.original.pickupAddressLine || "Pickup not set"}
-          <span className="text-muted-foreground"> → </span>
-          {row.original.dropoffAddressLine || "Destination not set"}
-        </div>
-      )
-    },
-    {
       id: "status",
       header: "Status",
       cell: ({ row }) => <TripStatusBadge status={row.original.status} />
@@ -107,14 +96,22 @@ export function DispatchActiveTripsTable({
     {
       id: "progress",
       header: "Progress",
-      cell: ({ row }) => (
-        <div className="min-w-[140px]">
-          <TripProgressBar
-            progress={row.original.progress}
-            waitingForGps={row.original.waitingForGps}
-          />
-        </div>
-      )
+      cell: ({ row }) => {
+        const { progress, waitingForGps } = row.original;
+        if (progress.kind === "idle") return null;
+
+        const showWaiting = waitingForGps && progress.etaLabel == null;
+        const value = progress.percent ?? (progress.kind === "completed" ? 100 : 0);
+
+        return (
+          <div className="flex min-w-[160px] items-center gap-3">
+            <Progress value={showWaiting ? 0 : value} className="h-1.5 min-w-[96px] flex-1" />
+            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              {showWaiting ? "Waiting for GPS" : progress.etaLabel}
+            </span>
+          </div>
+        );
+      }
     }
   ];
 

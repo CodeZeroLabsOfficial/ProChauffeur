@@ -9,13 +9,12 @@ import { fetchLiveRouteMetrics } from "@/lib/mapbox/live-route-metrics";
 import type { Trip } from "@/lib/models/trip";
 import { computeTripProgress, type TripProgress } from "@/lib/trip-progress";
 
-const DEFAULT_DEBOUNCE_MS = 1000;
+const DEBOUNCE_MS = 1000;
 const MAX_CONCURRENT = 4;
 
 type TripMetricsState = {
   remaining: number | null;
   baseline: number | null;
-  error: boolean;
 };
 
 function phaseKey(trip: Trip): string {
@@ -31,17 +30,11 @@ export function useActiveTripsProgress(
   trips: Trip[],
   locations: DriverLiveLocation[],
   token: string,
-  enabled: boolean,
-  options?: { debounceMs?: number }
-): {
-  progressByTripId: Map<string, TripProgress>;
-  loadingTripIds: Set<string>;
-} {
-  const debounceMs = options?.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+  enabled: boolean
+): { progressByTripId: Map<string, TripProgress> } {
   const [metricsByTripId, setMetricsByTripId] = useState<Map<string, TripMetricsState>>(
     () => new Map()
   );
-  const [loadingTripIds, setLoadingTripIds] = useState<Set<string>>(() => new Set());
   const [now, setNow] = useState(() => new Date());
   const baselineByPhase = useRef(new Map<string, number>());
   const hasFetchedOnce = useRef(new Set<string>());
@@ -78,8 +71,9 @@ export function useActiveTripsProgress(
       return next;
     });
     for (const key of [...hasFetchedOnce.current]) {
-      const tripId = key.split(":")[0];
-      if (!trips.some((t) => t.id === tripId)) hasFetchedOnce.current.delete(key);
+      if (!trips.some((t) => key.startsWith(`${t.id}:`))) {
+        hasFetchedOnce.current.delete(key);
+      }
     }
   }, [tripIdsKey, trips]);
 
@@ -96,30 +90,21 @@ export function useActiveTripsProgress(
       return hasValidCoordinate(from) && hasValidCoordinate(to);
     });
 
-    if (candidates.length === 0) {
-      setLoadingTripIds(new Set());
-      return;
-    }
+    if (candidates.length === 0) return;
 
     let cancelled = false;
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function loadAll() {
-      const loading = new Set(candidates.map((t) => t.id));
-      setLoadingTripIds(loading);
-
       const queue = [...candidates];
-      const workers: Promise<void>[] = [];
+      const updates = new Map<string, TripMetricsState>();
 
       async function worker() {
         while (queue.length > 0) {
           const trip = queue.shift();
           if (!trip || cancelled) return;
           const loc = resolveDriverLocation(trip, locationsRef.current);
-          if (!loc) {
-            loading.delete(trip.id);
-            continue;
-          }
+          if (!loc) continue;
           const from = coordinateFromLatLng(loc.lat, loc.lng);
           const mode = dispatchMapMode(trip.status);
           const to = mode === "to_pickup" ? trip.pickup : trip.dropoff;
@@ -132,51 +117,42 @@ export function useActiveTripsProgress(
               baseline = metrics.durationSeconds;
               baselineByPhase.current.set(key, metrics.durationSeconds);
             }
-            setMetricsByTripId((prev) => {
-              const next = new Map(prev);
-              next.set(trip.id, {
-                remaining: metrics?.durationSeconds ?? null,
-                baseline,
-                error: !metrics
-              });
-              return next;
+            updates.set(trip.id, {
+              remaining: metrics?.durationSeconds ?? null,
+              baseline
             });
             hasFetchedOnce.current.add(`${trip.id}:${trip.status}`);
           } catch {
             if (cancelled) return;
-            setMetricsByTripId((prev) => {
-              const next = new Map(prev);
-              next.set(trip.id, {
-                remaining: null,
-                baseline: baselineByPhase.current.get(phaseKey(trip)) ?? null,
-                error: true
-              });
-              return next;
+            updates.set(trip.id, {
+              remaining: null,
+              baseline: baselineByPhase.current.get(phaseKey(trip)) ?? null
             });
-          } finally {
-            loading.delete(trip.id);
-            if (!cancelled) setLoadingTripIds(new Set(loading));
           }
         }
       }
 
-      const workerCount = Math.min(MAX_CONCURRENT, queue.length);
-      for (let i = 0; i < workerCount; i++) workers.push(worker());
-      await Promise.all(workers);
-      if (!cancelled) {
-        setNow(new Date());
-        setLoadingTripIds(new Set());
-      }
+      await Promise.all(
+        Array.from({ length: Math.min(MAX_CONCURRENT, queue.length) }, () => worker())
+      );
+
+      if (cancelled || updates.size === 0) return;
+      setMetricsByTripId((prev) => {
+        const next = new Map(prev);
+        for (const [id, state] of updates) next.set(id, state);
+        return next;
+      });
+      setNow(new Date());
     }
 
     const anyFetched = candidates.some((t) =>
       hasFetchedOnce.current.has(`${t.id}:${t.status}`)
     );
 
-    if (debounceMs > 0 && anyFetched) {
+    if (anyFetched) {
       debounceTimer = setTimeout(() => {
         void loadAll();
-      }, debounceMs);
+      }, DEBOUNCE_MS);
     } else {
       void loadAll();
     }
@@ -185,12 +161,14 @@ export function useActiveTripsProgress(
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [enabled, token, liveTripSignatures, debounceMs, trips]);
+  }, [enabled, token, liveTripSignatures, trips]);
 
   useEffect(() => {
+    const hasLive = trips.some(needsLiveMetrics);
+    if (!hasLive) return;
     const id = window.setInterval(() => setNow(new Date()), 15_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [trips]);
 
   const progressByTripId = useMemo(() => {
     const map = new Map<string, TripProgress>();
@@ -210,5 +188,5 @@ export function useActiveTripsProgress(
     return map;
   }, [trips, metricsByTripId, now]);
 
-  return { progressByTripId, loadingTripIds };
+  return { progressByTripId };
 }

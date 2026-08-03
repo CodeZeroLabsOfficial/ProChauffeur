@@ -318,7 +318,6 @@ export default function DispatchPage() {
                     companyDefaultView={companyDefaultView}
                     token={token}
                     mapStyle={mapStyle}
-                    progress={progressByTripId.get(selectedTrip.id)!}
                     liveCount={locations.length}
                     liveReady={ready}
                   />
