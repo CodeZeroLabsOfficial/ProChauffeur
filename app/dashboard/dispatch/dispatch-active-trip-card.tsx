@@ -56,7 +56,7 @@ export function DispatchActiveTripCard({
         }}
         className="flex w-full cursor-pointer flex-col gap-3 p-4 text-left">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-muted-foreground text-xs">
+          <p className="text-foreground text-sm font-semibold">
             {formatDateTime(tripPickupReferenceDate(trip))}
           </p>
           <CollapsibleTrigger
@@ -108,21 +108,39 @@ export function DispatchActiveTripCard({
   );
 }
 
+function RoutePin({ variant }: { variant: "pickup" | "dropoff" }) {
+  const isPickup = variant === "pickup";
+  return (
+    <span
+      className={cn(
+        "mt-0.5 flex size-3 shrink-0 items-center justify-center rounded-full border-2",
+        isPickup ? "border-primary" : "border-muted-foreground/50"
+      )}>
+      <span
+        className={cn(
+          "size-1 rounded-full",
+          isPickup ? "bg-primary" : "bg-muted-foreground/50"
+        )}
+      />
+    </span>
+  );
+}
+
 function TripRouteStops({ pickup, dropoff }: { pickup: string; dropoff: string }) {
   return (
-    <div className="flex gap-3 pt-1">
-      <div className="flex flex-col items-center pt-0.5">
-        <span className="border-primary flex size-3 shrink-0 items-center justify-center rounded-full border-2">
-          <span className="bg-primary size-1 rounded-full" />
-        </span>
-        <span className="border-border min-h-4 flex-1 border-l border-dashed" />
-        <span className="border-muted-foreground/50 flex size-3 shrink-0 items-center justify-center rounded-full border-2">
-          <span className="bg-muted-foreground/50 size-1 rounded-full" />
-        </span>
+    <div className="flex flex-col pt-1">
+      <div className="flex items-start gap-3">
+        <div className="flex w-3 shrink-0 flex-col items-center self-stretch">
+          <RoutePin variant="pickup" />
+          <span className="border-border w-0 flex-1 border-l border-dashed" />
+        </div>
+        <p className="text-muted-foreground min-w-0 flex-1 pb-4 text-xs break-words">{pickup}</p>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <p className="text-foreground text-sm font-semibold break-words">{pickup}</p>
-        <p className="text-foreground text-sm font-semibold break-words">{dropoff}</p>
+      <div className="flex items-start gap-3">
+        <div className="flex w-3 shrink-0 justify-center">
+          <RoutePin variant="dropoff" />
+        </div>
+        <p className="text-muted-foreground min-w-0 flex-1 text-xs break-words">{dropoff}</p>
       </div>
     </div>
   );
