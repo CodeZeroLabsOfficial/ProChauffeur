@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/collapsible";
 import { formatDateTime } from "@/lib/format";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models";
-import { vehicleDisplayName } from "@/lib/models/vehicle";
 import type { TripProgress } from "@/lib/trip-progress";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 
@@ -45,8 +44,9 @@ export function DispatchActiveTripCard({
 }) {
   const [journeyOpen, setJourneyOpen] = useState(false);
 
+  const details = trip.vehicleSnapshot?.details;
   const vehicleName =
-    (trip.vehicleSnapshot ? vehicleDisplayName(trip.vehicleSnapshot) : "") ||
+    [details?.make, details?.model].filter(Boolean).join(" ").trim() ||
     vehicleLabel?.trim() ||
     null;
 
