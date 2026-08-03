@@ -85,10 +85,7 @@ function mapVehicleSpecifications(raw: unknown): VehicleSpecifications | null {
   const d = raw as DocumentData;
   return {
     engineType: typeof d.engineType === "string" ? d.engineType : null,
-    transmission: typeof d.transmission === "string" ? d.transmission : "",
-    wifi: typeof d.wifi === "string" ? d.wifi : "",
-    interior: typeof d.interior === "string" ? d.interior : "",
-    climateControl: typeof d.climateControl === "string" ? d.climateControl : ""
+    transmission: typeof d.transmission === "string" ? d.transmission : ""
   };
 }
 

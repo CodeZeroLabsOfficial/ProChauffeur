@@ -190,6 +190,15 @@ function parseVehicleClassCapacity(raw: unknown, path: string): VehicleClassCapa
   };
 }
 
+function parseVehicleClassInclusions(raw: unknown): VehicleClass["inclusions"] {
+  const d = raw && typeof raw === "object" ? (raw as DocumentData) : {};
+  return {
+    wifi: typeof d.wifi === "string" && d.wifi.trim() ? d.wifi.trim() : "Complimentary",
+    interior: typeof d.interior === "string" ? d.interior : "",
+    climateControl: typeof d.climateControl === "string" ? d.climateControl : ""
+  };
+}
+
 export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
   const path = `vehicle_classes/${id}`;
   const supportedTripTypes = Array.isArray(d.supportedTripTypes)
@@ -198,12 +207,19 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
   if (supportedTripTypes.length === 0) {
     throw new ConfigError(`Invalid ${path}.supportedTripTypes: at least one trip type required.`);
   }
+  const serviceTier =
+    typeof d.serviceTier === "string" && d.serviceTier.trim() ? d.serviceTier.trim() : "Business";
+  const bodyType =
+    typeof d.bodyType === "string" && d.bodyType.trim() ? d.bodyType.trim() : "Sedan";
   return {
     id,
     slug: requireString(d.slug, `${path}.slug`),
     displayName: requireString(d.displayName, `${path}.displayName`),
     sortOrder: requireNumber(d.sortOrder, `${path}.sortOrder`),
+    serviceTier,
+    bodyType,
     capacity: parseVehicleClassCapacity(d.capacity, `${path}.capacity`),
+    inclusions: parseVehicleClassInclusions(d.inclusions),
     description: typeof d.description === "string" ? d.description : null,
     imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
     isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),
@@ -218,8 +234,8 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
     supportedTripTypes: supportedTripTypes as TripType[],
     transfer: parseTransferRates(d.transfer ?? {}, `${path}.transfer`),
     hourly: parseHourlyRates(d.hourly ?? {}, `${path}.hourly`),
-    createdAt: d.createdAt?.toDate?.() ?? new Date(),
-    updatedAt: d.updatedAt?.toDate?.() ?? new Date()
+    createdAt: d.createdAt?.toDate?.() ?? (d.createdAt instanceof Date ? d.createdAt : new Date()),
+    updatedAt: d.updatedAt?.toDate?.() ?? (d.updatedAt instanceof Date ? d.updatedAt : new Date())
   };
 }
 

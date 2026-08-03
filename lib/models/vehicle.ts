@@ -34,12 +34,10 @@ export interface VehicleDetails {
   vehicleClassId: string | null;
 }
 
+/** Mechanical specs for a fleet plate (booking inclusions live on VehicleClass). */
 export interface VehicleSpecifications {
   engineType: string | null;
   transmission: string;
-  wifi: string;
-  interior: string;
-  climateControl: string;
 }
 
 /**
@@ -96,9 +94,6 @@ export function emptyVehicleDetails(): VehicleDetails {
 export function emptyVehicleSpecifications(): VehicleSpecifications {
   return {
     engineType: null,
-    transmission: "",
-    wifi: "Complimentary",
-    interior: "",
-    climateControl: ""
+    transmission: ""
   };
 }

@@ -11,6 +11,8 @@ import {
   buildInitialVehicleClass,
   slugFromDisplayName,
   tripTypeTitle,
+  VEHICLE_CLASS_BODY_TYPES,
+  VEHICLE_CLASS_SERVICE_TIERS,
   type TripType,
   type VehicleClass
 } from "@/lib/models";
@@ -18,10 +20,18 @@ import { MultiSelectField } from "@/components/multi-select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   ProfileV2TabTrigger,
   profileV2TabsListClassName
@@ -189,11 +199,16 @@ export function VehicleClassEditSheet({
   if (sheetKey !== seedKey) {
     setSeedKey(sheetKey);
     setDraft(
-      vehicleClass ??
-        buildInitialVehicleClass({
-          id: crypto.randomUUID(),
-          displayName: ""
-        })
+      vehicleClass
+        ? buildInitialVehicleClass({
+            ...vehicleClass,
+            id: vehicleClass.id,
+            displayName: vehicleClass.displayName
+          })
+        : buildInitialVehicleClass({
+            id: crypto.randomUUID(),
+            displayName: ""
+          })
     );
   }
 
@@ -296,6 +311,58 @@ export function VehicleClassEditSheet({
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="serviceTier">Service tier</Label>
+                    <Select
+                      value={draft.serviceTier}
+                      onValueChange={(value) => setDraft((c) => ({ ...c, serviceTier: value }))}>
+                      <SelectTrigger id="serviceTier" className="w-full">
+                        <SelectValue placeholder="Select tier" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className={cn(nested && "z-[110]")}>
+                        {VEHICLE_CLASS_SERVICE_TIERS.map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            {tier}
+                          </SelectItem>
+                        ))}
+                        {!VEHICLE_CLASS_SERVICE_TIERS.includes(
+                          draft.serviceTier as (typeof VEHICLE_CLASS_SERVICE_TIERS)[number]
+                        ) && draft.serviceTier ? (
+                          <SelectItem value={draft.serviceTier}>{draft.serviceTier}</SelectItem>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground text-xs">
+                      Shown on the Class chip in customer booking.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bodyType">Body type</Label>
+                    <Select
+                      value={draft.bodyType}
+                      onValueChange={(value) => setDraft((c) => ({ ...c, bodyType: value }))}>
+                      <SelectTrigger id="bodyType" className="w-full">
+                        <SelectValue placeholder="Select body" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className={cn(nested && "z-[110]")}>
+                        {VEHICLE_CLASS_BODY_TYPES.map((body) => (
+                          <SelectItem key={body} value={body}>
+                            {body}
+                          </SelectItem>
+                        ))}
+                        {!VEHICLE_CLASS_BODY_TYPES.includes(
+                          draft.bodyType as (typeof VEHICLE_CLASS_BODY_TYPES)[number]
+                        ) && draft.bodyType ? (
+                          <SelectItem value={draft.bodyType}>{draft.bodyType}</SelectItem>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground text-xs">
+                      Shown on the Body chip in customer booking.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <Separator />
@@ -351,6 +418,59 @@ export function VehicleClassEditSheet({
                     min={0}
                     max={20}
                   />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <SectionHeading>Inclusions</SectionHeading>
+                <p className="text-muted-foreground text-sm">
+                  Shown under &ldquo;What&apos;s included&rdquo; in the customer booking flow.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="inclusionWifi">Wifi</Label>
+                    <Input
+                      id="inclusionWifi"
+                      value={draft.inclusions.wifi}
+                      onChange={(e) =>
+                        setDraft((c) => ({
+                          ...c,
+                          inclusions: { ...c.inclusions, wifi: e.target.value }
+                        }))
+                      }
+                      placeholder="Complimentary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inclusionInterior">Interior</Label>
+                    <Input
+                      id="inclusionInterior"
+                      value={draft.inclusions.interior}
+                      onChange={(e) =>
+                        setDraft((c) => ({
+                          ...c,
+                          inclusions: { ...c.inclusions, interior: e.target.value }
+                        }))
+                      }
+                      placeholder="e.g. Leather, rear privacy"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inclusionClimate">Climate</Label>
+                    <Input
+                      id="inclusionClimate"
+                      value={draft.inclusions.climateControl}
+                      onChange={(e) =>
+                        setDraft((c) => ({
+                          ...c,
+                          inclusions: { ...c.inclusions, climateControl: e.target.value }
+                        }))
+                      }
+                      placeholder="e.g. Four-zone climate"
+                    />
+                  </div>
                 </div>
               </div>
 

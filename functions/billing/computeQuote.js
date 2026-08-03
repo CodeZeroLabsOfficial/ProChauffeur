@@ -85,17 +85,36 @@ function mapCorporateAccount(id, d) {
 
 function mapVehicleClass(id, d) {
   const data = d || {};
+  const inclusions =
+    data.inclusions && typeof data.inclusions === "object" ? data.inclusions : {};
   return {
     id,
     slug: data.slug || id,
     displayName: data.displayName || id,
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
+    serviceTier:
+      typeof data.serviceTier === "string" && data.serviceTier.trim()
+        ? data.serviceTier.trim()
+        : "Business",
+    bodyType:
+      typeof data.bodyType === "string" && data.bodyType.trim()
+        ? data.bodyType.trim()
+        : "Sedan",
     capacity: {
       passengerCount: data.capacity?.passengerCount ?? 4,
       luggage: {
         smallCount: data.capacity?.luggage?.smallCount ?? 0,
         largeCount: data.capacity?.luggage?.largeCount ?? 0,
       },
+    },
+    inclusions: {
+      wifi:
+        typeof inclusions.wifi === "string" && inclusions.wifi.trim()
+          ? inclusions.wifi.trim()
+          : "Complimentary",
+      interior: typeof inclusions.interior === "string" ? inclusions.interior : "",
+      climateControl:
+        typeof inclusions.climateControl === "string" ? inclusions.climateControl : "",
     },
     description: data.description ?? null,
     imageUrl: data.imageUrl ?? null,

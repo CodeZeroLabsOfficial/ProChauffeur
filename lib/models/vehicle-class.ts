@@ -11,13 +11,45 @@ export interface VehicleClassCapacity {
   luggage: VehicleClassLuggageCapacity;
 }
 
+/** Booking-facing inclusions shown under “What’s included”. */
+export interface VehicleClassInclusions {
+  wifi: string;
+  interior: string;
+  climateControl: string;
+}
+
+export const VEHICLE_CLASS_SERVICE_TIERS = [
+  "Business",
+  "First",
+  "Executive",
+  "Luxury"
+] as const;
+
+export type VehicleClassServiceTier = (typeof VEHICLE_CLASS_SERVICE_TIERS)[number];
+
+export const VEHICLE_CLASS_BODY_TYPES = [
+  "Sedan",
+  "SUV",
+  "Van",
+  "Stretch",
+  "Coach"
+] as const;
+
+export type VehicleClassBodyType = (typeof VEHICLE_CLASS_BODY_TYPES)[number];
+
 /** `branches/{branchId}/vehicle_classes/{id}` — service class + rate card. */
 export interface VehicleClass {
   id: string;
   slug: string;
   displayName: string;
   sortOrder: number;
+  /** Service tier shown on the Class specification chip (e.g. Business). */
+  serviceTier: string;
+  /** Body style shown on the Body specification chip (e.g. Sedan). */
+  bodyType: string;
   capacity: VehicleClassCapacity;
+  /** Wifi / interior / climate for booking “What’s included”. */
+  inclusions: VehicleClassInclusions;
   description?: string | null;
   imageUrl?: string | null;
   isEnabled: boolean;
@@ -47,13 +79,24 @@ export function emptyVehicleClassCapacity(): VehicleClassCapacity {
   };
 }
 
+export function emptyVehicleClassInclusions(): VehicleClassInclusions {
+  return {
+    wifi: "Complimentary",
+    interior: "",
+    climateControl: ""
+  };
+}
+
 export function buildInitialVehicleClass(
   overrides: Partial<VehicleClass> & Pick<VehicleClass, "id" | "displayName">
 ): VehicleClass {
   const now = new Date();
   return {
     sortOrder: 0,
+    serviceTier: "Business",
+    bodyType: "Sedan",
     capacity: emptyVehicleClassCapacity(),
+    inclusions: emptyVehicleClassInclusions(),
     description: null,
     imageUrl: null,
     isEnabled: true,
