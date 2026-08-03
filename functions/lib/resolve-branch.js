@@ -3,12 +3,6 @@
  * Mirrors web `lib/branch/resolve-branch.ts`.
  */
 
-const { DEFAULT_BRANCH_ID } = require("./collections");
-
-function isMultiLocationEnabled(maxLocations) {
-  return typeof maxLocations === "number" && maxLocations > 1;
-}
-
 function normalizePostcode(postcode) {
   return String(postcode || "")
     .trim()
@@ -63,23 +57,24 @@ function sortedActiveBranches(branches) {
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
 }
 
+function isMultiLocationEnabled(maxLocations) {
+  return typeof maxLocations === "number" && maxLocations > 1;
+}
+
 /**
+ * Resolves a customer pickup to a Location (branch) id.
+ * Matches postcodes first, then radius, across all active Locations.
+ * Zero matches → throws with code `out_of_area` (never silent default).
+ *
  * @param {{
  *   postcode?: string,
  *   latitude?: number,
  *   longitude?: number,
  *   branches: object[],
- *   maxLocations: number,
- *   defaultBranchId?: string
  * }} input
  * @returns {string}
  */
 function resolveBranchId(input) {
-  const defaultBranchId = input.defaultBranchId || DEFAULT_BRANCH_ID;
-  if (!isMultiLocationEnabled(input.maxLocations)) {
-    return defaultBranchId;
-  }
-
   const postcode = normalizePostcode(input.postcode);
   const hasCoords = hasValidCoordinate(input.latitude, input.longitude);
 
@@ -116,7 +111,7 @@ function extractPostcodeFromAddress(line) {
 }
 
 /**
- * Loads limits + branches and resolves a booking Location id.
+ * Loads branches and resolves a booking Location id from pickup.
  * @param {FirebaseFirestore.Firestore} db
  * @param {{
  *   journey?: {
@@ -127,15 +122,6 @@ function extractPostcodeFromAddress(line) {
  *   and `journey.pickup`.
  */
 async function resolveBookingBranchId(db, trip) {
-  const limitsSnap = await db.collection("app_settings").doc("limits").get();
-  let maxLocations = 1;
-  if (limitsSnap.exists) {
-    const raw = limitsSnap.data()?.maxLocations;
-    if (raw != null && Number.isFinite(Number(raw))) {
-      maxLocations = Number(raw);
-    }
-  }
-
   const branchesSnap = await db.collection("branches").get();
   const branches = branchesSnap.docs.map((doc) => {
     const data = doc.data() || {};
@@ -165,7 +151,6 @@ async function resolveBookingBranchId(db, trip) {
     latitude,
     longitude,
     branches,
-    maxLocations,
   });
 }
 

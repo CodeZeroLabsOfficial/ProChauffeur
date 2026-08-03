@@ -173,6 +173,13 @@ function normalizeTripForFirestore(trip) {
   if (quote.quoteComputedAt != null) {
     quote.quoteComputedAt = parseFirestoreDate(quote.quoteComputedAt);
   }
+  if (quote.quoteSnapshot && typeof quote.quoteSnapshot === "object") {
+    const snap = { ...quote.quoteSnapshot };
+    if (snap.scheduledPickupAt != null) {
+      snap.scheduledPickupAt = parseFirestoreDate(snap.scheduledPickupAt);
+    }
+    quote.quoteSnapshot = snap;
+  }
   if (billing.paidAt != null) {
     billing.paidAt = parseFirestoreDate(billing.paidAt);
   }

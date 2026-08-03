@@ -1,10 +1,6 @@
 import { haversineMeters } from "@/lib/geo/haversine";
 import { hasValidCoordinate } from "@/lib/mapbox/coordinates";
-import {
-  isMultiLocationEnabled,
-  type AppLicense
-} from "@/lib/models/license";
-import { DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
+import type { Branch } from "@/lib/models/branch";
 
 export class BranchResolveError extends Error {
   readonly code = "out_of_area" as const;
@@ -54,8 +50,6 @@ export type ResolveBranchInput = {
   latitude?: number;
   longitude?: number;
   branches: Branch[];
-  license: Pick<AppLicense, "maxLocations">;
-  defaultBranchId?: string;
 };
 
 function sortedActiveBranches(branches: Branch[]): Branch[] {
@@ -72,18 +66,11 @@ function firstMatch(branches: Branch[]): string | null {
 /**
  * Resolves a customer pickup to a Location (branch) id.
  *
- * - When `maxLocations ≤ 1`, returns `defaultBranchId` (no geo matching).
- * - When multi-Location is on, matches postcodes first, then radius circles.
- * - Zero matches → throws ``BranchResolveError``.
- * - Multiple matches in a tier → first by name.
+ * Matches postcodes first, then radius circles, across all active Locations.
+ * Zero matches → throws ``BranchResolveError`` (never silent default).
+ * Multiple matches in a tier → first by name.
  */
 export function resolveBranchId(input: ResolveBranchInput): string {
-  const defaultBranchId = input.defaultBranchId ?? DEFAULT_BRANCH_ID;
-
-  if (!isMultiLocationEnabled(input.license.maxLocations)) {
-    return defaultBranchId;
-  }
-
   const postcode = normalizePostcode(input.postcode ?? "");
   const hasCoords =
     typeof input.latitude === "number" &&

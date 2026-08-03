@@ -135,7 +135,7 @@ export function planLabel(license: AppLicense, catalog: AppPlansCatalog): string
   return "";
 }
 
-/** Multi-Location UI / resolve is on when the license allows more than one Location. */
+/** Multi-Location UI (switcher / create) is on when the license allows more than one Location. */
 export function isMultiLocationEnabled(maxLocations: number): boolean {
   return maxLocations > 1;
 }
