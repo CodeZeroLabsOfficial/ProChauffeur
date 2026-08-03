@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import {
+  BriefcaseIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  LuggageIcon,
+  UsersIcon
+} from "lucide-react";
 
 import { TripOnTimeBadge } from "@/components/trip-on-time-badge";
 import { TripProgressBar } from "@/components/trip-progress-bar";
@@ -14,6 +20,7 @@ import {
 } from "@/components/ui/collapsible";
 import { formatDateTime } from "@/lib/format";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models";
+import { vehicleDisplayName } from "@/lib/models/vehicle";
 import type { TripProgress } from "@/lib/trip-progress";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 
@@ -23,6 +30,7 @@ export function DispatchActiveTripCard({
   selected,
   chauffeurName,
   chauffeurPhotoURL,
+  vehicleLabel,
   waitingForGps,
   onSelect
 }: {
@@ -31,10 +39,22 @@ export function DispatchActiveTripCard({
   selected: boolean;
   chauffeurName: string;
   chauffeurPhotoURL?: string | null;
+  vehicleLabel?: string | null;
   waitingForGps: boolean;
   onSelect: () => void;
 }) {
   const [journeyOpen, setJourneyOpen] = useState(false);
+
+  const vehicleName =
+    (trip.vehicleSnapshot ? vehicleDisplayName(trip.vehicleSnapshot) : "") ||
+    vehicleLabel?.trim() ||
+    null;
+
+  const passengerCount = trip.bookingPassengerCount;
+  const smallLuggageCount = trip.bookingSmallLuggageCount;
+  const largeLuggageCount = trip.bookingLargeLuggageCount;
+  const showBookingMeta =
+    passengerCount != null || smallLuggageCount != null || largeLuggageCount != null;
 
   return (
     <Collapsible
@@ -78,18 +98,50 @@ export function DispatchActiveTripCard({
             <AvatarImage src={chauffeurPhotoURL ?? undefined} alt={chauffeurName} />
             <AvatarFallback>{generateAvatarFallback(chauffeurName)}</AvatarFallback>
           </Avatar>
-          <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
-            {trip.driverID ? (
-              <Link
-                href={`/dashboard/drivers/${trip.driverID}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-foreground truncate text-sm font-medium hover:underline">
-                {chauffeurName}
-              </Link>
-            ) : (
-              <span className="text-foreground truncate text-sm font-medium">{chauffeurName}</span>
-            )}
-            <TripOnTimeBadge onTime={progress.onTime} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              {trip.driverID ? (
+                <Link
+                  href={`/dashboard/drivers/${trip.driverID}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-foreground truncate text-sm font-medium hover:underline">
+                  {chauffeurName}
+                </Link>
+              ) : (
+                <span className="text-foreground truncate text-sm font-medium">
+                  {chauffeurName}
+                </span>
+              )}
+              <TripOnTimeBadge onTime={progress.onTime} />
+            </div>
+            {vehicleName ? (
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">{vehicleName}</p>
+            ) : null}
+            {showBookingMeta ? (
+              <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                {passengerCount != null ? (
+                  <span className="inline-flex items-center gap-1">
+                    <UsersIcon className="size-3.5 shrink-0" aria-hidden />
+                    <span className="tabular-nums">{passengerCount}</span>
+                    <span className="sr-only">passengers</span>
+                  </span>
+                ) : null}
+                {smallLuggageCount != null ? (
+                  <span className="inline-flex items-center gap-1">
+                    <BriefcaseIcon className="size-3.5 shrink-0" aria-hidden />
+                    <span className="tabular-nums">{smallLuggageCount}</span>
+                    <span className="sr-only">small luggage</span>
+                  </span>
+                ) : null}
+                {largeLuggageCount != null ? (
+                  <span className="inline-flex items-center gap-1">
+                    <LuggageIcon className="size-3.5 shrink-0" aria-hidden />
+                    <span className="tabular-nums">{largeLuggageCount}</span>
+                    <span className="sr-only">large luggage</span>
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
 

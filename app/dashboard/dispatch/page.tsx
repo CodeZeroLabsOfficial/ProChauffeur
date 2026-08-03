@@ -289,6 +289,7 @@ export default function DispatchPage() {
                       chauffeurPhotoURL={
                         t.driverID ? driverPhotoById.get(t.driverID) : null
                       }
+                      vehicleLabel={vehicleMakeByTripId.get(t.id) ?? null}
                       waitingForGps={waitingForGps(t)}
                       onSelect={() => toggleTripSelection(t.id)}
                     />
