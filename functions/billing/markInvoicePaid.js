@@ -53,9 +53,9 @@ async function markInvoicePaidHandler(request) {
   for (const tripId of tripIds) {
     const { ref: tripRef } = await resolveTripRef(db, tripId, branchId);
     batch.update(tripRef, {
-      paymentStatus: "paid",
-      paymentSource: "web",
-      paidAt: now,
+      "billing.paymentStatus": "paid",
+      "billing.paymentSource": "web",
+      "billing.paidAt": now,
       updatedAt: now,
     });
   }

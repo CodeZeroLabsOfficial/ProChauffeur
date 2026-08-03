@@ -43,6 +43,7 @@ export function DispatchTripMap({
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
   const mode = dispatchMapMode(trip.status);
   const fallbackView = companyDefaultView ?? MAP_FALLBACK_VIEW;
+  const { pickup: tripPickup, dropoff: tripDropoff } = trip.journey;
 
   const driverCoordinate = useMemo(
     () =>
@@ -52,13 +53,13 @@ export function DispatchTripMap({
     [driverLocation?.lat, driverLocation?.lng]
   );
 
-  const overviewValid = hasValidCoordinate(trip.pickup) && hasValidCoordinate(trip.dropoff);
-  const pickupValid = hasValidCoordinate(trip.pickup);
-  const dropoffValid = hasValidCoordinate(trip.dropoff);
-  const destination = mode === "to_pickup" ? trip.pickup : trip.dropoff;
+  const overviewValid = hasValidCoordinate(tripPickup) && hasValidCoordinate(tripDropoff);
+  const pickupValid = hasValidCoordinate(tripPickup);
+  const dropoffValid = hasValidCoordinate(tripDropoff);
+  const destination = mode === "to_pickup" ? tripPickup : tripDropoff;
 
-  const routeFrom = mode === "overview" ? trip.pickup : driverCoordinate;
-  const routeTo = mode === "overview" ? trip.dropoff : destination;
+  const routeFrom = mode === "overview" ? tripPickup : driverCoordinate;
+  const routeTo = mode === "overview" ? tripDropoff : destination;
   const routeEnabled =
     mode === "overview"
       ? overviewValid
@@ -73,14 +74,14 @@ export function DispatchTripMap({
   const fitBBox = useMemo((): LngLatBBox | null => {
     let bbox: LngLatBBox | null = null;
     if (mode === "overview" && overviewValid) {
-      bbox = includeCoordinate(bbox, trip.pickup);
-      bbox = includeCoordinate(bbox, trip.dropoff);
+      bbox = includeCoordinate(bbox, tripPickup);
+      bbox = includeCoordinate(bbox, tripDropoff);
     } else if (mode === "to_pickup" && pickupValid) {
       bbox = includeCoordinate(bbox, driverCoordinate);
-      bbox = includeCoordinate(bbox, trip.pickup);
+      bbox = includeCoordinate(bbox, tripPickup);
     } else if (mode === "to_dropoff" && dropoffValid) {
       bbox = includeCoordinate(bbox, driverCoordinate);
-      bbox = includeCoordinate(bbox, trip.dropoff);
+      bbox = includeCoordinate(bbox, tripDropoff);
     }
     return includeLngLatPairs(bbox, route?.geometry.coordinates);
   }, [
@@ -88,8 +89,8 @@ export function DispatchTripMap({
     overviewValid,
     pickupValid,
     dropoffValid,
-    trip.pickup,
-    trip.dropoff,
+    tripPickup,
+    tripDropoff,
     driverCoordinate,
     route
   ]);
@@ -97,7 +98,7 @@ export function DispatchTripMap({
   const isLiveTracking =
     (mode === "to_pickup" || mode === "to_dropoff") && Boolean(driverCoordinate);
   const liveDestination =
-    mode === "to_pickup" ? trip.pickup : mode === "to_dropoff" ? trip.dropoff : null;
+    mode === "to_pickup" ? tripPickup : mode === "to_dropoff" ? tripDropoff : null;
   const mapFitResetKey = `${trip.id}-${mode}`;
   const routeFlushKey = route?.geometry.coordinates?.length ? "route" : "";
 
@@ -176,14 +177,14 @@ export function DispatchTripMap({
         {mode === "overview" && (
           <>
             <Marker
-              longitude={trip.pickup.longitude}
-              latitude={trip.pickup.latitude}
+              longitude={tripPickup.longitude}
+              latitude={tripPickup.latitude}
               anchor="bottom">
               <MapPinIcon className="size-7 text-green-600 drop-shadow" />
             </Marker>
             <Marker
-              longitude={trip.dropoff.longitude}
-              latitude={trip.dropoff.latitude}
+              longitude={tripDropoff.longitude}
+              latitude={tripDropoff.latitude}
               anchor="bottom">
               <MapPinIcon
                 className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}
@@ -193,15 +194,15 @@ export function DispatchTripMap({
         )}
 
         {mode === "to_pickup" && pickupValid && (
-          <Marker longitude={trip.pickup.longitude} latitude={trip.pickup.latitude} anchor="bottom">
+          <Marker longitude={tripPickup.longitude} latitude={tripPickup.latitude} anchor="bottom">
             <MapPinIcon className="size-7 text-green-600 drop-shadow" />
           </Marker>
         )}
 
         {mode === "to_dropoff" && dropoffValid && (
           <Marker
-            longitude={trip.dropoff.longitude}
-            latitude={trip.dropoff.latitude}
+            longitude={tripDropoff.longitude}
+            latitude={tripDropoff.latitude}
             anchor="bottom">
             <MapPinIcon
               className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}

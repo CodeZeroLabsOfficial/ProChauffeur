@@ -82,7 +82,7 @@ export function BookingLiveSheet({
 
   const vehicleMake = trip
     ? (trip.driverID ? vehicleMakeByDriverId.get(trip.driverID) : undefined) ||
-      trip.vehicleSnapshot?.details?.make?.trim() ||
+      trip.vehicle.vehicleSnapshot?.details?.make?.trim() ||
       null
     : null;
 
@@ -107,7 +107,7 @@ export function BookingLiveSheet({
             <div className="text-muted-foreground space-y-1 text-sm">
               <p>
                 <span className="text-foreground font-medium">Customer: </span>
-                {trip.customerDisplayName || "Customer"}
+                {trip.customer.displayName || "Customer"}
               </p>
               <p>
                 <span className="text-foreground font-medium">Chauffeur: </span>
@@ -115,11 +115,11 @@ export function BookingLiveSheet({
               </p>
               <p className="truncate">
                 <span className="text-foreground font-medium">Pickup: </span>
-                {trip.pickupAddressLine || "Not set"}
+                {trip.journey.pickupAddressLine || "Not set"}
               </p>
               <p className="truncate">
                 <span className="text-foreground font-medium">Dropoff: </span>
-                {trip.dropoffAddressLine || "Not set"}
+                {trip.journey.dropoffAddressLine || "Not set"}
               </p>
             </div>
           ) : null}

@@ -23,13 +23,16 @@ function validateTripPayload(trip, customerUid) {
   if (trip.customerID !== customerUid) {
     throw new HttpsError("permission-denied", "Trip customer does not match signed-in user.");
   }
-  if (!trip.pickup || !trip.dropoff) {
-    throw new HttpsError("invalid-argument", "Trip pickup and dropoff are required.");
+  const journey = trip.journey && typeof trip.journey === "object" ? trip.journey : {};
+  const quote = trip.quote && typeof trip.quote === "object" ? trip.quote : {};
+  const billing = trip.billing && typeof trip.billing === "object" ? trip.billing : {};
+  if (!journey.pickup || !journey.dropoff) {
+    throw new HttpsError("invalid-argument", "Trip journey.pickup and journey.dropoff are required.");
   }
-  if (typeof trip.vehicleClassId !== "string" || !trip.vehicleClassId.trim()) {
-    throw new HttpsError("invalid-argument", "Trip vehicleClassId is required.");
+  if (typeof quote.vehicleClassId !== "string" || !quote.vehicleClassId.trim()) {
+    throw new HttpsError("invalid-argument", "Trip quote.vehicleClassId is required.");
   }
-  if (trip.paymentStatus === "on_account") {
+  if (billing.paymentStatus === "on_account") {
     throw new HttpsError(
       "failed-precondition",
       "On-account bookings cannot be charged via card payment."
@@ -41,8 +44,8 @@ function sumTripTotals(trips) {
   let total = 0;
   let currency = "AUD";
   for (const trip of trips) {
-    total += Number(trip.quotedTotal) || 0;
-    if (trip.quotedCurrencyCode) currency = trip.quotedCurrencyCode;
+    total += Number(trip.quote?.quotedTotal) || 0;
+    if (trip.quote?.quotedCurrencyCode) currency = trip.quote.quotedCurrencyCode;
   }
   return { total, currency };
 }
@@ -67,67 +70,49 @@ function scheduledPickupIso(value) {
   return null;
 }
 
-function extractAddonIds(trip) {
-  if (Array.isArray(trip.addonIds)) {
-    return trip.addonIds.filter((id) => typeof id === "string" && id);
-  }
-  if (Array.isArray(trip.bookingAddons)) {
-    return trip.bookingAddons
-      .map((a) => (a && typeof a.id === "string" ? a.id : null))
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function extractPostcode(line) {
-  if (typeof line !== "string") return "";
-  const match = line.match(/\b\d{4}\b/);
-  return match ? match[0] : "";
-}
-
 /**
  * Recomputes each leg on the server and overwrites client quote fields.
  */
 async function applyServerQuotes(db, uid, trips, branchId) {
   const quoted = [];
   for (const trip of trips) {
-    const scheduledPickupAt = scheduledPickupIso(trip.scheduledPickupAt);
+    const journey = trip.journey && typeof trip.journey === "object" ? trip.journey : {};
+    const quote = trip.quote && typeof trip.quote === "object" ? trip.quote : {};
+
+    const scheduledPickupAt = scheduledPickupIso(journey.scheduledPickupAt);
     if (!scheduledPickupAt) {
       throw new HttpsError(
         "invalid-argument",
-        "trip.scheduledPickupAt must be a valid date."
+        "trip.journey.scheduledPickupAt must be a valid date."
       );
     }
     const pickupAddressLine =
-      typeof trip.pickupAddressLine === "string" ? trip.pickupAddressLine : "";
+      typeof journey.pickupAddressLine === "string" ? journey.pickupAddressLine : "";
     const dropoffAddressLine =
-      typeof trip.dropoffAddressLine === "string" ? trip.dropoffAddressLine : "";
+      typeof journey.dropoffAddressLine === "string" ? journey.dropoffAddressLine : "";
 
-    const quote = await runComputeQuote(db, {
+    const quoteResult = await runComputeQuote(db, {
       customerId: uid,
       settlement: "card",
       branchIdHint: branchId,
       trip: {
-        tripType: trip.tripType || "transfer",
-        vehicleClassId: trip.vehicleClassId,
-        pickup: trip.pickup,
-        dropoff: trip.dropoff,
-        pickupAddressLine,
-        dropoffAddressLine,
-        pickupPostcode:
-          typeof trip.pickupPostcode === "string" && trip.pickupPostcode
-            ? trip.pickupPostcode
-            : extractPostcode(pickupAddressLine),
-        dropoffPostcode:
-          typeof trip.dropoffPostcode === "string" && trip.dropoffPostcode
-            ? trip.dropoffPostcode
-            : extractPostcode(dropoffAddressLine),
-        scheduledPickupAt,
-        addonIds: extractAddonIds(trip),
+        journey: {
+          tripType: journey.tripType || "transfer",
+          pickup: journey.pickup,
+          dropoff: journey.dropoff,
+          pickupAddressLine,
+          dropoffAddressLine,
+          scheduledPickupAt,
+          bookedHours: journey.bookedHours,
+          bookingAddons: journey.bookingAddons,
+        },
+        quote: {
+          vehicleClassId: quote.vehicleClassId,
+        },
       },
     });
 
-    const total = Number(quote.total);
+    const total = Number(quoteResult.total);
     if (!Number.isFinite(total) || total <= 0) {
       throw new HttpsError(
         "failed-precondition",
@@ -137,29 +122,22 @@ async function applyServerQuotes(db, uid, trips, branchId) {
 
     quoted.push({
       ...trip,
-      quotedSubtotal: quote.subtotal,
-      quotedTaxAmount: quote.taxAmount,
-      quotedTotal: quote.total,
-      quotedCurrencyCode: quote.currencyCode,
-      quotedTaxRate: quote.quotedTaxRate,
-      quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
-      quoteBreakdown: quote.breakdown,
-      quoteSnapshot: quote.snapshot,
-      quoteComputedAt: new Date().toISOString(),
+      quote: {
+        ...quote,
+        quotedSubtotal: quoteResult.subtotal,
+        quotedTaxAmount: quoteResult.taxAmount,
+        quotedTotal: quoteResult.total,
+        quotedCurrencyCode: quoteResult.currencyCode,
+        quotedTaxRate: quoteResult.quotedTaxRate,
+        quotedPricesIncludeTax: quoteResult.quotedPricesIncludeTax,
+        quoteBreakdown: quoteResult.breakdown,
+        quoteSnapshot: quoteResult.snapshot,
+        quoteComputedAt: new Date().toISOString(),
+      },
     });
   }
   return quoted;
 }
-
-const TRIP_DATE_FIELDS = [
-  "quoteComputedAt",
-  "scheduledPickupAt",
-  "createdAt",
-  "updatedAt",
-  "journeyStartedAt",
-  "journeyCompletedAt",
-  "paidAt",
-];
 
 function parseFirestoreDate(value) {
   if (value == null) return null;
@@ -177,17 +155,37 @@ function parseFirestoreDate(value) {
   return value;
 }
 
+/** Converts nested trip date fields to Firestore Timestamps before a `set`. */
 function normalizeTripForFirestore(trip) {
-  const out = { ...trip };
-  for (const field of TRIP_DATE_FIELDS) {
-    if (out[field] != null) {
-      out[field] = parseFirestoreDate(out[field]);
-    }
+  const journey = { ...(trip.journey || {}) };
+  const quote = { ...(trip.quote || {}) };
+  const billing = { ...(trip.billing || {}) };
+
+  if (journey.scheduledPickupAt != null) {
+    journey.scheduledPickupAt = parseFirestoreDate(journey.scheduledPickupAt);
   }
-  if (out.driverID == null || out.driverID === "") {
-    out.driverID = null;
+  if (journey.journeyStartedAt != null) {
+    journey.journeyStartedAt = parseFirestoreDate(journey.journeyStartedAt);
   }
-  return out;
+  if (journey.journeyCompletedAt != null) {
+    journey.journeyCompletedAt = parseFirestoreDate(journey.journeyCompletedAt);
+  }
+  if (quote.quoteComputedAt != null) {
+    quote.quoteComputedAt = parseFirestoreDate(quote.quoteComputedAt);
+  }
+  if (billing.paidAt != null) {
+    billing.paidAt = parseFirestoreDate(billing.paidAt);
+  }
+
+  return {
+    ...trip,
+    journey,
+    quote,
+    billing,
+    createdAt: trip.createdAt != null ? parseFirestoreDate(trip.createdAt) : trip.createdAt,
+    updatedAt: trip.updatedAt != null ? parseFirestoreDate(trip.updatedAt) : trip.updatedAt,
+    driverID: trip.driverID == null || trip.driverID === "" ? null : trip.driverID,
+  };
 }
 
 /**
@@ -205,11 +203,14 @@ async function upsertPendingTrips(db, tripsInput, branchId, stripePaymentIntentI
       ...normalizedTrip,
       branchId,
       status: normalizedTrip.status || "requested",
-      paymentStatus: "pending",
-      paymentSource: "ios",
-      stripePaymentIntentId: stripePaymentIntentId || null,
-      invoiceId: null,
-      paidAt: null,
+      billing: {
+        ...normalizedTrip.billing,
+        paymentStatus: "pending",
+        paymentSource: "ios",
+        stripePaymentIntentId: stripePaymentIntentId || null,
+        invoiceId: null,
+        paidAt: null,
+      },
       createdAt: normalizedTrip.createdAt || now,
       updatedAt: now,
     });
@@ -226,10 +227,11 @@ async function findReusablePaymentIntent(db, primaryTripId, branchId) {
   if (!snap.exists) return null;
 
   const data = snap.data() || {};
-  if (data.paymentStatus !== "pending") return null;
+  const billing = data.billing && typeof data.billing === "object" ? data.billing : {};
+  if (billing.paymentStatus !== "pending") return null;
 
   const existingIntentId =
-    typeof data.stripePaymentIntentId === "string" ? data.stripePaymentIntentId : null;
+    typeof billing.stripePaymentIntentId === "string" ? billing.stripePaymentIntentId : null;
   if (!existingIntentId) return null;
 
   return retrieveReusablePaymentIntent(existingIntentId);
@@ -314,7 +316,7 @@ async function createTripCardPaymentHandler(request) {
 
   for (const tripId of tripIds) {
     await tripRef(db, tripId, branchId).update({
-      stripePaymentIntentId: paymentIntent.id,
+      "billing.stripePaymentIntentId": paymentIntent.id,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }

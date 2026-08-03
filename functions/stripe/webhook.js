@@ -79,20 +79,21 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
   const paidBatch = db.batch();
   for (const ref of refs) {
     paidBatch.update(ref, {
-      paymentStatus: "paid",
-      paymentSource,
-      stripePaymentIntentId: paymentIntent.id,
-      paidAt: now,
+      "billing.paymentStatus": "paid",
+      "billing.paymentSource": paymentSource,
+      "billing.stripePaymentIntentId": paymentIntent.id,
+      "billing.paidAt": now,
       updatedAt: now,
     });
   }
   await paidBatch.commit();
 
   const primary = trips[0];
-  if (primary.invoiceId) {
+  const primaryInvoiceId = primary.billing?.invoiceId;
+  if (primaryInvoiceId) {
     const { ref: invoiceDoc } = await resolveInvoiceRef(
       db,
-      primary.invoiceId,
+      primaryInvoiceId,
       branchId
     );
     await invoiceDoc.update({
@@ -108,7 +109,7 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
     paymentIntentId: paymentIntent.id,
     tripIds,
     tripCount: trips.length,
-    quotedTotals: trips.map((t) => Number(t.quotedTotal) || 0),
+    quotedTotals: trips.map((t) => Number(t.quote?.quotedTotal) || 0),
   });
 
   const invoice = await createFirestoreInvoice(db, {
@@ -122,7 +123,7 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
   const invoiceLinkBatch = db.batch();
   for (const ref of refs) {
     invoiceLinkBatch.update(ref, {
-      invoiceId: invoice.id,
+      "billing.invoiceId": invoice.id,
       updatedAt: now,
     });
   }
@@ -138,7 +139,7 @@ async function handlePaymentIntentFailed(db, paymentIntent) {
   for (const tripId of tripIds) {
     const { ref } = await resolveTripRef(db, tripId, branchId);
     batch.update(ref, {
-      paymentStatus: "failed",
+      "billing.paymentStatus": "failed",
       updatedAt: now,
     });
   }
@@ -192,9 +193,9 @@ async function handleInvoicePaid(db, stripeInvoice) {
   for (const id of tripIds) {
     const { ref } = await resolveTripRef(db, id, branchId);
     batch.update(ref, {
-      paymentStatus: "paid",
-      paymentSource: "stripe",
-      paidAt: now,
+      "billing.paymentStatus": "paid",
+      "billing.paymentSource": "stripe",
+      "billing.paidAt": now,
       updatedAt: now,
     });
   }

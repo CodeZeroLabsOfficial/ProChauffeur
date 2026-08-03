@@ -172,7 +172,7 @@ export default function DispatchPage() {
       const fromFleet = trip.driverID
         ? vehicleMakeByDriverId.get(trip.driverID)
         : undefined;
-      const fromSnapshot = trip.vehicleSnapshot?.details?.make?.trim();
+      const fromSnapshot = trip.vehicle.vehicleSnapshot?.details?.make?.trim();
       const make = fromFleet || fromSnapshot;
       if (make) map.set(trip.id, make);
     }

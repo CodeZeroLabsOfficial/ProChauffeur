@@ -87,7 +87,9 @@ function InvoiceDetailBody({
   const email = invoice.customerEmail?.trim() || customer?.email?.trim() || null;
   const phone =
     invoice.customerPhone?.trim() || customer?.profile.phoneNumber?.trim() || null;
-  const tripLines = formatPostalAddressLines(trip ? postalAddressFromTripSnapshot(trip) : null);
+  const tripLines = formatPostalAddressLines(
+    trip ? postalAddressFromTripSnapshot(trip.customer) : null
+  );
   const addressLines =
     tripLines.length > 0
       ? tripLines

@@ -30,7 +30,15 @@
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "driverID", "order": "ASCENDING" },
-        { "fieldPath": "scheduledPickupAt", "order": "ASCENDING" }
+        { "fieldPath": "journey.scheduledPickupAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "trips",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "billing.corporateAccountId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {

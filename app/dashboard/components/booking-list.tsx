@@ -61,21 +61,21 @@ interface BookingRow {
 
 function vehicleClassLabel(trip: Trip) {
   return (
-    trip.vehicleClassDisplayName ??
-    trip.vehicleSnapshot?.details?.vehicleClassId ??
-    trip.vehicleClassId ??
+    trip.quote.vehicleClassDisplayName ??
+    trip.vehicle.vehicleSnapshot?.details?.vehicleClassId ??
+    trip.quote.vehicleClassId ??
     "Unassigned"
   );
 }
 
 function vehicleLabel(trip: Trip) {
-  const v = trip.vehicleSnapshot;
+  const v = trip.vehicle.vehicleSnapshot;
   if (!v) return "—";
   return vehicleDisplayName(v) || "—";
 }
 
 function durationLabel(trip: Trip) {
-  const passengers = trip.bookingPassengerCount ?? 1;
+  const passengers = trip.capacity.passengerCount ?? 1;
   return `${passengers} pax`;
 }
 
@@ -83,7 +83,7 @@ function toRow(trip: Trip): BookingRow {
   const pickup = tripPickupReferenceDate(trip);
   return {
     bookingId: shortBookingId(trip.id),
-    guestName: trip.customerDisplayName || "Customer",
+    guestName: trip.customer.displayName || "Customer",
     vehicleType: vehicleClassLabel(trip),
     vehicleLabel: vehicleLabel(trip),
     duration: durationLabel(trip),

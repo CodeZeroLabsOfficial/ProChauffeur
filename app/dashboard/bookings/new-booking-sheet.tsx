@@ -38,6 +38,11 @@ import {
   type PricingAddon,
   type PricingConfig,
   type Trip,
+  type TripBilling,
+  type TripCapacity,
+  type TripCustomer,
+  type TripJourney,
+  type TripQuote,
   type TripType,
   type User,
   BOOKING_TRIP_MODES,
@@ -198,23 +203,27 @@ function quoteFieldsFromResult(
   vehicleClassId: string,
   vehicleClassDisplayName: string,
   bookedHours: number | null
-) {
+): {
+  journeyFields: Pick<TripJourney, "tripType" | "bookedHours">;
+  quoteFields: TripQuote;
+} {
   return {
-    tripType,
-    vehicleClassId,
-    vehicleClassDisplayName,
-    bookedHours,
-    quotedSubtotal: quote.subtotal,
-    quotedTaxAmount: quote.taxAmount,
-    quotedTotal: quote.total,
-    quotedCurrencyCode: quote.currencyCode,
-    quotedTaxRate: quote.quotedTaxRate,
-    quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
-    quoteBreakdown: quote.breakdown,
-    quoteComputedAt: new Date(),
-    quoteSnapshot: quote.snapshot,
-    appliedPromoId: quote.snapshot.appliedPromoId,
-    promoCode: quote.snapshot.promoCode
+    journeyFields: { tripType, bookedHours },
+    quoteFields: {
+      vehicleClassId,
+      vehicleClassDisplayName,
+      quotedSubtotal: quote.subtotal,
+      quotedTaxAmount: quote.taxAmount,
+      quotedTotal: quote.total,
+      quotedCurrencyCode: quote.currencyCode,
+      quotedTaxRate: quote.quotedTaxRate,
+      quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
+      quoteBreakdown: quote.breakdown,
+      quoteComputedAt: new Date(),
+      quoteSnapshot: quote.snapshot,
+      appliedPromoId: quote.snapshot.appliedPromoId,
+      promoCode: quote.snapshot.promoCode
+    }
   };
 }
 
@@ -224,13 +233,15 @@ function preTaxAmountFromQuote(quote: QuoteResult): number {
     .reduce((sum, line) => sum + line.amount, 0);
 }
 
-function buildTripCustomerFields(customer: User) {
+function buildTripCustomerFields(customer: User): { customerID: string; customer: TripCustomer } {
   return {
     customerID: customer.id,
-    customerDisplayName: customerDisplayName(customer) || null,
-    customerPhoneNumber: customer.profile.phoneNumber ?? null,
-    customerEmail: customer.email || null,
-    ...customerAddressSnapshotFromProfile(customer.profile)
+    customer: {
+      displayName: customerDisplayName(customer) || null,
+      phoneNumber: customer.profile.phoneNumber ?? null,
+      email: customer.email || null,
+      ...customerAddressSnapshotFromProfile(customer.profile)
+    }
   };
 }
 
@@ -396,7 +407,7 @@ export function NewBookingSheet({
 
   const isEdit = Boolean(editTrip);
   const quoteTripType: TripType = isEdit
-    ? editTrip?.tripType === "hourly"
+    ? editTrip?.journey.tripType === "hourly"
       ? "hourly"
       : "transfer"
     : quoteTripTypeForBookingMode(bookingMode);
@@ -692,23 +703,23 @@ export function NewBookingSheet({
 
       setFieldErrors({});
       setCustomer(matchedCustomer);
-      setPickup(addressFromTrip(trip.pickupAddressLine, trip.pickup));
-      setDropoff(addressFromTrip(trip.dropoffAddressLine, trip.dropoff));
-      setSelectedAddonIds(trip.bookingAddons?.map((addon) => addon.id) ?? []);
-      setPassengerCount(trip.bookingPassengerCount ?? 1);
-      setSmallLuggageCount(trip.bookingSmallLuggageCount ?? 0);
-      setLargeLuggageCount(trip.bookingLargeLuggageCount ?? 0);
+      setPickup(addressFromTrip(trip.journey.pickupAddressLine, trip.journey.pickup));
+      setDropoff(addressFromTrip(trip.journey.dropoffAddressLine, trip.journey.dropoff));
+      setSelectedAddonIds(trip.journey.bookingAddons?.map((addon) => addon.id) ?? []);
+      setPassengerCount(trip.capacity.passengerCount ?? 1);
+      setSmallLuggageCount(trip.capacity.luggage.smallCount ?? 0);
+      setLargeLuggageCount(trip.capacity.luggage.largeCount ?? 0);
       setScheduledPickupAt(
-        editTrip ? (trip.scheduledPickupAt ?? tripPickupReferenceDate(trip)) : null
+        editTrip ? (trip.journey.scheduledPickupAt ?? tripPickupReferenceDate(trip)) : null
       );
-      setBookedHours(trip.bookedHours ?? 2);
-      setNotes(trip.notes ?? "");
+      setBookedHours(trip.journey.bookedHours ?? 2);
+      setNotes(trip.journey.notes ?? "");
       setVehicleClassId(
-        trip.vehicleClassId ?? trip.vehicleSnapshot?.details?.vehicleClassId ?? null
+        trip.quote.vehicleClassId ?? trip.vehicle.vehicleSnapshot?.details?.vehicleClassId ?? null
       );
-      setQuotedTotal(trip.quotedTotal ?? null);
+      setQuotedTotal(trip.quote.quotedTotal ?? null);
       setPromoError(null);
-      const existingCode = trip.promoCode?.trim() ?? "";
+      const existingCode = trip.quote.promoCode?.trim() ?? "";
       if (existingCode) {
         setPromoCodeInput(existingCode);
         setPromoExpanded(true);
@@ -761,7 +772,9 @@ export function NewBookingSheet({
   }, [open, editTrip, sourceTrip, users]);
 
   useEffect(() => {
-    const hourlyBookedHours = isEdit ? (editTrip?.bookedHours ?? bookedHours) : bookedHours;
+    const hourlyBookedHours = isEdit
+      ? (editTrip?.journey.bookedHours ?? bookedHours)
+      : bookedHours;
     const isRoundTrip = !isEdit && bookingMode === "round_trip";
     const needsReturnTime = isRoundTrip && !isValidScheduledPickup(scheduledReturnAt);
     const needsHourlyHours =
@@ -989,20 +1002,21 @@ export function NewBookingSheet({
       return;
     }
 
-    const editBookedHours = editTrip?.bookedHours ?? bookedHours;
+    const editBookedHours = editTrip?.journey.bookedHours ?? bookedHours;
     const submitTripType = isEditMode ? quoteTripType : quoteTripTypeForBookingMode(bookingMode);
     const submitBookedHours =
       submitTripType === "hourly" ? (isEditMode ? editBookedHours : bookedHours) : null;
 
     const bookingAddons = pricingAddons.filter((addon) => selectedAddonIds.includes(addon.id));
-    const sharedBookingFields = {
+    const sharedCapacityFields: TripCapacity = {
+      passengerCount,
+      luggage: { smallCount: smallLuggageCount, largeCount: largeLuggageCount }
+    };
+    const sharedJourneyBookingFields: Pick<TripJourney, "notes" | "bookingAddons"> = {
       notes: notes.trim() || null,
-      bookingPassengerCount: passengerCount,
-      bookingSmallLuggageCount: smallLuggageCount,
-      bookingLargeLuggageCount: largeLuggageCount,
       bookingAddons: bookingAddons.length ? bookingAddons : null
     };
-    const corporateBillingFields =
+    const corporateBillingFields: TripBilling =
       !isEditMode && billToCorporate && activeCorporateAccount
         ? {
             paymentStatus: "on_account" as const,
@@ -1078,29 +1092,40 @@ export function NewBookingSheet({
         const returnId = crypto.randomUUID();
         const now = new Date();
         const customerFields = buildTripCustomerFields(customer);
+        const outboundQuoteResult = quoteFieldsFromResult(
+          outboundQuote,
+          "transfer",
+          vehicleClassId,
+          selectedVehicleClass.displayName,
+          null
+        );
+        const returnQuoteResult = quoteFieldsFromResult(
+          returnQuote,
+          "transfer",
+          vehicleClassId,
+          selectedVehicleClass.displayName,
+          null
+        );
 
         const outbound: Trip = {
           id: outboundId,
           status: "requested",
           ...customerFields,
           driverID: null,
-          vehicleDocumentId: null,
-          vehicleSnapshot: null,
-          pickup: pickup.coordinate,
-          dropoff: dropoff.coordinate,
-          pickupAddressLine: pickup.addressLine,
-          dropoffAddressLine: dropoff.addressLine,
-          scheduledPickupAt,
-          linkedTripID: returnId,
-          ...sharedBookingFields,
-          ...quoteFieldsFromResult(
-            outboundQuote,
-            "transfer",
-            vehicleClassId,
-            selectedVehicleClass.displayName,
-            null
-          ),
-          ...corporateBillingFields,
+          capacity: sharedCapacityFields,
+          vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
+          journey: {
+            pickup: pickup.coordinate,
+            dropoff: dropoff.coordinate,
+            pickupAddressLine: pickup.addressLine,
+            dropoffAddressLine: dropoff.addressLine,
+            scheduledPickupAt,
+            linkedTripID: returnId,
+            ...sharedJourneyBookingFields,
+            ...outboundQuoteResult.journeyFields
+          },
+          quote: outboundQuoteResult.quoteFields,
+          billing: corporateBillingFields,
           createdAt: now,
           updatedAt: now
         };
@@ -1110,23 +1135,20 @@ export function NewBookingSheet({
           status: "requested",
           ...customerFields,
           driverID: null,
-          vehicleDocumentId: null,
-          vehicleSnapshot: null,
-          pickup: dropoff.coordinate,
-          dropoff: pickup.coordinate,
-          pickupAddressLine: dropoff.addressLine,
-          dropoffAddressLine: pickup.addressLine,
-          scheduledPickupAt: scheduledReturnAt!,
-          linkedTripID: outboundId,
-          ...sharedBookingFields,
-          ...quoteFieldsFromResult(
-            returnQuote,
-            "transfer",
-            vehicleClassId,
-            selectedVehicleClass.displayName,
-            null
-          ),
-          ...corporateBillingFields,
+          capacity: sharedCapacityFields,
+          vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
+          journey: {
+            pickup: dropoff.coordinate,
+            dropoff: pickup.coordinate,
+            pickupAddressLine: dropoff.addressLine,
+            dropoffAddressLine: pickup.addressLine,
+            scheduledPickupAt: scheduledReturnAt!,
+            linkedTripID: outboundId,
+            ...sharedJourneyBookingFields,
+            ...returnQuoteResult.journeyFields
+          },
+          quote: returnQuoteResult.quoteFields,
+          billing: corporateBillingFields,
           createdAt: now,
           updatedAt: now
         };
@@ -1165,7 +1187,7 @@ export function NewBookingSheet({
               }
             );
 
-      const quoteFields = quoteFieldsFromResult(
+      const { journeyFields, quoteFields } = quoteFieldsFromResult(
         quote,
         submitTripType,
         vehicleClassId,
@@ -1174,18 +1196,26 @@ export function NewBookingSheet({
       );
 
       if (isEditMode) {
+        const customerFields = buildTripCustomerFields(customer);
         await updateTrip(editTrip!.id, {
-          ...buildTripCustomerFields(customer),
+          customerID: customerFields.customerID,
+          customer: customerFields.customer,
           driverID: editTrip!.driverID ?? null,
-          vehicleDocumentId: editTrip!.vehicleDocumentId ?? null,
-          vehicleSnapshot: editTrip!.vehicleSnapshot ?? null,
-          pickup: pickup.coordinate,
-          dropoff: dropoff.coordinate,
-          pickupAddressLine: pickup.addressLine,
-          dropoffAddressLine: dropoff.addressLine,
-          scheduledPickupAt,
-          ...sharedBookingFields,
-          ...quoteFields
+          vehicle: {
+            vehicleDocumentId: editTrip!.vehicle.vehicleDocumentId ?? null,
+            vehicleSnapshot: editTrip!.vehicle.vehicleSnapshot ?? null
+          },
+          capacity: sharedCapacityFields,
+          journey: {
+            pickup: pickup.coordinate,
+            dropoff: dropoff.coordinate,
+            pickupAddressLine: pickup.addressLine,
+            dropoffAddressLine: dropoff.addressLine,
+            scheduledPickupAt,
+            ...sharedJourneyBookingFields,
+            ...journeyFields
+          },
+          quote: quoteFields
         });
         toast.success("Booking updated.");
       } else {
@@ -1194,16 +1224,19 @@ export function NewBookingSheet({
           status: "requested",
           ...buildTripCustomerFields(customer),
           driverID: null,
-          vehicleDocumentId: null,
-          vehicleSnapshot: null,
-          pickup: pickup.coordinate,
-          dropoff: dropoff.coordinate,
-          pickupAddressLine: pickup.addressLine,
-          dropoffAddressLine: dropoff.addressLine,
-          scheduledPickupAt,
-          ...sharedBookingFields,
-          ...quoteFields,
-          ...corporateBillingFields,
+          capacity: sharedCapacityFields,
+          vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
+          journey: {
+            pickup: pickup.coordinate,
+            dropoff: dropoff.coordinate,
+            pickupAddressLine: pickup.addressLine,
+            dropoffAddressLine: dropoff.addressLine,
+            scheduledPickupAt,
+            ...sharedJourneyBookingFields,
+            ...journeyFields
+          },
+          quote: quoteFields,
+          billing: corporateBillingFields,
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -1367,7 +1400,7 @@ export function NewBookingSheet({
               />
             ) : null}
 
-            {isEdit && editTrip?.tripType === "hourly" ? (
+            {isEdit && editTrip?.journey.tripType === "hourly" ? (
               <NumberStepper
                 id="bookedHours"
                 label="Booked hours"

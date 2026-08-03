@@ -1,6 +1,7 @@
 import type { PaymentSource, PaymentStatus, TripStatus, TripType } from "@/lib/models/enums";
 import type { PricingAddon } from "@/lib/models/pricing";
 import type { QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
+import type { VehicleClassCapacity } from "@/lib/models/vehicle-class";
 import type { Vehicle } from "@/lib/models/vehicle";
 
 export const TRIP_APPROVAL_STATUSES = [
@@ -17,33 +18,29 @@ export interface CoordinateField {
   longitude: number;
 }
 
-/** Trip.swift — `trips/{id}` document. */
-export interface Trip {
-  id: string;
-  status: TripStatus;
-  customerID: string;
-  customerDisplayName?: string | null;
-  customerPhoneNumber?: string | null;
-  customerEmail?: string | null;
-  customerStreet?: string | null;
-  customerCity?: string | null;
-  customerState?: string | null;
-  customerPostcode?: string | null;
-  customerCountry?: string | null;
-  customerCompany?: string | null;
-  driverID?: string | null;
-  /** Location id this trip is stored under (`branches/{branchId}/trips/{id}`). */
-  branchId?: string | null;
+/** Customer snapshot nested on the trip at booking time. */
+export interface TripCustomer {
+  displayName?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+  company?: string | null;
+}
+
+/** Booking party size — same shape as `VehicleClassCapacity`. */
+export type TripCapacity = VehicleClassCapacity;
+
+/** Journey / itinerary fields for the passenger trip. */
+export interface TripJourney {
   pickup: CoordinateField;
   dropoff: CoordinateField;
   pickupAddressLine?: string | null;
   dropoffAddressLine?: string | null;
-  vehicleSnapshot?: Vehicle | null;
-  vehicleDocumentId?: string | null;
   notes?: string | null;
-  bookingPassengerCount?: number | null;
-  bookingSmallLuggageCount?: number | null;
-  bookingLargeLuggageCount?: number | null;
   bookingAddons?: PricingAddon[] | null;
   scheduledPickupAt?: Date | null;
   linkedTripID?: string | null;
@@ -54,9 +51,13 @@ export interface Trip {
   /** In-vehicle duration in seconds, set at completion when start is known. */
   journeyDurationSeconds?: number | null;
   tripType?: TripType | null;
+  bookedHours?: number | null;
+}
+
+/** Quote totals and audit snapshot taken at booking / payment time. */
+export interface TripQuote {
   vehicleClassId?: string | null;
   vehicleClassDisplayName?: string | null;
-  bookedHours?: number | null;
   quotedSubtotal?: number | null;
   quotedTaxAmount?: number | null;
   quotedTotal?: number | null;
@@ -68,6 +69,10 @@ export interface Trip {
   quoteSnapshot?: TripQuoteSnapshot | null;
   appliedPromoId?: string | null;
   promoCode?: string | null;
+}
+
+/** Payment, invoice, and approval fields. */
+export interface TripBilling {
   paymentStatus?: PaymentStatus | null;
   paymentSource?: PaymentSource | null;
   stripePaymentIntentId?: string | null;
@@ -83,13 +88,61 @@ export interface Trip {
   approvedByUserId?: string | null;
   approvalNote?: string | null;
   paidAt?: Date | null;
+}
+
+/** Assigned fleet plate snapshot. */
+export interface TripVehicle {
+  vehicleDocumentId?: string | null;
+  vehicleSnapshot?: Vehicle | null;
+}
+
+/**
+ * Trip document at `branches/{branchId}/trips/{id}`.
+ * Nested maps hold booking detail; top-level keeps identity / query fields.
+ */
+export interface Trip {
+  id: string;
+  status: TripStatus;
+  customerID: string;
+  driverID?: string | null;
+  /** Location id this trip is stored under (`branches/{branchId}/trips/{id}`). */
+  branchId?: string | null;
+  customer: TripCustomer;
+  capacity: TripCapacity;
+  journey: TripJourney;
+  quote: TripQuote;
+  billing: TripBilling;
+  vehicle: TripVehicle;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export function emptyTripCapacity(): TripCapacity {
+  return {
+    passengerCount: 1,
+    luggage: { smallCount: 0, largeCount: 0 }
+  };
+}
+
+export function emptyTripCustomer(): TripCustomer {
+  return {};
+}
+
+export function emptyTripQuote(): TripQuote {
+  return {};
+}
+
+export function emptyTripBilling(): TripBilling {
+  return {};
+}
+
+export function emptyTripVehicle(): TripVehicle {
+  return {};
+}
+
 /** Effective pickup instant for list/summary UI. */
 export function tripPickupReferenceDate(trip: Trip): Date {
-  return trip.scheduledPickupAt ?? trip.createdAt;
+  return trip.journey.scheduledPickupAt ?? trip.createdAt;
 }
 
 /** Human-readable in-vehicle journey duration (`in_progress` → `completed`). */
@@ -105,7 +158,7 @@ export function formatJourneyDuration(from: Date, to: Date): string {
 }
 
 export function isRoundTripLeg(trip: Trip): boolean {
-  return Boolean(trip.linkedTripID);
+  return Boolean(trip.journey.linkedTripID);
 }
 
 /** Outbound leg has the earlier scheduled pickup when linked to a return leg. */
@@ -113,18 +166,21 @@ export function roundTripLegLabel(
   trip: Trip,
   linkedTrip: Trip | null
 ): "outbound" | "return" | null {
-  if (!trip.linkedTripID || !linkedTrip) return null;
+  if (!trip.journey.linkedTripID || !linkedTrip) return null;
   const thisPickup = tripPickupReferenceDate(trip).getTime();
   const linkedPickup = tripPickupReferenceDate(linkedTrip).getTime();
   return thisPickup <= linkedPickup ? "outbound" : "return";
 }
 
 export function tripJourneyTimeLabel(trip: Trip): string {
-  if (trip.journeyStartedAt && trip.journeyCompletedAt) {
-    return formatJourneyDuration(trip.journeyStartedAt, trip.journeyCompletedAt);
+  const started = trip.journey.journeyStartedAt;
+  const completed = trip.journey.journeyCompletedAt;
+  if (started && completed) {
+    return formatJourneyDuration(started, completed);
   }
-  if (trip.journeyDurationSeconds != null && trip.journeyDurationSeconds > 0) {
-    const minutes = Math.max(1, Math.round(trip.journeyDurationSeconds / 60));
+  const durationSeconds = trip.journey.journeyDurationSeconds;
+  if (durationSeconds != null && durationSeconds > 0) {
+    const minutes = Math.max(1, Math.round(durationSeconds / 60));
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const rem = minutes % 60;

@@ -257,16 +257,18 @@ export function BookingsDataTable({
             searchLabel: [
               t.id,
               shortBookingId(t.id),
-              t.customerDisplayName,
-              t.customerPhoneNumber,
+              t.customer.displayName,
+              t.customer.phoneNumber,
               chauffeurLabel
             ]
               .filter(Boolean)
               .join(" "),
             pickupLabel: formatDateTime(tripPickupReferenceDate(t)),
-            vehicleLabel: t.vehicleSnapshot ? vehicleDisplayName(t.vehicleSnapshot) : "—",
+            vehicleLabel: t.vehicle.vehicleSnapshot
+              ? vehicleDisplayName(t.vehicle.vehicleSnapshot)
+              : "—",
             vehicleFilterValue:
-              t.vehicleDocumentId ?? t.vehicleSnapshot?.driverID ?? NO_VEHICLE
+              t.vehicle.vehicleDocumentId ?? t.vehicle.vehicleSnapshot?.driverID ?? NO_VEHICLE
           };
         }),
     [trips, dateRange, driverNameById]
@@ -311,10 +313,10 @@ export function BookingsDataTable({
       },
       {
         id: "customer",
-        accessorFn: (row) => row.customerDisplayName || "Customer",
+        accessorFn: (row) => row.customer.displayName || "Customer",
         header: "Customer",
         cell: ({ row }) => (
-          <div className="font-medium">{row.original.customerDisplayName || "Customer"}</div>
+          <div className="font-medium">{row.original.customer.displayName || "Customer"}</div>
         ),
         filterFn: (row, _columnId, filterValue) => {
           const q = String(filterValue ?? "")

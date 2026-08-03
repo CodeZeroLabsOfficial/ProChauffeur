@@ -24,14 +24,15 @@ function filterAdminInvoiceableTrips(loadedTrips, loadedRefs) {
 
   for (let i = 1; i < loadedTrips.length; i++) {
     const linked = loadedTrips[i];
+    const linkedBilling = linked.billing || {};
     const sameCustomer =
       !primary.customerID ||
       !linked.customerID ||
       primary.customerID === linked.customerID;
-    const alreadyPaid = linked.paymentStatus === "paid";
+    const alreadyPaid = linkedBilling.paymentStatus === "paid";
     const alreadyInvoiced =
-      linked.invoiceId && linked.paymentStatus === "invoiced";
-    const paymentInProgress = linked.paymentStatus === "pending";
+      linkedBilling.invoiceId && linkedBilling.paymentStatus === "invoiced";
+    const paymentInProgress = linkedBilling.paymentStatus === "pending";
     if (sameCustomer && !alreadyPaid && !alreadyInvoiced && !paymentInProgress) {
       trips.push(linked);
       refs.push(loadedRefs[i]);
@@ -42,19 +43,20 @@ function filterAdminInvoiceableTrips(loadedTrips, loadedRefs) {
 }
 
 function assertTripInvoiceable(trip) {
-  if (trip.paymentStatus === "paid") {
+  const billing = trip.billing || {};
+  if (billing.paymentStatus === "paid") {
     throw new HttpsError("failed-precondition", "This booking is already paid.");
   }
-  if (trip.paymentStatus === "pending") {
+  if (billing.paymentStatus === "pending") {
     throw new HttpsError("failed-precondition", "Payment is in progress for this booking.");
   }
-  if (trip.invoiceId && trip.paymentStatus === "invoiced") {
+  if (billing.invoiceId && billing.paymentStatus === "invoiced") {
     throw new HttpsError(
       "failed-precondition",
       "An invoice has already been sent for this booking."
     );
   }
-  const total = Number(trip.quotedTotal);
+  const total = Number(trip.quote?.quotedTotal);
   if (!Number.isFinite(total) || total <= 0) {
     throw new HttpsError(
       "failed-precondition",
@@ -98,7 +100,7 @@ async function sendCustomerTripInvoiceHandler(request) {
     throw new HttpsError("failed-precondition", "Trip has no customer.");
   }
 
-  const currency = (primary.quotedCurrencyCode || "AUD").toLowerCase();
+  const currency = (primary.quote?.quotedCurrencyCode || "AUD").toLowerCase();
   const lineItems = lineItemsFromTrips(trips);
 
   const firestoreInvoice = await createFirestoreInvoice(db, {
@@ -121,9 +123,9 @@ async function sendCustomerTripInvoiceHandler(request) {
   const now = admin.firestore.FieldValue.serverTimestamp();
   for (const ref of refs) {
     await ref.update({
-      paymentStatus: "invoiced",
-      paymentSource: "web",
-      invoiceId: firestoreInvoice.id,
+      "billing.paymentStatus": "invoiced",
+      "billing.paymentSource": "web",
+      "billing.invoiceId": firestoreInvoice.id,
       updatedAt: now,
     });
   }

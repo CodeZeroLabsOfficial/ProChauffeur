@@ -86,7 +86,7 @@ export function useActiveTripsProgress(
       if (!loc) return false;
       const from = coordinateFromLatLng(loc.lat, loc.lng);
       const mode = dispatchMapMode(trip.status);
-      const to = mode === "to_pickup" ? trip.pickup : trip.dropoff;
+      const to = mode === "to_pickup" ? trip.journey.pickup : trip.journey.dropoff;
       return hasValidCoordinate(from) && hasValidCoordinate(to);
     });
 
@@ -107,7 +107,7 @@ export function useActiveTripsProgress(
           if (!loc) continue;
           const from = coordinateFromLatLng(loc.lat, loc.lng);
           const mode = dispatchMapMode(trip.status);
-          const to = mode === "to_pickup" ? trip.pickup : trip.dropoff;
+          const to = mode === "to_pickup" ? trip.journey.pickup : trip.journey.dropoff;
           try {
             const metrics = await fetchLiveRouteMetrics(from, to, token);
             if (cancelled) return;

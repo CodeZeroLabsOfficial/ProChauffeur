@@ -548,21 +548,32 @@ export async function assignTripDriver(
     branchDocRef(db(), "trips", id),
     stripUndefined({
       driverID,
-      vehicleDocumentId: driverID ? vehicleDocumentId : null,
+      "vehicle.vehicleDocumentId": driverID ? vehicleDocumentId : null,
+      "vehicle.vehicleSnapshot": driverID ? vehicleSnapshot : null,
       fleetVehicleDocumentId: deleteField(),
-      vehicleSnapshot: driverID ? vehicleSnapshot : null,
       updatedAt: serverTimestamp()
     })
   );
 }
 
 export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void> {
+  const journey = patch.journey
+    ? stripUndefined({
+        ...patch.journey,
+        pickup: patch.journey.pickup
+          ? coordinateToFirestoreField(patch.journey.pickup)
+          : undefined,
+        dropoff: patch.journey.dropoff
+          ? coordinateToFirestoreField(patch.journey.dropoff)
+          : undefined
+      })
+    : undefined;
+
   await updateDoc(
     branchDocRef(db(), "trips", id),
     stripUndefined({
       ...patch,
-      pickup: patch.pickup ? coordinateToFirestoreField(patch.pickup) : undefined,
-      dropoff: patch.dropoff ? coordinateToFirestoreField(patch.dropoff) : undefined,
+      journey,
       updatedAt: serverTimestamp()
     })
   );
@@ -572,10 +583,21 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
   const now = new Date();
   const branchId = trip.branchId ?? getActiveBranchId();
   return stripUndefined({
-    ...trip,
+    id: trip.id,
+    status: trip.status,
+    customerID: trip.customerID,
+    driverID: trip.driverID,
     branchId,
-    pickup: coordinateToFirestoreField(trip.pickup),
-    dropoff: coordinateToFirestoreField(trip.dropoff),
+    customer: trip.customer,
+    capacity: trip.capacity,
+    journey: {
+      ...trip.journey,
+      pickup: coordinateToFirestoreField(trip.journey.pickup),
+      dropoff: coordinateToFirestoreField(trip.journey.dropoff)
+    },
+    quote: trip.quote,
+    billing: trip.billing,
+    vehicle: trip.vehicle,
     createdAt: trip.createdAt ?? now,
     updatedAt: trip.updatedAt ?? now
   });
@@ -583,8 +605,8 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
 
 export async function createTrip(trip: Trip): Promise<void> {
   await setDoc(branchDocRef(db(), "trips", trip.id), tripFirestorePayload(trip));
-  if (trip.appliedPromoId) {
-    void incrementPromoRedemption(trip.appliedPromoId);
+  if (trip.quote.appliedPromoId) {
+    void incrementPromoRedemption(trip.quote.appliedPromoId);
   }
 }
 
@@ -593,7 +615,7 @@ export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): 
   batch.set(branchDocRef(db(), "trips", outbound.id), tripFirestorePayload(outbound));
   batch.set(branchDocRef(db(), "trips", returnLeg.id), tripFirestorePayload(returnLeg));
   await batch.commit();
-  const promoId = outbound.appliedPromoId || returnLeg.appliedPromoId;
+  const promoId = outbound.quote.appliedPromoId || returnLeg.quote.appliedPromoId;
   if (promoId) {
     void incrementPromoRedemption(promoId);
   }
@@ -641,7 +663,7 @@ export async function countCustomerPromoRedemptions(
   const snap = await getDocs(
     query(branchCollectionRef(db(), "trips", branchId), where("customerID", "==", customerId))
   );
-  return snap.docs.filter((docSnap) => docSnap.data().appliedPromoId === promoId).length;
+  return snap.docs.filter((docSnap) => docSnap.data()?.quote?.appliedPromoId === promoId).length;
 }
 
 export async function savePromotion(promo: Promotion): Promise<void> {

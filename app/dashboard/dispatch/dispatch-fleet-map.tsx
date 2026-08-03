@@ -49,8 +49,8 @@ export function DispatchFleetMap({
       bbox = includeLngLat(bbox, loc.lng, loc.lat);
     }
     for (const trip of activeTrips) {
-      if (hasValidCoordinate(trip.pickup)) {
-        bbox = includeCoordinate(bbox, trip.pickup);
+      if (hasValidCoordinate(trip.journey.pickup)) {
+        bbox = includeCoordinate(bbox, trip.journey.pickup);
       }
     }
     return bbox;
@@ -93,8 +93,8 @@ export function DispatchFleetMap({
       {activeTrips.map((t) => (
         <Marker
           key={`pickup-${t.id}`}
-          longitude={t.pickup.longitude}
-          latitude={t.pickup.latitude}
+          longitude={t.journey.pickup.longitude}
+          latitude={t.journey.pickup.latitude}
           anchor="bottom"
           onClick={() => onSelectTrip(t.id)}>
           <MapPinIcon

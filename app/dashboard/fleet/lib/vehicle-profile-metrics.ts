@@ -16,7 +16,7 @@ export function tripsForVehicle(trips: Trip[], vehicle: Vehicle): Trip[] {
   const chauffeurId = effectiveChauffeurUserId(vehicle);
   return trips.filter(
     (t) =>
-      t.vehicleDocumentId === vehicle.driverID ||
+      t.vehicle.vehicleDocumentId === vehicle.driverID ||
       (chauffeurId != null && t.driverID === chauffeurId)
   );
 }

@@ -50,15 +50,15 @@ async function fetchUninvoicedOnAccountTrips(db, branchId, corporateAccountId) {
     `${Collections.branches}/${branchId}/${Collections.trips}`
   );
   const snap = await tripsRef
-    .where("corporateAccountId", "==", corporateAccountId)
+    .where("billing.corporateAccountId", "==", corporateAccountId)
     .get();
 
   return snap.docs
     .map((doc) => ({ id: doc.id, ref: doc.ref, ...(doc.data() || {}) }))
     .filter(
       (trip) =>
-        trip.paymentStatus === "on_account" &&
-        !trip.invoiceId &&
+        trip.billing?.paymentStatus === "on_account" &&
+        !trip.billing?.invoiceId &&
         trip.status !== "cancelled"
     );
 }
@@ -78,14 +78,14 @@ async function createCorporateInvoice(db, {
   const first = trips[0];
   const lineItems = trips.map((trip) => ({
     id: cryptoRandomId(),
-    label: `Trip ${trip.id.slice(0, 8)}${trip.customerDisplayName ? ` — ${trip.customerDisplayName}` : ""}`,
-    amount: Number(trip.quotedTotal) || 0,
+    label: `Trip ${trip.id.slice(0, 8)}${trip.customer?.displayName ? ` — ${trip.customer.displayName}` : ""}`,
+    amount: Number(trip.quote?.quotedTotal) || 0,
   }));
 
   const subtotal = lineItems.reduce((sum, li) => sum + li.amount, 0);
-  const taxRate = Number(first.quotedTaxRate) || 0;
-  const taxAmount = trips.reduce((sum, t) => sum + (Number(t.quotedTaxAmount) || 0), 0);
-  const total = trips.reduce((sum, t) => sum + (Number(t.quotedTotal) || 0), 0);
+  const taxRate = Number(first.quote?.quotedTaxRate) || 0;
+  const taxAmount = trips.reduce((sum, t) => sum + (Number(t.quote?.quotedTaxAmount) || 0), 0);
+  const total = trips.reduce((sum, t) => sum + (Number(t.quote?.quotedTotal) || 0), 0);
 
   const paymentTermsDays =
     typeof account.paymentTermsDays === "number" && Number.isFinite(account.paymentTermsDays)
@@ -99,16 +99,16 @@ async function createCorporateInvoice(db, {
 
   const customerID = first.customerID || null;
   const customerName =
-    account.name || first.customerDisplayName || "Corporate account";
+    account.name || first.customer?.displayName || "Corporate account";
   const customerEmail =
-    account.billingEmail || account.email || first.customerEmail || null;
+    account.billingEmail || account.email || first.customer?.email || null;
   const customerPhone =
-    account.billingPhone || account.phone || first.customerPhoneNumber || null;
+    account.billingPhone || account.phone || first.customer?.phoneNumber || null;
 
   const tripIds = trips.map((t) => t.id);
   const number = invoiceNumber();
   const ref = invoicesCollection(db, branchId).doc();
-  const currencyCode = (first.quotedCurrencyCode || "AUD").toUpperCase();
+  const currencyCode = (first.quote?.quotedCurrencyCode || "AUD").toUpperCase();
   const payload = {
     id: ref.id,
     invoiceNumber: number,
@@ -141,8 +141,8 @@ async function createCorporateInvoice(db, {
   batch.set(ref, payload);
   for (const trip of trips) {
     batch.update(trip.ref, {
-      invoiceId: ref.id,
-      paymentStatus: "invoiced",
+      "billing.invoiceId": ref.id,
+      "billing.paymentStatus": "invoiced",
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }

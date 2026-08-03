@@ -68,13 +68,13 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
         bookingIdLabel: shortBookingId(trip.id),
         searchLabel: [
           shortBookingId(trip.id),
-          trip.customerDisplayName,
-          trip.pickupAddressLine,
-          trip.dropoffAddressLine
+          trip.customer.displayName,
+          trip.journey.pickupAddressLine,
+          trip.journey.dropoffAddressLine
         ]
           .filter(Boolean)
           .join(" "),
-        customerLabel: trip.customerDisplayName?.trim() || "—",
+        customerLabel: trip.customer.displayName?.trim() || "—",
         pickupLabel: formatDateTime(tripPickupReferenceDate(trip)),
         pickupSort: tripPickupReferenceDate(trip).getTime()
       })),

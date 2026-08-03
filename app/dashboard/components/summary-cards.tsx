@@ -60,15 +60,15 @@ export function SummaryCards() {
     ).length;
 
     const totalPassengers = trips.reduce(
-      (sum, t) => sum + (t.bookingPassengerCount ?? 1),
+      (sum, t) => sum + (t.capacity.passengerCount ?? 1),
       0
     );
     const monthPassengers = tripsInMonth(trips, thisMonth.start, thisMonth.end).reduce(
-      (sum, t) => sum + (t.bookingPassengerCount ?? 1),
+      (sum, t) => sum + (t.capacity.passengerCount ?? 1),
       0
     );
     const lastMonthPassengers = tripsInMonth(trips, lastMonth.start, lastMonth.end).reduce(
-      (sum, t) => sum + (t.bookingPassengerCount ?? 1),
+      (sum, t) => sum + (t.capacity.passengerCount ?? 1),
       0
     );
 

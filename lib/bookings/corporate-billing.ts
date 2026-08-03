@@ -34,7 +34,7 @@ export function corporateBillingPeriodRange(now: Date = new Date()): {
 }
 
 function tripReferenceTime(trip: Trip, fallback: Date): Date {
-  return trip.createdAt ?? trip.scheduledPickupAt ?? fallback;
+  return trip.createdAt ?? trip.journey.scheduledPickupAt ?? fallback;
 }
 
 /**
@@ -45,10 +45,10 @@ export function unbilledCorporateTrips(trips: Trip[], accountId: string): Trip[]
   const now = new Date();
   return trips
     .filter((trip) => {
-      if (trip.corporateAccountId !== accountId) return false;
+      if (trip.billing.corporateAccountId !== accountId) return false;
       if (trip.status === "cancelled") return false;
-      if (trip.paymentStatus !== "on_account") return false;
-      if (trip.invoiceId) return false;
+      if (trip.billing.paymentStatus !== "on_account") return false;
+      if (trip.billing.invoiceId) return false;
       return true;
     })
     .sort(
@@ -60,7 +60,7 @@ export function unbilledCorporateTrips(trips: Trip[], accountId: string): Trip[]
 export function sumTripQuotedTotals(trips: Trip[]): number {
   let sum = 0;
   for (const trip of trips) {
-    const amount = trip.quotedTotal;
+    const amount = trip.quote.quotedTotal;
     if (typeof amount === "number" && Number.isFinite(amount)) sum += amount;
   }
   return sum;

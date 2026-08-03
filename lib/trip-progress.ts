@@ -85,7 +85,7 @@ export function computeTripProgress({
           ? clampPercent((1 - remaining / baseline) * 100)
           : null,
       etaLabel,
-      onTime: etaAt ? computeOnTime(etaAt, trip.scheduledPickupAt) : null,
+      onTime: etaAt ? computeOnTime(etaAt, trip.journey.scheduledPickupAt) : null,
       phaseLabel: tripStatusTitle.en_route_pickup
     };
   }
@@ -93,17 +93,20 @@ export function computeTripProgress({
   let percent: number | null = null;
   if (remaining != null && baseline != null) {
     percent = clampPercent((1 - remaining / baseline) * 100);
-  } else if (remaining != null && trip.journeyStartedAt) {
-    const elapsedSeconds = Math.max(0, (now.getTime() - trip.journeyStartedAt.getTime()) / 1000);
+  } else if (remaining != null && trip.journey.journeyStartedAt) {
+    const elapsedSeconds = Math.max(
+      0,
+      (now.getTime() - trip.journey.journeyStartedAt.getTime()) / 1000
+    );
     const total = elapsedSeconds + remaining;
     percent = total > 0 ? clampPercent((elapsedSeconds / total) * 100) : null;
   }
 
   let onTime: TripProgressOnTime | null = null;
-  if (etaAt && baseline != null && trip.journeyStartedAt) {
+  if (etaAt && baseline != null && trip.journey.journeyStartedAt) {
     onTime = computeOnTime(
       etaAt,
-      new Date(trip.journeyStartedAt.getTime() + baseline * 1000)
+      new Date(trip.journey.journeyStartedAt.getTime() + baseline * 1000)
     );
   }
 

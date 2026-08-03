@@ -13,7 +13,7 @@ const INVOICE_TIME_ZONE = "Australia/Brisbane";
  * `{ seconds, nanoseconds }` shapes into a `Date`.
  */
 function tripPickupDate(trip) {
-  const value = trip?.scheduledPickupAt;
+  const value = trip?.journey?.scheduledPickupAt;
   if (value == null) return null;
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
@@ -78,7 +78,7 @@ function transferLineLabel(trip, legKind = "oneWay") {
 }
 
 function taxLabelFromTrip(trip) {
-  const breakdown = Array.isArray(trip.quoteBreakdown) ? trip.quoteBreakdown : [];
+  const breakdown = Array.isArray(trip.quote?.quoteBreakdown) ? trip.quote.quoteBreakdown : [];
   const taxLine = breakdown.find((line) => line && line.category === "tax");
   return taxLine ? String(taxLine.label || "GST") : "GST";
 }
@@ -90,11 +90,11 @@ function taxLabelFromTrip(trip) {
  *   is false, tax is omitted (multi-leg invoices append a single combined GST).
  */
 function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay" } = {}) {
-  const breakdown = Array.isArray(trip.quoteBreakdown) ? trip.quoteBreakdown : [];
+  const breakdown = Array.isArray(trip.quote?.quoteBreakdown) ? trip.quote.quoteBreakdown : [];
   const addons = breakdown.filter((line) => line && line.category === "addon");
 
   const addonTotal = addons.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
-  const subtotal = Number(trip.quotedSubtotal) || 0;
+  const subtotal = Number(trip.quote?.quotedSubtotal) || 0;
   const farePortion = subtotal - addonTotal;
   const fareLabel = transferLineLabel(trip, legKind);
 
@@ -117,7 +117,7 @@ function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay" } = {})
   }
 
   if (includeTax) {
-    const taxAmount = Number(trip.quotedTaxAmount) || 0;
+    const taxAmount = Number(trip.quote?.quotedTaxAmount) || 0;
     if (taxAmount > 0) {
       items.push({
         id: cryptoRandomId(),
@@ -127,11 +127,11 @@ function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay" } = {})
     }
   }
 
-  if (items.length === 0 && Number(trip.quotedTotal) > 0) {
+  if (items.length === 0 && Number(trip.quote?.quotedTotal) > 0) {
     items.push({
       id: cryptoRandomId(),
       label: fareLabel,
-      amount: Number(trip.quotedTotal),
+      amount: Number(trip.quote.quotedTotal),
     });
   }
 
@@ -168,7 +168,7 @@ function lineItemsFromTrips(trips) {
         legKind: legKindForIndex(index),
       })
     );
-    const tripTax = Number(trip.quotedTaxAmount) || 0;
+    const tripTax = Number(trip.quote?.quotedTaxAmount) || 0;
     if (tripTax > 0) {
       taxAmount += tripTax;
       taxLabel = taxLabelFromTrip(trip);
@@ -183,10 +183,11 @@ function lineItemsFromTrips(trips) {
 }
 
 function totalsFromTrip(trip) {
-  const subtotal = Number(trip.quotedSubtotal) || 0;
-  const taxRate = Number(trip.quotedTaxRate) || 0;
-  const taxAmount = Number(trip.quotedTaxAmount) || 0;
-  const total = Number(trip.quotedTotal) || 0;
+  const quote = trip.quote || {};
+  const subtotal = Number(quote.quotedSubtotal) || 0;
+  const taxRate = Number(quote.quotedTaxRate) || 0;
+  const taxAmount = Number(quote.quotedTaxAmount) || 0;
+  const total = Number(quote.quotedTotal) || 0;
   return { subtotal, taxRate, taxAmount, total };
 }
 
@@ -207,7 +208,7 @@ function totalsFromTrips(trips) {
   }
   return {
     subtotal,
-    taxRate: Number(trips[0].quotedTaxRate) || 0,
+    taxRate: Number(trips[0].quote?.quotedTaxRate) || 0,
     taxAmount,
     total,
   };
@@ -260,7 +261,7 @@ async function loadTripsForPaymentInvoice(db, seedTripIds, branchId = DEFAULT_BR
     refs.push(ref);
 
     const linked =
-      typeof trip.linkedTripID === "string" ? trip.linkedTripID.trim() : "";
+      typeof trip.journey?.linkedTripID === "string" ? trip.journey.linkedTripID.trim() : "";
     if (linked && !seen.has(linked)) {
       seen.add(linked);
       ids.push(linked);
@@ -303,13 +304,13 @@ async function createFirestoreInvoice(db, {
   const payload = {
     invoiceNumber: invoiceNumber(),
     customerID: primary.customerID,
-    customerName: primary.customerDisplayName || "Customer",
-    customerEmail: primary.customerEmail || null,
-    customerPhone: primary.customerPhoneNumber || null,
+    customerName: primary.customer?.displayName || "Customer",
+    customerEmail: primary.customer?.email || null,
+    customerPhone: primary.customer?.phoneNumber || null,
     tripIDs,
     branchId,
     status,
-    currencyCode: (primary.quotedCurrencyCode || "AUD").toUpperCase(),
+    currencyCode: (primary.quote?.quotedCurrencyCode || "AUD").toUpperCase(),
     lineItems,
     subtotal: totals.subtotal,
     taxRate: totals.taxRate,

@@ -12,22 +12,27 @@ export function tripStatusUpdateFields(
     updatedAt: FieldValue.serverTimestamp()
   };
 
-  if (status === "in_progress" && existing?.journeyStartedAt == null) {
-    fields.journeyStartedAt = FieldValue.serverTimestamp();
+  const journey =
+    existing?.journey && typeof existing.journey === "object"
+      ? (existing.journey as DocumentData)
+      : {};
+
+  if (status === "in_progress" && journey.journeyStartedAt == null) {
+    fields["journey.journeyStartedAt"] = FieldValue.serverTimestamp();
   }
 
-  if (status === "completed" && existing?.journeyCompletedAt == null) {
-    fields.journeyCompletedAt = FieldValue.serverTimestamp();
+  if (status === "completed" && journey.journeyCompletedAt == null) {
+    fields["journey.journeyCompletedAt"] = FieldValue.serverTimestamp();
 
-    if (existing?.journeyDurationSeconds == null && existing?.journeyStartedAt != null) {
+    if (journey.journeyDurationSeconds == null && journey.journeyStartedAt != null) {
       const startedAt =
-        existing.journeyStartedAt instanceof Timestamp
-          ? existing.journeyStartedAt.toDate()
-          : existing.journeyStartedAt instanceof Date
-            ? existing.journeyStartedAt
+        journey.journeyStartedAt instanceof Timestamp
+          ? journey.journeyStartedAt.toDate()
+          : journey.journeyStartedAt instanceof Date
+            ? journey.journeyStartedAt
             : null;
       if (startedAt) {
-        fields.journeyDurationSeconds = Math.max(
+        fields["journey.journeyDurationSeconds"] = Math.max(
           0,
           Math.round((Date.now() - startedAt.getTime()) / 1000)
         );

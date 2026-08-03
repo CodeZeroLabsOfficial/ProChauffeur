@@ -44,15 +44,15 @@ export function DispatchActiveTripCard({
 }) {
   const [journeyOpen, setJourneyOpen] = useState(false);
 
-  const details = trip.vehicleSnapshot?.details;
+  const details = trip.vehicle.vehicleSnapshot?.details;
   const vehicleName =
     [details?.make, details?.model].filter(Boolean).join(" ").trim() ||
     vehicleLabel?.trim() ||
     null;
 
-  const passengerCount = trip.bookingPassengerCount;
-  const smallLuggageCount = trip.bookingSmallLuggageCount;
-  const largeLuggageCount = trip.bookingLargeLuggageCount;
+  const passengerCount = trip.capacity.passengerCount;
+  const smallLuggageCount = trip.capacity.luggage.smallCount;
+  const largeLuggageCount = trip.capacity.luggage.largeCount;
   const showBookingMeta =
     passengerCount != null || smallLuggageCount != null || largeLuggageCount != null;
 
@@ -151,8 +151,8 @@ export function DispatchActiveTripCard({
 
         <CollapsibleContent>
           <TripRouteStops
-            pickup={trip.pickupAddressLine || "Pickup location not set"}
-            dropoff={trip.dropoffAddressLine || "Destination not set"}
+            pickup={trip.journey.pickupAddressLine || "Pickup location not set"}
+            dropoff={trip.journey.dropoffAddressLine || "Destination not set"}
           />
         </CollapsibleContent>
       </div>

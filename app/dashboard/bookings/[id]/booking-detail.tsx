@@ -154,10 +154,11 @@ function BookingVehicleCard({
 }
 
 function luggageLabel(trip: Trip) {
-  if (trip.bookingSmallLuggageCount == null && trip.bookingLargeLuggageCount == null) {
+  const { smallCount, largeCount } = trip.capacity.luggage;
+  if (smallCount == null && largeCount == null) {
     return "—";
   }
-  return `${trip.bookingSmallLuggageCount ?? 0} small, ${trip.bookingLargeLuggageCount ?? 0} large`;
+  return `${smallCount ?? 0} small, ${largeCount ?? 0} large`;
 }
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
@@ -210,7 +211,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       ? (currentStepIndex / (ACTIVE_STATUSES.length - 1)) * 100
       : 0;
 
-  const completedAt = useMemo(() => trip?.journeyCompletedAt ?? null, [trip]);
+  const completedAt = useMemo(() => trip?.journey.journeyCompletedAt ?? null, [trip]);
 
   const journeyTime = useMemo(() => (trip ? tripJourneyTimeLabel(trip) : "—"), [trip]);
 
@@ -238,18 +239,21 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       ? chauffeur.email
       : "No chauffeur assigned to this booking";
 
-  const customerName = trip?.customerDisplayName || customer?.profile.displayName || null;
-  const customerEmail = trip?.customerEmail ?? customer?.email ?? null;
-  const customerPhone = trip?.customerPhoneNumber ?? customer?.profile.phoneNumber ?? null;
+  const customerName = trip?.customer.displayName || customer?.profile.displayName || null;
+  const customerEmail = trip?.customer.email ?? customer?.email ?? null;
+  const customerPhone = trip?.customer.phoneNumber ?? customer?.profile.phoneNumber ?? null;
   const isCorporateCustomer = Boolean(
-    trip?.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
+    trip?.billing.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
   );
-  const vehicleClassLabel = trip?.vehicleClassDisplayName?.trim() || null;
+  const vehicleClassLabel = trip?.quote.vehicleClassDisplayName?.trim() || null;
 
   const paymentStatus = trip ? effectivePaymentStatus(trip) : "unpaid";
   const linkedInvoice = useMemo(
-    () => (trip?.invoiceId ? invoices.find((inv) => inv.id === trip.invoiceId) : undefined),
-    [trip?.invoiceId, invoices]
+    () =>
+      trip?.billing.invoiceId
+        ? invoices.find((inv) => inv.id === trip.billing.invoiceId)
+        : undefined,
+    [trip?.billing.invoiceId, invoices]
   );
   const canSendInvoice = trip ? canSendTripInvoice(trip) : false;
 
@@ -403,17 +407,19 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
             <DetailRow
               label="Passengers"
-              value={trip.bookingPassengerCount != null ? trip.bookingPassengerCount : "—"}
+              value={
+                trip.capacity.passengerCount != null ? trip.capacity.passengerCount : "—"
+              }
             />
             <DetailRow label="Luggage requirements" value={luggageLabel(trip)} />
           </SectionCard>
 
           <SectionCard title="Journey">
             <BookingJourneyMap
-              pickup={trip.pickup}
-              dropoff={trip.dropoff}
-              pickupLabel={trip.pickupAddressLine}
-              dropoffLabel={trip.dropoffAddressLine}
+              pickup={trip.journey.pickup}
+              dropoff={trip.journey.dropoff}
+              pickupLabel={trip.journey.pickupAddressLine}
+              dropoffLabel={trip.journey.dropoffAddressLine}
             />
           </SectionCard>
         </div>
@@ -425,7 +431,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow label="Requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
               label="Trip type:"
-              value={trip.tripType ? tripTypeTitle[trip.tripType] : "—"}
+              value={trip.journey.tripType ? tripTypeTitle[trip.journey.tripType] : "—"}
             />
             <DetailRow label="Completed:" value={completedAt ? formatDateTime(completedAt) : "—"} />
             <DetailRow label="Journey time:" value={journeyTime} />
@@ -440,16 +446,21 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           />
 
           <BookingVehicleCard
-            vehicleSnapshot={trip.vehicleSnapshot}
+            vehicleSnapshot={trip.vehicle.vehicleSnapshot}
             vehicleClassLabel={vehicleClassLabel}
           />
 
           <SectionCard title="Payment" headerAction={<PaymentStatusBadge status={paymentStatus} />}>
             <DetailRow
               label="Source:"
-              value={trip.paymentSource ? paymentSourceTitle[trip.paymentSource] : "—"}
+              value={
+                trip.billing.paymentSource ? paymentSourceTitle[trip.billing.paymentSource] : "—"
+              }
             />
-            <DetailRow label="Paid at:" value={trip.paidAt ? formatDateTime(trip.paidAt) : "—"} />
+            <DetailRow
+              label="Paid at:"
+              value={trip.billing.paidAt ? formatDateTime(trip.billing.paidAt) : "—"}
+            />
             {linkedInvoice ? (
               <DetailRow
                 label="Invoice:"
@@ -461,8 +472,8 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                   </Link>
                 }
               />
-            ) : trip.invoiceId ? (
-              <DetailRow label="Invoice:" value={shortBookingId(trip.invoiceId)} />
+            ) : trip.billing.invoiceId ? (
+              <DetailRow label="Invoice:" value={shortBookingId(trip.billing.invoiceId)} />
             ) : null}
           </SectionCard>
 
@@ -470,10 +481,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow
               label="Base Fare:"
               value={
-                trip.quotedSubtotal != null
+                trip.quote.quotedSubtotal != null
                   ? formatCurrency(
-                      trip.quotedSubtotal,
-                      trip.quotedCurrencyCode ?? appConfig.currency
+                      trip.quote.quotedSubtotal,
+                      trip.quote.quotedCurrencyCode ?? appConfig.currency
                     )
                   : "—"
               }
@@ -481,10 +492,10 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow
               label="GST:"
               value={
-                trip.quotedTaxAmount != null
+                trip.quote.quotedTaxAmount != null
                   ? formatCurrency(
-                      trip.quotedTaxAmount,
-                      trip.quotedCurrencyCode ?? appConfig.currency
+                      trip.quote.quotedTaxAmount,
+                      trip.quote.quotedCurrencyCode ?? appConfig.currency
                     )
                   : "—"
               }
@@ -492,8 +503,11 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow
               label="Total:"
               value={
-                trip.quotedTotal != null
-                  ? formatCurrency(trip.quotedTotal, trip.quotedCurrencyCode ?? appConfig.currency)
+                trip.quote.quotedTotal != null
+                  ? formatCurrency(
+                      trip.quote.quotedTotal,
+                      trip.quote.quotedCurrencyCode ?? appConfig.currency
+                    )
                   : "—"
               }
             />

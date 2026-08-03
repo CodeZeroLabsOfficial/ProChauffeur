@@ -29,12 +29,13 @@ export function corporateMonthlySpend(
   const to = endOfMonth(now).getTime();
   let sum = 0;
   for (const trip of trips) {
-    if (trip.corporateAccountId !== accountId) continue;
+    if (trip.billing.corporateAccountId !== accountId) continue;
     if (tripIsCancelled(trip)) continue;
-    if (trip.paymentStatus !== "on_account" && trip.paymentStatus !== "invoiced") continue;
-    const at = (trip.createdAt ?? trip.scheduledPickupAt ?? now).getTime();
+    if (trip.billing.paymentStatus !== "on_account" && trip.billing.paymentStatus !== "invoiced")
+      continue;
+    const at = (trip.createdAt ?? trip.journey.scheduledPickupAt ?? now).getTime();
     if (at < from || at > to) continue;
-    const amount = trip.quotedTotal;
+    const amount = trip.quote.quotedTotal;
     if (typeof amount === "number" && Number.isFinite(amount)) sum += amount;
   }
   return sum;
@@ -55,11 +56,11 @@ export function corporateOpenExposure(
     }
   }
   for (const trip of trips) {
-    if (trip.corporateAccountId !== accountId) continue;
+    if (trip.billing.corporateAccountId !== accountId) continue;
     if (tripIsCancelled(trip)) continue;
-    if (trip.paymentStatus !== "on_account") continue;
-    if (trip.invoiceId) continue;
-    const amount = trip.quotedTotal;
+    if (trip.billing.paymentStatus !== "on_account") continue;
+    if (trip.billing.invoiceId) continue;
+    const amount = trip.quote.quotedTotal;
     if (typeof amount === "number" && Number.isFinite(amount)) sum += amount;
   }
   return sum;

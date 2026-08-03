@@ -8,13 +8,13 @@ export interface PostalAddress {
   country?: string | null;
 }
 
-/** Customer address fields snapshotted on `trips/{id}` at booking time. */
+/** Customer address fields snapshotted on `trips/{id}.customer` at booking time. */
 export interface CustomerAddressSnapshot {
-  customerStreet?: string | null;
-  customerCity?: string | null;
-  customerState?: string | null;
-  customerPostcode?: string | null;
-  customerCountry?: string | null;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  country?: string | null;
 }
 
 export function formatPostalAddress(address: PostalAddress | null | undefined): string | null {
@@ -87,11 +87,11 @@ export function customerAddressSnapshotFromProfile(
 ): CustomerAddressSnapshot {
   const address = postalAddressFromProfile(profile);
   return {
-    customerStreet: address.street ?? null,
-    customerCity: address.city ?? null,
-    customerState: address.state ?? null,
-    customerPostcode: address.postcode ?? null,
-    customerCountry: address.country ?? null
+    street: address.street ?? null,
+    city: address.city ?? null,
+    state: address.state ?? null,
+    postcode: address.postcode ?? null,
+    country: address.country ?? null
   };
 }
 
@@ -100,11 +100,11 @@ export function postalAddressFromTripSnapshot(
 ): PostalAddress {
   if (!trip) return {};
   return {
-    street: trip.customerStreet ?? null,
-    city: trip.customerCity ?? null,
-    state: trip.customerState ?? null,
-    postcode: trip.customerPostcode ?? null,
-    country: trip.customerCountry ?? null
+    street: trip.street ?? null,
+    city: trip.city ?? null,
+    state: trip.state ?? null,
+    postcode: trip.postcode ?? null,
+    country: trip.country ?? null
   };
 }
 

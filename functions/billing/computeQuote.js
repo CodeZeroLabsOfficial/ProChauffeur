@@ -10,6 +10,7 @@ const {
 const { computeQuote, QuoteError } = require("../quoting/quote-engine");
 const { fetchRouteMetrics } = require("../quoting/mapbox-directions");
 const { getMapboxToken } = require("../quoting/mapbox-token");
+const { extractPostcodeFromAddress } = require("../lib/resolve-branch");
 
 const ALLOWED_SETTLEMENTS = new Set(["on_account", "card"]);
 
@@ -34,6 +35,14 @@ function normalizePromoCode(code) {
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
+}
+
+/** Addon ids selected for the leg, from `journey.bookingAddons`. */
+function extractAddonIds(journey) {
+  if (!journey || !Array.isArray(journey.bookingAddons)) return [];
+  return journey.bookingAddons
+    .map((a) => (a && typeof a.id === "string" ? a.id : null))
+    .filter(Boolean);
 }
 
 function requireCoord(label, value) {
@@ -237,7 +246,14 @@ function serializeQuoteResult(result) {
 /**
  * Core quote computation used by the callable and booking payment re-quote.
  * @param {FirebaseFirestore.Firestore} db
- * @param {customerId: string, settlement: string, trip: object, branchIdHint?: string|null, promoCode?: string|null} args
+ * @param {{
+ *   customerId: string,
+ *   settlement: string,
+ *   trip: { journey: object, quote: object },
+ *   branchIdHint?: string|null,
+ *   promoCode?: string|null
+ * }} args `trip` is a nested payload mirroring the Trip document's
+ *   `journey` / `quote` maps.
  */
 async function runComputeQuote(db, {
   customerId,
@@ -246,52 +262,51 @@ async function runComputeQuote(db, {
   branchIdHint = null,
   promoCode = null,
 }) {
-  const tripType = trip.tripType;
+  const journey = trip?.journey && typeof trip.journey === "object" ? trip.journey : {};
+  const quote = trip?.quote && typeof trip.quote === "object" ? trip.quote : {};
+
+  const tripType = journey.tripType;
   if (tripType !== "transfer" && tripType !== "hourly") {
-    throw new HttpsError("invalid-argument", "trip.tripType must be transfer or hourly.");
+    throw new HttpsError("invalid-argument", "trip.journey.tripType must be transfer or hourly.");
   }
 
   const vehicleClassId =
-    typeof trip.vehicleClassId === "string" ? trip.vehicleClassId.trim() : "";
+    typeof quote.vehicleClassId === "string" ? quote.vehicleClassId.trim() : "";
   if (!vehicleClassId) {
-    throw new HttpsError("invalid-argument", "trip.vehicleClassId is required.");
+    throw new HttpsError("invalid-argument", "trip.quote.vehicleClassId is required.");
   }
 
-  const pickup = requireCoord("pickup", trip.pickup);
-  const dropoff = requireCoord("dropoff", trip.dropoff);
+  const pickup = requireCoord("pickup", journey.pickup);
+  const dropoff = requireCoord("dropoff", journey.dropoff);
 
   const pickupAddressLine =
-    typeof trip.pickupAddressLine === "string" ? trip.pickupAddressLine : "";
+    typeof journey.pickupAddressLine === "string" ? journey.pickupAddressLine : "";
   const dropoffAddressLine =
-    typeof trip.dropoffAddressLine === "string" ? trip.dropoffAddressLine : "";
-  const pickupPostcode =
-    typeof trip.pickupPostcode === "string" ? trip.pickupPostcode : "";
-  const dropoffPostcode =
-    typeof trip.dropoffPostcode === "string" ? trip.dropoffPostcode : "";
+    typeof journey.dropoffAddressLine === "string" ? journey.dropoffAddressLine : "";
+  const pickupPostcode = extractPostcodeFromAddress(pickupAddressLine);
+  const dropoffPostcode = extractPostcodeFromAddress(dropoffAddressLine);
 
-  const scheduledRaw = trip.scheduledPickupAt;
+  const scheduledRaw = journey.scheduledPickupAt;
   const scheduledPickupAt =
     typeof scheduledRaw === "string" ? new Date(scheduledRaw) : null;
   if (!scheduledPickupAt || Number.isNaN(scheduledPickupAt.getTime())) {
     throw new HttpsError(
       "invalid-argument",
-      "trip.scheduledPickupAt must be a valid ISO string."
+      "trip.journey.scheduledPickupAt must be a valid ISO string."
     );
   }
 
   const bookedHours =
     tripType === "hourly"
-      ? Number(trip.bookedHours)
-      : trip.bookedHours != null
-        ? Number(trip.bookedHours)
+      ? Number(journey.bookedHours)
+      : journey.bookedHours != null
+        ? Number(journey.bookedHours)
         : null;
   if (tripType === "hourly" && (!Number.isFinite(bookedHours) || bookedHours <= 0)) {
-    throw new HttpsError("invalid-argument", "trip.bookedHours is required for hourly.");
+    throw new HttpsError("invalid-argument", "trip.journey.bookedHours is required for hourly.");
   }
 
-  const addonIds = Array.isArray(trip.addonIds)
-    ? trip.addonIds.filter((id) => typeof id === "string" && id)
-    : [];
+  const addonIds = extractAddonIds(journey);
 
   let branchId =
     typeof branchIdHint === "string" && branchIdHint.trim()
@@ -300,9 +315,7 @@ async function runComputeQuote(db, {
   if (!branchId) {
     try {
       branchId = await resolveBookingBranchId(db, {
-        pickupPostcode,
-        pickupAddressLine,
-        pickup,
+        journey: { pickupAddressLine, pickup },
       });
     } catch (err) {
       if (err && err.code === "out_of_area") {
@@ -487,7 +500,7 @@ async function runComputeQuote(db, {
  * Callable handler: compute a trip quote.
  * data: {
  *   branchId?, customerId, settlement: 'on_account'|'card',
- *   trip: { tripType, vehicleClassId, pickup, dropoff, ... },
+ *   trip: { journey: { tripType, pickup, dropoff, ... }, quote: { vehicleClassId } },
  *   promoCode?
  * }
  */

@@ -74,8 +74,8 @@ export function AccountBillingTab({
       return [
         trip.id,
         shortBookingId(trip.id),
-        trip.customerDisplayName,
-        formatDateTime(trip.scheduledPickupAt ?? trip.createdAt)
+        trip.customer.displayName,
+        formatDateTime(trip.journey.scheduledPickupAt ?? trip.createdAt)
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q));
@@ -220,15 +220,18 @@ export function AccountBillingTab({
                         </Link>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDateTime(trip.scheduledPickupAt ?? trip.createdAt)}
+                        {formatDateTime(trip.journey.scheduledPickupAt ?? trip.createdAt)}
                       </TableCell>
-                      <TableCell>{trip.customerDisplayName?.trim() || "—"}</TableCell>
+                      <TableCell>{trip.customer.displayName?.trim() || "—"}</TableCell>
                       <TableCell>
                         <TripStatusBadge status={trip.status} />
                       </TableCell>
                       <TableCell>
-                        {trip.quotedTotal != null
-                          ? formatCurrency(trip.quotedTotal, trip.quotedCurrencyCode ?? undefined)
+                        {trip.quote.quotedTotal != null
+                          ? formatCurrency(
+                              trip.quote.quotedTotal,
+                              trip.quote.quotedCurrencyCode ?? undefined
+                            )
                           : "—"}
                       </TableCell>
                     </TableRow>

@@ -25,13 +25,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 function bookingRequestDescription(trip: Trip) {
-  const pickup = trip.pickupAddressLine?.trim() || "Pickup";
-  const dropoff = trip.dropoffAddressLine?.trim() || "Drop-off";
+  const pickup = trip.journey.pickupAddressLine?.trim() || "Pickup";
+  const dropoff = trip.journey.dropoffAddressLine?.trim() || "Drop-off";
   return `${pickup} → ${dropoff}`;
 }
 
 function customerNameForTrip(trip: Trip, displayNameByCustomerId: Map<string, string>) {
-  const fromTrip = trip.customerDisplayName?.trim();
+  const fromTrip = trip.customer.displayName?.trim();
   if (fromTrip) return fromTrip;
   const fromUser = displayNameByCustomerId.get(trip.customerID);
   if (fromUser) return fromUser;

@@ -119,10 +119,12 @@ function extractPostcodeFromAddress(line) {
  * Loads limits + branches and resolves a booking Location id.
  * @param {FirebaseFirestore.Firestore} db
  * @param {{
- *   pickupPostcode?: string,
- *   pickupAddressLine?: string,
- *   pickup?: { latitude?: number, longitude?: number }
- * }} trip
+ *   journey?: {
+ *     pickupAddressLine?: string,
+ *     pickup?: { latitude?: number, longitude?: number }
+ *   }
+ * }} trip Nested trip (or quote request) payload — reads `journey.pickupAddressLine`
+ *   and `journey.pickup`.
  */
 async function resolveBookingBranchId(db, trip) {
   const limitsSnap = await db.collection("app_settings").doc("limits").get();
@@ -145,14 +147,12 @@ async function resolveBookingBranchId(db, trip) {
     };
   });
 
-  const postcode =
-    (typeof trip.pickupPostcode === "string" && trip.pickupPostcode.trim()) ||
-    extractPostcodeFromAddress(trip.pickupAddressLine) ||
-    "";
+  const journey = trip?.journey && typeof trip.journey === "object" ? trip.journey : {};
+  const postcode = extractPostcodeFromAddress(journey.pickupAddressLine) || "";
 
   let latitude;
   let longitude;
-  const pickup = trip.pickup;
+  const pickup = journey.pickup;
   if (pickup && typeof pickup === "object") {
     if (typeof pickup.latitude === "number" && typeof pickup.longitude === "number") {
       latitude = pickup.latitude;

@@ -46,7 +46,7 @@ import {
   normalizeAllowedPaymentMethods,
   normalizeAllowedVehicleClassIds
 } from "@/lib/models/corporate-account";
-import { TRIP_APPROVAL_STATUSES } from "@/lib/models/trip";
+import { TRIP_APPROVAL_STATUSES, emptyTripCapacity } from "@/lib/models/trip";
 import {
   UNLIMITED,
   defaultPlansCatalog,
@@ -359,69 +359,118 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
 }
 
 export function mapTrip(id: string, d: DocumentData): Trip {
+  const customerRaw =
+    d.customer && typeof d.customer === "object" ? (d.customer as DocumentData) : {};
+  const capacityRaw =
+    d.capacity && typeof d.capacity === "object" ? (d.capacity as DocumentData) : null;
+  const luggageRaw =
+    capacityRaw?.luggage && typeof capacityRaw.luggage === "object"
+      ? (capacityRaw.luggage as DocumentData)
+      : {};
+  const journeyRaw =
+    d.journey && typeof d.journey === "object" ? (d.journey as DocumentData) : {};
+  const quoteRaw = d.quote && typeof d.quote === "object" ? (d.quote as DocumentData) : {};
+  const billingRaw =
+    d.billing && typeof d.billing === "object" ? (d.billing as DocumentData) : {};
+  const vehicleRaw =
+    d.vehicle && typeof d.vehicle === "object" ? (d.vehicle as DocumentData) : {};
+
+  const defaults = emptyTripCapacity();
+
   return {
     id,
     status: d.status ?? "requested",
     customerID: d.customerID ?? "",
-    customerDisplayName: d.customerDisplayName ?? null,
-    customerPhoneNumber: d.customerPhoneNumber ?? null,
-    customerEmail: d.customerEmail ?? null,
-    customerStreet: d.customerStreet ?? null,
-    customerCity: d.customerCity ?? null,
-    customerState: d.customerState ?? null,
-    customerPostcode: d.customerPostcode ?? null,
-    customerCountry: d.customerCountry ?? null,
-    customerCompany: d.customerCompany ?? null,
     driverID: d.driverID ?? null,
     branchId: typeof d.branchId === "string" ? d.branchId : null,
-    pickup: toCoordinate(d.pickup) ?? { latitude: 0, longitude: 0 },
-    dropoff: toCoordinate(d.dropoff) ?? { latitude: 0, longitude: 0 },
-    pickupAddressLine: d.pickupAddressLine ?? null,
-    dropoffAddressLine: d.dropoffAddressLine ?? null,
-    vehicleSnapshot: d.vehicleSnapshot ? mapVehicle(d.vehicleSnapshot) : null,
-    vehicleDocumentId: d.vehicleDocumentId ?? null,
-    notes: d.notes ?? null,
-    bookingPassengerCount: d.bookingPassengerCount ?? null,
-    bookingSmallLuggageCount: d.bookingSmallLuggageCount ?? null,
-    bookingLargeLuggageCount: d.bookingLargeLuggageCount ?? null,
-    bookingAddons: Array.isArray(d.bookingAddons)
-      ? d.bookingAddons.map((addon) => mapPricingAddon(addon as DocumentData))
-      : null,
-    scheduledPickupAt: toDate(d.scheduledPickupAt),
-    linkedTripID: d.linkedTripID ?? null,
-    journeyStartedAt: toDate(d.journeyStartedAt),
-    journeyCompletedAt: toDate(d.journeyCompletedAt),
-    journeyDurationSeconds:
-      typeof d.journeyDurationSeconds === "number" ? d.journeyDurationSeconds : null,
-    tripType: d.tripType ?? null,
-    vehicleClassId: d.vehicleClassId ?? null,
-    vehicleClassDisplayName: d.vehicleClassDisplayName ?? null,
-    bookedHours: d.bookedHours ?? null,
-    quotedSubtotal: d.quotedSubtotal ?? null,
-    quotedTaxAmount: d.quotedTaxAmount ?? null,
-    quotedTotal: d.quotedTotal ?? null,
-    quotedCurrencyCode: d.quotedCurrencyCode ?? null,
-    quotedTaxRate: d.quotedTaxRate ?? null,
-    quotedPricesIncludeTax: d.quotedPricesIncludeTax ?? null,
-    quoteBreakdown: Array.isArray(d.quoteBreakdown)
-      ? d.quoteBreakdown.map((line) => mapQuoteLineItem(line as DocumentData))
-      : null,
-    quoteComputedAt: toDate(d.quoteComputedAt),
-    quoteSnapshot: d.quoteSnapshot ? mapTripQuoteSnapshot(d.quoteSnapshot as DocumentData) : null,
-    appliedPromoId: d.appliedPromoId ?? null,
-    promoCode: d.promoCode ?? null,
-    paymentStatus: d.paymentStatus ?? null,
-    paymentSource: d.paymentSource ?? null,
-    stripePaymentIntentId: d.stripePaymentIntentId ?? null,
-    invoiceId: d.invoiceId ?? null,
-    corporateAccountId: typeof d.corporateAccountId === "string" ? d.corporateAccountId : null,
-    approvalStatus: TRIP_APPROVAL_STATUSES.includes(d.approvalStatus as TripApprovalStatus)
-      ? (d.approvalStatus as TripApprovalStatus)
-      : null,
-    approvedAt: toDate(d.approvedAt),
-    approvedByUserId: typeof d.approvedByUserId === "string" ? d.approvedByUserId : null,
-    approvalNote: typeof d.approvalNote === "string" ? d.approvalNote : null,
-    paidAt: toDate(d.paidAt),
+    customer: {
+      displayName: customerRaw.displayName ?? null,
+      phoneNumber: customerRaw.phoneNumber ?? null,
+      email: customerRaw.email ?? null,
+      street: customerRaw.street ?? null,
+      city: customerRaw.city ?? null,
+      state: customerRaw.state ?? null,
+      postcode: customerRaw.postcode ?? null,
+      country: customerRaw.country ?? null,
+      company: customerRaw.company ?? null
+    },
+    capacity: {
+      passengerCount:
+        typeof capacityRaw?.passengerCount === "number"
+          ? capacityRaw.passengerCount
+          : defaults.passengerCount,
+      luggage: {
+        smallCount:
+          typeof luggageRaw.smallCount === "number"
+            ? luggageRaw.smallCount
+            : defaults.luggage.smallCount,
+        largeCount:
+          typeof luggageRaw.largeCount === "number"
+            ? luggageRaw.largeCount
+            : defaults.luggage.largeCount
+      }
+    },
+    journey: {
+      pickup: toCoordinate(journeyRaw.pickup) ?? { latitude: 0, longitude: 0 },
+      dropoff: toCoordinate(journeyRaw.dropoff) ?? { latitude: 0, longitude: 0 },
+      pickupAddressLine: journeyRaw.pickupAddressLine ?? null,
+      dropoffAddressLine: journeyRaw.dropoffAddressLine ?? null,
+      notes: journeyRaw.notes ?? null,
+      bookingAddons: Array.isArray(journeyRaw.bookingAddons)
+        ? journeyRaw.bookingAddons.map((addon) => mapPricingAddon(addon as DocumentData))
+        : null,
+      scheduledPickupAt: toDate(journeyRaw.scheduledPickupAt),
+      linkedTripID: journeyRaw.linkedTripID ?? null,
+      journeyStartedAt: toDate(journeyRaw.journeyStartedAt),
+      journeyCompletedAt: toDate(journeyRaw.journeyCompletedAt),
+      journeyDurationSeconds:
+        typeof journeyRaw.journeyDurationSeconds === "number"
+          ? journeyRaw.journeyDurationSeconds
+          : null,
+      tripType: journeyRaw.tripType ?? null,
+      bookedHours: journeyRaw.bookedHours ?? null
+    },
+    quote: {
+      vehicleClassId: quoteRaw.vehicleClassId ?? null,
+      vehicleClassDisplayName: quoteRaw.vehicleClassDisplayName ?? null,
+      quotedSubtotal: quoteRaw.quotedSubtotal ?? null,
+      quotedTaxAmount: quoteRaw.quotedTaxAmount ?? null,
+      quotedTotal: quoteRaw.quotedTotal ?? null,
+      quotedCurrencyCode: quoteRaw.quotedCurrencyCode ?? null,
+      quotedTaxRate: quoteRaw.quotedTaxRate ?? null,
+      quotedPricesIncludeTax: quoteRaw.quotedPricesIncludeTax ?? null,
+      quoteBreakdown: Array.isArray(quoteRaw.quoteBreakdown)
+        ? quoteRaw.quoteBreakdown.map((line) => mapQuoteLineItem(line as DocumentData))
+        : null,
+      quoteComputedAt: toDate(quoteRaw.quoteComputedAt),
+      quoteSnapshot: quoteRaw.quoteSnapshot
+        ? mapTripQuoteSnapshot(quoteRaw.quoteSnapshot as DocumentData)
+        : null,
+      appliedPromoId: quoteRaw.appliedPromoId ?? null,
+      promoCode: quoteRaw.promoCode ?? null
+    },
+    billing: {
+      paymentStatus: billingRaw.paymentStatus ?? null,
+      paymentSource: billingRaw.paymentSource ?? null,
+      stripePaymentIntentId: billingRaw.stripePaymentIntentId ?? null,
+      invoiceId: billingRaw.invoiceId ?? null,
+      corporateAccountId:
+        typeof billingRaw.corporateAccountId === "string" ? billingRaw.corporateAccountId : null,
+      approvalStatus: TRIP_APPROVAL_STATUSES.includes(billingRaw.approvalStatus as TripApprovalStatus)
+        ? (billingRaw.approvalStatus as TripApprovalStatus)
+        : null,
+      approvedAt: toDate(billingRaw.approvedAt),
+      approvedByUserId:
+        typeof billingRaw.approvedByUserId === "string" ? billingRaw.approvedByUserId : null,
+      approvalNote: typeof billingRaw.approvalNote === "string" ? billingRaw.approvalNote : null,
+      paidAt: toDate(billingRaw.paidAt)
+    },
+    vehicle: {
+      vehicleDocumentId: vehicleRaw.vehicleDocumentId ?? null,
+      vehicleSnapshot: vehicleRaw.vehicleSnapshot
+        ? mapVehicle(vehicleRaw.vehicleSnapshot as DocumentData)
+        : null
+    },
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

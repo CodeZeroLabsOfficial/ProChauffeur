@@ -30,9 +30,9 @@ export function LocationRecentTripsCard({ trips }: { trips: Trip[] }) {
                     {formatDateTime(tripPickupReferenceDate(trip))}
                   </p>
                   <p className="text-muted-foreground truncate text-sm">
-                    {trip.pickupAddressLine?.trim() || "Pickup not set"}
-                    {trip.dropoffAddressLine?.trim()
-                      ? ` → ${trip.dropoffAddressLine.trim()}`
+                    {trip.journey.pickupAddressLine?.trim() || "Pickup not set"}
+                    {trip.journey.dropoffAddressLine?.trim()
+                      ? ` → ${trip.journey.dropoffAddressLine.trim()}`
                       : ""}
                   </p>
                 </div>

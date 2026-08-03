@@ -68,8 +68,8 @@ export function CustomerProfileTripsTab({ trips }: { trips: Trip[] }) {
           bookingIdLabel: shortBookingId(trip.id),
           searchLabel: [
             shortBookingId(trip.id),
-            trip.pickupAddressLine,
-            trip.dropoffAddressLine
+            trip.journey.pickupAddressLine,
+            trip.journey.dropoffAddressLine
           ]
             .filter(Boolean)
             .join(" "),

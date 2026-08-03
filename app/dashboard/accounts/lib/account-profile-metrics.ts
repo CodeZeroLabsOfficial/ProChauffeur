@@ -8,7 +8,7 @@ export function tripsForCorporateAccount(
 ): Trip[] {
   return trips.filter(
     (t) =>
-      t.corporateAccountId === accountId ||
+      t.billing.corporateAccountId === accountId ||
       (t.customerID ? memberCustomerIds.has(t.customerID) : false)
   );
 }
