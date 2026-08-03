@@ -1,19 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { endOfDay, endOfMonth, endOfWeek, endOfYear, startOfDay } from "date-fns";
-import { FilterIcon, RadioIcon } from "lucide-react";
+import { FilterIcon, ListIcon, MapIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+import { DispatchActiveTripCard } from "@/app/dashboard/dispatch/dispatch-active-trip-card";
+import { DispatchActiveTripsTable } from "@/app/dashboard/dispatch/dispatch-active-trips-table";
 import { DispatchFleetMap } from "@/app/dashboard/dispatch/dispatch-fleet-map";
-import { DispatchTripMap } from "@/app/dashboard/dispatch/dispatch-trip-map";
+import { DispatchLivePill } from "@/components/dispatch-live-pill";
+import { LiveTripPanel } from "@/components/live-trip-panel";
 import { getMapboxToken } from "@/lib/env";
+import { useActiveTripsProgress } from "@/hooks/use-active-trips-progress";
 import { useLiveLocations } from "@/hooks/use-live-locations";
 import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-collections";
-import { resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
+import { dispatchMapMode, resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import {
   companyDefaultMapView,
   tripPickupReferenceDate,
@@ -22,10 +25,7 @@ import {
   type Trip
 } from "@/lib/models";
 import { effectiveChauffeurUserId } from "@/lib/models/vehicle";
-import { formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
-import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -39,8 +39,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import type { ListFilterOption } from "@/components/list-filter-popover";
 
 const activeTripsPeriodPresets = [
@@ -51,6 +49,7 @@ const activeTripsPeriodPresets = [
 ] as const;
 
 type ActiveTripsPeriodFilter = (typeof activeTripsPeriodPresets)[number]["value"] | "all";
+type DispatchViewMode = "map" | "table";
 
 function activeTripsRangeForPreset(type: ActiveTripsPeriodFilter, reference = new Date()) {
   const from = startOfDay(reference);
@@ -84,6 +83,7 @@ export default function DispatchPage() {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [periodFilter, setPeriodFilter] = useState<ActiveTripsPeriodFilter>("all");
+  const [viewMode, setViewMode] = useState<DispatchViewMode>("map");
 
   let token = "";
   let tokenError = false;
@@ -96,6 +96,12 @@ export default function DispatchPage() {
   const driverNameById = useMemo(() => {
     const map = new globalThis.Map<string, string>();
     for (const u of users) map.set(u.id, u.profile.displayName || u.email);
+    return map;
+  }, [users]);
+
+  const driverPhotoById = useMemo(() => {
+    const map = new globalThis.Map<string, string | null>();
+    for (const u of users) map.set(u.id, u.profile.photoURL ?? null);
     return map;
   }, [users]);
 
@@ -173,6 +179,13 @@ export default function DispatchPage() {
     return map;
   }, [filteredActiveTrips, vehicleMakeByDriverId]);
 
+  const { progressByTripId } = useActiveTripsProgress(
+    filteredActiveTrips,
+    locations,
+    token,
+    Boolean(token) && !tokenError
+  );
+
   const mapStyle =
     resolvedTheme === "dark"
       ? "mapbox://styles/mapbox/dark-v11"
@@ -187,24 +200,44 @@ export default function DispatchPage() {
     return driverNameById.get(trip.driverID) ?? "Assigned";
   }
 
+  function waitingForGps(trip: Trip) {
+    const mode = dispatchMapMode(trip.status);
+    if (mode !== "to_pickup" && mode !== "to_dropoff") return false;
+    return !resolveDriverLocation(trip, locations);
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
       <div className="shrink-0">
         <PageHeader
           title="Dispatch"
           actions={
-            <Badge variant="outline" className="gap-1.5">
-              <RadioIcon
-                className={cn("size-3.5", ready ? "text-green-500" : "text-muted-foreground")}
-              />
-              {locations.length} live
-            </Badge>
+            <div className="overflow-hidden rounded-md border">
+              <Button
+                type="button"
+                variant={viewMode === "map" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none"
+                aria-label="Live map view"
+                onClick={() => setViewMode("map")}>
+                <MapIcon className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none"
+                aria-label="Active trips table"
+                onClick={() => setViewMode("table")}>
+                <ListIcon className="size-4" />
+              </Button>
+            </div>
           }
         />
       </div>
 
-      <div className="grid h-0 min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-[360px_1fr] lg:grid-rows-1 lg:items-stretch">
-        <Card className="order-2 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-1">
+      {viewMode === "table" ? (
+        <Card className="flex h-0 min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b p-4">
               <p className="text-sm font-semibold">Active trips</p>
@@ -216,97 +249,102 @@ export default function DispatchPage() {
                 onPeriodFilterChange={setPeriodFilter}
               />
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {filteredActiveTrips.length === 0 ? (
-                <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
-              ) : (
-                filteredActiveTrips.map((t) => (
-                  <div
-                    key={t.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => toggleTripSelection(t.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        toggleTripSelection(t.id);
+            <div className="min-h-0 flex-1 overflow-auto">
+              <DispatchActiveTripsTable
+                trips={filteredActiveTrips}
+                progressByTripId={progressByTripId}
+                locations={locations}
+                chauffeurNameById={driverNameById}
+                selectedTripId={selectedTripId}
+                onSelectTrip={toggleTripSelection}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid h-0 min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-[360px_1fr] lg:grid-rows-1 lg:items-stretch">
+          <Card className="order-2 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-1">
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b p-4">
+                <p className="text-sm font-semibold">Active trips</p>
+                <ActiveTripsFilter
+                  statusOptions={statusFilterOptions}
+                  statusSelected={statusFilter}
+                  onStatusSelectedChange={setStatusFilter}
+                  periodFilter={periodFilter}
+                  onPeriodFilterChange={setPeriodFilter}
+                />
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {filteredActiveTrips.length === 0 ? (
+                  <p className="text-muted-foreground p-6 text-center text-sm">No active trips.</p>
+                ) : (
+                  filteredActiveTrips.map((t) => (
+                    <DispatchActiveTripCard
+                      key={t.id}
+                      trip={t}
+                      progress={progressByTripId.get(t.id)!}
+                      selected={selectedTripId === t.id}
+                      chauffeurName={chauffeurLabel(t)}
+                      chauffeurPhotoURL={
+                        t.driverID ? driverPhotoById.get(t.driverID) : null
                       }
-                    }}
-                    className={cn(
-                      "border-border hover:bg-muted/60 flex w-full cursor-pointer flex-col gap-3 border-b p-4 text-left transition-colors",
-                      selectedTripId === t.id && "bg-muted"
-                    )}>
-                    <div className="flex items-start justify-between gap-2">
-                      {t.driverID ? (
-                        <Link
-                          href={`/dashboard/drivers/${t.driverID}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-foreground text-sm font-medium hover:underline">
-                          {chauffeurLabel(t)}
-                        </Link>
-                      ) : (
-                        <span className="text-foreground text-sm font-medium">Unassigned</span>
-                      )}
-                      <TripStatusBadge status={t.status} />
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      {formatDateTime(tripPickupReferenceDate(t))}
-                    </p>
-                    <Separator />
-                    <TripRouteStops
-                      pickup={t.pickupAddressLine || "Pickup location not set"}
-                      dropoff={t.dropoffAddressLine || "Destination not set"}
+                      waitingForGps={waitingForGps(t)}
+                      onSelect={() => toggleTripSelection(t.id)}
                     />
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="order-1 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-2">
-          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            <div className="h-full min-h-0 flex-1">
-              {tokenError ? (
-                <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
-                  Set NEXT_PUBLIC_MAPBOX_TOKEN to enable the dispatch map.
-                </div>
-              ) : selectedTrip ? (
-                <DispatchTripMap
-                  key={selectedTrip.id}
-                  trip={selectedTrip}
-                  driverLocation={selectedDriverLocation}
-                  driverName={
-                    selectedTrip.driverID
-                      ? (driverNameById.get(selectedTrip.driverID) ?? "Assigned")
-                      : null
-                  }
-                  vehicleMake={
-                    selectedTrip
-                      ? (vehicleMakeByTripId.get(selectedTrip.id) ?? null)
-                      : null
-                  }
-                  companyDefaultView={companyDefaultView}
-                  token={token}
-                  mapStyle={mapStyle}
-                />
-              ) : (
-                <DispatchFleetMap
-                  token={token}
-                  mapStyle={mapStyle}
-                  locations={locations}
-                  activeTrips={filteredActiveTrips}
-                  driverNameById={driverNameById}
-                  vehicleMakeByTripId={vehicleMakeByTripId}
-                  companyDefaultView={companyDefaultView}
-                  selectedTripId={selectedTripId}
-                  onSelectTrip={toggleTripSelection}
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="order-1 flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0 lg:order-2">
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+              <div className="relative h-full min-h-0 flex-1">
+                {tokenError ? (
+                  <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
+                    Set NEXT_PUBLIC_MAPBOX_TOKEN to enable the dispatch map.
+                  </div>
+                ) : selectedTrip ? (
+                  <LiveTripPanel
+                    trip={selectedTrip}
+                    driverLocation={selectedDriverLocation}
+                    driverName={
+                      selectedTrip.driverID
+                        ? (driverNameById.get(selectedTrip.driverID) ?? "Assigned")
+                        : null
+                    }
+                    vehicleMake={vehicleMakeByTripId.get(selectedTrip.id) ?? null}
+                    companyDefaultView={companyDefaultView}
+                    token={token}
+                    mapStyle={mapStyle}
+                    progress={progressByTripId.get(selectedTrip.id)!}
+                    liveCount={locations.length}
+                    liveReady={ready}
+                  />
+                ) : (
+                  <>
+                    <div className="absolute top-3 left-3 z-10">
+                      <DispatchLivePill count={locations.length} ready={ready} />
+                    </div>
+                    <DispatchFleetMap
+                      token={token}
+                      mapStyle={mapStyle}
+                      locations={locations}
+                      activeTrips={filteredActiveTrips}
+                      driverNameById={driverNameById}
+                      vehicleMakeByTripId={vehicleMakeByTripId}
+                      companyDefaultView={companyDefaultView}
+                      selectedTripId={selectedTripId}
+                      onSelectTrip={toggleTripSelection}
+                    />
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -379,36 +417,5 @@ function ActiveTripsFilter({
         </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function RouteStopDot({ variant }: { variant: "pickup" | "dropoff" }) {
-  const isPickup = variant === "pickup";
-  return (
-    <span
-      className={cn(
-        "flex size-3 shrink-0 items-center justify-center rounded-full border-2",
-        isPickup ? "border-primary" : "border-muted-foreground/50"
-      )}>
-      <span
-        className={cn("size-1 rounded-full", isPickup ? "bg-primary" : "bg-muted-foreground/50")}
-      />
-    </span>
-  );
-}
-
-function TripRouteStops({ pickup, dropoff }: { pickup: string; dropoff: string }) {
-  return (
-    <div className="flex gap-3">
-      <div className="flex flex-col items-center pt-0.5">
-        <RouteStopDot variant="pickup" />
-        <span className="border-border min-h-4 flex-1 border-l border-dashed" />
-        <RouteStopDot variant="dropoff" />
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <p className="text-foreground text-sm font-semibold break-words">{pickup}</p>
-        <p className="text-foreground text-sm font-semibold break-words">{dropoff}</p>
-      </div>
-    </div>
   );
 }

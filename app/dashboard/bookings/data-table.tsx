@@ -109,10 +109,12 @@ function tripInDateRange(trip: Trip, range: DateRange | undefined) {
 
 export function BookingsDataTable({
   onRebook,
-  onEdit
+  onEdit,
+  onOpenLive
 }: {
   onRebook: (trip: Trip) => void;
   onEdit: (trip: Trip) => void;
+  onOpenLive: (trip: Trip) => void;
 }) {
   const { user: authUser } = useFirebaseAuth();
   const { trips, loading } = useTrips();
@@ -365,6 +367,9 @@ export function BookingsDataTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onOpenLive(row.original)}>
+                View live
+              </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!canEditBooking(row.original.status)}
                 onClick={() => onEdit(row.original)}>
@@ -420,7 +425,7 @@ export function BookingsDataTable({
         )
       }
     ],
-    [changeStatus, onEdit, onRebook, reassignableChauffeurs, reassignChauffeur]
+    [changeStatus, onEdit, onOpenLive, onRebook, reassignableChauffeurs, reassignChauffeur]
   );
 
   const table = useReactTable({
@@ -521,9 +526,21 @@ export function BookingsDataTable({
               </TableRow>
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer"
+                  onClick={() => onOpenLive(row.original)}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      onClick={
+                        cell.column.id === "select" || cell.column.id === "actions"
+                          ? (e) => e.stopPropagation()
+                          : cell.column.id === "bookingId"
+                            ? (e) => e.stopPropagation()
+                            : undefined
+                      }>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
