@@ -6,6 +6,7 @@ import { MapPinIcon } from "lucide-react";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import type { DriverLiveLocation } from "@/hooks/use-live-locations";
+import { useLiveTripMapFit } from "@/hooks/use-live-trip-map-fit";
 import { useMapboxRoute } from "@/hooks/use-mapbox-route";
 import { useThrottledMapFit } from "@/hooks/use-throttled-map-fit";
 import {
@@ -95,15 +96,31 @@ export function DispatchTripMap({
 
   const isLiveTracking =
     (mode === "to_pickup" || mode === "to_dropoff") && Boolean(driverCoordinate);
+  const liveDestination =
+    mode === "to_pickup" ? trip.pickup : mode === "to_dropoff" ? trip.dropoff : null;
+  const mapFitResetKey = `${trip.id}-${mode}`;
+  const routeFlushKey = route?.geometry.coordinates?.length ? "route" : "";
 
   useThrottledMapFit({
-    map: mapRef,
+    map: isLiveTracking ? null : mapRef,
     bbox: fitBBox,
     fallbackView,
-    throttle: isLiveTracking,
-    freezeAfterFit: isLiveTracking,
-    resetKey: `${trip.id}-${mode}`,
-    flushKey: route?.geometry.coordinates?.length ? "route" : ""
+    resetKey: mapFitResetKey,
+    flushKey: routeFlushKey
+  });
+
+  useLiveTripMapFit({
+    map: mapRef,
+    enabled: isLiveTracking,
+    bbox: fitBBox,
+    driverLat: driverCoordinate?.latitude ?? null,
+    driverLng: driverCoordinate?.longitude ?? null,
+    destLat: liveDestination?.latitude ?? null,
+    destLng: liveDestination?.longitude ?? null,
+    hasRoute: Boolean(route?.geometry.coordinates?.length),
+    fallbackView,
+    resetKey: mapFitResetKey,
+    flushKey: routeFlushKey
   });
 
   const waitingForGps = (mode === "to_pickup" || mode === "to_dropoff") && !driverCoordinate;
