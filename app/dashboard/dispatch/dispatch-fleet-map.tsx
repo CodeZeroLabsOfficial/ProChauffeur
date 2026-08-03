@@ -6,7 +6,7 @@ import { MapPinIcon } from "lucide-react";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import type { DriverLiveLocation } from "@/hooks/use-live-locations";
-import { useThrottledMapFit } from "@/hooks/use-throttled-map-fit";
+import { useDispatchMapFit } from "@/hooks/use-dispatch-map-fit";
 import {
   hasValidCoordinate,
   includeLngLat,
@@ -65,12 +65,11 @@ export function DispatchFleetMap({
     [activeTrips]
   );
 
-  useThrottledMapFit({
+  useDispatchMapFit({
     map: mapRef,
     bbox: fitBBox,
     fallbackView,
-    throttle: locations.length > 0 || activeTrips.length > 0,
-    freezeAfterFit: locations.length > 0,
+    once: locations.length > 0 || activeTrips.length > 0,
     resetKey: fleetResetKey,
     flushKey: fitBBox && fitBBox.count > 0 ? "points" : ""
   });

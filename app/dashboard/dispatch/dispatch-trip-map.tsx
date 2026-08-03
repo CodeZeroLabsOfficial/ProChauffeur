@@ -6,9 +6,9 @@ import { MapPinIcon } from "lucide-react";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
 import type { DriverLiveLocation } from "@/hooks/use-live-locations";
+import { useDispatchMapFit } from "@/hooks/use-dispatch-map-fit";
 import { useLiveTripMapFit } from "@/hooks/use-live-trip-map-fit";
 import { useMapboxRoute } from "@/hooks/use-mapbox-route";
-import { useThrottledMapFit } from "@/hooks/use-throttled-map-fit";
 import {
   coordinateFromLatLng,
   hasValidCoordinate,
@@ -101,7 +101,7 @@ export function DispatchTripMap({
   const mapFitResetKey = `${trip.id}-${mode}`;
   const routeFlushKey = route?.geometry.coordinates?.length ? "route" : "";
 
-  useThrottledMapFit({
+  useDispatchMapFit({
     map: isLiveTracking ? null : mapRef,
     bbox: fitBBox,
     fallbackView,

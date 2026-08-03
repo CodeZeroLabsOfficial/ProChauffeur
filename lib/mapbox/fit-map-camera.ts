@@ -11,7 +11,6 @@ export const DISPATCH_MAP_FIT = {
   padding: 64,
   maxZoom: 15,
   durationMs: 700,
-  throttleMs: 1500,
   singlePointZoom: 13
 } as const;
 
