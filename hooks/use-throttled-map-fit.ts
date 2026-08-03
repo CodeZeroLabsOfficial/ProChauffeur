@@ -10,6 +10,9 @@ import { applyMapCameraFit, DISPATCH_MAP_FIT } from "@/lib/mapbox/fit-map-camera
  * Fits the map to `bbox`, throttling while `throttle` is true so live GPS
  * updates do not constantly re-animate. `resetKey` / `flushKey` force an
  * immediate fit (trip/mode change, first route arrival, etc.).
+ *
+ * When `freezeAfterFit` is set, further bbox changes are ignored after the
+ * initial / reset / flush fit so live driver motion does not re-frame the map.
  */
 export function useThrottledMapFit({
   map,
@@ -17,6 +20,7 @@ export function useThrottledMapFit({
   fallbackView,
   throttle = false,
   throttleMs = DISPATCH_MAP_FIT.throttleMs,
+  freezeAfterFit = false,
   resetKey = "",
   flushKey = ""
 }: {
@@ -25,6 +29,7 @@ export function useThrottledMapFit({
   fallbackView: MapViewState;
   throttle?: boolean;
   throttleMs?: number;
+  freezeAfterFit?: boolean;
   resetKey?: string;
   /** When this becomes non-empty, fit immediately (e.g. route geometry arrived). */
   flushKey?: string;
@@ -36,6 +41,13 @@ export function useThrottledMapFit({
 
   useEffect(() => {
     if (!map) return;
+
+    const clearTimer = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
 
     const applyFit = () => {
       lastFitAtRef.current = Date.now();
@@ -56,12 +68,17 @@ export function useThrottledMapFit({
     const flushJustArrived = flushActive && !hadFlushRef.current;
     if (flushActive) hadFlushRef.current = true;
 
-    if (!throttle || resetChanged || lastFitAtRef.current === 0 || flushJustArrived) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+    const forceFit =
+      !throttle || resetChanged || lastFitAtRef.current === 0 || flushJustArrived;
+
+    if (forceFit) {
+      clearTimer();
       applyFit();
+      return;
+    }
+
+    if (freezeAfterFit) {
+      clearTimer();
       return;
     }
 
@@ -71,14 +88,11 @@ export function useThrottledMapFit({
       return;
     }
 
-    if (timerRef.current) clearTimeout(timerRef.current);
+    clearTimer();
     timerRef.current = setTimeout(applyFit, throttleMs - elapsed);
 
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      clearTimer();
     };
   }, [
     map,
@@ -92,6 +106,7 @@ export function useThrottledMapFit({
     fallbackView.zoom,
     throttle,
     throttleMs,
+    freezeAfterFit,
     resetKey,
     flushKey
   ]);

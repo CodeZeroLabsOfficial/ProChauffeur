@@ -101,6 +101,7 @@ export function DispatchTripMap({
     bbox: fitBBox,
     fallbackView,
     throttle: isLiveTracking,
+    freezeAfterFit: isLiveTracking,
     resetKey: `${trip.id}-${mode}`,
     flushKey: route?.geometry.coordinates?.length ? "route" : ""
   });

@@ -56,12 +56,22 @@ export function DispatchFleetMap({
     return bbox;
   }, [locations, activeTrips]);
 
+  const fleetResetKey = useMemo(
+    () =>
+      `fleet-${activeTrips
+        .map((t) => t.id)
+        .sort()
+        .join(",")}`,
+    [activeTrips]
+  );
+
   useThrottledMapFit({
     map: mapRef,
     bbox: fitBBox,
     fallbackView,
-    throttle: locations.length > 0,
-    resetKey: "fleet",
+    throttle: locations.length > 0 || activeTrips.length > 0,
+    freezeAfterFit: locations.length > 0,
+    resetKey: fleetResetKey,
     flushKey: fitBBox && fitBBox.count > 0 ? "points" : ""
   });
 
