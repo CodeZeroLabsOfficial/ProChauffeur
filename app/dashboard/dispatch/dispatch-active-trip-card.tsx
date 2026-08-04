@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   BriefcaseIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   LuggageIcon,
   UsersIcon
@@ -83,13 +82,9 @@ export function DispatchActiveTripCard({
             type="button"
             aria-label="Toggle journey addresses"
             aria-expanded={journeyOpen}
-            className="text-muted-foreground hover:text-foreground inline-flex size-7 shrink-0 items-center justify-center rounded-md"
+            className="text-muted-foreground hover:text-foreground inline-flex size-7 shrink-0 items-center justify-center rounded-md [&[data-state=open]>svg]:rotate-90"
             onClick={(e) => e.stopPropagation()}>
-            {journeyOpen ? (
-              <ChevronDownIcon className="size-4" />
-            ) : (
-              <ChevronRightIcon className="size-4" />
-            )}
+            <ChevronRightIcon className="size-4 transition-transform duration-200" />
           </CollapsibleTrigger>
         </div>
 
@@ -149,7 +144,7 @@ export function DispatchActiveTripCard({
           <TripProgressBar progress={progress} waitingForGps={waitingForGps} />
         </div>
 
-        <CollapsibleContent>
+        <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
           <TripRouteStops
             pickup={trip.journey.pickupAddressLine || "Pickup location not set"}
             dropoff={trip.journey.dropoffAddressLine || "Destination not set"}

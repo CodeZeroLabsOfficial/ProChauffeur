@@ -23,10 +23,10 @@ const ON_TIME_SLACK_SECONDS = 2 * 60;
 
 export function formatEtaDuration(durationSeconds: number): string {
   const minutes = Math.max(0, Math.round(durationSeconds / 60));
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `ETA ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rem = minutes % 60;
-  return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
+  return rem ? `ETA ${hours} hr ${rem} min` : `ETA ${hours} hr`;
 }
 
 function clampPercent(value: number): number {
