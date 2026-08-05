@@ -9,14 +9,37 @@ export type RouteMetrics = {
   durationSeconds: number;
 };
 
+/** Opt-in traffic-aware Directions (matches iOS live tracking). */
+export type DirectionsTrafficOptions = {
+  trafficAware?: boolean;
+  /** Used when `trafficAware`; defaults to now. */
+  departAt?: Date;
+};
+
+function directionsProfileUrl(
+  from: CoordinateField,
+  to: CoordinateField,
+  options?: DirectionsTrafficOptions
+): URL {
+  const profile = options?.trafficAware ? "driving-traffic" : "driving";
+  const url = new URL(
+    `https://api.mapbox.com/directions/v5/mapbox/${profile}/${from.longitude},${from.latitude};${to.longitude},${to.latitude}`
+  );
+  if (options?.trafficAware) {
+    const departAt = options.departAt ?? new Date();
+    // Mapbox expects ISO 8601 YYYY-MM-DDThh:mm (UTC).
+    url.searchParams.set("depart_at", departAt.toISOString().slice(0, 16));
+  }
+  return url;
+}
+
 export async function fetchRouteMetrics(
   from: CoordinateField,
   to: CoordinateField,
-  token: string
+  token: string,
+  options?: DirectionsTrafficOptions
 ): Promise<RouteMetrics | null> {
-  const url = new URL(
-    `https://api.mapbox.com/directions/v5/mapbox/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}`
-  );
+  const url = directionsProfileUrl(from, to, options);
   url.searchParams.set("overview", "false");
   url.searchParams.set("access_token", token);
 
@@ -38,11 +61,10 @@ export async function fetchRouteMetrics(
 export async function fetchMapboxDrivingRoute(
   from: CoordinateField,
   to: CoordinateField,
-  token: string
+  token: string,
+  options?: DirectionsTrafficOptions
 ): Promise<RouteFeature | null> {
-  const url = new URL(
-    `https://api.mapbox.com/directions/v5/mapbox/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}`
-  );
+  const url = directionsProfileUrl(from, to, options);
   url.searchParams.set("geometries", "geojson");
   url.searchParams.set("overview", "full");
   url.searchParams.set("access_token", token);

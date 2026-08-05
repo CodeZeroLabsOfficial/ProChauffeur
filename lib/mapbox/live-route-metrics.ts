@@ -46,7 +46,7 @@ function setCached(from: CoordinateField, to: CoordinateField, metrics: RouteMet
   }
 }
 
-/** Live GPS → destination route metrics with short TTL + quantized coords. */
+/** Live GPS → destination metrics (traffic-aware), with short TTL + quantized coords. */
 export async function fetchLiveRouteMetrics(
   from: CoordinateField,
   to: CoordinateField,
@@ -55,7 +55,11 @@ export async function fetchLiveRouteMetrics(
   const cached = getCached(from, to);
   if (cached) return cached;
 
-  const metrics = await fetchRouteMetrics(from, to, token);
+  // Match iOS live tracking: traffic-aware duration with depart_at=now.
+  const metrics = await fetchRouteMetrics(from, to, token, {
+    trafficAware: true,
+    departAt: new Date()
+  });
   if (metrics) setCached(from, to, metrics);
   return metrics;
 }

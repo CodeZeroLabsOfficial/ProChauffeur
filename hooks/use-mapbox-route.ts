@@ -11,7 +11,7 @@ export function useMapboxRoute(
   to: CoordinateField | null,
   token: string,
   enabled: boolean,
-  options?: { debounceMs?: number; resetKey?: string }
+  options?: { debounceMs?: number; resetKey?: string; trafficAware?: boolean }
 ) {
   const [route, setRoute] = useState<RouteFeature | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,7 @@ export function useMapboxRoute(
 
   const debounceMs = options?.debounceMs ?? 0;
   const resetKey = options?.resetKey ?? "";
+  const trafficAware = options?.trafficAware ?? false;
   const fromLat = from?.latitude ?? 0;
   const fromLng = from?.longitude ?? 0;
   const toLat = to?.latitude ?? 0;
@@ -52,7 +53,12 @@ export function useMapboxRoute(
       setError(false);
 
       try {
-        const result = await fetchMapboxDrivingRoute(from!, to!, token);
+        const result = await fetchMapboxDrivingRoute(
+          from!,
+          to!,
+          token,
+          trafficAware ? { trafficAware: true, departAt: new Date() } : undefined
+        );
         if (cancelled) return;
         if (!result) {
           setRoute(null);
@@ -85,7 +91,7 @@ export function useMapboxRoute(
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [enabled, token, fromLat, fromLng, toLat, toLng, debounceMs, resetKey]);
+  }, [enabled, token, fromLat, fromLng, toLat, toLng, debounceMs, resetKey, trafficAware]);
 
   return { route, loading, error };
 }

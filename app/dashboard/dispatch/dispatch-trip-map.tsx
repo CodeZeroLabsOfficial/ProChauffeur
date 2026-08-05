@@ -68,7 +68,9 @@ export function DispatchTripMap({
 
   const { route, error: routeError } = useMapboxRoute(routeFrom, routeTo, token, routeEnabled, {
     debounceMs: mode === "overview" ? 0 : 1000,
-    resetKey: `${trip.id}-${mode}`
+    resetKey: `${trip.id}-${mode}`,
+    // Match iOS live tracking: traffic-aware while en route / in progress.
+    trafficAware: mode === "to_pickup" || mode === "to_dropoff"
   });
 
   const fitBBox = useMemo((): LngLatBBox | null => {

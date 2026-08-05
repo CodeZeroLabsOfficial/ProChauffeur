@@ -22,7 +22,8 @@ export const IDLE_TRIP_PROGRESS: TripProgress = {
 const ON_TIME_SLACK_SECONDS = 2 * 60;
 
 export function formatEtaDuration(durationSeconds: number): string {
-  const minutes = Math.max(0, Math.round(durationSeconds / 60));
+  // Match iOS live ETA: round to nearest minute, never show less than 1.
+  const minutes = Math.max(1, Math.round(durationSeconds / 60));
   if (minutes < 60) return `ETA ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rem = minutes % 60;
