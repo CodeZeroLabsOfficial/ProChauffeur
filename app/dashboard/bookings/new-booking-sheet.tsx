@@ -1112,6 +1112,7 @@ export function NewBookingSheet({
           status: "requested",
           ...customerFields,
           driverID: null,
+          driver: {},
           capacity: sharedCapacityFields,
           vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
           journey: {
@@ -1135,6 +1136,7 @@ export function NewBookingSheet({
           status: "requested",
           ...customerFields,
           driverID: null,
+          driver: {},
           capacity: sharedCapacityFields,
           vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
           journey: {
@@ -1224,6 +1226,7 @@ export function NewBookingSheet({
           status: "requested",
           ...buildTripCustomerFields(customer),
           driverID: null,
+          driver: {},
           capacity: sharedCapacityFields,
           vehicle: { vehicleDocumentId: null, vehicleSnapshot: null },
           journey: {

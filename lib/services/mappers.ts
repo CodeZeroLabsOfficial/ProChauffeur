@@ -361,6 +361,8 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
 export function mapTrip(id: string, d: DocumentData): Trip {
   const customerRaw =
     d.customer && typeof d.customer === "object" ? (d.customer as DocumentData) : {};
+  const driverRaw =
+    d.driver && typeof d.driver === "object" ? (d.driver as DocumentData) : {};
   const capacityRaw =
     d.capacity && typeof d.capacity === "object" ? (d.capacity as DocumentData) : null;
   const luggageRaw =
@@ -393,6 +395,11 @@ export function mapTrip(id: string, d: DocumentData): Trip {
       postcode: customerRaw.postcode ?? null,
       country: customerRaw.country ?? null,
       company: customerRaw.company ?? null
+    },
+    driver: {
+      displayName: driverRaw.displayName ?? null,
+      phoneNumber: driverRaw.phoneNumber ?? null,
+      photoURL: driverRaw.photoURL ?? null
     },
     capacity: {
       passengerCount:

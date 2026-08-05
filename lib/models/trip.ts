@@ -31,6 +31,13 @@ export interface TripCustomer {
   company?: string | null;
 }
 
+/** Assigned chauffeur contact snapshot, written at claim time. */
+export interface TripDriver {
+  displayName?: string | null;
+  phoneNumber?: string | null;
+  photoURL?: string | null;
+}
+
 /** Booking party size — same shape as `VehicleClassCapacity`. */
 export type TripCapacity = VehicleClassCapacity;
 
@@ -108,6 +115,7 @@ export interface Trip {
   /** Location id this trip is stored under (`branches/{branchId}/trips/{id}`). */
   branchId?: string | null;
   customer: TripCustomer;
+  driver: TripDriver;
   capacity: TripCapacity;
   journey: TripJourney;
   quote: TripQuote;
@@ -125,6 +133,10 @@ export function emptyTripCapacity(): TripCapacity {
 }
 
 export function emptyTripCustomer(): TripCustomer {
+  return {};
+}
+
+export function emptyTripDriver(): TripDriver {
   return {};
 }
 

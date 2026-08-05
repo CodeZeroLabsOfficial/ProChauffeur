@@ -589,6 +589,7 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
     driverID: trip.driverID,
     branchId,
     customer: trip.customer,
+    driver: trip.driver,
     capacity: trip.capacity,
     journey: {
       ...trip.journey,
