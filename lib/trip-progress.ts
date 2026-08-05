@@ -103,19 +103,11 @@ export function computeTripProgress({
     percent = total > 0 ? clampPercent((elapsedSeconds / total) * 100) : null;
   }
 
-  let onTime: TripProgressOnTime | null = null;
-  if (etaAt && baseline != null && trip.journey.journeyStartedAt) {
-    onTime = computeOnTime(
-      etaAt,
-      new Date(trip.journey.journeyStartedAt.getTime() + baseline * 1000)
-    );
-  }
-
   return {
     kind: "in_progress",
     percent,
     etaLabel,
-    onTime,
+    onTime: null,
     phaseLabel: tripStatusTitle.in_progress
   };
 }
