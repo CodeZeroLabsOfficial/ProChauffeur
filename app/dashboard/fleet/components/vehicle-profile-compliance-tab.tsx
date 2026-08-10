@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ClipboardCheckIcon, FileTextIcon, ShieldIcon } from "lucide-react";
 
 import type { Vehicle, VehicleInsurancePolicy } from "@/lib/models";
-import { vehicleInsuranceCoverTypeLabel } from "@/lib/vehicle-insurance";
 import { cn } from "@/lib/utils";
 import { VehicleRegistrationEditSheet } from "@/app/dashboard/fleet/vehicle-registration-edit-sheet";
 import { VehicleInsuranceEditSheet } from "@/app/dashboard/fleet/vehicle-insurance-edit-sheet";
@@ -92,7 +91,7 @@ export function VehicleProfileComplianceTab({
         {policies.map((policy) => (
           <ComplianceTile
             key={policy.id}
-            label={vehicleInsuranceCoverTypeLabel[policy.coverType]}
+            label={policy.coverType}
             secondary={policy.insurerName}
             start={policy.policyStart}
             expiry={policy.policyExpiry}
