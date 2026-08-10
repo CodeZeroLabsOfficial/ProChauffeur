@@ -7,14 +7,6 @@ export const VEHICLE_INSURANCE_COVER_TYPES = [
 
 export type VehicleInsuranceCoverType = (typeof VEHICLE_INSURANCE_COVER_TYPES)[number];
 
-/** Older camelCase values that may still exist on vehicle documents. */
-const LEGACY_COVER_TYPE_BY_KEY: Record<string, VehicleInsuranceCoverType> = {
-  compulsoryThirdParty: "Compulsory Third Party",
-  comprehensive: "Comprehensive",
-  thirdPartyPropertyDamage: "Third Party Property Damage",
-  thirdPartyFireAndTheft: "Third Party Property Damage, Fire and Theft"
-};
-
 export const VEHICLE_INSURANCE_COVER_TYPE_OPTIONS = VEHICLE_INSURANCE_COVER_TYPES.map((value) => ({
   value,
   label: value
@@ -22,10 +14,9 @@ export const VEHICLE_INSURANCE_COVER_TYPE_OPTIONS = VEHICLE_INSURANCE_COVER_TYPE
 
 export function parseVehicleInsuranceCoverType(raw: unknown): VehicleInsuranceCoverType | null {
   if (typeof raw !== "string") return null;
-  if ((VEHICLE_INSURANCE_COVER_TYPES as readonly string[]).includes(raw)) {
-    return raw as VehicleInsuranceCoverType;
-  }
-  return LEGACY_COVER_TYPE_BY_KEY[raw] ?? null;
+  return (VEHICLE_INSURANCE_COVER_TYPES as readonly string[]).includes(raw)
+    ? (raw as VehicleInsuranceCoverType)
+    : null;
 }
 
 export function validityProgress(
