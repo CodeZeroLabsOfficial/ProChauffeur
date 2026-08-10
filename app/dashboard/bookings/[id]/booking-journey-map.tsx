@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import MapGL, { Layer, Marker, Source, type MapRef } from "react-map-gl/mapbox";
+import MapGL, { Layer, Source, type MapRef } from "react-map-gl/mapbox";
 import { useTheme } from "next-themes";
 import { MapPinIcon } from "lucide-react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+import { DispatchMapPin } from "@/components/dispatch-map-pin";
+import { DispatchStopMarker } from "@/components/dispatch-stop-marker";
 import { getMapboxToken } from "@/lib/env";
 import { useMapboxRoute } from "@/hooks/use-mapbox-route";
 import {
@@ -15,7 +17,6 @@ import {
   hasValidCoordinate
 } from "@/lib/mapbox/coordinates";
 import type { CoordinateField } from "@/lib/models/trip";
-import { cn } from "@/lib/utils";
 
 export function BookingJourneyMap({
   pickup,
@@ -123,12 +124,12 @@ export function BookingJourneyMap({
                 />
               </Source>
             )}
-            <Marker longitude={pickup.longitude} latitude={pickup.latitude} anchor="bottom">
-              <MapPinIcon className="size-7 text-green-600 drop-shadow" />
-            </Marker>
-            <Marker longitude={dropoff.longitude} latitude={dropoff.latitude} anchor="bottom">
-              <MapPinIcon className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")} />
-            </Marker>
+            <DispatchStopMarker longitude={pickup.longitude} latitude={pickup.latitude}>
+              <DispatchMapPin variant="pickup" />
+            </DispatchStopMarker>
+            <DispatchStopMarker longitude={dropoff.longitude} latitude={dropoff.latitude}>
+              <DispatchMapPin variant="dropoff" />
+            </DispatchStopMarker>
           </MapGL>
         )}
       </div>

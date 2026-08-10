@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import MapGL, { Marker, NavigationControl, type MapRef } from "react-map-gl/mapbox";
-import { MapPinIcon } from "lucide-react";
+import MapGL, { NavigationControl, type MapRef } from "react-map-gl/mapbox";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
+import { DispatchMapPin } from "@/components/dispatch-map-pin";
+import { DispatchStopMarker } from "@/components/dispatch-stop-marker";
 import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { useDispatchMapFit } from "@/hooks/use-dispatch-map-fit";
 import {
@@ -17,7 +18,6 @@ import {
 } from "@/lib/mapbox/coordinates";
 import { initialViewFromBBox } from "@/lib/mapbox/fit-map-camera";
 import type { Trip } from "@/lib/models/trip";
-import { cn } from "@/lib/utils";
 
 export function DispatchFleetMap({
   token,
@@ -90,21 +90,20 @@ export function DispatchFleetMap({
           vehicleMake={vehicleMakeByTripId.get(loc.tripId)}
         />
       ))}
-      {activeTrips.map((t) => (
-        <Marker
-          key={`pickup-${t.id}`}
-          longitude={t.journey.pickup.longitude}
-          latitude={t.journey.pickup.latitude}
-          anchor="bottom"
-          onClick={() => onSelectTrip(t.id)}>
-          <MapPinIcon
-            className={cn(
-              "size-6 drop-shadow",
-              selectedTripId === t.id ? "text-red-500" : "text-amber-500"
-            )}
-          />
-        </Marker>
-      ))}
+      {activeTrips
+        .filter((t) => hasValidCoordinate(t.journey.pickup))
+        .map((t) => (
+          <DispatchStopMarker
+            key={`pickup-${t.id}`}
+            longitude={t.journey.pickup.longitude}
+            latitude={t.journey.pickup.latitude}
+            onClick={() => onSelectTrip(t.id)}>
+            <DispatchMapPin
+              variant="pickup"
+              className={selectedTripId === t.id ? "scale-110" : undefined}
+            />
+          </DispatchStopMarker>
+        ))}
     </MapGL>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import MapGL, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
-import { MapPinIcon } from "lucide-react";
+import MapGL, { Layer, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 
 import { AnimatedDriverMarker } from "@/app/dashboard/dispatch/animated-driver-marker";
+import { DispatchMapPin } from "@/components/dispatch-map-pin";
+import { DispatchStopMarker } from "@/components/dispatch-stop-marker";
 import type { DriverLiveLocation } from "@/hooks/use-live-locations";
 import { useDispatchMapFit } from "@/hooks/use-dispatch-map-fit";
 import { useLiveTripMapFit } from "@/hooks/use-live-trip-map-fit";
@@ -21,7 +22,6 @@ import {
 import { dispatchMapMode } from "@/lib/mapbox/dispatch-map-mode";
 import { initialViewFromBBox } from "@/lib/mapbox/fit-map-camera";
 import type { Trip } from "@/lib/models/trip";
-import { cn } from "@/lib/utils";
 
 export function DispatchTripMap({
   trip,
@@ -66,7 +66,7 @@ export function DispatchTripMap({
       : Boolean(driverCoordinate) &&
         (mode === "to_pickup" ? pickupValid : dropoffValid);
 
-  const { route, error: routeError } = useMapboxRoute(routeFrom, routeTo, token, routeEnabled, {
+  const { route } = useMapboxRoute(routeFrom, routeTo, token, routeEnabled, {
     debounceMs: mode === "overview" ? 0 : 1000,
     resetKey: `${trip.id}-${mode}`,
     // Match iOS live tracking: traffic-aware while en route / in progress.
@@ -176,40 +176,16 @@ export function DispatchTripMap({
           </Source>
         )}
 
-        {mode === "overview" && (
-          <>
-            <Marker
-              longitude={tripPickup.longitude}
-              latitude={tripPickup.latitude}
-              anchor="bottom">
-              <MapPinIcon className="size-7 text-green-600 drop-shadow" />
-            </Marker>
-            <Marker
-              longitude={tripDropoff.longitude}
-              latitude={tripDropoff.latitude}
-              anchor="bottom">
-              <MapPinIcon
-                className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}
-              />
-            </Marker>
-          </>
+        {(mode === "overview" || mode === "to_pickup") && (
+          <DispatchStopMarker longitude={tripPickup.longitude} latitude={tripPickup.latitude}>
+            <DispatchMapPin variant="pickup" />
+          </DispatchStopMarker>
         )}
 
-        {mode === "to_pickup" && pickupValid && (
-          <Marker longitude={tripPickup.longitude} latitude={tripPickup.latitude} anchor="bottom">
-            <MapPinIcon className="size-7 text-green-600 drop-shadow" />
-          </Marker>
-        )}
-
-        {mode === "to_dropoff" && dropoffValid && (
-          <Marker
-            longitude={tripDropoff.longitude}
-            latitude={tripDropoff.latitude}
-            anchor="bottom">
-            <MapPinIcon
-              className={cn("size-7 drop-shadow", routeError ? "text-red-500" : "text-red-600")}
-            />
-          </Marker>
+        {(mode === "overview" || mode === "to_dropoff") && (
+          <DispatchStopMarker longitude={tripDropoff.longitude} latitude={tripDropoff.latitude}>
+            <DispatchMapPin variant="dropoff" />
+          </DispatchStopMarker>
         )}
 
         {driverLocation && mode !== "overview" && (
