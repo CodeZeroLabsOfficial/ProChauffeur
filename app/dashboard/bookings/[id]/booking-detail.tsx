@@ -271,7 +271,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const pickupAt = tripPickupReferenceDate(trip);
 
   return (
-    <div className="mx-auto max-w-screen-lg space-y-4 lg:mt-10">
+    <div className="mx-auto max-w-screen-lg space-y-4">
       <Card className="relative">
         <div className="absolute start-4 top-4 z-10">
           <Button
