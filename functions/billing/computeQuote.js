@@ -148,7 +148,7 @@ function mapPricingConfig(d) {
   return {
     schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 2,
     minimumFare: typeof data.minimumFare === "number" ? data.minimumFare : 0,
-    weekendWeekdays: Array.isArray(data.weekendWeekdays) ? data.weekendWeekdays : [6, 7],
+    weekendWeekdays: [6, 7],
     quoteRounding: data.quoteRounding || "none",
     addons: Array.isArray(data.addons) ? data.addons : [],
     zones: Array.isArray(data.zones) ? data.zones : [],

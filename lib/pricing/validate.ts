@@ -3,6 +3,7 @@ import type { DocumentData } from "firebase/firestore";
 import {
   DISTANCE_UNITS,
   PRICING_RULE_TYPES,
+  PRICING_WEEKEND_WEEKDAYS,
   QUOTE_ROUNDING,
   TAX_DISPLAY_MODES,
   TRIP_TYPES,
@@ -264,7 +265,7 @@ export function parsePricingConfig(d: DocumentData): PricingConfig {
   return {
     schemaVersion,
     minimumFare: requireNonNegative(d.minimumFare, "minimumFare"),
-    weekendWeekdays: parseWeekdays(d.weekendWeekdays, "weekendWeekdays"),
+    weekendWeekdays: [...PRICING_WEEKEND_WEEKDAYS],
     quoteRounding: requireEnum(d.quoteRounding, "quoteRounding", QUOTE_ROUNDING),
     addons: Array.isArray(d.addons)
       ? d.addons.map((addon, index) => parseAddon(addon as DocumentData, index))

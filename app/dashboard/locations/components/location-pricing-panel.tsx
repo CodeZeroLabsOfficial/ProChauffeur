@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2Icon } from "lucide-react";
+import { InfoIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -18,13 +18,16 @@ import {
   QUOTE_ROUNDING,
   buildInitialPricingConfig,
   preparePricingConfigForSave,
+  quoteRoundingTitle,
   type PricingAddon,
   type PricingConfig,
-  type WeekdayNumber
+  type QuoteRounding
 } from "@/lib/models";
 import { formatCurrency } from "@/lib/format";
 import { ConfigError } from "@/lib/pricing/errors";
 import { cn } from "@/lib/utils";
+import { NumberStepper } from "@/components/number-stepper";
+import { SettingsSection } from "@/components/settings-section";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +41,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -55,11 +57,27 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const WEEKEND_WEEKDAY_OPTIONS: { value: WeekdayNumber; label: string }[] = [
-  { value: 6, label: "Saturday" },
-  { value: 7, label: "Sunday" }
-];
+const MINIMUM_FARE_MAX = 100_000;
+
+function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-accent rounded-full p-1"
+          aria-label={`About ${label}`}>
+          <InfoIcon className="text-muted-foreground size-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{children}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function LocationPricingPanel({
   branchId,
@@ -92,19 +110,6 @@ export function LocationPricingPanel({
       })
       .finally(() => setLoading(false));
   }, [branchId]);
-
-  function setGlobal<K extends keyof PricingConfig>(key: K, value: PricingConfig[K]) {
-    setConfig((current) => ({ ...current, [key]: value }));
-  }
-
-  function toggleWeekendWeekday(weekday: WeekdayNumber) {
-    setConfig((current) => {
-      const selected = new Set(current.weekendWeekdays);
-      if (selected.has(weekday)) selected.delete(weekday);
-      else selected.add(weekday);
-      return { ...current, weekendWeekdays: [...selected].sort((a, b) => a - b) };
-    });
-  }
 
   function openNewAddon() {
     setEditingAddon(null);
@@ -164,6 +169,12 @@ export function LocationPricingPanel({
 
   if (loading) return <p className="text-muted-foreground text-sm">Loading pricing…</p>;
 
+  const saveFooter = (
+    <Button type="button" onClick={() => void save()} disabled={saving}>
+      {saving ? "Saving…" : configured ? "Save pricing" : "Initialize pricing"}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
       {!configured ? (
@@ -176,75 +187,77 @@ export function LocationPricingPanel({
               Set add-ons and rules for this location. Transfer and hourly rates are configured per
               vehicle class.
             </p>
-            <Button type="button" variant="outline" onClick={() => setConfig(buildInitialPricingConfig())}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfig(buildInitialPricingConfig())}>
               Reset template
             </Button>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Global pricing</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-            <Label htmlFor="minimumFare">Minimum fare (transfer floor)</Label>
-            <Input
-              id="minimumFare"
-              type="number"
-              step="1"
-              className="max-w-xs"
+      <SettingsSection
+        title="Minimum fare"
+        description="Never quote a transfer below this amount. If the class rate comes in lower, we raise the fare to this floor.">
+        <TooltipProvider>
+          <div className="max-w-sm">
+            <NumberStepper
+              id="pricing-minimum-fare"
+              label="Minimum fare"
+              labelExtra={
+                <FieldInfoTooltip label="minimum fare">
+                  Applies to transfer trips only. Each vehicle class can also have its own min base
+                  rate — whichever is higher wins. Use this when you want one company minimum across
+                  all classes without editing every class.
+                </FieldInfoTooltip>
+              }
               value={config.minimumFare}
-              onChange={(e) => setGlobal("minimumFare", parseFloat(e.target.value) || 0)}
+              onChange={(value) => setConfig((current) => ({ ...current, minimumFare: value }))}
+              min={0}
+              max={MINIMUM_FARE_MAX}
+              step={1}
+              disabled={saving}
             />
-            <p className="text-muted-foreground text-xs">
-              Applied after the vehicle class total if this amount is higher. Set per-class minimums
-              on each vehicle class as well.
-            </p>
           </div>
+        </TooltipProvider>
+      </SettingsSection>
 
+      <SettingsSection
+        title="Quote rounding"
+        description="How the final taxed quote total is rounded for display.">
+        <TooltipProvider>
           <div className="space-y-2">
-            <Label htmlFor="quoteRounding">Quote rounding</Label>
+            <div className="flex items-center gap-1">
+              <Label htmlFor="pricing-quote-rounding">Quote rounding</Label>
+              <FieldInfoTooltip label="quote rounding">
+                Applied after tax to the customer-facing quote total. None keeps cent precision;
+                nearest dollar or half dollar cleans up the displayed fare.
+              </FieldInfoTooltip>
+            </div>
             <Select
               value={config.quoteRounding}
-              onValueChange={(value) => setGlobal("quoteRounding", value as PricingConfig["quoteRounding"])}>
-              <SelectTrigger id="quoteRounding">
+              onValueChange={(value) =>
+                setConfig((current) => ({
+                  ...current,
+                  quoteRounding: value as QuoteRounding
+                }))
+              }
+              disabled={saving}>
+              <SelectTrigger id="pricing-quote-rounding" className="w-full max-w-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {QUOTE_ROUNDING.map((mode) => (
                   <SelectItem key={mode} value={mode}>
-                    {mode}
+                    {quoteRoundingTitle[mode]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Weekend days (hourly)</Label>
-            <div className="flex flex-wrap gap-2">
-              {WEEKEND_WEEKDAY_OPTIONS.map(({ value, label }) => {
-                const selected = config.weekendWeekdays.includes(value);
-                return (
-                  <Button
-                    key={value}
-                    type="button"
-                    size="sm"
-                    variant={selected ? "default" : "outline"}
-                    onClick={() => toggleWeekendWeekday(value)}>
-                    {label}
-                  </Button>
-                );
-              })}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Pickups on these days use each class&apos;s weekend hourly rate and minimum hours.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </TooltipProvider>
+      </SettingsSection>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -272,10 +285,7 @@ export function LocationPricingPanel({
                 {config.addons.map((addon) => (
                   <TableRow
                     key={addon.id}
-                    className={cn(
-                      "cursor-pointer",
-                      !addon.isEnabled && "text-muted-foreground"
-                    )}
+                    className={cn("cursor-pointer", !addon.isEnabled && "text-muted-foreground")}
                     onClick={() => openEditAddon(addon)}>
                     <TableCell className="font-medium">
                       <span className="inline-flex items-center gap-2">
@@ -343,11 +353,7 @@ export function LocationPricingPanel({
         nested={nestedSheet}
       />
 
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving…" : configured ? "Save pricing" : "Initialize pricing"}
-        </Button>
-      </div>
+      <div className="flex justify-end">{saveFooter}</div>
     </div>
   );
 }

@@ -404,7 +404,7 @@ function computeQuote(request, context) {
     time: timeStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
     date: dateStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
   };
-  const weekendWeekdays = new Set(context.pricing.weekendWeekdays || []);
+  const weekendWeekdays = new Set([6, 7]); // Sat–Sun (Mon=1 … Sun=7)
   const selectedAddonIds = new Set(request.addonIds || []);
   const onboardUnits = metersToDistanceUnit(
     context.routeDistanceMeters,

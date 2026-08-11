@@ -1,4 +1,5 @@
 import {
+  PRICING_WEEKEND_WEEKDAYS,
   type PricingRuleType,
   type QuoteRounding,
   type TripType,
@@ -80,7 +81,10 @@ export interface PricingConfig {
   schemaVersion: number;
   /** Company-wide transfer floor applied after vehicle class calculation. */
   minimumFare: number;
-  /** Weekdays treated as weekend for hourly class rates (e.g. Sat–Sun). */
+  /**
+   * Persisted as Sat–Sun for document shape. Hourly weekend rates always use
+   * `PRICING_WEEKEND_WEEKDAYS` in the quote engine.
+   */
   weekendWeekdays: WeekdayNumber[];
   quoteRounding: QuoteRounding;
   addons: PricingAddon[];
@@ -88,11 +92,12 @@ export interface PricingConfig {
   rules: PricingRule[];
 }
 
-/** Normalize schema version before persisting operator pricing. */
+/** Normalize schema version and fixed weekend days before persisting. */
 export function preparePricingConfigForSave(config: PricingConfig): PricingConfig {
   return {
     ...config,
-    schemaVersion: 2
+    schemaVersion: 2,
+    weekendWeekdays: [...PRICING_WEEKEND_WEEKDAYS]
   };
 }
 
@@ -101,7 +106,7 @@ export function buildInitialPricingConfig(): PricingConfig {
   return {
     schemaVersion: 2,
     minimumFare: 89,
-    weekendWeekdays: [6, 7],
+    weekendWeekdays: [...PRICING_WEEKEND_WEEKDAYS],
     quoteRounding: "dollar",
     addons: [
       {

@@ -102,6 +102,15 @@ export type PricingRuleType = (typeof PRICING_RULE_TYPES)[number];
 export const QUOTE_ROUNDING = ["none", "dollar", "half_dollar"] as const;
 export type QuoteRounding = (typeof QUOTE_ROUNDING)[number];
 
+export const quoteRoundingTitle: Record<QuoteRounding, string> = {
+  none: "None (cents)",
+  dollar: "Nearest dollar",
+  half_dollar: "Nearest half dollar"
+};
+
+/** Sat–Sun for hourly weekend rates (Mon=1 … Sun=7). Not operator-configurable. */
+export const PRICING_WEEKEND_WEEKDAYS: WeekdayNumber[] = [6, 7];
+
 export const QUOTE_LINE_CATEGORIES = [
   "base",
   "distance",

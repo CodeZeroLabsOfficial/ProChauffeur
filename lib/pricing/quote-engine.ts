@@ -9,7 +9,7 @@ import type {
 } from "@/lib/models/pricing";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult, QuoteLineItem, TripQuoteSnapshot } from "@/lib/models/quote";
-import type { WeekdayNumber } from "@/lib/models/enums";
+import { PRICING_WEEKEND_WEEKDAYS, type WeekdayNumber } from "@/lib/models/enums";
 import { applyPromoDiscountLayer } from "@/lib/pricing/apply-promo";
 import {
   applyCorporateFixedRatesToVehicleClass,
@@ -452,7 +452,7 @@ export function computeQuote(request: QuoteRequest, context: QuoteEngineContext)
     time: timeStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
     date: dateStringInTimezone(request.scheduledPickupAt, context.locale.timezone)
   };
-  const weekendWeekdays = new Set(context.pricing.weekendWeekdays);
+  const weekendWeekdays = new Set<WeekdayNumber>(PRICING_WEEKEND_WEEKDAYS);
   const selectedAddonIds = new Set(request.addonIds);
   const onboardUnits = metersToDistanceUnit(context.routeDistanceMeters, context.locale.distanceUnit);
   const deadheadUnits = metersToDistanceUnit(context.deadheadDistanceMeters, context.locale.distanceUnit);
