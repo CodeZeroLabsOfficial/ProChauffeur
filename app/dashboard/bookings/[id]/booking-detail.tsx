@@ -25,6 +25,7 @@ import {
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
   tripJourneyTimeLabel,
+  tripOnboardDistanceLabel,
   tripStatusTitle,
   tripTypeTitle,
   paymentSourceTitle,
@@ -214,6 +215,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const completedAt = useMemo(() => trip?.journey.journeyCompletedAt ?? null, [trip]);
 
   const journeyTime = useMemo(() => (trip ? tripJourneyTimeLabel(trip) : "—"), [trip]);
+  const distanceLabel = useMemo(() => (trip ? tripOnboardDistanceLabel(trip) : "—"), [trip]);
 
   const customer = useMemo(
     () => (trip ? users.find((u) => u.id === trip.customerID) : undefined),
@@ -434,7 +436,8 @@ export function BookingDetail({ tripId }: { tripId: string }) {
               value={trip.journey.tripType ? tripTypeTitle[trip.journey.tripType] : "—"}
             />
             <DetailRow label="Completed:" value={completedAt ? formatDateTime(completedAt) : "—"} />
-            <DetailRow label="Journey time:" value={journeyTime} />
+            <DetailRow label="Duration:" value={journeyTime} />
+            <DetailRow label="Distance:" value={distanceLabel} />
           </SectionCard>
 
           <BookingCustomerCard

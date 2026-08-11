@@ -57,6 +57,8 @@ export interface TripJourney {
   journeyCompletedAt?: Date | null;
   /** In-vehicle duration in seconds, set at completion when start is known. */
   journeyDurationSeconds?: number | null;
+  /** Onboard distance in meters, written at completion. */
+  onboardDistanceMeters?: number | null;
   tripType?: TripType | null;
   bookedHours?: number | null;
 }
@@ -199,4 +201,11 @@ export function tripJourneyTimeLabel(trip: Trip): string {
     return rem ? `${hours} hr ${rem} min` : `${hours} hr`;
   }
   return "—";
+}
+
+/** Human-readable onboard distance in km (written at completion). */
+export function tripOnboardDistanceLabel(trip: Trip): string {
+  const meters = trip.journey.onboardDistanceMeters;
+  if (meters == null || !Number.isFinite(meters) || meters < 0) return "—";
+  return `${(meters / 1000).toFixed(1)} km`;
 }

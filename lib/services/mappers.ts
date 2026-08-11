@@ -434,6 +434,10 @@ export function mapTrip(id: string, d: DocumentData): Trip {
         typeof journeyRaw.journeyDurationSeconds === "number"
           ? journeyRaw.journeyDurationSeconds
           : null,
+      onboardDistanceMeters:
+        typeof journeyRaw.onboardDistanceMeters === "number"
+          ? journeyRaw.onboardDistanceMeters
+          : null,
       tripType: journeyRaw.tripType ?? null,
       bookedHours: journeyRaw.bookedHours ?? null
     },
