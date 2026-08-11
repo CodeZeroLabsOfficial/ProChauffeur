@@ -24,7 +24,7 @@ import { DriverProfileFinancialsTab } from "@/app/dashboard/drivers/components/d
 import { DriverProfileComplianceTab } from "@/app/dashboard/drivers/components/driver-profile-compliance-tab";
 import { DriverProfileOperationsTab } from "@/app/dashboard/drivers/components/driver-profile-operations-tab";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
-import { ProfilePageShell } from "@/components/layout/profile-page-shell";
+import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
@@ -90,15 +90,15 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
 
   if (loading || rosterLoading) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Loading chauffeur profile…</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   if (!displayUser || displayUser.role !== "driver" || !roster) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Chauffeur not found.</p>
         <Button variant="outline" asChild>
           <Link href="/dashboard/drivers">
@@ -106,7 +106,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
             Back to drivers
           </Link>
         </Button>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
@@ -117,7 +117,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
 
   return (
     <>
-      <ProfilePageShell>
+      <DetailPageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <DriverDetailCard
             user={displayUser}
@@ -161,7 +161,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
             />
           </TabsContent>
         </Tabs>
-      </ProfilePageShell>
+      </DetailPageShell>
 
       <DriverEditSheet
         user={displayUser}

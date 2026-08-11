@@ -16,7 +16,7 @@ import { CustomerProfileOverviewTab } from "@/app/dashboard/customers/components
 import { CustomerProfileTripsTab } from "@/app/dashboard/customers/components/customer-profile-trips-tab";
 import { CustomerProfileBillingTab } from "@/app/dashboard/customers/components/customer-profile-billing-tab";
 import { CustomerEditSheet } from "@/app/dashboard/customers/customer-edit-sheet";
-import { ProfilePageShell } from "@/components/layout/profile-page-shell";
+import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
@@ -68,15 +68,15 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
 
   if (loading) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Loading customer profile…</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   if (!user || user.role !== "customer") {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Customer not found.</p>
         <Button variant="outline" asChild>
           <Link href="/dashboard/customers">
@@ -84,7 +84,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
             Back to customers
           </Link>
         </Button>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
@@ -95,7 +95,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
 
   return (
     <>
-      <ProfilePageShell>
+      <DetailPageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <CustomerDetailCard user={user} onEditClick={() => setEditOpen(true)} />
 
@@ -119,7 +119,7 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
             <CustomerProfileBillingTab invoices={metrics.customerInvoices} />
           </TabsContent>
         </Tabs>
-      </ProfilePageShell>
+      </DetailPageShell>
 
       <CustomerEditSheet
         user={user}

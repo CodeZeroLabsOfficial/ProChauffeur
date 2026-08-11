@@ -23,7 +23,7 @@ import { VehicleProfileFinancialsTab } from "@/app/dashboard/fleet/components/ve
 import { VehicleProfileComplianceTab } from "@/app/dashboard/fleet/components/vehicle-profile-compliance-tab";
 import { VehicleProfileOperationsTab } from "@/app/dashboard/fleet/components/vehicle-profile-operations-tab";
 import { VehicleEditSheet } from "@/app/dashboard/fleet/vehicle-edit-sheet";
-import { ProfilePageShell } from "@/components/layout/profile-page-shell";
+import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
@@ -97,28 +97,28 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
 
   if (loading) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Loading vehicle profile…</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   if (!vehicle || !metrics) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/fleet" aria-label="Back to fleet">
             <ChevronLeftIcon />
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Vehicle not found.</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   return (
     <>
-      <ProfilePageShell>
+      <DetailPageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="gap-4">
           <VehicleDetailCard
             vehicle={vehicle}
@@ -161,7 +161,7 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
             />
           </TabsContent>
         </Tabs>
-      </ProfilePageShell>
+      </DetailPageShell>
 
       <VehicleEditSheet
         vehicle={vehicle}

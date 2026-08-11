@@ -14,7 +14,7 @@ import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-op
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { useInvoices, useTrips } from "@/hooks/use-collections";
-import { ProfilePageShell } from "@/components/layout/profile-page-shell";
+import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { Branch } from "@/lib/models";
@@ -65,28 +65,28 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
 
   if (loading) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <p className="text-muted-foreground text-sm">Loading location…</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   if (!branch) {
     return (
-      <ProfilePageShell>
+      <DetailPageShell>
         <Button asChild variant="ghost" size="icon" className="bg-background/50 rounded-full">
           <Link href="/dashboard/locations" aria-label="Back to locations">
             <ChevronLeftIcon />
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Location not found.</p>
-      </ProfilePageShell>
+      </DetailPageShell>
     );
   }
 
   return (
     <>
-      <ProfilePageShell>
+      <DetailPageShell>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as LocationTab)} className="gap-4">
           <LocationDetailCard branch={branch} onEditClick={() => setEditOpen(true)} />
 
@@ -116,7 +116,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
             <LocationPricingPanel branchId={branch.id} />
           </TabsContent>
         </Tabs>
-      </ProfilePageShell>
+      </DetailPageShell>
 
       <LocationEditSheet
         open={editOpen}

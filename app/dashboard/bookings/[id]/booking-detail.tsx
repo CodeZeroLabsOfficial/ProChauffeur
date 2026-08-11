@@ -35,6 +35,7 @@ import { vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
+import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -245,15 +246,15 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
   if (loading) {
     return (
-      <div className="text-muted-foreground mx-auto max-w-screen-lg py-16 text-center text-sm">
-        Loading booking…
-      </div>
+      <DetailPageShell>
+        <p className="text-muted-foreground py-16 text-center text-sm">Loading booking…</p>
+      </DetailPageShell>
     );
   }
 
   if (notFound || !trip) {
     return (
-      <div className="mx-auto max-w-screen-lg space-y-4">
+      <DetailPageShell>
         <Button
           asChild
           variant="ghost"
@@ -264,14 +265,14 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </Link>
         </Button>
         <p className="text-muted-foreground text-sm">Booking not found.</p>
-      </div>
+      </DetailPageShell>
     );
   }
 
   const pickupAt = tripPickupReferenceDate(trip);
 
   return (
-    <div className="mx-auto max-w-screen-lg space-y-4">
+    <DetailPageShell>
       <Card className="relative">
         <div className="absolute start-4 top-4 z-10">
           <Button
@@ -452,6 +453,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </SectionCard>
         </div>
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
