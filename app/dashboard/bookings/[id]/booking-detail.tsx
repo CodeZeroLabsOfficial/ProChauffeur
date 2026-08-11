@@ -212,6 +212,7 @@ export function BookingDetail({ tripId }: { tripId: string }) {
       ? (currentStepIndex / (ACTIVE_STATUSES.length - 1)) * 100
       : 0;
 
+  const startedAt = useMemo(() => trip?.journey.journeyStartedAt ?? null, [trip]);
   const completedAt = useMemo(() => trip?.journey.journeyCompletedAt ?? null, [trip]);
 
   const journeyTime = useMemo(() => (trip ? tripJourneyTimeLabel(trip) : "—"), [trip]);
@@ -410,7 +411,9 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow
               label="Passengers"
               value={
-                trip.capacity.passengerCount != null ? trip.capacity.passengerCount : "—"
+                trip.capacity.passengerCount != null
+                  ? `${trip.capacity.passengerCount} pax`
+                  : "—"
               }
             />
             <DetailRow label="Luggage requirements" value={luggageLabel(trip)} />
@@ -428,13 +431,14 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
         <div className="space-y-4 lg:col-span-1">
           <SectionCard
-            title="Booking status"
+            title="Trip summary"
             headerAction={<TripStatusBadge status={trip.status} />}>
             <DetailRow label="Requested:" value={formatDateTime(trip.createdAt)} />
             <DetailRow
               label="Trip type:"
               value={trip.journey.tripType ? tripTypeTitle[trip.journey.tripType] : "—"}
             />
+            <DetailRow label="Started:" value={startedAt ? formatDateTime(startedAt) : "—"} />
             <DetailRow label="Completed:" value={completedAt ? formatDateTime(completedAt) : "—"} />
             <DetailRow label="Duration:" value={journeyTime} />
             <DetailRow label="Distance:" value={distanceLabel} />
