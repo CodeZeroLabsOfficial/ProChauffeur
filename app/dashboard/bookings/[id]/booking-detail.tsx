@@ -1,25 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
-  FileTextIcon,
-  PackageIcon,
-  PencilIcon,
-  PrinterIcon
+  PackageIcon
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
-import { canSendTripInvoice, effectivePaymentStatus } from "@/lib/bookings/trip-payment";
-import { updateTripStatus } from "@/lib/services/firebase-service";
-import { sendCustomerTripInvoice } from "@/lib/services/payment-service";
+import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import {
   TRIP_STATUSES,
   chauffeurCategoryTitle,
@@ -31,7 +25,6 @@ import {
   paymentSourceTitle,
   vehicleDisplayName,
   type Trip,
-  type TripStatus,
   type User,
   type Vehicle
 } from "@/lib/models";
@@ -46,14 +39,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Progress } from "@/components/ui/progress";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -202,7 +187,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();
-  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
   const currentStepIndex = trip
     ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number])
@@ -258,31 +242,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
         : undefined,
     [trip?.billing.invoiceId, invoices]
   );
-  const canSendInvoice = trip ? canSendTripInvoice(trip) : false;
-
-  async function sendInvoice() {
-    if (!trip) return;
-    setIsSendingInvoice(true);
-    try {
-      await sendCustomerTripInvoice(trip.id);
-      toast.success("Invoice sent to the customer.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not send the invoice.";
-      toast.error(message);
-    } finally {
-      setIsSendingInvoice(false);
-    }
-  }
-
-  async function changeStatus(status: TripStatus) {
-    if (!trip) return;
-    try {
-      await updateTripStatus(trip.id, status);
-      toast.success(`Marked as ${tripStatusTitle[status]}.`);
-    } catch {
-      toast.error("Could not update the booking.");
-    }
-  }
 
   if (loading) {
     return (
@@ -295,8 +254,12 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   if (notFound || !trip) {
     return (
       <div className="mx-auto max-w-screen-lg space-y-4">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/bookings">
+        <Button
+          asChild
+          variant="ghost"
+          size="icon-sm"
+          className="bg-background/50 rounded-full">
+          <Link href="/dashboard/bookings" aria-label="Back to bookings">
             <ChevronLeftIcon />
           </Link>
         </Button>
@@ -309,51 +272,19 @@ export function BookingDetail({ tripId }: { tripId: string }) {
 
   return (
     <div className="mx-auto max-w-screen-lg space-y-4 lg:mt-10">
-      <div className="flex items-center justify-between">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/bookings">
-            <ChevronLeftIcon />
-          </Link>
-        </Button>
-        <div className="flex gap-2">
-          {canSendInvoice ? (
-            <Button variant="outline" disabled={isSendingInvoice} onClick={() => sendInvoice()}>
-              <FileTextIcon />
-              {isSendingInvoice ? "Sending…" : "Send invoice"}
-            </Button>
-          ) : null}
-          <Button variant="outline" onClick={() => window.print()}>
-            <PrinterIcon />
-            Print
+      <Card className="relative">
+        <div className="absolute start-4 top-4 z-10">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-sm"
+            className="bg-background/50 rounded-full">
+            <Link href="/dashboard/bookings" aria-label="Back to bookings">
+              <ChevronLeftIcon />
+            </Link>
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <PencilIcon />
-                Edit
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Set status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {TRIP_STATUSES.map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  disabled={s === trip.status}
-                  onClick={() => changeStatus(s)}>
-                  {tripStatusTitle[s]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Trip status</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-14">
           {trip.status === "cancelled" ? (
             <p className="text-muted-foreground text-sm">
               This booking was cancelled on {formatDateTime(trip.updatedAt)}.
