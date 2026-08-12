@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { UploadIcon } from "lucide-react";
+import { InfoIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useFileUpload } from "@/hooks/use-file-upload";
@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
   ProfileV2TabTrigger,
@@ -50,6 +51,24 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function SectionHeading({ children }: { children: string }) {
   return <h4 className="text-sm font-medium">{children}</h4>;
+}
+
+function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-accent rounded-full p-1"
+          aria-label={`About ${label}`}>
+          <InfoIcon className="text-muted-foreground size-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{children}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function ImageUploadField({
@@ -279,308 +298,333 @@ export function VehicleClassEditSheet({
           <SheetTitle>{sheetTitle}</SheetTitle>
         </SheetHeader>
         <form className="space-y-4 px-4" onSubmit={onSubmit}>
-          <Tabs key={sheetKey} defaultValue="overview" className="gap-4">
-            <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
-              <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
-            </TabsList>
+          <TooltipProvider>
+            <Tabs key={sheetKey} defaultValue="overview" className="gap-4">
+              <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
+                <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
+                <ProfileV2TabTrigger value="inclusions">Inclusions</ProfileV2TabTrigger>
+                <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
+              </TabsList>
 
-            <TabsContent value="overview" className="mt-0 space-y-4">
-              <div className="space-y-4">
-                <SectionHeading>Class details</SectionHeading>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="displayName">Display name</Label>
-                    <Input
-                      id="displayName"
-                      value={draft.displayName}
-                      onChange={(e) => setDraft((c) => ({ ...c, displayName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="supportedTripTypes">Supported trips</Label>
-                    <MultiSelectField
-                      id="supportedTripTypes"
-                      options={SUPPORTED_TRIP_TYPE_OPTIONS}
-                      selected={draft.supportedTripTypes.filter((t) => t !== "round_trip")}
-                      onSelectedChange={(selected) =>
-                        setDraft((c) => ({ ...c, supportedTripTypes: selected as TripType[] }))
-                      }
-                      placeholder="Select trip types"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="serviceTier">Service tier</Label>
-                    <Select
-                      value={draft.serviceTier}
-                      onValueChange={(value) => setDraft((c) => ({ ...c, serviceTier: value }))}>
-                      <SelectTrigger id="serviceTier" className="w-full">
-                        <SelectValue placeholder="Select tier" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                        {VEHICLE_CLASS_SERVICE_TIERS.map((tier) => (
-                          <SelectItem key={tier} value={tier}>
-                            {tier}
-                          </SelectItem>
-                        ))}
-                        {!VEHICLE_CLASS_SERVICE_TIERS.includes(
-                          draft.serviceTier as (typeof VEHICLE_CLASS_SERVICE_TIERS)[number]
-                        ) && draft.serviceTier ? (
-                          <SelectItem value={draft.serviceTier}>{draft.serviceTier}</SelectItem>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-muted-foreground text-xs">
-                      Shown on the Class chip in customer booking.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bodyType">Body type</Label>
-                    <Select
-                      value={draft.bodyType}
-                      onValueChange={(value) => setDraft((c) => ({ ...c, bodyType: value }))}>
-                      <SelectTrigger id="bodyType" className="w-full">
-                        <SelectValue placeholder="Select body" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className={cn(nested && "z-[110]")}>
-                        {VEHICLE_CLASS_BODY_TYPES.map((body) => (
-                          <SelectItem key={body} value={body}>
-                            {body}
-                          </SelectItem>
-                        ))}
-                        {!VEHICLE_CLASS_BODY_TYPES.includes(
-                          draft.bodyType as (typeof VEHICLE_CLASS_BODY_TYPES)[number]
-                        ) && draft.bodyType ? (
-                          <SelectItem value={draft.bodyType}>{draft.bodyType}</SelectItem>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-muted-foreground text-xs">
-                      Shown on the Body chip in customer booking.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <SectionHeading>Capacity</SectionHeading>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <NumberStepper
-                    id="passengerCapacity"
-                    label="Passengers"
-                    value={draft.capacity.passengerCount}
-                    onChange={(value) =>
-                      setDraft((c) => ({
-                        ...c,
-                        capacity: {
-                          ...c.capacity,
-                          passengerCount: value
-                        }
-                      }))
-                    }
-                    min={1}
-                    max={60}
-                  />
-                  <NumberStepper
-                    id="smallLuggageCount"
-                    label="Small luggage"
-                    value={draft.capacity.luggage.smallCount}
-                    onChange={(value) =>
-                      setDraft((c) => ({
-                        ...c,
-                        capacity: {
-                          ...c.capacity,
-                          luggage: { ...c.capacity.luggage, smallCount: value }
-                        }
-                      }))
-                    }
-                    min={0}
-                    max={20}
-                  />
-                  <NumberStepper
-                    id="largeLuggageCount"
-                    label="Large luggage"
-                    value={draft.capacity.luggage.largeCount}
-                    onChange={(value) =>
-                      setDraft((c) => ({
-                        ...c,
-                        capacity: {
-                          ...c.capacity,
-                          luggage: { ...c.capacity.luggage, largeCount: value }
-                        }
-                      }))
-                    }
-                    min={0}
-                    max={20}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <SectionHeading>Inclusions</SectionHeading>
-                <p className="text-muted-foreground text-sm">
-                  Shown under &ldquo;What&apos;s included&rdquo; in the customer booking flow.
-                </p>
-                <div className="grid gap-3 sm:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="inclusionWifi">Wifi</Label>
-                    <Input
-                      id="inclusionWifi"
-                      value={draft.inclusions.wifi}
-                      onChange={(e) =>
-                        setDraft((c) => ({
-                          ...c,
-                          inclusions: { ...c.inclusions, wifi: e.target.value }
-                        }))
-                      }
-                      placeholder="Complimentary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inclusionInterior">Interior</Label>
-                    <Input
-                      id="inclusionInterior"
-                      value={draft.inclusions.interior}
-                      onChange={(e) =>
-                        setDraft((c) => ({
-                          ...c,
-                          inclusions: { ...c.inclusions, interior: e.target.value }
-                        }))
-                      }
-                      placeholder="e.g. Leather, rear privacy"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inclusionClimate">Climate</Label>
-                    <Input
-                      id="inclusionClimate"
-                      value={draft.inclusions.climateControl}
-                      onChange={(e) =>
-                        setDraft((c) => ({
-                          ...c,
-                          inclusions: { ...c.inclusions, climateControl: e.target.value }
-                        }))
-                      }
-                      placeholder="e.g. Four-zone climate"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <SectionHeading>Vehicle class image</SectionHeading>
-                <p className="text-muted-foreground text-sm">
-                  Shown in the customer app vehicle picker and booking flow. PNG, JPEG, or WebP up to
-                  5 MB.
-                </p>
-                <ImageUploadField
-                  label="Vehicle class image"
-                  hideLabel
-                  title={hasImage ? "Replace image" : "Upload image"}
-                  description={
-                    hasImage ? "Tap to choose a different image" : "Tap to upload a hero image"
-                  }
-                  previewUrl={imagePreviewUrl}
-                  errors={imageErrors}
-                  onOpenDialog={openImageDialog}
-                  inputProps={getImageInputProps()}
-                  alt={draft.displayName || "Vehicle class"}
-                />
-                {hasImage ? (
-                  <Button type="button" variant="outline" size="sm" onClick={removeImage}>
-                    Remove image
-                  </Button>
-                ) : null}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <SectionHeading>Booking</SectionHeading>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="vc-enabled">Enabled</Label>
-                      <p className="text-muted-foreground text-xs">
-                        Disabled classes are excluded from booking and quotes.
-                      </p>
+              <TabsContent value="overview" className="mt-0 space-y-4">
+                <div className="space-y-4">
+                  <SectionHeading>Class details</SectionHeading>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="displayName">Display name</Label>
+                        <FieldInfoTooltip label="display name">
+                          Customer-facing name for this class in booking and quotes.
+                        </FieldInfoTooltip>
+                      </div>
+                      <Input
+                        id="displayName"
+                        value={draft.displayName}
+                        onChange={(e) => setDraft((c) => ({ ...c, displayName: e.target.value }))}
+                        required
+                      />
                     </div>
-                    <Switch
-                      id="vc-enabled"
-                      checked={draft.isEnabled}
-                      onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
-                      disabled={saving}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="vc-visible">Visible</Label>
-                      <p className="text-muted-foreground text-xs">
-                        When off, this class is hidden from the customer booking flow.
-                      </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="supportedTripTypes">Supported trips</Label>
+                        <FieldInfoTooltip label="supported trips">
+                          Which trip types customers can book with this class.
+                        </FieldInfoTooltip>
+                      </div>
+                      <MultiSelectField
+                        id="supportedTripTypes"
+                        options={SUPPORTED_TRIP_TYPE_OPTIONS}
+                        selected={draft.supportedTripTypes.filter((t) => t !== "round_trip")}
+                        onSelectedChange={(selected) =>
+                          setDraft((c) => ({ ...c, supportedTripTypes: selected as TripType[] }))
+                        }
+                        placeholder="Select trip types"
+                      />
                     </div>
-                    <Switch
-                      id="vc-visible"
-                      checked={draft.isVisible}
-                      onCheckedChange={(checked) => setDraft((c) => ({ ...c, isVisible: checked }))}
-                      disabled={saving}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="serviceTier">Service tier</Label>
+                        <FieldInfoTooltip label="service tier">
+                          Customers see this as the Class option when choosing a vehicle.
+                        </FieldInfoTooltip>
+                      </div>
+                      <Select
+                        value={draft.serviceTier}
+                        onValueChange={(value) => setDraft((c) => ({ ...c, serviceTier: value }))}>
+                        <SelectTrigger id="serviceTier" className="w-full">
+                          <SelectValue placeholder="Select tier" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className={cn(nested && "z-[110]")}>
+                          {VEHICLE_CLASS_SERVICE_TIERS.map((tier) => (
+                            <SelectItem key={tier} value={tier}>
+                              {tier}
+                            </SelectItem>
+                          ))}
+                          {!VEHICLE_CLASS_SERVICE_TIERS.includes(
+                            draft.serviceTier as (typeof VEHICLE_CLASS_SERVICE_TIERS)[number]
+                          ) && draft.serviceTier ? (
+                            <SelectItem value={draft.serviceTier}>{draft.serviceTier}</SelectItem>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="bodyType">Body type</Label>
+                        <FieldInfoTooltip label="body type">
+                          Customers see this as the Body option when choosing a vehicle.
+                        </FieldInfoTooltip>
+                      </div>
+                      <Select
+                        value={draft.bodyType}
+                        onValueChange={(value) => setDraft((c) => ({ ...c, bodyType: value }))}>
+                        <SelectTrigger id="bodyType" className="w-full">
+                          <SelectValue placeholder="Select body" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className={cn(nested && "z-[110]")}>
+                          {VEHICLE_CLASS_BODY_TYPES.map((body) => (
+                            <SelectItem key={body} value={body}>
+                              {body}
+                            </SelectItem>
+                          ))}
+                          {!VEHICLE_CLASS_BODY_TYPES.includes(
+                            draft.bodyType as (typeof VEHICLE_CLASS_BODY_TYPES)[number]
+                          ) && draft.bodyType ? (
+                            <SelectItem value={draft.bodyType}>{draft.bodyType}</SelectItem>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <SectionHeading>Capacity</SectionHeading>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <NumberStepper
+                      id="passengerCapacity"
+                      label="Passengers"
+                      value={draft.capacity.passengerCount}
+                      onChange={(value) =>
+                        setDraft((c) => ({
+                          ...c,
+                          capacity: {
+                            ...c.capacity,
+                            passengerCount: value
+                          }
+                        }))
+                      }
+                      min={1}
+                      max={60}
+                    />
+                    <NumberStepper
+                      id="smallLuggageCount"
+                      label="Small luggage"
+                      value={draft.capacity.luggage.smallCount}
+                      onChange={(value) =>
+                        setDraft((c) => ({
+                          ...c,
+                          capacity: {
+                            ...c.capacity,
+                            luggage: { ...c.capacity.luggage, smallCount: value }
+                          }
+                        }))
+                      }
+                      min={0}
+                      max={20}
+                    />
+                    <NumberStepper
+                      id="largeLuggageCount"
+                      label="Large luggage"
+                      value={draft.capacity.luggage.largeCount}
+                      onChange={(value) =>
+                        setDraft((c) => ({
+                          ...c,
+                          capacity: {
+                            ...c.capacity,
+                            luggage: { ...c.capacity.luggage, largeCount: value }
+                          }
+                        }))
+                      }
+                      min={0}
+                      max={20}
                     />
                   </div>
                 </div>
-              </div>
-            </TabsContent>
 
-            <TabsContent value="pricing" className="mt-0 space-y-4">
-              <div className="space-y-4">
-                <SectionHeading>Point-to-point rates</SectionHeading>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {transferFields.map((field) => (
-                    <NumberStepper
-                      key={field.key}
-                      id={`transfer-${field.key}`}
-                      label={field.label}
-                      value={draft.transfer[field.key as keyof typeof draft.transfer]}
-                      onChange={(value) => setTransferField(field.key, value)}
-                      min={field.min ?? RATE_MIN}
-                      max={field.max ?? RATE_MAX}
-                      step={field.step ?? 1}
-                      decimals={field.decimals}
-                    />
-                  ))}
+                <Separator />
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-1">
+                    <SectionHeading>Vehicle class image</SectionHeading>
+                    <FieldInfoTooltip label="vehicle class image">
+                      Shown in the customer app vehicle picker and booking flow. PNG, JPEG, or WebP
+                      up to 5 MB.
+                    </FieldInfoTooltip>
+                  </div>
+                  <ImageUploadField
+                    label="Vehicle class image"
+                    hideLabel
+                    title={hasImage ? "Replace image" : "Upload image"}
+                    description={
+                      hasImage ? "Tap to choose a different image" : "Tap to upload a hero image"
+                    }
+                    previewUrl={imagePreviewUrl}
+                    errors={imageErrors}
+                    onOpenDialog={openImageDialog}
+                    inputProps={getImageInputProps()}
+                    alt={draft.displayName || "Vehicle class"}
+                  />
+                  {hasImage ? (
+                    <Button type="button" variant="outline" size="sm" onClick={removeImage}>
+                      Remove image
+                    </Button>
+                  ) : null}
                 </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              <div className="space-y-4">
-                <SectionHeading>Hourly rates</SectionHeading>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {hourlyFields.map((field) => (
-                    <NumberStepper
-                      key={field.key}
-                      id={`hourly-${field.key}`}
-                      label={field.label}
-                      value={draft.hourly[field.key as keyof typeof draft.hourly]}
-                      onChange={(value) => setHourlyField(field.key, value)}
-                      min={field.min ?? RATE_MIN}
-                      max={field.max ?? RATE_MAX}
-                      step={field.step ?? 1}
-                      decimals={field.decimals}
-                    />
-                  ))}
+                <div className="space-y-4">
+                  <SectionHeading>Booking</SectionHeading>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="vc-enabled">Enabled</Label>
+                        <p className="text-muted-foreground text-xs">
+                          Disabled classes are excluded from booking and quotes.
+                        </p>
+                      </div>
+                      <Switch
+                        id="vc-enabled"
+                        checked={draft.isEnabled}
+                        onCheckedChange={(checked) =>
+                          setDraft((c) => ({ ...c, isEnabled: checked }))
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="vc-visible">Visible</Label>
+                        <p className="text-muted-foreground text-xs">
+                          When off, this class is hidden from the customer booking flow.
+                        </p>
+                      </div>
+                      <Switch
+                        id="vc-visible"
+                        checked={draft.isVisible}
+                        onCheckedChange={(checked) =>
+                          setDraft((c) => ({ ...c, isVisible: checked }))
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+
+              <TabsContent value="inclusions" className="mt-0 space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-1">
+                    <SectionHeading>Inclusions</SectionHeading>
+                    <FieldInfoTooltip label="inclusions">
+                      Customers see these under “What’s included” when booking this class.
+                    </FieldInfoTooltip>
+                  </div>
+                  <div className="grid gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="inclusionWifi">Wifi</Label>
+                      <Input
+                        id="inclusionWifi"
+                        value={draft.inclusions.wifi}
+                        onChange={(e) =>
+                          setDraft((c) => ({
+                            ...c,
+                            inclusions: { ...c.inclusions, wifi: e.target.value }
+                          }))
+                        }
+                        placeholder="Complimentary"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inclusionInterior">Interior</Label>
+                      <Input
+                        id="inclusionInterior"
+                        value={draft.inclusions.interior}
+                        onChange={(e) =>
+                          setDraft((c) => ({
+                            ...c,
+                            inclusions: { ...c.inclusions, interior: e.target.value }
+                          }))
+                        }
+                        placeholder="e.g. Leather, rear privacy"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inclusionClimate">Climate</Label>
+                      <Input
+                        id="inclusionClimate"
+                        value={draft.inclusions.climateControl}
+                        onChange={(e) =>
+                          setDraft((c) => ({
+                            ...c,
+                            inclusions: { ...c.inclusions, climateControl: e.target.value }
+                          }))
+                        }
+                        placeholder="e.g. Four-zone climate"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pricing" className="mt-0 space-y-4">
+                <div className="space-y-4">
+                  <SectionHeading>Point-to-point rates</SectionHeading>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {transferFields.map((field) => (
+                      <NumberStepper
+                        key={field.key}
+                        id={`transfer-${field.key}`}
+                        label={field.label}
+                        value={draft.transfer[field.key as keyof typeof draft.transfer]}
+                        onChange={(value) => setTransferField(field.key, value)}
+                        min={field.min ?? RATE_MIN}
+                        max={field.max ?? RATE_MAX}
+                        step={field.step ?? 1}
+                        decimals={field.decimals}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <SectionHeading>Hourly rates</SectionHeading>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {hourlyFields.map((field) => (
+                      <NumberStepper
+                        key={field.key}
+                        id={`hourly-${field.key}`}
+                        label={field.label}
+                        value={draft.hourly[field.key as keyof typeof draft.hourly]}
+                        onChange={(value) => setHourlyField(field.key, value)}
+                        min={field.min ?? RATE_MIN}
+                        max={field.max ?? RATE_MAX}
+                        step={field.step ?? 1}
+                        decimals={field.decimals}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </TooltipProvider>
 
           <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
             <span />
