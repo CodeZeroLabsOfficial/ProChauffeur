@@ -403,7 +403,12 @@ export function VehicleClassEditSheet({
                 <Separator />
 
                 <div className="space-y-4">
-                  <SectionHeading>Capacity</SectionHeading>
+                  <div className="flex items-center gap-1">
+                    <SectionHeading>Capacity</SectionHeading>
+                    <FieldInfoTooltip label="capacity">
+                      Maximum passengers and luggage customers can book with this class.
+                    </FieldInfoTooltip>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <NumberStepper
                       id="passengerCapacity"
