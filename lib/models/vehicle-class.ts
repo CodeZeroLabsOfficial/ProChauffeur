@@ -11,11 +11,11 @@ export interface VehicleClassCapacity {
   luggage: VehicleClassLuggageCapacity;
 }
 
-/** Booking-facing inclusions shown under “What’s included”. */
-export interface VehicleClassInclusions {
-  wifi: string;
-  interior: string;
-  climateControl: string;
+/** One booking-facing inclusion row shown under “What’s included”. */
+export interface VehicleClassInclusion {
+  id: string;
+  label: string;
+  value: string;
 }
 
 export const VEHICLE_CLASS_SERVICE_TIERS = [
@@ -48,8 +48,8 @@ export interface VehicleClass {
   /** Body style shown on the Body specification chip (e.g. Sedan). */
   bodyType: string;
   capacity: VehicleClassCapacity;
-  /** Wifi / interior / climate for booking “What’s included”. */
-  inclusions: VehicleClassInclusions;
+  /** Ordered inclusion rows for booking “What’s included”. */
+  inclusions: VehicleClassInclusion[];
   description?: string | null;
   imageUrl?: string | null;
   isEnabled: boolean;
@@ -79,12 +79,8 @@ export function emptyVehicleClassCapacity(): VehicleClassCapacity {
   };
 }
 
-export function emptyVehicleClassInclusions(): VehicleClassInclusions {
-  return {
-    wifi: "Complimentary",
-    interior: "",
-    climateControl: ""
-  };
+export function emptyVehicleClassInclusions(): VehicleClassInclusion[] {
+  return [];
 }
 
 export function buildInitialVehicleClass(

@@ -2,7 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { InfoIcon, UploadIcon } from "lucide-react";
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVerticalIcon, InfoIcon, PlusIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useFileUpload } from "@/hooks/use-file-upload";
@@ -14,7 +31,8 @@ import {
   VEHICLE_CLASS_BODY_TYPES,
   VEHICLE_CLASS_SERVICE_TIERS,
   type TripType,
-  type VehicleClass
+  type VehicleClass,
+  type VehicleClassInclusion
 } from "@/lib/models";
 import { MultiSelectField } from "@/components/multi-select-field";
 import { Button } from "@/components/ui/button";
@@ -68,6 +86,63 @@ function FieldInfoTooltip({ label, children }: { label: string; children: string
         <p>{children}</p>
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function newInclusion(): VehicleClassInclusion {
+  return { id: crypto.randomUUID(), label: "", value: "" };
+}
+
+function SortableInclusionRow({
+  inclusion,
+  onChange,
+  onRemove
+}: {
+  inclusion: VehicleClassInclusion;
+  onChange: (patch: Partial<Pick<VehicleClassInclusion, "label" | "value">>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: inclusion.id
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition
+      }}
+      className={cn("flex items-center gap-2", isDragging && "opacity-60")}>
+      <button
+        type="button"
+        className="text-muted-foreground hover:bg-accent inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md active:cursor-grabbing"
+        aria-label="Reorder inclusion"
+        {...attributes}
+        {...listeners}>
+        <GripVerticalIcon className="size-4" />
+      </button>
+      <Input
+        value={inclusion.label}
+        onChange={(e) => onChange({ label: e.target.value })}
+        placeholder="Name"
+        aria-label="Inclusion name"
+      />
+      <Input
+        value={inclusion.value}
+        onChange={(e) => onChange({ value: e.target.value })}
+        placeholder="Detail"
+        aria-label="Inclusion detail"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        aria-label="Remove inclusion">
+        <Trash2Icon className="size-4" />
+      </Button>
+    </div>
   );
 }
 
@@ -214,6 +289,11 @@ export function VehicleClassEditSheet({
     maxFiles: 1
   });
 
+  const inclusionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   const sheetKey = vehicleClass?.id ?? "__new__";
   if (sheetKey !== seedKey) {
     setSeedKey(sheetKey);
@@ -257,6 +337,41 @@ export function VehicleClassEditSheet({
     }));
   }
 
+  function updateInclusion(
+    id: string,
+    patch: Partial<Pick<VehicleClassInclusion, "label" | "value">>
+  ) {
+    setDraft((current) => ({
+      ...current,
+      inclusions: current.inclusions.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    }));
+  }
+
+  function removeInclusion(id: string) {
+    setDraft((current) => ({
+      ...current,
+      inclusions: current.inclusions.filter((row) => row.id !== id)
+    }));
+  }
+
+  function addInclusion() {
+    setDraft((current) => ({
+      ...current,
+      inclusions: [...current.inclusions, newInclusion()]
+    }));
+  }
+
+  function onInclusionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setDraft((current) => {
+      const oldIndex = current.inclusions.findIndex((row) => row.id === active.id);
+      const newIndex = current.inclusions.findIndex((row) => row.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return current;
+      return { ...current, inclusions: arrayMove(current.inclusions, oldIndex, newIndex) };
+    });
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -270,6 +385,18 @@ export function VehicleClassEditSheet({
         toast.error("Select at least one supported trip type.");
         return;
       }
+      const incompleteInclusion = draft.inclusions.find(
+        (row) => !row.label.trim() || !row.value.trim()
+      );
+      if (incompleteInclusion) {
+        toast.error("Each inclusion needs both a name and a detail.");
+        return;
+      }
+      const inclusions = draft.inclusions.map((row) => ({
+        id: row.id,
+        label: row.label.trim(),
+        value: row.value.trim()
+      }));
       let nextImageUrl = draft.imageUrl ?? null;
       const pendingImage = imageFiles[0]?.file;
       if (pendingImage instanceof File) {
@@ -280,7 +407,13 @@ export function VehicleClassEditSheet({
           return;
         }
       }
-      await saveVehicleClass({ ...draft, slug, imageUrl: nextImageUrl, updatedAt: new Date() });
+      await saveVehicleClass({
+        ...draft,
+        slug,
+        inclusions,
+        imageUrl: nextImageUrl,
+        updatedAt: new Date()
+      });
       toast.success(isNew ? "Vehicle class created." : "Vehicle class saved.");
       onSaved();
       onOpenChange(false);
@@ -540,50 +673,28 @@ export function VehicleClassEditSheet({
                       Customers see these under “What’s included” when booking this class.
                     </FieldInfoTooltip>
                   </div>
-                  <div className="grid gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="inclusionWifi">Wifi</Label>
-                      <Input
-                        id="inclusionWifi"
-                        value={draft.inclusions.wifi}
-                        onChange={(e) =>
-                          setDraft((c) => ({
-                            ...c,
-                            inclusions: { ...c.inclusions, wifi: e.target.value }
-                          }))
-                        }
-                        placeholder="Complimentary"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="inclusionInterior">Interior</Label>
-                      <Input
-                        id="inclusionInterior"
-                        value={draft.inclusions.interior}
-                        onChange={(e) =>
-                          setDraft((c) => ({
-                            ...c,
-                            inclusions: { ...c.inclusions, interior: e.target.value }
-                          }))
-                        }
-                        placeholder="e.g. Leather, rear privacy"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="inclusionClimate">Climate</Label>
-                      <Input
-                        id="inclusionClimate"
-                        value={draft.inclusions.climateControl}
-                        onChange={(e) =>
-                          setDraft((c) => ({
-                            ...c,
-                            inclusions: { ...c.inclusions, climateControl: e.target.value }
-                          }))
-                        }
-                        placeholder="e.g. Four-zone climate"
-                      />
-                    </div>
-                  </div>
+                  <DndContext
+                    sensors={inclusionSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={onInclusionDragEnd}>
+                    <SortableContext
+                      items={draft.inclusions.map((row) => row.id)}
+                      strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {draft.inclusions.map((inclusion) => (
+                          <SortableInclusionRow
+                            key={inclusion.id}
+                            inclusion={inclusion}
+                            onChange={(patch) => updateInclusion(inclusion.id, patch)}
+                            onRemove={() => removeInclusion(inclusion.id)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                  <Button type="button" variant="outline" size="sm" onClick={addInclusion}>
+                    <PlusIcon /> Add inclusion
+                  </Button>
                 </div>
               </TabsContent>
 

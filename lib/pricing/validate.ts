@@ -26,7 +26,11 @@ import type {
   PricingZone,
   TransferPricingRates
 } from "@/lib/models/pricing";
-import type { VehicleClass, VehicleClassCapacity } from "@/lib/models/vehicle-class";
+import type {
+  VehicleClass,
+  VehicleClassCapacity,
+  VehicleClassInclusion
+} from "@/lib/models/vehicle-class";
 import { ConfigError } from "@/lib/pricing/errors";
 
 function requireNumber(value: unknown, field: string): number {
@@ -191,13 +195,24 @@ function parseVehicleClassCapacity(raw: unknown, path: string): VehicleClassCapa
   };
 }
 
-function parseVehicleClassInclusions(raw: unknown): VehicleClass["inclusions"] {
-  const d = raw && typeof raw === "object" ? (raw as DocumentData) : {};
+function parseVehicleClassInclusion(raw: unknown, path: string): VehicleClassInclusion {
+  if (!raw || typeof raw !== "object") {
+    throw new ConfigError(`Invalid ${path}: expected an inclusion object.`);
+  }
+  const d = raw as DocumentData;
   return {
-    wifi: typeof d.wifi === "string" && d.wifi.trim() ? d.wifi.trim() : "Complimentary",
-    interior: typeof d.interior === "string" ? d.interior : "",
-    climateControl: typeof d.climateControl === "string" ? d.climateControl : ""
+    id: requireString(d.id, `${path}.id`),
+    label: requireString(d.label, `${path}.label`),
+    value: requireString(d.value, `${path}.value`)
   };
+}
+
+function parseVehicleClassInclusions(raw: unknown, path: string): VehicleClassInclusion[] {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) {
+    throw new ConfigError(`Invalid ${path}: expected an array of inclusions.`);
+  }
+  return raw.map((item, index) => parseVehicleClassInclusion(item, `${path}[${index}]`));
 }
 
 export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
@@ -220,7 +235,7 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
     serviceTier,
     bodyType,
     capacity: parseVehicleClassCapacity(d.capacity, `${path}.capacity`),
-    inclusions: parseVehicleClassInclusions(d.inclusions),
+    inclusions: parseVehicleClassInclusions(d.inclusions, `${path}.inclusions`),
     description: typeof d.description === "string" ? d.description : null,
     imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
     isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),

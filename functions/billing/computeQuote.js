@@ -96,10 +96,20 @@ function mapCorporateAccount(id, d) {
   };
 }
 
+function mapVehicleClassInclusion(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = typeof raw.id === "string" ? raw.id.trim() : "";
+  const label = typeof raw.label === "string" ? raw.label.trim() : "";
+  const value = typeof raw.value === "string" ? raw.value.trim() : "";
+  if (!id || !label || !value) return null;
+  return { id, label, value };
+}
+
 function mapVehicleClass(id, d) {
   const data = d || {};
-  const inclusions =
-    data.inclusions && typeof data.inclusions === "object" ? data.inclusions : {};
+  const inclusions = Array.isArray(data.inclusions)
+    ? data.inclusions.map(mapVehicleClassInclusion).filter(Boolean)
+    : [];
   return {
     id,
     slug: data.slug || id,
@@ -120,15 +130,7 @@ function mapVehicleClass(id, d) {
         largeCount: data.capacity?.luggage?.largeCount ?? 0,
       },
     },
-    inclusions: {
-      wifi:
-        typeof inclusions.wifi === "string" && inclusions.wifi.trim()
-          ? inclusions.wifi.trim()
-          : "Complimentary",
-      interior: typeof inclusions.interior === "string" ? inclusions.interior : "",
-      climateControl:
-        typeof inclusions.climateControl === "string" ? inclusions.climateControl : "",
-    },
+    inclusions,
     description: data.description ?? null,
     imageUrl: data.imageUrl ?? null,
     isEnabled: data.isEnabled !== false,
