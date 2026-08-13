@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { useLicenseEntitlements } from "@/hooks/use-feature-enabled";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardDescription,
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -78,7 +79,7 @@ export function LocationFeaturesPanel({
               <CardHeader className="gap-2 px-6 py-5">
                 <div className="flex items-start justify-between gap-3">
                   <CardTitle className="text-base">{copy.title}</CardTitle>
-                  <Badge variant="secondary">Premium</Badge>
+                  <DetailSheetIconBadge icon={Sparkles}>Premium</DetailSheetIconBadge>
                 </div>
                 <CardDescription>{copy.description}</CardDescription>
               </CardHeader>
