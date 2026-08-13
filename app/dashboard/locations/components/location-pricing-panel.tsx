@@ -9,7 +9,7 @@ import {
   formatAddonTripTypes,
   formatAddonVehicleClasses
 } from "@/app/dashboard/locations/components/addon-edit-sheet";
-import { useVehicleClasses } from "@/hooks/use-collections";
+import { useBranchVehicleClasses } from "@/hooks/use-branch-collections";
 import {
   fetchPricingConfiguration,
   savePricingConfiguration
@@ -86,7 +86,7 @@ export function LocationPricingPanel({
   branchId: string;
   nestedSheet?: boolean;
 }) {
-  const { vehicleClasses } = useVehicleClasses();
+  const { vehicleClasses } = useBranchVehicleClasses(branchId);
   const [config, setConfig] = useState<PricingConfig>(buildInitialPricingConfig());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

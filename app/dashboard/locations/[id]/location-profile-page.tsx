@@ -15,7 +15,7 @@ import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/component
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
-import { useInvoices, useTrips } from "@/hooks/use-collections";
+import { useBranchInvoices, useBranchTrips } from "@/hooks/use-branch-collections";
 import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -40,8 +40,8 @@ function isLocationTab(value: string | null): value is LocationTab {
 export function LocationProfilePage({ locationId }: { locationId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { trips } = useTrips();
-  const { invoices } = useInvoices();
+  const { trips } = useBranchTrips(locationId);
+  const { invoices } = useBranchInvoices(locationId);
 
   const tabParam = searchParams.get("tab");
   const activeTab: LocationTab = isLocationTab(tabParam) ? tabParam : "overview";

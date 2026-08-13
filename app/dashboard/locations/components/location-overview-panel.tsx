@@ -18,7 +18,7 @@ import {
   fetchPricingConfiguration
 } from "@/lib/services/firebase-service";
 import { isServiceAreaConfigured } from "@/lib/branch/service-area";
-import { useVehicleClasses } from "@/hooks/use-collections";
+import { useBranchVehicleClasses } from "@/hooks/use-branch-collections";
 
 function SetupRow({ done, label }: { done: boolean; label: string }) {
   return (
@@ -46,7 +46,7 @@ export function LocationOverviewPanel({
   period: ProfileOverviewPeriod;
   onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
-  const { vehicleClasses } = useVehicleClasses();
+  const { vehicleClasses } = useBranchVehicleClasses(branch.id);
   const [hoursConfigured, setHoursConfigured] = useState(false);
   const [pricingConfigured, setPricingConfigured] = useState(false);
   const [localeConfigured, setLocaleConfigured] = useState(false);
