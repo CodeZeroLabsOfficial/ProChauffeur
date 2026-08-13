@@ -18,9 +18,8 @@ const LOCATION_EVENT_CATEGORIES = new Set([
   "pricing"
 ]);
 
-const ALWAYS_ALLOWED_PREFIXES = [
+const PERSONAL_SETTINGS_PREFIXES = [
   "/dashboard/settings/profile",
-  "/dashboard/settings/appearance",
   "/dashboard/settings/account",
   "/dashboard/notifications"
 ] as const;
@@ -29,17 +28,22 @@ const DISPATCHER_PREFIXES = [
   "/dashboard/dispatch",
   "/dashboard/bookings",
   "/dashboard/customers",
+  "/dashboard/accounts",
   "/dashboard/drivers",
   "/dashboard/fleet",
-  ...ALWAYS_ALLOWED_PREFIXES
+  ...PERSONAL_SETTINGS_PREFIXES
 ] as const;
 
 const ACCOUNTS_PREFIXES = [
   "/dashboard/billing",
   "/dashboard/reports",
   "/dashboard/accounts",
-  ...ALWAYS_ALLOWED_PREFIXES
+  "/dashboard/customers",
+  ...PERSONAL_SETTINGS_PREFIXES
 ] as const;
+
+const SETTINGS_APPEARANCE_HREF = "/dashboard/settings/appearance";
+const SETTINGS_PROFILE_HREF = "/dashboard/settings/profile";
 
 export function parseStaffRole(value: unknown): StaffRole | null {
   if (typeof value !== "string") return null;
@@ -72,6 +76,12 @@ export function canUsePath(
 
   const prefixes = role === "dispatcher" ? DISPATCHER_PREFIXES : ACCOUNTS_PREFIXES;
   return prefixes.some((prefix) => pathMatches(path, prefix));
+}
+
+export function defaultSettingsHref(staffRole: StaffRole | null | undefined): string {
+  return canUsePath(staffRole, SETTINGS_APPEARANCE_HREF)
+    ? SETTINGS_APPEARANCE_HREF
+    : SETTINGS_PROFILE_HREF;
 }
 
 export function canAccessLocation(

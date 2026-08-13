@@ -72,7 +72,7 @@ export const navGroups: NavGroup[] = [
       },
       {
         title: "Settings",
-        href: "/dashboard/settings/appearance",
+        href: "/dashboard/settings",
         icon: SettingsIcon,
         items: [
           { title: "Account", href: "/dashboard/settings/account" },

@@ -52,19 +52,17 @@ function filterNavGroups(
     .map((group) => ({
       ...group,
       items: group.items
-        .filter(
-          (item) =>
-            featureAllowed(item.featureId, ready, isEnabled) && canUsePath(staffRole, item.href)
-        )
-        .map((item) =>
-          item.items?.length
-            ? {
-                ...item,
-                items: item.items.filter((sub) => canUsePath(staffRole, sub.href))
-              }
-            : item
-        )
-        .filter((item) => !item.items || item.items.length > 0)
+        .map((item) => {
+          if (item.items?.length) {
+            const items = item.items.filter((sub) => canUsePath(staffRole, sub.href));
+            return { ...item, items };
+          }
+          return item;
+        })
+        .filter((item) => {
+          if (item.items) return item.items.length > 0;
+          return featureAllowed(item.featureId, ready, isEnabled) && canUsePath(staffRole, item.href);
+        })
     }))
     .filter((group) => group.items.length > 0);
 }

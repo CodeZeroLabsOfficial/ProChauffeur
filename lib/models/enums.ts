@@ -26,8 +26,8 @@ export const staffRoleTitle: Record<StaffRole, string> = {
 export const staffRoleDescription: Record<StaffRole, string> = {
   admin: "Full access, including Team.",
   manager: "Ops and settings. Cannot manage Team.",
-  dispatcher: "Dispatch, bookings, customers, chauffeurs, and fleet.",
-  accounts: "Billing, reports, and corporate accounts."
+  dispatcher: "Dispatch, bookings, customers, corporate accounts, chauffeurs, and fleet.",
+  accounts: "Billing, reports, customers, and corporate accounts."
 };
 
 // TripStatus.swift — note snake_case raw values for multi-word cases.

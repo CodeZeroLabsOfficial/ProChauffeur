@@ -5,13 +5,16 @@ import { useCallback, useMemo, useState } from "react";
 import { Check, Settings } from "lucide-react";
 import { toast } from "sonner";
 
+import { useSessionUser } from "@/components/providers/session-provider";
 import { useNotifications } from "@/hooks/use-collections";
+import { defaultSettingsHref } from "@/lib/auth/staff-access";
 import { markAllNotificationsRead } from "@/lib/services/firebase-service";
 import { ListPageHeader } from "@/components/list-page-header";
 import { Button } from "@/components/ui/button";
 import { NotificationsDataTable } from "@/app/dashboard/notifications/data-table";
 
 export default function NotificationsPage() {
+  const session = useSessionUser();
   const { notifications } = useNotifications(200);
   const [markingAll, setMarkingAll] = useState(false);
 
@@ -46,7 +49,7 @@ export default function NotificationsPage() {
               Mark All as Read
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/settings/appearance">
+              <Link href={defaultSettingsHref(session.staffRole)}>
                 <Settings />
               </Link>
             </Button>
