@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckIcon, ChevronDownIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,16 +74,14 @@ function memberStaffRole(user: User): StaffRole {
 }
 
 function grantLabel(user: User, namesById: Map<string, string>): string {
-  if (user.canAccessAllBranches || (!user.staffRole && !user.branchIds?.length)) {
-    return "All Locations";
-  }
+  if (user.canAccessAllBranches) return "All Locations";
   const ids = user.branchIds?.filter(Boolean) ?? [];
   if (ids.length === 0) return "No locations";
   return ids.map((id) => namesById.get(id) ?? id).join(", ");
 }
 
 function grantsFromUser(user: User): Pick<StaffGrantInput, "canAccessAllBranches" | "branchIds"> {
-  if (user.canAccessAllBranches || (!user.staffRole && !user.branchIds?.length)) {
+  if (user.canAccessAllBranches) {
     return { canAccessAllBranches: true, branchIds: null };
   }
   return {
@@ -119,10 +117,6 @@ export default function TeamPage() {
     [branches]
   );
   const callerCanGrantAll = me.canAccessAllBranches === true;
-
-  useEffect(() => {
-    void fetch("/api/admins/ensure-staff", { method: "POST" });
-  }, []);
 
   function resetInvite() {
     setInviteRole(DEFAULT_INVITE_ROLE);

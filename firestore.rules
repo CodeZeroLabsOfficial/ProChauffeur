@@ -29,20 +29,13 @@ service cloud.firestore {
     }
 
     function isStaffAdminUser() {
-      let d = callerUser();
-      return isAdmin() && (!('staffRole' in d) || d.staffRole == 'admin');
-    }
-
-    function hasGrantFields() {
-      let d = callerUser();
-      return 'canAccessAllBranches' in d || 'branchIds' in d;
+      return isAdmin() && callerUser().staffRole == 'admin';
     }
 
     function canAccessBranch(branchId) {
       let d = callerUser();
       return isAdmin() && (
-        !hasGrantFields()
-        || d.canAccessAllBranches == true
+        d.canAccessAllBranches == true
         || (d.branchIds is list && branchId in d.branchIds)
       );
     }
@@ -155,12 +148,12 @@ service cloud.firestore {
 
     // Branch sub-accounts: nested ops data under branches/{branchId}/…
     match /branches/{branchId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
       allow create: if isAdmin();
       allow update, delete: if canAccessBranch(branchId);
 
       match /settings/{docId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow write: if canAccessBranch(branchId);
       }
 
@@ -197,13 +190,13 @@ service cloud.firestore {
       }
 
       match /vehicles/{vehicleId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow create, update, delete: if canAccessBranch(branchId)
           || (signedIn() && request.auth.uid == vehicleId);
       }
 
       match /locations/{locId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow create, update, delete: if canAccessBranch(branchId);
       }
 
@@ -214,7 +207,7 @@ service cloud.firestore {
       }
 
       match /drivers/{driverUid} {
-        allow read: if signedIn();
+        allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow write: if canAccessBranch(branchId) || isSelf(driverUid);
       }
     }

@@ -1,8 +1,4 @@
-import {
-  STAFF_ROLES,
-  type StaffRole,
-  type User
-} from "@/lib/models";
+import { STAFF_ROLES, type StaffRole } from "@/lib/models";
 
 export type StaffLocationGrants = {
   staffRole?: StaffRole | null;
@@ -66,13 +62,15 @@ export function canUsePath(
   staffRole: StaffRole | null | undefined,
   pathname: string
 ): boolean {
-  const role = parseStaffRole(staffRole) ?? "admin";
-  if (role === "admin") return true;
-
+  const role = parseStaffRole(staffRole);
   const path = (pathname.split("?")[0] ?? pathname).replace(/\/+$/, "") || "/";
   if (path === "/dashboard") return true;
-  if (role === "manager") return !pathMatches(path, "/dashboard/settings/team");
   if (path === "/dashboard/settings") return true;
+  if (!role) {
+    return PERSONAL_SETTINGS_PREFIXES.some((prefix) => pathMatches(path, prefix));
+  }
+  if (role === "admin") return true;
+  if (role === "manager") return !pathMatches(path, "/dashboard/settings/team");
 
   const prefixes = role === "dispatcher" ? DISPATCHER_PREFIXES : ACCOUNTS_PREFIXES;
   return prefixes.some((prefix) => pathMatches(path, prefix));
@@ -111,7 +109,7 @@ export function resolveGrantedBranchId(
   if (grants?.defaultBranchId && grantedIds.includes(grants.defaultBranchId)) {
     return grants.defaultBranchId;
   }
-  return grantedIds[0] ?? currentId;
+  return grantedIds[0] ?? "";
 }
 
 export function canViewActivityEvent(
@@ -131,15 +129,6 @@ export function locationIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/dashboard\/locations\/([^/]+)/);
   if (!match?.[1] || match[1] === "new") return null;
   return decodeURIComponent(match[1]);
-}
-
-export function staffGrantsFromUser(user: Pick<User, keyof StaffLocationGrants>): StaffLocationGrants {
-  return {
-    staffRole: user.staffRole,
-    canAccessAllBranches: user.canAccessAllBranches,
-    branchIds: user.branchIds,
-    defaultBranchId: user.defaultBranchId
-  };
 }
 
 export type StaffGrantInput = {
