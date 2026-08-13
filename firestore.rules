@@ -219,6 +219,13 @@ service cloud.firestore {
       }
     }
 
+    // Collection-group reads of `trips` (customer Upcoming across every Location).
+    match /{path=**}/trips/{tripId} {
+      allow read: if signedIn()
+        && resource.data.customerID is string
+        && resource.data.customerID == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

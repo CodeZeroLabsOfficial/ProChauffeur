@@ -10,6 +10,14 @@
     },
     {
       "collectionGroup": "trips",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "customerID", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "trips",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "driverID", "order": "ASCENDING" },
