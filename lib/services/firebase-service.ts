@@ -466,7 +466,8 @@ export async function deleteBranch(branchId: string): Promise<void> {
     });
   }
 
-  invalidatePricingConfigurationCache();
+  invalidatePricingConfigurationCache(id);
+  invalidateOperatorLocaleCache(id);
 }
 
 // ─────────────────────────────── Trips ───────────────────────────────
@@ -1426,7 +1427,7 @@ export async function savePricingConfiguration(
     stripUndefined({ ...config }),
     { merge: true }
   );
-  invalidatePricingConfigurationCache();
+  invalidatePricingConfigurationCache(branchId);
   void createActivityNotification(pricingNotification());
 }
 

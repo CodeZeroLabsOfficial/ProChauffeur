@@ -62,6 +62,7 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
@@ -363,6 +364,7 @@ export function NewBookingSheet({
   sourceTrip?: Trip | null;
   editTrip?: Trip | null;
 }) {
+  const { branchId } = useActiveBranch();
   const { users } = useUsers();
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
@@ -678,18 +680,28 @@ export function NewBookingSheet({
   useEffect(() => {
     if (!open) return;
 
+    let cancelled = false;
+    setPricingConfig(null);
+    setOperatorLocale(null);
+
     Promise.all([
-      getCachedPricingConfiguration(),
-      getCachedOperatorLocale(getActiveBranchId())
+      getCachedPricingConfiguration(branchId),
+      getCachedOperatorLocale(branchId)
     ])
       .then(([pricing, locale]) => {
+        if (cancelled) return;
         setPricingConfig(pricing);
         setOperatorLocale(locale);
       })
       .catch((err) => {
+        if (cancelled) return;
         toast.error(err instanceof Error ? err.message : "Pricing is not configured.");
       });
-  }, [open]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, branchId]);
 
   useEffect(() => {
     if (!open) return;

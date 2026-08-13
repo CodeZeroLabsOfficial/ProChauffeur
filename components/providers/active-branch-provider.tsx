@@ -18,10 +18,6 @@ import {
 } from "@/lib/branch/active-branch-store";
 import { DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
 import { listenBranches } from "@/lib/services/firebase-service";
-import {
-  invalidateOperatorLocaleCache,
-  invalidatePricingConfigurationCache
-} from "@/lib/services/operator-config-cache";
 
 type ActiveBranchContextValue = {
   branchId: string;
@@ -53,8 +49,6 @@ export function ActiveBranchProvider({ children }: { children: ReactNode }) {
 
   const setBranchId = useCallback((next: string) => {
     setStoreBranchId(next);
-    invalidatePricingConfigurationCache();
-    invalidateOperatorLocaleCache();
   }, []);
 
   const activeBranch = useMemo(

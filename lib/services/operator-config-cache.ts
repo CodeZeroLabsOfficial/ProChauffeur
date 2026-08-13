@@ -5,14 +5,15 @@ import {
   fetchPricingConfiguration
 } from "@/lib/services/firebase-service";
 
-let pricingCache: Promise<PricingConfig> | null = null;
+const pricingCache = new Map<string, Promise<PricingConfig>>();
 const localeCache = new Map<string, Promise<OperatorLocale>>();
 
-export function getCachedPricingConfiguration(): Promise<PricingConfig> {
-  if (!pricingCache) {
-    pricingCache = fetchPricingConfiguration();
-  }
-  return pricingCache;
+export function getCachedPricingConfiguration(branchId: string): Promise<PricingConfig> {
+  const existing = pricingCache.get(branchId);
+  if (existing) return existing;
+  const next = fetchPricingConfiguration(branchId);
+  pricingCache.set(branchId, next);
+  return next;
 }
 
 export function getCachedOperatorLocale(branchId: string): Promise<OperatorLocale> {
@@ -23,8 +24,12 @@ export function getCachedOperatorLocale(branchId: string): Promise<OperatorLocal
   return next;
 }
 
-export function invalidatePricingConfigurationCache(): void {
-  pricingCache = null;
+export function invalidatePricingConfigurationCache(branchId?: string): void {
+  if (branchId) {
+    pricingCache.delete(branchId);
+    return;
+  }
+  pricingCache.clear();
 }
 
 export function invalidateOperatorLocaleCache(branchId?: string): void {
