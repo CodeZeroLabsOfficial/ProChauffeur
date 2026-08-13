@@ -29,7 +29,6 @@ import {
   type Vehicle
 } from "@/lib/models";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { appConfig } from "@/lib/env";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
@@ -54,6 +53,17 @@ const statusStepIcons: Record<(typeof ACTIVE_STATUSES)[number], ReactNode> = {
   in_progress: <CircleDotIcon className="size-4 lg:size-5" />,
   completed: <CheckCircle2Icon className="size-4 lg:size-5" />
 };
+
+function quoteTaxLabel(trip: Trip): string {
+  const taxLine = trip.quote.quoteBreakdown?.find((line) => line.category === "tax");
+  const label = taxLine?.label?.trim();
+  return label || "Tax";
+}
+
+function formatQuoteMoney(amount: number | null | undefined, currency: string | null | undefined) {
+  if (amount == null || !currency?.trim()) return "—";
+  return formatCurrency(amount, currency);
+}
 
 function BookingCustomerCard({
   customer,
@@ -419,36 +429,15 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           <SectionCard title="Pricing">
             <DetailRow
               label="Base Fare:"
-              value={
-                trip.quote.quotedSubtotal != null
-                  ? formatCurrency(
-                      trip.quote.quotedSubtotal,
-                      trip.quote.quotedCurrencyCode ?? appConfig.currency
-                    )
-                  : "—"
-              }
+              value={formatQuoteMoney(trip.quote.quotedSubtotal, trip.quote.quotedCurrencyCode)}
             />
             <DetailRow
-              label="GST:"
-              value={
-                trip.quote.quotedTaxAmount != null
-                  ? formatCurrency(
-                      trip.quote.quotedTaxAmount,
-                      trip.quote.quotedCurrencyCode ?? appConfig.currency
-                    )
-                  : "—"
-              }
+              label={`${quoteTaxLabel(trip)}:`}
+              value={formatQuoteMoney(trip.quote.quotedTaxAmount, trip.quote.quotedCurrencyCode)}
             />
             <DetailRow
               label="Total:"
-              value={
-                trip.quote.quotedTotal != null
-                  ? formatCurrency(
-                      trip.quote.quotedTotal,
-                      trip.quote.quotedCurrencyCode ?? appConfig.currency
-                    )
-                  : "—"
-              }
+              value={formatQuoteMoney(trip.quote.quotedTotal, trip.quote.quotedCurrencyCode)}
             />
           </SectionCard>
         </div>

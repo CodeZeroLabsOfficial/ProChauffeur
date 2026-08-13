@@ -80,7 +80,8 @@ function transferLineLabel(trip, legKind = "oneWay") {
 function taxLabelFromTrip(trip) {
   const breakdown = Array.isArray(trip.quote?.quoteBreakdown) ? trip.quote.quoteBreakdown : [];
   const taxLine = breakdown.find((line) => line && line.category === "tax");
-  return taxLine ? String(taxLine.label || "GST") : "GST";
+  const label = typeof taxLine?.label === "string" ? taxLine.label.trim() : "";
+  return label || "Tax";
 }
 
 /**
@@ -159,7 +160,7 @@ function lineItemsFromTrips(trips) {
 
   const items = [];
   let taxAmount = 0;
-  let taxLabel = "GST";
+  let taxLabel = "Tax";
 
   trips.forEach((trip, index) => {
     items.push(
@@ -271,6 +272,14 @@ async function loadTripsForPaymentInvoice(db, seedTripIds, branchId = DEFAULT_BR
   return { trips, refs, tripIds: ids };
 }
 
+function requireQuoteCurrency(trip) {
+  const code = trip?.quote?.quotedCurrencyCode;
+  if (typeof code !== "string" || !code.trim()) {
+    throw new Error("Quote is missing currency.");
+  }
+  return code.trim().toUpperCase();
+}
+
 /**
  * Creates a Firestore invoice aggregating line items and totals for every trip.
  *
@@ -310,7 +319,7 @@ async function createFirestoreInvoice(db, {
     tripIDs,
     branchId,
     status,
-    currencyCode: (primary.quote?.quotedCurrencyCode || "AUD").toUpperCase(),
+    currencyCode: requireQuoteCurrency(primary),
     lineItems,
     subtotal: totals.subtotal,
     taxRate: totals.taxRate,

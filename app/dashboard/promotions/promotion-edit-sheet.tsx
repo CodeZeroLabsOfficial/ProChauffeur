@@ -38,6 +38,7 @@ import {
   type VehicleClass
 } from "@/lib/models";
 import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
+import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
 
@@ -208,7 +209,7 @@ export function PromotionEditSheet({
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
-  const [currency, setCurrency] = useState("AUD");
+  const [currency, setCurrency] = useState("");
   const [seedKey, setSeedKey] = useState("");
 
   const sheetKey = promotion?.id ?? "__new__";
@@ -247,9 +248,9 @@ export function PromotionEditSheet({
 
   useEffect(() => {
     if (!open) return;
-    getCachedOperatorLocale()
-      .then((locale) => setCurrency(locale.currency || "AUD"))
-      .catch(() => setCurrency("AUD"));
+    getCachedOperatorLocale(getActiveBranchId())
+      .then((locale) => setCurrency(locale.currency))
+      .catch(() => setCurrency(""));
   }, [open]);
 
   const branchOptions = branches.map((branch) => ({
@@ -431,7 +432,7 @@ export function PromotionEditSheet({
               ) : (
                 <NumberStepper
                   id="promo-value"
-                  label={`Amount (${currency})`}
+                  label={currency ? `Amount (${currency})` : "Amount"}
                   value={fixedAmount}
                   onChange={(value) => {
                     setFixedAmount(value);

@@ -1,6 +1,5 @@
 import { httpsCallable } from "firebase/functions";
 
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { firebaseFunctions } from "@/lib/firebase/client";
 import type { CorporateAllowedPayment } from "@/lib/models";
 import type { QuoteLineItem, QuoteResult, TripQuoteSnapshot } from "@/lib/models/quote";
@@ -23,7 +22,7 @@ export type ComputeQuoteTripInput = {
 };
 
 export type ComputeQuoteRequest = {
-  branchId?: string;
+  branchId: string;
   customerId: string;
   settlement: CorporateAllowedPayment;
   trip: ComputeQuoteTripInput;
@@ -103,7 +102,7 @@ export async function computeQuoteRemote(request: ComputeQuoteRequest): Promise<
   >(firebaseFunctions(), "computeQuote");
 
   const result = await callable({
-    branchId: request.branchId ?? getActiveBranchId(),
+    branchId: request.branchId,
     customerId: request.customerId,
     settlement: request.settlement,
     promoCode: request.promoCode ?? null,

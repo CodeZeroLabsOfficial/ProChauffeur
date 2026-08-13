@@ -24,10 +24,10 @@ existing iOS app's Firestore schema.
 | `/dashboard/drivers` | Chauffeur management & compliance |
 | `/dashboard/fleet` | Vehicle management (keyed to chauffeurs) |
 | `/dashboard/billing` | Invoices (new `invoices` collection) |
-| `/dashboard/locations` | City markets (list → detail: hours, classes, pricing) |
+| `/dashboard/locations` | City markets (list → detail: hours, classes, pricing, locale) |
 | `/dashboard/settings/company` | Company (org profile) |
 | `/dashboard/reports` | Client-side aggregation over trips & invoices |
-| `/dashboard/settings` | Account · Appearance · Company · Integrations · License · Locale · Profile · Team |
+| `/dashboard/settings` | Account · Appearance · Company · Integrations · License · Profile · Team |
 
 ## Getting started
 
@@ -59,8 +59,14 @@ Auth users live at `users/{uid}`. Operational data is scoped under branches:
 `branches/{branchId}/` with nested `settings`, `trips`, `vehicles`, `locations`,
 `vehicle_classes`, `invoices`, and `drivers`.
 
-Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `company`, `locale`).
-Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`).
+Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `company`).
+Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`, `locale`).
+
+Copy existing company locale onto every location, then delete `app_settings/locale`:
+
+```bash
+npm run migrate:locale
+```
 
 Default branch id: `brisbane`.
 

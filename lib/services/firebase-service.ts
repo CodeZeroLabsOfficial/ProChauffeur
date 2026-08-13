@@ -1499,20 +1499,32 @@ export async function saveOperatingHours(
   void createActivityNotification(operatingHoursNotification());
 }
 
-export async function fetchOperatorLocale(): Promise<OperatorLocale> {
-  const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.locale));
-  if (!snap.exists()) throw new ConfigError("Locale is not configured.");
+export async function fetchOperatorLocale(
+  branchId: string = getActiveBranchId()
+): Promise<OperatorLocale> {
+  const snap = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale, branchId));
+  if (!snap.exists()) {
+    throw new ConfigError("Locale is not configured. Set locale for this location first.");
+  }
   return mapOperatorLocale(snap.data());
 }
 
-export async function saveOperatorLocale(locale: OperatorLocale): Promise<void> {
+export async function saveOperatorLocale(
+  locale: OperatorLocale,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
   validateOperatorLocale(locale);
   await setDoc(
-    doc(db(), Collections.appSettings, AppSettingsDocs.locale),
-    stripUndefined({ ...locale })
+    branchSettingsDocRef(db(), BranchSettingsDocs.locale, branchId),
+    stripUndefined({ ...locale }),
+    { merge: true }
   );
-  invalidateOperatorLocaleCache();
-  void createActivityNotification(localeNotification());
+  const branch = await fetchBranch(branchId);
+  if (branch && branch.timeZoneIdentifier !== locale.timezone) {
+    await upsertBranch({ ...branch, timeZoneIdentifier: locale.timezone, updatedAt: new Date() });
+  }
+  invalidateOperatorLocaleCache(branchId);
+  void createActivityNotification(localeNotification(branchId));
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {

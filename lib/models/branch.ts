@@ -20,7 +20,8 @@ export type BranchSubcollection = (typeof BRANCH_SUBCOLLECTIONS)[number];
 /** Doc ids under `branches/{branchId}/settings/{docId}`. */
 export const BranchSettingsDocs = {
   operatingHours: "operating_hours",
-  pricing: "pricing"
+  pricing: "pricing",
+  locale: "locale"
 } as const;
 
 export type BranchSettingsDocId = (typeof BranchSettingsDocs)[keyof typeof BranchSettingsDocs];

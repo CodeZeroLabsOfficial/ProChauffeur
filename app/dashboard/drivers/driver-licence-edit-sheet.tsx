@@ -10,7 +10,6 @@ import { complianceSheetTitle, hasComplianceDetails } from "@/components/complia
 import { saveDriverProfile } from "@/lib/services/firebase-service";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import {
-  DEFAULT_DRIVER_LICENCE_COUNTRY,
   formatLicenceClasses,
   licenceClassesForCountry,
   licenceJurisdictionsForCountry,
@@ -18,6 +17,7 @@ import {
   type BranchDriver,
   type User
 } from "@/lib/models";
+import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export function DriverLicenceEditSheet({
   const [jurisdictionCode, setJurisdictionCode] = useState(
     () => license?.jurisdictionCode?.trim() ?? ""
   );
-  const [licenceCountry, setLicenceCountry] = useState(DEFAULT_DRIVER_LICENCE_COUNTRY);
+  const [licenceCountry, setLicenceCountry] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
@@ -86,12 +86,12 @@ export function DriverLicenceEditSheet({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    getCachedOperatorLocale()
+    getCachedOperatorLocale(getActiveBranchId())
       .then((locale) => {
         if (!cancelled) setLicenceCountry(locale.driverLicenceCountry);
       })
       .catch(() => {
-        if (!cancelled) setLicenceCountry(DEFAULT_DRIVER_LICENCE_COUNTRY);
+        if (!cancelled) setLicenceCountry("");
       });
     return () => {
       cancelled = true;
@@ -99,6 +99,9 @@ export function DriverLicenceEditSheet({
   }, [open]);
 
   const classOptions = useMemo(() => {
+    if (!licenceCountry) {
+      return licenceClasses.map((code) => ({ value: code, label: code }));
+    }
     const preset = licenceClassesForCountry(licenceCountry);
     const known = new Set(preset.map((option) => option.value.toUpperCase()));
     const extras = licenceClasses
@@ -108,6 +111,10 @@ export function DriverLicenceEditSheet({
   }, [licenceCountry, licenceClasses]);
 
   const jurisdictionOptions = useMemo(() => {
+    if (!licenceCountry) {
+      const current = jurisdictionCode.trim();
+      return current ? [{ value: current, label: current }] : [];
+    }
     const preset = licenceJurisdictionsForCountry(licenceCountry);
     const known = new Set(preset.map((option) => option.value.toUpperCase()));
     const current = jurisdictionCode.trim();

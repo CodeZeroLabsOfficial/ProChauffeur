@@ -108,7 +108,11 @@ async function createCorporateInvoice(db, {
   const tripIds = trips.map((t) => t.id);
   const number = invoiceNumber();
   const ref = invoicesCollection(db, branchId).doc();
-  const currencyCode = (first.quote?.quotedCurrencyCode || "AUD").toUpperCase();
+  const quotedCurrency = first.quote?.quotedCurrencyCode;
+  if (typeof quotedCurrency !== "string" || !quotedCurrency.trim()) {
+    throw new Error("Quote is missing currency.");
+  }
+  const currencyCode = quotedCurrency.trim().toUpperCase();
   const payload = {
     id: ref.id,
     invoiceNumber: number,

@@ -15,7 +15,9 @@ import {
   distanceUnitTitle,
   optionsWithCurrent,
   taxDisplayModeTitle,
-  type OperatorLocale
+  type DistanceUnit,
+  type OperatorLocale,
+  type TaxDisplayMode
 } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +39,34 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 
-function localeFormState(locale: OperatorLocale) {
+type LocaleFormState = {
+  language: string;
+  currency: string;
+  timezone: string;
+  distanceUnit: string;
+  defaultTaxRatePct: number;
+  taxDisplayName: string;
+  taxDisplayMode: string;
+  showTaxOnQuotes: boolean;
+  driverLicenceCountry: string;
+};
+
+function emptyFormState(): LocaleFormState {
+  return {
+    language: "",
+    currency: "",
+    timezone: "",
+    distanceUnit: "",
+    defaultTaxRatePct: 0,
+    taxDisplayName: "",
+    taxDisplayMode: "",
+    showTaxOnQuotes: false,
+    driverLicenceCountry: ""
+  };
+}
+
+function localeFormState(locale: OperatorLocale | null): LocaleFormState {
+  if (!locale) return emptyFormState();
   return {
     language: locale.locale,
     currency: locale.currency,
@@ -52,28 +81,28 @@ function localeFormState(locale: OperatorLocale) {
 }
 
 export function LocaleEditSheet({
+  branchId,
   locale,
   open,
   onOpenChange,
   onSaved
 }: {
-  locale: OperatorLocale;
+  branchId: string;
+  locale: OperatorLocale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (locale: OperatorLocale) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [language, setLanguage] = useState(locale.locale);
-  const [currency, setCurrency] = useState(locale.currency);
-  const [timezone, setTimezone] = useState(locale.timezone);
-  const [distanceUnit, setDistanceUnit] = useState<OperatorLocale["distanceUnit"]>(locale.distanceUnit);
-  const [defaultTaxRatePct, setDefaultTaxRatePct] = useState(locale.defaultTaxRate * 100);
-  const [taxDisplayName, setTaxDisplayName] = useState(locale.taxName);
-  const [taxDisplayMode, setTaxDisplayMode] = useState<OperatorLocale["taxDisplayMode"]>(
-    locale.taxDisplayMode
-  );
-  const [showTaxOnQuotes, setShowTaxOnQuotes] = useState(locale.showTaxOnQuotes);
-  const [driverLicenceCountry, setDriverLicenceCountry] = useState(locale.driverLicenceCountry);
+  const [language, setLanguage] = useState("");
+  const [currency, setCurrency] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [distanceUnit, setDistanceUnit] = useState("");
+  const [defaultTaxRatePct, setDefaultTaxRatePct] = useState(0);
+  const [taxDisplayName, setTaxDisplayName] = useState("");
+  const [taxDisplayMode, setTaxDisplayMode] = useState("");
+  const [showTaxOnQuotes, setShowTaxOnQuotes] = useState(false);
+  const [driverLicenceCountry, setDriverLicenceCountry] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -95,26 +124,34 @@ export function LocaleEditSheet({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data: OperatorLocale = {
-      locale: language.trim(),
-      currency: currency.trim().toUpperCase(),
-      timezone: timezone.trim(),
-      distanceUnit,
-      defaultTaxRate: defaultTaxRatePct / 100,
-      taxName: taxDisplayName.trim(),
-      taxDisplayMode,
-      showTaxOnQuotes,
-      driverLicenceCountry
-    };
-
-    if (!data.locale || !data.currency || !data.timezone || !data.taxName) {
+    if (
+      !language.trim() ||
+      !currency.trim() ||
+      !timezone.trim() ||
+      !taxDisplayName.trim() ||
+      !driverLicenceCountry.trim() ||
+      !DISTANCE_UNITS.includes(distanceUnit as DistanceUnit) ||
+      !TAX_DISPLAY_MODES.includes(taxDisplayMode as TaxDisplayMode)
+    ) {
       toast.error("Complete all required locale fields.");
       return;
     }
 
+    const data: OperatorLocale = {
+      locale: language.trim(),
+      currency: currency.trim().toUpperCase(),
+      timezone: timezone.trim(),
+      distanceUnit: distanceUnit as DistanceUnit,
+      defaultTaxRate: defaultTaxRatePct / 100,
+      taxName: taxDisplayName.trim(),
+      taxDisplayMode: taxDisplayMode as TaxDisplayMode,
+      showTaxOnQuotes,
+      driverLicenceCountry
+    };
+
     setSaving(true);
     try {
-      await saveOperatorLocale(data);
+      await saveOperatorLocale(data, branchId);
       onSaved(data);
       toast.success("Locale preferences saved.");
       onOpenChange(false);
@@ -129,16 +166,17 @@ export function LocaleEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Edit locale</SheetTitle>
+          <SheetTitle>{locale ? "Edit locale" : "Configure locale"}</SheetTitle>
           <SheetDescription>
-            Set regional and tax preferences used for pricing, quotes, and formatting.
+            Set regional and tax preferences for this location. Quotes cannot run until locale is
+            saved.
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="space-y-4 px-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="language">Language</Label>
-              <Select value={language} onValueChange={setLanguage} disabled={saving}>
+              <Select value={language || undefined} onValueChange={setLanguage} disabled={saving}>
                 <SelectTrigger id="language" className="w-full">
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
@@ -154,7 +192,7 @@ export function LocaleEditSheet({
             <div className="space-y-2">
               <Label htmlFor="driverLicenceCountry">Country</Label>
               <Select
-                value={driverLicenceCountry}
+                value={driverLicenceCountry || undefined}
                 onValueChange={setDriverLicenceCountry}
                 disabled={saving}>
                 <SelectTrigger id="driverLicenceCountry" className="w-full">
@@ -171,7 +209,7 @@ export function LocaleEditSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="timezone">Time zone</Label>
-              <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
+              <Select value={timezone || undefined} onValueChange={setTimezone} disabled={saving}>
                 <SelectTrigger id="timezone" className="w-full">
                   <SelectValue placeholder="Select time zone" />
                 </SelectTrigger>
@@ -186,7 +224,7 @@ export function LocaleEditSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
-              <Select value={currency} onValueChange={setCurrency} disabled={saving}>
+              <Select value={currency || undefined} onValueChange={setCurrency} disabled={saving}>
                 <SelectTrigger id="currency" className="w-full">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
@@ -202,11 +240,11 @@ export function LocaleEditSheet({
             <div className="space-y-2">
               <Label htmlFor="distanceUnit">Distance unit</Label>
               <Select
-                value={distanceUnit}
-                onValueChange={(v) => setDistanceUnit(v as OperatorLocale["distanceUnit"])}
+                value={distanceUnit || undefined}
+                onValueChange={setDistanceUnit}
                 disabled={saving}>
                 <SelectTrigger id="distanceUnit" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select unit" />
                 </SelectTrigger>
                 <SelectContent>
                   {DISTANCE_UNITS.map((unit) => (
@@ -234,6 +272,7 @@ export function LocaleEditSheet({
                 id="taxDisplayName"
                 value={taxDisplayName}
                 onChange={(e) => setTaxDisplayName(e.target.value)}
+                placeholder="e.g. GST or VAT"
                 required
                 disabled={saving}
               />
@@ -241,11 +280,11 @@ export function LocaleEditSheet({
             <div className="space-y-2">
               <Label htmlFor="taxDisplayMode">Tax display mode</Label>
               <Select
-                value={taxDisplayMode}
-                onValueChange={(v) => setTaxDisplayMode(v as OperatorLocale["taxDisplayMode"])}
+                value={taxDisplayMode || undefined}
+                onValueChange={setTaxDisplayMode}
                 disabled={saving}>
                 <SelectTrigger id="taxDisplayMode" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select mode" />
                 </SelectTrigger>
                 <SelectContent>
                   {TAX_DISPLAY_MODES.map((mode) => (

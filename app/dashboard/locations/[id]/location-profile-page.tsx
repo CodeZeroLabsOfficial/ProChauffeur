@@ -7,6 +7,7 @@ import { ChevronLeftIcon } from "lucide-react";
 
 import { LocationDetailCard } from "@/app/dashboard/locations/components/location-detail-card";
 import { LocationOverviewPanel } from "@/app/dashboard/locations/components/location-overview-panel";
+import { LocationLocalePanel } from "@/app/dashboard/locations/components/location-locale-panel";
 import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
 import { LocationServiceAreaPanel } from "@/app/dashboard/locations/components/location-service-area-panel";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
@@ -20,7 +21,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { Branch } from "@/lib/models";
 import { fetchBranch } from "@/lib/services/firebase-service";
 
-const LOCATION_TABS = ["overview", "service-area", "hours", "classes", "pricing"] as const;
+const LOCATION_TABS = ["overview", "service-area", "hours", "classes", "pricing", "locale"] as const;
 type LocationTab = (typeof LOCATION_TABS)[number];
 
 function isLocationTab(value: string | null): value is LocationTab {
@@ -114,6 +115,10 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
 
           <TabsContent value="pricing" className="mt-0 space-y-4">
             <LocationPricingPanel branchId={branch.id} />
+          </TabsContent>
+
+          <TabsContent value="locale" className="mt-0 space-y-4">
+            <LocationLocalePanel branchId={branch.id} />
           </TabsContent>
         </Tabs>
       </DetailPageShell>

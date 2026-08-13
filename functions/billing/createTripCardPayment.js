@@ -42,10 +42,16 @@ function validateTripPayload(trip, customerUid) {
 
 function sumTripTotals(trips) {
   let total = 0;
-  let currency = "AUD";
+  let currency = null;
   for (const trip of trips) {
     total += Number(trip.quote?.quotedTotal) || 0;
-    if (trip.quote?.quotedCurrencyCode) currency = trip.quote.quotedCurrencyCode;
+    const code = trip.quote?.quotedCurrencyCode;
+    if (typeof code === "string" && code.trim()) {
+      currency = code.trim().toUpperCase();
+    }
+  }
+  if (!currency) {
+    throw new Error("Quote is missing currency.");
   }
   return { total, currency };
 }

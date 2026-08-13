@@ -11,7 +11,6 @@ const HREF = {
   company: "/dashboard/settings/company",
   locations: "/dashboard/locations",
   operatingHours: "/dashboard/locations",
-  locale: "/dashboard/settings/locale",
   pricing: "/dashboard/locations",
   billing: "/dashboard/billing",
   team: "/dashboard/settings/team"
@@ -138,13 +137,14 @@ export function operatingHoursNotification(): CreateActivityNotificationInput {
   };
 }
 
-export function localeNotification(): CreateActivityNotificationInput {
+export function localeNotification(branchId: string): CreateActivityNotificationInput {
   return {
     category: "locale",
     action: "updated",
     title: "Locale settings",
     message: "Locale settings updated",
-    href: HREF.locale
+    href: `${HREF.locations}/${branchId}?tab=locale`,
+    entityId: branchId
   };
 }
 

@@ -73,9 +73,8 @@ service cloud.firestore {
 
     match /app_settings/{docId} {
       allow read: if docId in ['license', 'plans', 'workspace', 'company']
-        || (signedIn() && docId == 'locale')
         || (signedIn() && isAdmin() && docId == 'integrations');
-      allow write: if isAdmin() && docId in ['license', 'plans', 'workspace', 'integrations', 'company', 'locale'];
+      allow write: if isAdmin() && docId in ['license', 'plans', 'workspace', 'integrations', 'company'];
     }
 
     function validNotificationCategories() {

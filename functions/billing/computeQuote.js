@@ -158,18 +158,63 @@ function mapPricingConfig(d) {
   };
 }
 
+function requireString(value, field) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Locale is not configured for this Location (${field}).`
+    );
+  }
+  return value.trim();
+}
+
 function mapOperatorLocale(d) {
-  const data = d || {};
+  if (!d || typeof d !== "object") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location."
+    );
+  }
+  if (d.distanceUnit !== "km" && d.distanceUnit !== "mile") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (distanceUnit)."
+    );
+  }
+  if (typeof d.defaultTaxRate !== "number" || !Number.isFinite(d.defaultTaxRate) || d.defaultTaxRate < 0) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (defaultTaxRate)."
+    );
+  }
+  if (d.taxDisplayMode !== "inclusive" && d.taxDisplayMode !== "exclusive") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (taxDisplayMode)."
+    );
+  }
+  if (typeof d.showTaxOnQuotes !== "boolean") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (showTaxOnQuotes)."
+    );
+  }
+  if (typeof d.driverLicenceCountry !== "string" || !d.driverLicenceCountry.trim()) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (driverLicenceCountry)."
+    );
+  }
   return {
-    locale: data.locale || "en-AU",
-    currency: data.currency || "AUD",
-    timezone: data.timezone || "Australia/Sydney",
-    distanceUnit: data.distanceUnit === "mile" ? "mile" : "km",
-    defaultTaxRate: typeof data.defaultTaxRate === "number" ? data.defaultTaxRate : 0.1,
-    taxName: data.taxName || "GST",
-    taxDisplayMode: data.taxDisplayMode === "inclusive" ? "inclusive" : "exclusive",
-    showTaxOnQuotes: data.showTaxOnQuotes === true,
-    driverLicenceCountry: data.driverLicenceCountry || "AU",
+    locale: requireString(d.locale, "locale"),
+    currency: requireString(d.currency, "currency").toUpperCase(),
+    timezone: requireString(d.timezone, "timezone"),
+    distanceUnit: d.distanceUnit,
+    defaultTaxRate: d.defaultTaxRate,
+    taxName: requireString(d.taxName, "taxName"),
+    taxDisplayMode: d.taxDisplayMode,
+    showTaxOnQuotes: d.showTaxOnQuotes,
+    driverLicenceCountry: d.driverLicenceCountry.trim(),
   };
 }
 
@@ -348,7 +393,7 @@ async function runComputeQuote(db, {
     { license, catalog },
   ] = await Promise.all([
     db.doc(`${Collections.branches}/${branchId}/settings/pricing`).get(),
-    db.collection("app_settings").doc("locale").get(),
+    db.doc(`${Collections.branches}/${branchId}/settings/locale`).get(),
     db.doc(`${Collections.branches}/${branchId}/vehicle_classes/${vehicleClassId}`).get(),
     db.collection(`${Collections.branches}/${branchId}/locations`).get(),
     db.doc(`${Collections.users}/${customerId}`).get(),
@@ -359,7 +404,10 @@ async function runComputeQuote(db, {
     throw new HttpsError("failed-precondition", "Pricing is not configured for this Location.");
   }
   if (!localeSnap.exists) {
-    throw new HttpsError("failed-precondition", "Locale is not configured.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location."
+    );
   }
   if (!vehicleClassSnap.exists) {
     throw new HttpsError("not-found", "Vehicle class not found.");

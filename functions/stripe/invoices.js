@@ -19,7 +19,10 @@ async function sendCustomerTripInvoice(db, {
 }) {
   const stripeCustomerId = await syncUserStripeCustomer(db, customerUid);
   const stripe = getStripe();
-  const currency = String(currencyCode || "AUD").toLowerCase();
+  if (typeof currencyCode !== "string" || !currencyCode.trim()) {
+    throw new Error("Invoice is missing currency.");
+  }
+  const currency = currencyCode.trim().toLowerCase();
 
   for (const line of lineItems) {
     await stripe.invoiceItems.create({
@@ -76,7 +79,10 @@ async function sendCorporateInvoice(db, {
 }) {
   const stripeCustomerId = await syncCorporateStripeCustomer(db, account.id);
   const stripe = getStripe();
-  const currency = String(currencyCode || "AUD").toLowerCase();
+  if (typeof currencyCode !== "string" || !currencyCode.trim()) {
+    throw new Error("Invoice is missing currency.");
+  }
+  const currency = currencyCode.trim().toLowerCase();
   const daysUntilDue = Math.max(
     1,
     typeof paymentTermsDays === "number" && Number.isFinite(paymentTermsDays)

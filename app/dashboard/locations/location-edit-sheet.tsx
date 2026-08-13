@@ -51,6 +51,7 @@ import {
   upsertBranch
 } from "@/lib/services/firebase-service";
 import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
+import { LocationLocalePanel } from "@/app/dashboard/locations/components/location-locale-panel";
 import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
 import { LocationServiceAreaForm } from "@/app/dashboard/locations/components/location-service-area-form";
 import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
@@ -516,6 +517,9 @@ export function LocationEditSheet({
               <ProfileV2TabTrigger value="pricing" disabled={!locationExists}>
                 Pricing
               </ProfileV2TabTrigger>
+              <ProfileV2TabTrigger value="locale" disabled={!locationExists}>
+                Locale
+              </ProfileV2TabTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-0">
@@ -580,6 +584,16 @@ export function LocationEditSheet({
               ) : (
                 <p className="text-muted-foreground text-sm">
                   Save the location overview first to configure pricing.
+                </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="locale" className="mt-0 space-y-4">
+              {working ? (
+                <LocationLocalePanel branchId={working.id} />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Save the location overview first to configure locale.
                 </p>
               )}
             </TabsContent>

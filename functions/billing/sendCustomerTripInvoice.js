@@ -100,7 +100,11 @@ async function sendCustomerTripInvoiceHandler(request) {
     throw new HttpsError("failed-precondition", "Trip has no customer.");
   }
 
-  const currency = (primary.quote?.quotedCurrencyCode || "AUD").toLowerCase();
+  const quotedCurrency = primary.quote?.quotedCurrencyCode;
+  if (typeof quotedCurrency !== "string" || !quotedCurrency.trim()) {
+    throw new HttpsError("failed-precondition", "Quote is missing currency.");
+  }
+  const currency = quotedCurrency.trim().toLowerCase();
   const lineItems = lineItemsFromTrips(trips);
 
   const firestoreInvoice = await createFirestoreInvoice(db, {

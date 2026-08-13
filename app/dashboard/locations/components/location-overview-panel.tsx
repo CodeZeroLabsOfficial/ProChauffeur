@@ -14,6 +14,7 @@ import type { Invoice } from "@/lib/models/invoice";
 import type { Trip } from "@/lib/models/trip";
 import {
   fetchOperatingHours,
+  fetchOperatorLocale,
   fetchPricingConfiguration
 } from "@/lib/services/firebase-service";
 import { isServiceAreaConfigured } from "@/lib/branch/service-area";
@@ -48,6 +49,7 @@ export function LocationOverviewPanel({
   const { vehicleClasses } = useVehicleClasses();
   const [hoursConfigured, setHoursConfigured] = useState(false);
   const [pricingConfigured, setPricingConfigured] = useState(false);
+  const [localeConfigured, setLocaleConfigured] = useState(false);
 
   const officeSet = Boolean(branch.officeAddressLine?.trim());
   const serviceAreaSet = isServiceAreaConfigured(branch.serviceArea);
@@ -61,6 +63,10 @@ export function LocationOverviewPanel({
     fetchPricingConfiguration(branch.id)
       .then(() => setPricingConfigured(true))
       .catch(() => setPricingConfigured(false));
+
+    fetchOperatorLocale(branch.id)
+      .then(() => setLocaleConfigured(true))
+      .catch(() => setLocaleConfigured(false));
   }, [branch.id]);
 
   return (
@@ -78,6 +84,7 @@ export function LocationOverviewPanel({
             <SetupRow done={hoursConfigured} label="Operating hours" />
             <SetupRow done={classesSet} label="Vehicle classes" />
             <SetupRow done={pricingConfigured} label="Pricing" />
+            <SetupRow done={localeConfigured} label="Locale" />
           </CardContent>
         </Card>
       </div>

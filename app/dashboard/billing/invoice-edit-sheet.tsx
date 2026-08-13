@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
+import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { createInvoice, fetchOperatorLocale } from "@/lib/services/firebase-service";
 import {
   computeInvoiceTotals,
@@ -12,7 +13,6 @@ import {
   type InvoiceStatus
 } from "@/lib/models";
 import { NEW_INVOICE_STATUSES } from "@/app/dashboard/billing/lib/invoice-actions";
-import { appConfig } from "@/lib/env";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +47,9 @@ export function InvoiceEditSheet({
 }) {
   const [status, setStatus] = useState<InvoiceStatus>("draft");
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([newLine()]);
-  const [taxRate, setTaxRate] = useState(10);
-  const [currencyCode, setCurrencyCode] = useState("AUD");
+  const [taxRate, setTaxRate] = useState(0);
+  const [currencyCode, setCurrencyCode] = useState("");
+  const [localeReady, setLocaleReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -56,16 +57,19 @@ export function InvoiceEditSheet({
     if (!open) return;
     setStatus("draft");
     setLineItems([newLine()]);
-    setTaxRate(10);
-    setCurrencyCode("AUD");
+    setTaxRate(0);
+    setCurrencyCode("");
+    setLocaleReady(false);
     setFormKey((k) => k + 1);
-    fetchOperatorLocale()
+    fetchOperatorLocale(getActiveBranchId())
       .then((locale) => {
         setTaxRate(locale.defaultTaxRate * 100);
         setCurrencyCode(locale.currency);
+        setLocaleReady(true);
       })
-      .catch(() => {
-        // Invoice can still be created manually when locale is not configured.
+      .catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Locale is not configured.");
+        setLocaleReady(false);
       });
   }, [open]);
 
@@ -121,7 +125,9 @@ export function InvoiceEditSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>New invoice</SheetTitle>
-          <SheetDescription>Amounts are in {appConfig.currency}.</SheetDescription>
+          <SheetDescription>
+            {currencyCode ? `Amounts are in ${currencyCode}.` : "Load location locale to set currency."}
+          </SheetDescription>
         </SheetHeader>
         <form key={formKey} onSubmit={onSubmit} className="space-y-4 px-4">
           <div className="grid grid-cols-2 gap-3">
@@ -212,15 +218,19 @@ export function InvoiceEditSheet({
             <div className="flex flex-col justify-end gap-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(totals.subtotal)}</span>
+                <span>
+                  {currencyCode ? formatCurrency(totals.subtotal, currencyCode) : "—"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tax</span>
-                <span>{formatCurrency(totals.taxAmount)}</span>
+                <span>
+                  {currencyCode ? formatCurrency(totals.taxAmount, currencyCode) : "—"}
+                </span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span>{formatCurrency(totals.total)}</span>
+                <span>{currencyCode ? formatCurrency(totals.total, currencyCode) : "—"}</span>
               </div>
             </div>
           </div>
@@ -248,7 +258,7 @@ export function InvoiceEditSheet({
 
           <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
             <span />
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !localeReady || !currencyCode}>
               {saving ? "Saving…" : "Create invoice"}
             </Button>
           </SheetFooter>

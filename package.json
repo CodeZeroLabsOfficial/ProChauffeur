@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:locale": "node scripts/migrate-locale-to-branches.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

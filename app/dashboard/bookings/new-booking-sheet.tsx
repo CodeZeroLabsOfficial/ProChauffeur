@@ -136,6 +136,7 @@ async function resolveBookingQuote(
 ): Promise<QuoteResult> {
   if (request.corporateAccount && opts.customerId && opts.settlement) {
     return computeQuoteRemote({
+      branchId: getActiveBranchId(),
       customerId: opts.customerId,
       settlement: opts.settlement,
       trip: {
@@ -419,13 +420,13 @@ export function NewBookingSheet({
       ) ?? [],
     [pricingConfig, quoteTripType]
   );
-  const currency = operatorLocale?.currency ?? "AUD";
+  const currency = operatorLocale?.currency;
 
   const addonOptions = useMemo(
     () =>
       pricingAddons.map((addon) => ({
         value: addon.id,
-        label: addonLabel(addon, currency)
+        label: currency ? addonLabel(addon, currency) : addon.title
       })),
     [pricingAddons, currency]
   );
@@ -677,7 +678,10 @@ export function NewBookingSheet({
   useEffect(() => {
     if (!open) return;
 
-    Promise.all([getCachedPricingConfiguration(), getCachedOperatorLocale()])
+    Promise.all([
+      getCachedPricingConfiguration(),
+      getCachedOperatorLocale(getActiveBranchId())
+    ])
       .then(([pricing, locale]) => {
         setPricingConfig(pricing);
         setOperatorLocale(locale);
@@ -1601,7 +1605,11 @@ export function NewBookingSheet({
               <div className="bg-muted rounded-lg px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Estimated total: </span>
                 <span className="font-medium">
-                  {quoting ? "Calculating…" : formatCurrency(quotedTotal, currency)}
+                  {quoting
+                    ? "Calculating…"
+                    : currency
+                      ? formatCurrency(quotedTotal, currency)
+                      : "—"}
                 </span>
               </div>
             ) : null}
