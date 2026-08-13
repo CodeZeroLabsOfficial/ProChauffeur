@@ -208,6 +208,12 @@ export function canCreateLocation(used: number, maxLocations: number): boolean {
   return used < maxLocations;
 }
 
+/** Whether another chauffeur user may be added under the current cap. */
+export function canAddDriver(used: number, maxDrivers: number): boolean {
+  if (maxDrivers >= UNLIMITED) return true;
+  return used < maxDrivers;
+}
+
 export function capLabel(value: number): string {
   return value >= UNLIMITED ? "Unlimited" : String(value);
 }

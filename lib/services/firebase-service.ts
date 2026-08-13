@@ -74,10 +74,10 @@ import {
   type User,
   type UserPreferences,
   type UserProfile,
-  type UserRole,
   type Vehicle,
   type VehicleClass,
   type CorporateAccount,
+  effectiveChauffeurUserId,
   vehicleDisplayName
 } from "@/lib/models";
 import {
@@ -125,6 +125,7 @@ import {
   type BranchDriver
 } from "@/lib/models/branch";
 import {
+  canAddDriver,
   canCreateLocation,
   clampPreferredPayment,
   normalizeAllowedPaymentMethods,
@@ -1165,8 +1166,24 @@ export async function saveDriverProfile(
   const branchId = getActiveBranchId();
   const userRef = doc(db(), Collections.users, uid);
   const userSnap = await getDoc(userRef);
+  const homeBranchId =
+    typeof userSnap.data()?.homeBranchId === "string" ? userSnap.data()?.homeBranchId : null;
+  if (homeBranchId && homeBranchId !== branchId) {
+    throw new Error("This chauffeur is assigned to another Location.");
+  }
   const patch: Record<string, unknown> = {};
-  if (options?.isNew || !userSnap.data()?.homeBranchId) {
+  if (options?.isNew) {
+    const [license, driverSnap] = await Promise.all([
+      fetchLicense(),
+      getDocs(query(collection(db(), Collections.users), where("role", "==", "driver")))
+    ]);
+    const used = driverSnap.docs.filter((d) => d.id !== uid).length;
+    if (!canAddDriver(used, license.maxDrivers)) {
+      throw new Error("Driver limit reached on the current license.");
+    }
+    patch.role = "driver";
+    patch.homeBranchId = branchId;
+  } else if (!homeBranchId) {
     patch.homeBranchId = branchId;
   }
   if (Object.keys(patch).length > 0) {
@@ -1179,35 +1196,18 @@ export async function saveDriverProfile(
   }
 }
 
-export async function updateUserRole(uid: string, role: UserRole): Promise<void> {
-  await updateDoc(doc(db(), Collections.users, uid), { role });
-}
-
-/** Demotes a chauffeur to customer and removes their Location roster (and fleet vehicle if any). */
+/** Deletes the chauffeur Auth account, user doc, and home roster. */
 export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
   const branchId = getActiveBranchId();
-  const vehicleRef = branchDocRef(db(), "vehicles", uid);
-  const vehicleSnap = await getDoc(vehicleRef);
-  if (vehicleSnap.exists()) {
-    await deleteVehicle(uid);
+  const res = await fetch(`/api/drivers/${encodeURIComponent(uid)}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ branchId, driverTitle })
+  });
+  const body = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not delete the chauffeur.");
   }
-  const userRef = doc(db(), Collections.users, uid);
-  const userSnap = await getDoc(userRef);
-  const homeBranchId =
-    typeof userSnap.data()?.homeBranchId === "string" ? userSnap.data()?.homeBranchId : null;
-  const patch: Record<string, unknown> = {
-    role: "customer"
-  };
-  if (!homeBranchId || homeBranchId === branchId) {
-    patch.homeBranchId = deleteField();
-  }
-  await updateDoc(userRef, patch);
-  try {
-    await deleteDoc(branchDocRef(db(), "drivers", uid));
-  } catch {
-    /* roster entry may not exist yet */
-  }
-  void createActivityNotification(driverNotification("deleted", driverTitle ?? "Chauffeur", uid));
 }
 
 // ────────────────────────── Branch drivers (roster) ──────────────────────────
@@ -1316,8 +1316,7 @@ export async function assignFleetVehicle(
   let found = false;
   for (const v of vehicles) {
     if (v.driverID === vehicleDocumentId) found = true;
-    const linked =
-      v.assignedChauffeurUserId == null ? v.driverID : v.assignedChauffeurUserId || null;
+    const linked = effectiveChauffeurUserId(v);
     if (linked === toChauffeurUserId && v.driverID !== vehicleDocumentId) {
       batch.update(branchDocRef(db(), "vehicles", v.driverID), { assignedChauffeurUserId: "" });
     }

@@ -82,10 +82,12 @@ function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId:
 
 export function DriversDataTable({
   createOpen,
-  onCreateOpenChange
+  onCreateOpenChange,
+  canAdd = true
 }: {
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
+  canAdd?: boolean;
 }) {
   const { users } = useUsers();
   const { chauffeurs, loading } = useRosterChauffeurs();
@@ -181,7 +183,11 @@ export function DriversDataTable({
   const handleRemoveDriver = useCallback(
     async (c: RosterChauffeur) => {
       const name = driverTitle(c);
-      if (!window.confirm(`Remove ${name} from chauffeurs? Their fleet vehicle will also be removed if one exists.`)) {
+      if (
+        !window.confirm(
+          `This will permanently delete ${name}'s account. This action cannot be undone.`
+        )
+      ) {
         return;
       }
       try {
@@ -191,9 +197,9 @@ export function DriversDataTable({
           setEditOpen(false);
           setSelectedId(null);
         }
-        toast.success("Driver removed.");
-      } catch {
-        toast.error("Could not remove the driver.");
+        toast.success("Driver deleted.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not delete the chauffeur.");
       }
     },
     [driverTitle, selectedId]
@@ -528,6 +534,7 @@ export function DriversDataTable({
         user={createOpen ? null : selectedChauffeur?.user ?? null}
         roster={createOpen ? null : selectedChauffeur?.roster ?? null}
         candidates={candidates}
+        canAdd={canAdd}
         open={createOpen || editOpen}
         onOpenChange={(next) => {
           if (createOpen) handleCreateOpenChange(next);

@@ -45,6 +45,16 @@ service cloud.firestore {
         .hasAny(['staffRole', 'branchIds', 'canAccessAllBranches']);
     }
 
+    function homeBranchLocked() {
+      return !('homeBranchId' in resource.data)
+        || resource.data.homeBranchId == null
+        || resource.data.homeBranchId == ''
+        || (
+          'homeBranchId' in request.resource.data
+          && request.resource.data.homeBranchId == resource.data.homeBranchId
+        );
+    }
+
     function driverIdEmpty(data) {
       return !('driverID' in data)
         || data.driverID == null
@@ -78,6 +88,7 @@ service cloud.firestore {
       allow update: if (
           isStaffAdminUser()
           && request.resource.data.role == resource.data.role
+          && homeBranchLocked()
           && (userId != request.auth.uid
             || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['staffRole']))
         )
@@ -85,16 +96,26 @@ service cloud.firestore {
           isAdmin()
           && !grantFieldsChanged()
           && request.resource.data.role == resource.data.role
+          && homeBranchLocked()
+        )
+        || (
+          isAdmin()
+          && !grantFieldsChanged()
+          && resource.data.role == 'customer'
+          && request.resource.data.role == 'driver'
+          && homeBranchLocked()
         )
         || (
           isSelf(userId)
           && request.resource.data.role == resource.data.role
+          && homeBranchLocked()
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['corporateAccountId', 'staffRole', 'branchIds', 'canAccessAllBranches'])
         )
         || (
           isSelf(userId)
           && customerDriverSwap()
+          && homeBranchLocked()
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['corporateAccountId', 'staffRole', 'branchIds', 'canAccessAllBranches'])
         );
@@ -207,8 +228,21 @@ service cloud.firestore {
       }
 
       match /drivers/{driverUid} {
+        function chauffeurHomeBranch() {
+          let p = /databases/$(database)/documents/users/$(driverUid);
+          return exists(p) && 'homeBranchId' in get(p).data
+            ? get(p).data.homeBranchId
+            : '';
+        }
+        function chauffeurHomeAllows() {
+          let home = chauffeurHomeBranch();
+          return home == '' || home == null || home == branchId;
+        }
+
         allow read: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
-        allow write: if canAccessBranch(branchId) || isSelf(driverUid);
+        allow write: if chauffeurHomeAllows() && (
+          canAccessBranch(branchId) || isSelf(driverUid)
+        );
       }
     }
 

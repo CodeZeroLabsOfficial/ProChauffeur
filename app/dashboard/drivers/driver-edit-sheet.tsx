@@ -8,8 +8,7 @@ import { toast } from "sonner";
 import {
   saveDriverProfile,
   updateUserEmail,
-  updateUserProfile,
-  updateUserRole
+  updateUserProfile
 } from "@/lib/services/firebase-service";
 import {
   CHAUFFEUR_CATEGORIES,
@@ -75,6 +74,7 @@ export function DriverEditSheet({
   user,
   roster,
   candidates,
+  canAdd = true,
   open,
   onOpenChange,
   nested = false
@@ -82,6 +82,7 @@ export function DriverEditSheet({
   user: User | null;
   roster: BranchDriver | null;
   candidates: User[];
+  canAdd?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nested?: boolean;
@@ -129,6 +130,10 @@ export function DriverEditSheet({
     const uid = user?.id ?? selectedUserId;
     if (!uid) {
       toast.error("Select the user to add as a chauffeur.");
+      return;
+    }
+    if (isNew && !canAdd) {
+      toast.error("Driver limit reached on the current license.");
       return;
     }
 
@@ -179,7 +184,6 @@ export function DriverEditSheet({
 
     setSaving(true);
     try {
-      if (isNew) await updateUserRole(uid, "driver");
       await saveDriverProfile(uid, nextDriverProfile, {
         driverTitle: displayName,
         isNew
@@ -190,8 +194,14 @@ export function DriverEditSheet({
       }
       toast.success(isNew ? "Driver added." : "Driver profile saved.");
       onOpenChange(false);
-    } catch {
-      toast.error(isNew ? "Could not add the driver." : "Could not save the driver profile.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : isNew
+            ? "Could not add the driver."
+            : "Could not save the driver profile."
+      );
     } finally {
       setSaving(false);
     }
@@ -379,7 +389,9 @@ export function DriverEditSheet({
 
           <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
             <span />
-            <Button type="submit" disabled={saving || (isNew && candidates.length === 0)}>
+            <Button
+              type="submit"
+              disabled={saving || (isNew && (candidates.length === 0 || !canAdd))}>
               {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
             </Button>
           </SheetFooter>

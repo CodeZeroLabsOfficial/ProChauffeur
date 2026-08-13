@@ -108,7 +108,7 @@ export default function DispatchPage() {
   const vehicleMakeByDriverId = useMemo(() => {
     const map = new globalThis.Map<string, string>();
     for (const v of vehicles) {
-      const driverId = effectiveChauffeurUserId(v) ?? v.driverID;
+      const driverId = effectiveChauffeurUserId(v);
       const make = v.details?.make?.trim();
       if (driverId && make) map.set(driverId, make);
     }

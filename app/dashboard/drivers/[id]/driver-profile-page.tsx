@@ -24,7 +24,9 @@ import { DriverProfileFinancialsTab } from "@/app/dashboard/drivers/components/d
 import { DriverProfileComplianceTab } from "@/app/dashboard/drivers/components/driver-profile-compliance-tab";
 import { DriverProfileOperationsTab } from "@/app/dashboard/drivers/components/driver-profile-operations-tab";
 import { DriverEditSheet } from "@/app/dashboard/drivers/driver-edit-sheet";
+import { AccessBlockedEmpty } from "@/components/access-blocked-empty";
 import { DetailPageShell } from "@/components/layout/detail-page-shell";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
@@ -37,6 +39,7 @@ function isProfileTab(value: string | null): value is ProfileTab {
 }
 
 export function DriverProfilePage({ driverId }: { driverId: string }) {
+  const { branchId } = useActiveBranch();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -94,6 +97,14 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
         <p className="text-muted-foreground text-sm">Loading chauffeur profile…</p>
       </DetailPageShell>
     );
+  }
+
+  if (
+    displayUser?.role === "driver" &&
+    displayUser.homeBranchId &&
+    displayUser.homeBranchId !== branchId
+  ) {
+    return <AccessBlockedEmpty />;
   }
 
   if (!displayUser || displayUser.role !== "driver" || !roster) {

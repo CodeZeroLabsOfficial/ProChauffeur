@@ -72,12 +72,10 @@ export function vehicleRegistrationNumber(v: Pick<Vehicle, "registration">): str
   return v.registration?.registrationNumber?.trim() || "";
 }
 
-/** Resolves the chauffeur linked to a fleet row (assignedChauffeurUserId, else driverID). */
+/** Resolves the chauffeur linked to a fleet row. Missing or empty is unassigned. */
 export function effectiveChauffeurUserId(v: Vehicle): string | null {
-  if (v.assignedChauffeurUserId != null) {
-    return v.assignedChauffeurUserId === "" ? null : v.assignedChauffeurUserId;
-  }
-  return v.driverID;
+  const id = v.assignedChauffeurUserId?.trim();
+  return id ? id : null;
 }
 
 export function emptyVehicleDetails(): VehicleDetails {
