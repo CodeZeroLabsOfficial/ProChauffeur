@@ -55,6 +55,7 @@ export function LocationDetailCard({
           <ProfileV2TabTrigger value="classes">Vehicle classes</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="locale">Locale</ProfileV2TabTrigger>
+          <ProfileV2TabTrigger value="features">Features</ProfileV2TabTrigger>
         </>
       }
     />

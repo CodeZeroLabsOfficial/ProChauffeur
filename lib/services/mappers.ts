@@ -279,6 +279,9 @@ export function mapBranch(id: string, d: DocumentData): Branch {
     officeEmail: typeof d.officeEmail === "string" ? d.officeEmail : null,
     contactUserId: typeof d.contactUserId === "string" ? d.contactUserId : null,
     serviceArea: d.serviceArea ?? null,
+    autoDispatchEnabled: d.autoDispatchEnabled === true,
+    dynamicPricingEnabled: d.dynamicPricingEnabled === true,
+    bookingValidationEnabled: d.bookingValidationEnabled === true,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

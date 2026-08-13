@@ -262,6 +262,9 @@ export async function upsertBranch(branch: Branch): Promise<void> {
       officeEmail: branch.officeEmail ?? null,
       contactUserId: branch.contactUserId ?? null,
       serviceArea: branch.serviceArea ?? null,
+      autoDispatchEnabled: branch.autoDispatchEnabled === true,
+      dynamicPricingEnabled: branch.dynamicPricingEnabled === true,
+      bookingValidationEnabled: branch.bookingValidationEnabled === true,
       createdAt: existing.exists() ? branch.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp()
     }),

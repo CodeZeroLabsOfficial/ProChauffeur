@@ -52,6 +52,12 @@ export interface Branch {
     radiusMeters?: number;
     polygon?: { latitude: number; longitude: number }[];
   } | null;
+  /** Location switch; company license must also allow Auto-Dispatch. Default off. */
+  autoDispatchEnabled: boolean;
+  /** Location switch; company license must also allow dynamic pricing. Default off. */
+  dynamicPricingEnabled: boolean;
+  /** Location switch; company license must also allow booking validation. Default off. */
+  bookingValidationEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,6 +103,9 @@ export function buildBranch(
     officeEmail: null,
     contactUserId: null,
     serviceArea: null,
+    autoDispatchEnabled: false,
+    dynamicPricingEnabled: false,
+    bookingValidationEnabled: false,
     createdAt: now,
     updatedAt: now,
     ...overrides

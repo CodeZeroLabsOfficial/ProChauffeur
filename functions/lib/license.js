@@ -9,6 +9,14 @@ const FEATURE_IDS = [
   "corporateAccounts",
 ];
 
+const LOCATION_OPS_FEATURE_IDS = ["autoDispatch", "dynamicPricing", "bookingValidation"];
+
+const LOCATION_OPS_FEATURE_FIELDS = {
+  autoDispatch: "autoDispatchEnabled",
+  dynamicPricing: "dynamicPricingEnabled",
+  bookingValidation: "bookingValidationEnabled",
+};
+
 const FEATURE_LABELS = {
   autoDispatch: "Auto-Dispatch",
   bookingValidation: "Booking Validation",
@@ -75,6 +83,17 @@ function isFeatureEnabled(license, catalog, feature) {
   if (flag === "forceOff") return false;
   if (flag === "forceOn") return true;
   return planIncludes(catalog, license.planId, feature);
+}
+
+/**
+ * Runtime check: company license allows the feature AND this Location has it on.
+ * Missing Location flags are off.
+ */
+function isLocationFeatureEnabled(license, catalog, branch, feature) {
+  if (!isFeatureEnabled(license, catalog, feature)) return false;
+  const field = LOCATION_OPS_FEATURE_FIELDS[feature];
+  if (!field || !branch) return false;
+  return branch[field] === true;
 }
 
 function mapLicense(d) {
@@ -166,12 +185,14 @@ async function assertCorporateAccountsEnabled(db) {
 module.exports = {
   FEATURE_IDS,
   FEATURE_LABELS,
+  LOCATION_OPS_FEATURE_IDS,
   UNLIMITED,
   defaultLicense,
   defaultPlansCatalog,
   isFeatureId,
   isFeatureFlagValue,
   isFeatureEnabled,
+  isLocationFeatureEnabled,
   mapLicense,
   mapPlansCatalog,
   loadLicenseAndPlans,

@@ -11,6 +11,34 @@ export const FEATURE_IDS = [
 
 export type FeatureId = (typeof FEATURE_IDS)[number];
 
+/** License features that also require a per-Location switch (`branches/{id}`). */
+export const LOCATION_OPS_FEATURE_IDS = [
+  "autoDispatch",
+  "dynamicPricing",
+  "bookingValidation"
+] as const;
+
+export type LocationOpsFeatureId = (typeof LOCATION_OPS_FEATURE_IDS)[number];
+
+export const LOCATION_OPS_FEATURE_COPY: Record<
+  LocationOpsFeatureId,
+  { title: string; description: string }
+> = {
+  autoDispatch: {
+    title: "Auto-Dispatch",
+    description:
+      "Automatically assign incoming jobs to the nearest available chauffeur with the right vehicle."
+  },
+  dynamicPricing: {
+    title: "Dynamic pricing",
+    description: "Adjust fares from demand and time of day."
+  },
+  bookingValidation: {
+    title: "Booking validation",
+    description: "Block bookings outside hours or service rules."
+  }
+};
+
 export type FeatureFlagValue = "inherit" | "forceOn" | "forceOff";
 
 /** How a feature resolved for display (License settings). */
@@ -111,6 +139,40 @@ export function isFeatureEnabled(
   if (flag === "forceOff") return false;
   if (flag === "forceOn") return true;
   return planIncludes(catalog, license.planId, feature);
+}
+
+/** Location field for an ops feature. Missing / not `true` is off. */
+export function locationOpsFeatureField(
+  feature: LocationOpsFeatureId
+): "autoDispatchEnabled" | "dynamicPricingEnabled" | "bookingValidationEnabled" {
+  switch (feature) {
+    case "autoDispatch":
+      return "autoDispatchEnabled";
+    case "dynamicPricing":
+      return "dynamicPricingEnabled";
+    case "bookingValidation":
+      return "bookingValidationEnabled";
+  }
+}
+
+export type LocationOpsFlags = {
+  autoDispatchEnabled: boolean;
+  dynamicPricingEnabled: boolean;
+  bookingValidationEnabled: boolean;
+};
+
+/**
+ * Runtime check: company license allows the feature AND this Location has it on.
+ * Missing Location flags are off.
+ */
+export function isLocationFeatureEnabled(
+  license: AppLicense,
+  catalog: AppPlansCatalog,
+  flags: LocationOpsFlags,
+  feature: LocationOpsFeatureId
+): boolean {
+  if (!isFeatureEnabled(license, catalog, feature)) return false;
+  return flags[locationOpsFeatureField(feature)] === true;
 }
 
 /** Display source for License UI. */
