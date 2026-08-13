@@ -5,13 +5,7 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { useLicenseEntitlements } from "@/hooks/use-feature-enabled";
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings-section";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -59,47 +53,36 @@ export function LocationFeaturesPanel({
   }
 
   return (
-    <section className="grid gap-4 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:gap-10">
-      <div className="space-y-1">
-        <h3 className="text-sm font-medium leading-none">Features</h3>
-        <p className="text-muted-foreground text-sm text-pretty">
-          Turn on ops tools this Location is allowed to use.
-        </p>
-      </div>
-      <div className="min-w-0 space-y-4">
-        {LOCATION_OPS_FEATURE_IDS.map((feature) => {
-          const copy = LOCATION_OPS_FEATURE_COPY[feature];
-          const field = locationOpsFeatureField(feature);
-          const entitled = ready && isEnabled(feature);
-          const active = branch[field] === true;
-          const saving = savingFeature === feature;
-          const switchId = `location-feature-${feature}`;
-          return (
-            <Card key={feature} className="gap-0 py-0">
-              <CardHeader className="gap-2 px-6 py-5">
-                <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="text-base">{copy.title}</CardTitle>
-                  <DetailSheetIconBadge icon={Sparkles}>Premium</DetailSheetIconBadge>
-                </div>
-                <CardDescription>{copy.description}</CardDescription>
-              </CardHeader>
-              <CardFooter className="border-t px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={switchId}
-                    checked={active}
-                    disabled={saving || (!entitled && !active)}
-                    onCheckedChange={(checked) => void setFeatureEnabled(feature, checked)}
-                  />
-                  <Label htmlFor={switchId} className="text-sm font-medium">
-                    Activate
-                  </Label>
-                </div>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
-    </section>
+    <SettingsSection
+      title="Features"
+      description="Turn on ops tools this Location is allowed to use.">
+      {LOCATION_OPS_FEATURE_IDS.map((feature) => {
+        const copy = LOCATION_OPS_FEATURE_COPY[feature];
+        const field = locationOpsFeatureField(feature);
+        const entitled = ready && isEnabled(feature);
+        const active = branch[field] === true;
+        const saving = savingFeature === feature;
+        const switchId = `location-feature-${feature}`;
+        return (
+          <div
+            key={feature}
+            className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label htmlFor={switchId}>{copy.title}</Label>
+                <DetailSheetIconBadge icon={Sparkles}>Premium</DetailSheetIconBadge>
+              </div>
+              <p className="text-muted-foreground text-xs">{copy.description}</p>
+            </div>
+            <Switch
+              id={switchId}
+              checked={active}
+              disabled={saving || (!entitled && !active)}
+              onCheckedChange={(checked) => void setFeatureEnabled(feature, checked)}
+            />
+          </div>
+        );
+      })}
+    </SettingsSection>
   );
 }
