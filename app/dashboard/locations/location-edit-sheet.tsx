@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power, User } from "lucide-react";
+import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power, UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
@@ -248,7 +248,7 @@ function LocationOverviewFields({
             </dd>
           </div>
           <div className="col-span-2 space-y-1">
-            <DetailLabel icon={User}>Contact</DetailLabel>
+            <DetailLabel icon={UserIcon}>Contact</DetailLabel>
             <dd>
               <LocationContactPicker
                 contactUserId={branch.contactUserId}
