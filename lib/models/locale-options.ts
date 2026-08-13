@@ -33,6 +33,19 @@ export const COMMON_CURRENCIES: LocaleOption[] = [
   { value: "INR", label: "INR — Indian rupee" }
 ];
 
+export const COMMON_TAX_NAMES: LocaleOption[] = [
+  { value: "GST", label: "GST — Goods and services tax" },
+  { value: "VAT", label: "VAT — Value added tax" },
+  { value: "TVA", label: "TVA — Taxe sur la valeur ajoutée" },
+  { value: "IVA", label: "IVA — Impuesto / imposta sul valore aggiunto" },
+  { value: "MwSt", label: "MwSt — Mehrwertsteuer" },
+  { value: "USt", label: "USt — Umsatzsteuer" },
+  { value: "BTW", label: "BTW — Belasting over de toegevoegde waarde" },
+  { value: "Moms", label: "Moms" },
+  { value: "DPH", label: "DPH — Daň z přidané hodnoty" },
+  { value: "ÁFA", label: "ÁFA — Általános forgalmi adó" }
+];
+
 export const COMMON_TIMEZONES: LocaleOption[] = [
   { value: "Australia/Sydney", label: "Australia/Sydney (AEST/AEDT)" },
   { value: "Australia/Melbourne", label: "Australia/Melbourne (AEST/AEDT)" },

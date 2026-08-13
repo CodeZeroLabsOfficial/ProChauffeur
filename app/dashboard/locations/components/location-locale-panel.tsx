@@ -8,7 +8,6 @@ import { NumberStepper } from "@/components/number-stepper";
 import { SettingsSection } from "@/components/settings-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   COMMON_CURRENCIES,
   COMMON_LANGUAGES,
+  COMMON_TAX_NAMES,
   COMMON_TIMEZONES,
   DISTANCE_UNITS,
   DRIVER_LICENCE_COUNTRY_PRESETS,
@@ -176,6 +176,10 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
     () => optionsWithCurrent(COMMON_TIMEZONES, draft.timezone),
     [draft.timezone]
   );
+  const taxNameOptions = useMemo(
+    () => optionsWithCurrent(COMMON_TAX_NAMES, draft.taxDisplayName),
+    [draft.taxDisplayName]
+  );
 
   const canSave = isDraftComplete(draft);
 
@@ -216,6 +220,12 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
 
   if (loading) return <p className="text-muted-foreground text-sm">Loading locale…</p>;
 
+  const saveFooter = (
+    <Button type="button" onClick={() => void save()} disabled={saving || !canSave}>
+      {saving ? "Saving…" : configured ? "Save" : "Initialize locale"}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
       {!configured ? (
@@ -239,7 +249,7 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
           <SelectField
             id="locale-country"
             label="Country"
-            tooltip="Sets the driver licence classes and states shown when you add chauffeurs here. Not the same as currency."
+            tooltip="The country this location operates in. Used for local compliance and regulations."
             value={draft.driverLicenceCountry}
             placeholder="Select country"
             disabled={saving}
@@ -296,7 +306,8 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
 
         <SettingsSection
           title="Currency and tax"
-          description="Set currency and tax for quotes and charges.">
+          description="Set currency and tax for quotes and charges."
+          footer={saveFooter}>
           <SelectField
             id="locale-currency"
             label="Currency"
@@ -311,21 +322,20 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
               </SelectItem>
             ))}
           </SelectField>
-          <div className="max-w-sm space-y-2">
-            <div className="flex items-center gap-1">
-              <Label htmlFor="locale-tax-name">Tax name</Label>
-              <FieldInfoTooltip label="tax name">
-                Label on the tax line, e.g. GST or VAT.
-              </FieldInfoTooltip>
-            </div>
-            <Input
-              id="locale-tax-name"
-              value={draft.taxDisplayName}
-              onChange={(e) => update("taxDisplayName", e.target.value)}
-              placeholder="e.g. GST or VAT"
-              disabled={saving}
-            />
-          </div>
+          <SelectField
+            id="locale-tax-name"
+            label="Tax name"
+            tooltip="Label on the tax line, e.g. GST or VAT."
+            value={draft.taxDisplayName}
+            placeholder="Select tax name"
+            disabled={saving}
+            onValueChange={(value) => update("taxDisplayName", value)}>
+            {taxNameOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectField>
           <div className="max-w-sm">
             <NumberStepper
               id="locale-tax-rate"
@@ -379,12 +389,6 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
           </div>
         </SettingsSection>
       </TooltipProvider>
-
-      <div className="flex justify-end">
-        <Button type="button" onClick={() => void save()} disabled={saving || !canSave}>
-          {saving ? "Saving…" : configured ? "Save locale" : "Initialize locale"}
-        </Button>
-      </div>
     </div>
   );
 }

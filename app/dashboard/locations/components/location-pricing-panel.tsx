@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -320,6 +320,7 @@ export function LocationPricingPanel({
             </Table>
           )}
         </CardContent>
+        <CardFooter className="justify-end border-t">{saveFooter}</CardFooter>
       </Card>
 
       <AlertDialog
@@ -352,8 +353,6 @@ export function LocationPricingPanel({
         onSave={upsertAddon}
         nested={nestedSheet}
       />
-
-      <div className="flex justify-end">{saveFooter}</div>
     </div>
   );
 }
