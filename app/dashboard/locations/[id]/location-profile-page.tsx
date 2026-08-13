@@ -24,12 +24,12 @@ import { fetchBranch } from "@/lib/services/firebase-service";
 
 const LOCATION_TABS = [
   "overview",
-  "service-area",
-  "hours",
-  "classes",
-  "pricing",
+  "features",
   "locale",
-  "features"
+  "hours",
+  "pricing",
+  "service-area",
+  "classes"
 ] as const;
 type LocationTab = (typeof LOCATION_TABS)[number];
 
@@ -110,28 +110,28 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
             />
           </TabsContent>
 
-          <TabsContent value="service-area" className="mt-0 space-y-4">
-            <LocationServiceAreaPanel branch={branch} onSaved={(updated) => setBranch(updated)} />
-          </TabsContent>
-
-          <TabsContent value="hours" className="mt-0 space-y-4">
-            <LocationOperatingHoursTab branchId={branch.id} />
-          </TabsContent>
-
-          <TabsContent value="classes" className="mt-0 space-y-4">
-            <LocationVehicleClassesPanel branchId={branch.id} />
-          </TabsContent>
-
-          <TabsContent value="pricing" className="mt-0 space-y-4">
-            <LocationPricingPanel branchId={branch.id} />
+          <TabsContent value="features" className="mt-0 space-y-4">
+            <LocationFeaturesPanel branch={branch} onSaved={setBranch} />
           </TabsContent>
 
           <TabsContent value="locale" className="mt-0 space-y-4">
             <LocationLocalePanel branchId={branch.id} />
           </TabsContent>
 
-          <TabsContent value="features" className="mt-0 space-y-4">
-            <LocationFeaturesPanel branch={branch} onSaved={setBranch} />
+          <TabsContent value="hours" className="mt-0 space-y-4">
+            <LocationOperatingHoursTab branchId={branch.id} />
+          </TabsContent>
+
+          <TabsContent value="pricing" className="mt-0 space-y-4">
+            <LocationPricingPanel branchId={branch.id} />
+          </TabsContent>
+
+          <TabsContent value="service-area" className="mt-0 space-y-4">
+            <LocationServiceAreaPanel branch={branch} onSaved={(updated) => setBranch(updated)} />
+          </TabsContent>
+
+          <TabsContent value="classes" className="mt-0 space-y-4">
+            <LocationVehicleClassesPanel branchId={branch.id} />
           </TabsContent>
         </Tabs>
       </DetailPageShell>

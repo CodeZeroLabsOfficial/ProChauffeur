@@ -82,16 +82,18 @@ export function LocationFeaturesPanel({
                 </div>
                 <CardDescription>{copy.description}</CardDescription>
               </CardHeader>
-              <CardFooter className="justify-between border-t px-6 py-4">
-                <Label htmlFor={switchId} className="text-sm font-medium">
-                  Activate
-                </Label>
-                <Switch
-                  id={switchId}
-                  checked={active}
-                  disabled={saving || (!entitled && !active)}
-                  onCheckedChange={(checked) => void setFeatureEnabled(feature, checked)}
-                />
+              <CardFooter className="border-t px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id={switchId}
+                    checked={active}
+                    disabled={saving || (!entitled && !active)}
+                    onCheckedChange={(checked) => void setFeatureEnabled(feature, checked)}
+                  />
+                  <Label htmlFor={switchId} className="text-sm font-medium">
+                    Activate
+                  </Label>
+                </div>
               </CardFooter>
             </Card>
           );
