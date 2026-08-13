@@ -8,7 +8,6 @@ import { MultiSelectField } from "@/components/multi-select-field";
 import { NumberStepper } from "@/components/number-stepper";
 import { SettingsSection } from "@/components/settings-section";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -293,17 +292,6 @@ export function AccountPolicyTab({
                 </SelectContent>
               </Select>
             </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={draft.gstInclusive}
-                disabled={saving}
-                onCheckedChange={(checked) =>
-                  setDraft((c) => ({ ...c, gstInclusive: checked === true }))
-                }
-              />
-              GST included in rates
-            </label>
           </div>
         </TooltipProvider>
       </SettingsSection>

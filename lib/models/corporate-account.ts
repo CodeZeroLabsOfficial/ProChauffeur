@@ -86,8 +86,6 @@ export interface CorporateAccount {
   allowedPaymentMethods: CorporateAllowedPayment[];
   /** Default among `allowedPaymentMethods`; null = no preference. */
   preferredPayment?: CorporatePreferredPayment | null;
-  /** Display/policy flag; does not rewrite the tax engine. */
-  gstInclusive: boolean;
   status: CorporateAccountStatus;
   /** Invoice issue day: last day of month, or 1–28. */
   billingDay: CorporateBillingDay;
@@ -207,7 +205,6 @@ export function buildNewCorporateAccount(
     monthlyBudget: null,
     allowedPaymentMethods: ["on_account"],
     preferredPayment: "on_account",
-    gstInclusive: true,
     status: "active",
     billingDay: "last",
     paymentTermsDays: 0,

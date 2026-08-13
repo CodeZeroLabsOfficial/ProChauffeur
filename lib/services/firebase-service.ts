@@ -857,7 +857,7 @@ export async function saveCorporateAccount(account: CorporateAccount): Promise<v
           : null,
       allowedPaymentMethods,
       preferredPayment,
-      gstInclusive: account.gstInclusive !== false,
+      gstInclusive: deleteField(),
       status: account.status,
       billingDay: account.billingDay,
       paymentTermsDays: account.paymentTermsDays,

@@ -763,7 +763,6 @@ export function mapCorporateAccount(id: string, d: DocumentData): CorporateAccou
     monthlyBudget: typeof d.monthlyBudget === "number" ? d.monthlyBudget : null,
     allowedPaymentMethods,
     preferredPayment: clampPreferredPayment(preferredPayment, allowedPaymentMethods),
-    gstInclusive: d.gstInclusive !== false,
     status,
     billingDay: mapCorporateBillingDay(d.billingDay),
     paymentTermsDays: typeof d.paymentTermsDays === "number" ? d.paymentTermsDays : 0,
