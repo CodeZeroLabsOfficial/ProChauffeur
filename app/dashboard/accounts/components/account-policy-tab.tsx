@@ -83,10 +83,7 @@ export function AccountPolicyTab({
     () =>
       companyClassOptions.map((option) => ({
         value: option.id,
-        label:
-          option.locationNames.length > 1
-            ? `${option.label} (${option.locationNames.join(", ")})`
-            : option.label
+        label: option.label
       })),
     [companyClassOptions]
   );

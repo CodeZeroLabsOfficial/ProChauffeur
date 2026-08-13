@@ -201,9 +201,7 @@ export function AccountRatesTab({
                       <SelectContent>
                         {companyClassOptions.map((option) => (
                           <SelectItem key={option.id} value={option.id}>
-                            {option.locationNames.length > 1
-                              ? `${option.label} (${option.locationNames.join(", ")})`
-                              : option.label}
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

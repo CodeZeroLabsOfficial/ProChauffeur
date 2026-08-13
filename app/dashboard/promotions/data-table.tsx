@@ -393,10 +393,7 @@ export function PromotionsDataTable({
         branches={branches}
         vehicleClasses={companyClassOptions.map((option) => ({
           id: option.id,
-          displayName:
-            option.locationNames.length > 1
-              ? `${option.label} (${option.locationNames.join(", ")})`
-              : option.label
+          displayName: option.label
         }))}
         open={sheetOpen}
         onOpenChange={(next) => {
