@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const { resolveInvoiceRef } = require("../lib/collections");
+const { requireBranchId, resolveInvoiceRef } = require("../lib/collections");
 const { getStripe, toStripeAmount } = require("./client");
 const { syncUserStripeCustomer, syncCorporateStripeCustomer } = require("./customer");
 
@@ -17,6 +17,7 @@ async function sendCustomerTripInvoice(db, {
   lineItems,
   currencyCode,
 }) {
+  const resolvedBranchId = requireBranchId(branchId);
   const stripeCustomerId = await syncUserStripeCustomer(db, customerUid);
   const stripe = getStripe();
   if (typeof currencyCode !== "string" || !currencyCode.trim()) {
@@ -42,7 +43,7 @@ async function sendCustomerTripInvoice(db, {
       tripId: primaryTripId,
       tripIds: JSON.stringify(tripIds || []),
       invoiceId,
-      branchId,
+      branchId: resolvedBranchId,
       source: "web",
     },
   });
@@ -50,7 +51,7 @@ async function sendCustomerTripInvoice(db, {
   const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
   await stripe.invoices.sendInvoice(finalized.id);
 
-  const { ref: invoiceDoc } = await resolveInvoiceRef(db, invoiceId, branchId);
+  const { ref: invoiceDoc } = await resolveInvoiceRef(db, invoiceId, resolvedBranchId);
   await invoiceDoc.update({
     stripeInvoiceId: finalized.id,
     stripeHostedInvoiceUrl: finalized.hosted_invoice_url || null,
@@ -77,6 +78,7 @@ async function sendCorporateInvoice(db, {
   currencyCode,
   paymentTermsDays,
 }) {
+  const resolvedBranchId = requireBranchId(branchId);
   const stripeCustomerId = await syncCorporateStripeCustomer(db, account.id);
   const stripe = getStripe();
   if (typeof currencyCode !== "string" || !currencyCode.trim()) {
@@ -114,7 +116,7 @@ async function sendCorporateInvoice(db, {
       invoiceId,
       invoiceNumber: invoiceNumber || "",
       corporateAccountId: account.id,
-      branchId,
+      branchId: resolvedBranchId,
       tripIds: JSON.stringify(tripIds || []),
       source: "corporate_period",
     },
@@ -123,7 +125,7 @@ async function sendCorporateInvoice(db, {
   const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
   await stripe.invoices.sendInvoice(finalized.id);
 
-  const { ref: invoiceDoc } = await resolveInvoiceRef(db, invoiceId, branchId);
+  const { ref: invoiceDoc } = await resolveInvoiceRef(db, invoiceId, resolvedBranchId);
   await invoiceDoc.update({
     stripeInvoiceId: finalized.id,
     stripeHostedInvoiceUrl: finalized.hosted_invoice_url || null,

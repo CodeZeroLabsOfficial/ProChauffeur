@@ -28,8 +28,16 @@ async function requireCustomer(db, uid) {
   }
 }
 
+function requireBranchIdArg(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new HttpsError("invalid-argument", "branchId is required.");
+  }
+  return value.trim();
+}
+
 module.exports = {
   requireAuth,
   requireAdmin,
   requireCustomer,
+  requireBranchIdArg,
 };

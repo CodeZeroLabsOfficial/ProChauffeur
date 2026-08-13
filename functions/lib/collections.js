@@ -11,42 +11,49 @@ const Collections = {
 
 const PaymentMethodSubcollection = "payment_methods";
 
-/** Default branch for booking writes until multi-city resolve ships. */
-const DEFAULT_BRANCH_ID = "brisbane";
+/** Rejects empty Location ids. Writes must not fall back to a default city. */
+function requireBranchId(branchId) {
+  if (typeof branchId !== "string" || !branchId.trim()) {
+    throw new Error("branchId is required.");
+  }
+  return branchId.trim();
+}
 
 /** `branches/{branchId}/{subcollection}/{docId}` */
 function branchDocPath(branchId, subcollection, docId) {
-  return `${Collections.branches}/${branchId}/${subcollection}/${docId}`;
+  return `${Collections.branches}/${requireBranchId(branchId)}/${subcollection}/${docId}`;
 }
 
-function tripDocPath(tripId, branchId = DEFAULT_BRANCH_ID) {
+function tripDocPath(tripId, branchId) {
   return branchDocPath(branchId, Collections.trips, tripId);
 }
 
-function invoiceDocPath(invoiceId, branchId = DEFAULT_BRANCH_ID) {
+function invoiceDocPath(invoiceId, branchId) {
   return branchDocPath(branchId, Collections.invoices, invoiceId);
 }
 
-/** Nested trip reference (new writes). */
-function tripRef(db, tripId, branchId = DEFAULT_BRANCH_ID) {
+/** Nested trip reference. */
+function tripRef(db, tripId, branchId) {
   return db.doc(tripDocPath(tripId, branchId));
 }
 
-/** Nested invoice reference (new writes). */
-function invoiceRef(db, invoiceId, branchId = DEFAULT_BRANCH_ID) {
+/** Nested invoice reference. */
+function invoiceRef(db, invoiceId, branchId) {
   return db.doc(invoiceDocPath(invoiceId, branchId));
 }
 
 /** Nested invoices collection (auto-id creates). */
-function invoicesCollection(db, branchId = DEFAULT_BRANCH_ID) {
-  return db.collection(`${Collections.branches}/${branchId}/${Collections.invoices}`);
+function invoicesCollection(db, branchId) {
+  return db.collection(
+    `${Collections.branches}/${requireBranchId(branchId)}/${Collections.invoices}`
+  );
 }
 
 /**
  * Nested trip doc under `branches/{branchId}/trips/{tripId}`.
  * @returns {Promise<{ ref: FirebaseFirestore.DocumentReference, snap: FirebaseFirestore.DocumentSnapshot }>}
  */
-async function resolveTripRef(db, tripId, branchId = DEFAULT_BRANCH_ID) {
+async function resolveTripRef(db, tripId, branchId) {
   const ref = tripRef(db, tripId, branchId);
   const snap = await ref.get();
   return { ref, snap };
@@ -55,7 +62,7 @@ async function resolveTripRef(db, tripId, branchId = DEFAULT_BRANCH_ID) {
 /**
  * Nested invoice doc under `branches/{branchId}/invoices/{invoiceId}`.
  */
-async function resolveInvoiceRef(db, invoiceId, branchId = DEFAULT_BRANCH_ID) {
+async function resolveInvoiceRef(db, invoiceId, branchId) {
   const ref = invoiceRef(db, invoiceId, branchId);
   const snap = await ref.get();
   return { ref, snap };
@@ -64,7 +71,7 @@ async function resolveInvoiceRef(db, invoiceId, branchId = DEFAULT_BRANCH_ID) {
 module.exports = {
   Collections,
   PaymentMethodSubcollection,
-  DEFAULT_BRANCH_ID,
+  requireBranchId,
   branchDocPath,
   tripDocPath,
   invoiceDocPath,

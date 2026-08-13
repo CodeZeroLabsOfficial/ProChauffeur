@@ -271,10 +271,12 @@ export function InvoiceDetailSheet({
     if (!displayInvoice) return;
     setMarkingPaid(true);
     try {
-      const result = await markInvoicePaid(
-        displayInvoice.id,
-        displayInvoice.branchId ?? undefined
-      );
+      const branchId = displayInvoice.branchId?.trim();
+      if (!branchId) {
+        toast.error("Invoice is missing a Location.");
+        return;
+      }
+      const result = await markInvoicePaid(displayInvoice.id, branchId);
       toast.success(
         result.alreadyPaid
           ? "Invoice was already paid."

@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 
 import { firebaseFunctions } from "@/lib/firebase/client";
+import { requireBranchId } from "@/lib/branch/require-branch-id";
 
 export type SendCustomerTripInvoiceResult = {
   invoiceId: string;
@@ -9,13 +10,15 @@ export type SendCustomerTripInvoiceResult = {
 };
 
 export async function sendCustomerTripInvoice(
-  tripId: string
+  tripId: string,
+  branchId: string
 ): Promise<SendCustomerTripInvoiceResult> {
-  const callable = httpsCallable<{ tripId: string }, SendCustomerTripInvoiceResult>(
-    firebaseFunctions(),
-    "sendCustomerTripInvoice"
-  );
-  const result = await callable({ tripId });
+  const resolvedBranchId = requireBranchId(branchId);
+  const callable = httpsCallable<
+    { tripId: string; branchId: string },
+    SendCustomerTripInvoiceResult
+  >(firebaseFunctions(), "sendCustomerTripInvoice");
+  const result = await callable({ tripId, branchId: resolvedBranchId });
   return result.data;
 }
 
@@ -71,15 +74,16 @@ export type MarkInvoicePaidResult = {
 /** Mark a Firestore invoice paid and sync linked trips (admin callable). */
 export async function markInvoicePaid(
   invoiceId: string,
-  branchId?: string | null
+  branchId: string
 ): Promise<MarkInvoicePaidResult> {
+  const resolvedBranchId = requireBranchId(branchId);
   const callable = httpsCallable<
-    { invoiceId: string; branchId?: string },
+    { invoiceId: string; branchId: string },
     MarkInvoicePaidResult
   >(firebaseFunctions(), "markInvoicePaid");
   const result = await callable({
     invoiceId,
-    ...(branchId?.trim() ? { branchId: branchId.trim() } : {})
+    branchId: resolvedBranchId
   });
   return result.data;
 }

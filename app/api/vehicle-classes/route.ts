@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
+import { parseBranchId } from "@/lib/branch/require-branch-id";
 import {
-  DEFAULT_BRANCH_ID,
   isValidVehicleClassSlug,
   type VehicleClass
 } from "@/lib/models";
@@ -32,10 +32,10 @@ export async function PUT(request: Request) {
 
   try {
     const payload = body as VehicleClass & { branchId?: string };
-    const branchId =
-      typeof payload.branchId === "string" && payload.branchId.trim()
-        ? payload.branchId.trim()
-        : DEFAULT_BRANCH_ID;
+    const branchId = parseBranchId(payload.branchId);
+    if (!branchId) {
+      return NextResponse.json({ error: "branchId is required." }, { status: 400 });
+    }
     const { branchId: _branchId, ...vehicleClass } = payload;
     validateVehicleClass(vehicleClass);
 

@@ -165,9 +165,14 @@ export function BookingsDataTable({
     [authUser.uid]
   );
 
-  const changeStatus = useCallback(async (id: string, status: RowStatusAction) => {
+  const changeStatus = useCallback(async (trip: Trip, status: RowStatusAction) => {
+    const branchId = trip.branchId?.trim();
+    if (!branchId) {
+      toast.error("Booking is missing a Location.");
+      return;
+    }
     try {
-      await updateTripStatus(id, status);
+      await updateTripStatus(trip.id, status, branchId);
       if (status === "accepted") {
         toast.success("Booking accepted.");
       } else if (status === "cancelled") {
@@ -385,7 +390,7 @@ export function BookingsDataTable({
                     <DropdownMenuItem
                       key={status}
                       disabled={row.original.status === status}
-                      onClick={() => void changeStatus(row.original.id, status)}>
+                      onClick={() => void changeStatus(row.original, status)}>
                       {label}
                     </DropdownMenuItem>
                   ))}
@@ -419,7 +424,7 @@ export function BookingsDataTable({
                 disabled={
                   row.original.status === "cancelled" || row.original.status === "completed"
                 }
-                onClick={() => void changeStatus(row.original.id, "cancelled")}>
+                onClick={() => void changeStatus(row.original, "cancelled")}>
                 Cancel booking
               </DropdownMenuItem>
             </DropdownMenuContent>

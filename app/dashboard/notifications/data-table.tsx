@@ -229,10 +229,15 @@ export function NotificationsDataTable() {
     return map;
   }, [users]);
 
-  const handleStatusChange = useCallback(async (tripId: string, status: "accepted" | "cancelled") => {
-    setActingOnId(tripId);
+  const handleStatusChange = useCallback(async (trip: Trip, status: "accepted" | "cancelled") => {
+    const branchId = trip.branchId?.trim();
+    if (!branchId) {
+      toast.error("Booking is missing a Location.");
+      return;
+    }
+    setActingOnId(trip.id);
     try {
-      await updateTripStatus(tripId, status);
+      await updateTripStatus(trip.id, status, branchId);
       toast.success(status === "accepted" ? "Booking accepted." : "Booking declined.");
     } catch {
       toast.error("Could not update the booking.");
@@ -289,12 +294,12 @@ export function NotificationsDataTable() {
             {
               label: "Accept",
               variant: "outline" as const,
-              onClick: busy ? undefined : () => void handleStatusChange(trip.id, "accepted")
+              onClick: busy ? undefined : () => void handleStatusChange(trip, "accepted")
             },
             {
               label: "Decline",
               variant: "destructive" as const,
-              onClick: busy ? undefined : () => void handleStatusChange(trip.id, "cancelled")
+              onClick: busy ? undefined : () => void handleStatusChange(trip, "cancelled")
             }
           ]
         };

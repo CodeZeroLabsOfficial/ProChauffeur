@@ -1,7 +1,6 @@
 const admin = require("firebase-admin");
 const { HttpsError } = require("firebase-functions/v2/https");
-const { DEFAULT_BRANCH_ID } = require("../lib/collections");
-const { requireAuth, requireAdmin } = require("../lib/auth");
+const { requireAuth, requireAdmin, requireBranchIdArg } = require("../lib/auth");
 const { sendCustomerTripInvoice } = require("../stripe/invoices");
 const {
   lineItemsFromTrips,
@@ -75,10 +74,7 @@ async function sendCustomerTripInvoiceHandler(request) {
     throw new HttpsError("invalid-argument", "tripId is required.");
   }
 
-  const branchId =
-    typeof request.data?.branchId === "string" && request.data.branchId.trim()
-      ? request.data.branchId.trim()
-      : DEFAULT_BRANCH_ID;
+  const branchId = requireBranchIdArg(request.data?.branchId);
 
   let loaded;
   try {

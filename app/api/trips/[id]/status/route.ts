@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { removeLiveTripLocation } from "@/lib/firebase/admin-live-location";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { DEFAULT_BRANCH_ID, TRIP_STATUSES, type TripStatus } from "@/lib/models";
+import { parseBranchId } from "@/lib/branch/require-branch-id";
+import { TRIP_STATUSES, type TripStatus } from "@/lib/models";
 import { tripStatusUpdateFields } from "@/lib/trip-status-update";
 
 function isTripStatus(value: unknown): value is TripStatus {
@@ -32,15 +33,17 @@ export async function PATCH(
   }
 
   let status: unknown;
-  let branchId: string = DEFAULT_BRANCH_ID;
+  let branchId: string | null = null;
   try {
     const body = await request.json();
     status = body.status;
-    if (typeof body.branchId === "string" && body.branchId.trim()) {
-      branchId = body.branchId.trim();
-    }
+    branchId = parseBranchId(body.branchId);
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  if (!branchId) {
+    return NextResponse.json({ error: "branchId is required." }, { status: 400 });
   }
 
   if (!isTripStatus(status)) {

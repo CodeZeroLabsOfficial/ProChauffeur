@@ -104,6 +104,7 @@ import {
   validateVehicleClass
 } from "@/lib/pricing/validate";
 import { getActiveBranchId, setActiveBranchId } from "@/lib/branch/active-branch-store";
+import { requireBranchId } from "@/lib/branch/require-branch-id";
 import {
   branchCollectionRef,
   branchDocRef,
@@ -519,11 +520,16 @@ export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): U
   );
 }
 
-export async function updateTripStatus(id: string, status: TripStatus): Promise<void> {
+export async function updateTripStatus(
+  id: string,
+  status: TripStatus,
+  branchId: string
+): Promise<void> {
+  const resolvedBranchId = requireBranchId(branchId);
   const res = await fetch(`/api/trips/${encodeURIComponent(id)}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status, branchId: getActiveBranchId() })
+    body: JSON.stringify({ status, branchId: resolvedBranchId })
   });
 
   if (!res.ok) {
@@ -581,7 +587,7 @@ export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void
 
 function tripFirestorePayload(trip: Trip): Record<string, unknown> {
   const now = new Date();
-  const branchId = trip.branchId ?? getActiveBranchId();
+  const branchId = requireBranchId(trip.branchId);
   return stripUndefined({
     id: trip.id,
     status: trip.status,
@@ -605,16 +611,25 @@ function tripFirestorePayload(trip: Trip): Record<string, unknown> {
 }
 
 export async function createTrip(trip: Trip): Promise<void> {
-  await setDoc(branchDocRef(db(), "trips", trip.id), tripFirestorePayload(trip));
+  const branchId = requireBranchId(trip.branchId);
+  await setDoc(branchDocRef(db(), "trips", trip.id, branchId), tripFirestorePayload(trip));
   if (trip.quote.appliedPromoId) {
     void incrementPromoRedemption(trip.quote.appliedPromoId);
   }
 }
 
 export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): Promise<void> {
+  const outboundBranchId = requireBranchId(outbound.branchId);
+  const returnBranchId = requireBranchId(returnLeg.branchId);
   const batch = writeBatch(db());
-  batch.set(branchDocRef(db(), "trips", outbound.id), tripFirestorePayload(outbound));
-  batch.set(branchDocRef(db(), "trips", returnLeg.id), tripFirestorePayload(returnLeg));
+  batch.set(
+    branchDocRef(db(), "trips", outbound.id, outboundBranchId),
+    tripFirestorePayload(outbound)
+  );
+  batch.set(
+    branchDocRef(db(), "trips", returnLeg.id, returnBranchId),
+    tripFirestorePayload(returnLeg)
+  );
   await batch.commit();
   const promoId = outbound.quote.appliedPromoId || returnLeg.quote.appliedPromoId;
   if (promoId) {
@@ -1460,13 +1475,14 @@ async function parseApiError(res: Response, fallback: string): Promise<never> {
 
 export async function saveVehicleClass(
   vehicleClass: VehicleClass,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
   validateVehicleClass(vehicleClass);
+  const resolvedBranchId = requireBranchId(branchId);
   const res = await fetch("/api/vehicle-classes", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...vehicleClass, branchId })
+    body: JSON.stringify({ ...vehicleClass, branchId: resolvedBranchId })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not save vehicle class.");
@@ -1475,12 +1491,13 @@ export async function saveVehicleClass(
 
 export async function deleteVehicleClass(
   id: string,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
+  const resolvedBranchId = requireBranchId(branchId);
   const res = await fetch(`/api/vehicle-classes/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ branchId })
+    body: JSON.stringify({ branchId: resolvedBranchId })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not delete vehicle class.");

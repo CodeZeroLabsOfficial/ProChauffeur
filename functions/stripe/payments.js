@@ -1,4 +1,5 @@
 const { HttpsError } = require("firebase-functions/v2/https");
+const { requireBranchId } = require("../lib/collections");
 const { getStripe, toStripeAmount } = require("./client");
 
 const REUSABLE_PI_STATUSES = new Set([
@@ -62,6 +63,7 @@ async function createTripCardPaymentIntent({
   paymentMethodId,
   saveCard,
 }) {
+  const resolvedBranchId = requireBranchId(branchId);
   const stripe = getStripe();
   const amountCents = toStripeAmount(amount, currency);
 
@@ -73,7 +75,7 @@ async function createTripCardPaymentIntent({
       firebaseUid,
       tripId: primaryTripId,
       tripIds: JSON.stringify(tripIds),
-      branchId,
+      branchId: resolvedBranchId,
       source: "ios",
     },
   };

@@ -2,7 +2,6 @@ const admin = require("firebase-admin");
 const {
   Collections,
   PaymentMethodSubcollection,
-  DEFAULT_BRANCH_ID,
   resolveTripRef,
   resolveInvoiceRef,
 } = require("../lib/collections");
@@ -48,16 +47,20 @@ function parseTripIdsFromMetadata(metadata) {
 }
 
 function branchIdFromMetadata(metadata) {
-  if (typeof metadata.branchId === "string" && metadata.branchId.trim()) {
+  if (typeof metadata?.branchId === "string" && metadata.branchId.trim()) {
     return metadata.branchId.trim();
   }
-  return DEFAULT_BRANCH_ID;
+  return null;
 }
 
 async function handlePaymentIntentSucceeded(db, paymentIntent) {
   const metadata = paymentIntent.metadata || {};
   const uid = metadata.firebaseUid;
   const branchId = branchIdFromMetadata(metadata);
+  if (!branchId) {
+    console.error("payment_intent.succeeded missing metadata.branchId", paymentIntent.id);
+    return;
+  }
 
   const seedIds = parseTripIdsFromMetadata(metadata);
   if (metadata.tripId && !seedIds.includes(metadata.tripId)) {
@@ -133,6 +136,10 @@ async function handlePaymentIntentSucceeded(db, paymentIntent) {
 async function handlePaymentIntentFailed(db, paymentIntent) {
   const metadata = paymentIntent.metadata || {};
   const branchId = branchIdFromMetadata(metadata);
+  if (!branchId) {
+    console.error("payment_intent.payment_failed missing metadata.branchId", paymentIntent.id);
+    return;
+  }
   const tripIds = parseTripIdsFromMetadata(metadata);
   const batch = db.batch();
   const now = admin.firestore.FieldValue.serverTimestamp();
@@ -151,6 +158,10 @@ async function handleInvoicePaid(db, stripeInvoice) {
   const invoiceId = metadata.invoiceId;
   const tripId = metadata.tripId;
   const branchId = branchIdFromMetadata(metadata);
+  if (!branchId) {
+    console.error("invoice.paid missing metadata.branchId", stripeInvoice.id);
+    return;
+  }
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   /** @type {string[]} */

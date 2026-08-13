@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const {
-  DEFAULT_BRANCH_ID,
   invoicesCollection,
+  requireBranchId,
   resolveTripRef,
 } = require("../lib/collections");
 
@@ -246,16 +246,17 @@ function normalizeTripIdList(ids) {
  *
  * @returns {Promise<{ trips: object[], refs: FirebaseFirestore.DocumentReference[], tripIds: string[] }>}
  */
-async function loadTripsForPaymentInvoice(db, seedTripIds, branchId = DEFAULT_BRANCH_ID) {
+async function loadTripsForPaymentInvoice(db, seedTripIds, branchId) {
+  const resolvedBranchId = requireBranchId(branchId);
   const ids = normalizeTripIdList(seedTripIds);
   const trips = [];
   const refs = [];
   const seen = new Set(ids);
 
   for (let i = 0; i < ids.length; i++) {
-    const { ref, snap } = await resolveTripRef(db, ids[i], branchId);
+    const { ref, snap } = await resolveTripRef(db, ids[i], resolvedBranchId);
     if (!snap.exists) {
-      throw new Error(`Missing trip ${ids[i]} (branch=${branchId})`);
+      throw new Error(`Missing trip ${ids[i]} (branch=${resolvedBranchId})`);
     }
     const trip = { id: snap.id, ...snap.data() };
     trips.push(trip);
@@ -289,9 +290,10 @@ async function createFirestoreInvoice(db, {
   trips,
   status,
   source,
-  branchId = DEFAULT_BRANCH_ID,
+  branchId,
   stripeFields = {},
 }) {
+  const resolvedBranchId = requireBranchId(branchId);
   if (!Array.isArray(trips) || trips.length === 0) {
     throw new Error("createFirestoreInvoice requires a non-empty trips array.");
   }
@@ -308,7 +310,7 @@ async function createFirestoreInvoice(db, {
 
   // Pre-generate the document ref so the `id` field is written with the rest of
   // the payload in a single `set` instead of an `add` followed by an `update`.
-  const ref = invoicesCollection(db, branchId).doc();
+  const ref = invoicesCollection(db, resolvedBranchId).doc();
 
   const payload = {
     invoiceNumber: invoiceNumber(),
@@ -317,7 +319,7 @@ async function createFirestoreInvoice(db, {
     customerEmail: primary.customer?.email || null,
     customerPhone: primary.customer?.phoneNumber || null,
     tripIDs,
-    branchId,
+    branchId: resolvedBranchId,
     status,
     currencyCode: requireQuoteCurrency(primary),
     lineItems,

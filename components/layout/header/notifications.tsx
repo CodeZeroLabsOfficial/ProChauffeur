@@ -119,10 +119,15 @@ export function HeaderNotifications() {
   );
 
   const handleStatusChange = useCallback(
-    async (tripId: string, status: "accepted" | "cancelled") => {
-      setActingOnId(tripId);
+    async (trip: Trip, status: "accepted" | "cancelled") => {
+      const branchId = trip.branchId?.trim();
+      if (!branchId) {
+        toast.error("Booking is missing a Location.");
+        return;
+      }
+      setActingOnId(trip.id);
       try {
-        await updateTripStatus(tripId, status);
+        await updateTripStatus(trip.id, status, branchId);
         toast.success(status === "accepted" ? "Booking accepted." : "Booking declined.");
       } catch {
         toast.error("Could not update the booking.");
@@ -215,7 +220,7 @@ export function HeaderNotifications() {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    void handleStatusChange(trip.id, "accepted");
+                                    void handleStatusChange(trip, "accepted");
                                   }}>
                                   Accept
                                 </Button>
@@ -226,7 +231,7 @@ export function HeaderNotifications() {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    void handleStatusChange(trip.id, "cancelled");
+                                    void handleStatusChange(trip, "cancelled");
                                   }}>
                                   Decline
                                 </Button>
