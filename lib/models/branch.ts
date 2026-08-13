@@ -11,8 +11,7 @@ export const BRANCH_SUBCOLLECTIONS = [
   "locations",
   "vehicle_classes",
   "invoices",
-  "drivers",
-  "notifications"
+  "drivers"
 ] as const;
 
 export type BranchSubcollection = (typeof BRANCH_SUBCOLLECTIONS)[number];
