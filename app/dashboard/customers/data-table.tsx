@@ -16,7 +16,8 @@ import {
 } from "@tanstack/react-table";
 import { MoreHorizontalIcon } from "lucide-react";
 
-import { useTrips, useUsers } from "@/hooks/use-collections";
+import { useCompanyTrips } from "@/hooks/use-company-collections";
+import { useUsers } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import type { CorporateAccount, User } from "@/lib/models";
 import { formatPostalAddress } from "@/lib/models/postal-address";
@@ -83,7 +84,7 @@ export function CustomersDataTable({
   onCreateOpenChange?: (open: boolean) => void;
 }) {
   const { users, loading: usersLoading } = useUsers();
-  const { trips, loading: tripsLoading } = useTrips();
+  const { trips, loading: tripsLoading } = useCompanyTrips();
   const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
   const loading = usersLoading || tripsLoading;
 

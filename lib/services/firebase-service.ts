@@ -479,9 +479,12 @@ export async function deleteBranch(branchId: string): Promise<void> {
 
 // ─────────────────────────────── Trips ───────────────────────────────
 
-/** Admin overview listener: recent trips for the active branch, newest first. */
-export function listenTrips(onUpdate: (trips: Trip[]) => void, max = 800): Unsub {
-  const branchId = getActiveBranchId();
+/** Admin overview listener: recent trips for a Location, newest first. */
+export function listenTrips(
+  onUpdate: (trips: Trip[]) => void,
+  max = 800,
+  branchId: string = getActiveBranchId()
+): Unsub {
   const nested = query(
     branchCollectionRef(db(), "trips", branchId),
     orderBy("createdAt", "desc"),
@@ -489,7 +492,7 @@ export function listenTrips(onUpdate: (trips: Trip[]) => void, max = 800): Unsub
   );
   return listenQuery(
     nested,
-    (snap) => snapToList(snap, mapTrip),
+    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId)),
     onUpdate,
     onSnapshotError("trips", onUpdate)
   );
@@ -502,7 +505,8 @@ export async function fetchTrips(max = 800): Promise<Trip[]> {
     orderBy("createdAt", "desc"),
     fsLimit(max)
   );
-  return snapToList(await getDocs(nested), mapTrip);
+  const snap = await getDocs(nested);
+  return snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId));
 }
 
 export async function fetchTrip(
@@ -510,7 +514,7 @@ export async function fetchTrip(
   branchId: string = getActiveBranchId()
 ): Promise<Trip | null> {
   const nested = await getDoc(branchDocRef(db(), "trips", id, branchId));
-  return nested.exists() ? mapTrip(nested.id, nested.data()) : null;
+  return nested.exists() ? mapTrip(nested.id, nested.data(), branchId) : null;
 }
 
 /** Realtime listener for a single trip document. */
@@ -519,7 +523,7 @@ export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): U
   return onSnapshot(
     branchDocRef(db(), "trips", id, branchId),
     (snap) => {
-      onUpdate(snap.exists() ? mapTrip(snap.id, snap.data()) : null);
+      onUpdate(snap.exists() ? mapTrip(snap.id, snap.data(), branchId) : null);
     },
     (error) => {
       console.error("Firestore trip listener failed:", error.code, error.message);
@@ -1595,23 +1599,26 @@ export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
 
 // ─────────────────────────────── Invoices ───────────────────────────────
 
-export function listenInvoices(onUpdate: (invoices: Invoice[]) => void): Unsub {
-  const branchId = getActiveBranchId();
+export function listenInvoices(
+  onUpdate: (invoices: Invoice[]) => void,
+  branchId: string = getActiveBranchId()
+): Unsub {
   const nested = query(
     branchCollectionRef(db(), "invoices", branchId),
     orderBy("issuedAt", "desc")
   );
   return listenQuery(
     nested,
-    (snap) => snapToList(snap, mapInvoice),
+    (snap) => snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), branchId)),
     onUpdate,
     onSnapshotError("invoices", onUpdate)
   );
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice | null> {
-  const nested = await getDoc(branchDocRef(db(), "invoices", id));
-  return nested.exists() ? mapInvoice(nested.id, nested.data()) : null;
+  const branchId = getActiveBranchId();
+  const nested = await getDoc(branchDocRef(db(), "invoices", id, branchId));
+  return nested.exists() ? mapInvoice(nested.id, nested.data(), branchId) : null;
 }
 
 export async function createInvoice(

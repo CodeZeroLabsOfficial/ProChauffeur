@@ -361,7 +361,7 @@ function mapTripQuoteSnapshot(d: DocumentData): TripQuoteSnapshot {
   };
 }
 
-export function mapTrip(id: string, d: DocumentData): Trip {
+export function mapTrip(id: string, d: DocumentData, pathBranchId?: string): Trip {
   const customerRaw =
     d.customer && typeof d.customer === "object" ? (d.customer as DocumentData) : {};
   const driverRaw =
@@ -387,7 +387,7 @@ export function mapTrip(id: string, d: DocumentData): Trip {
     status: d.status ?? "requested",
     customerID: d.customerID ?? "",
     driverID: d.driverID ?? null,
-    branchId: typeof d.branchId === "string" ? d.branchId : null,
+    branchId: typeof d.branchId === "string" ? d.branchId : pathBranchId ?? null,
     customer: {
       displayName: customerRaw.displayName ?? null,
       phoneNumber: customerRaw.phoneNumber ?? null,
@@ -624,7 +624,7 @@ export function mapActivityNotification(id: string, d: DocumentData): ActivityNo
   };
 }
 
-export function mapInvoice(id: string, d: DocumentData): Invoice {
+export function mapInvoice(id: string, d: DocumentData, pathBranchId?: string): Invoice {
   return {
     id,
     invoiceNumber: d.invoiceNumber ?? "",
@@ -633,7 +633,7 @@ export function mapInvoice(id: string, d: DocumentData): Invoice {
     customerEmail: d.customerEmail ?? null,
     customerPhone: d.customerPhone ?? null,
     tripIDs: d.tripIDs ?? [],
-    branchId: typeof d.branchId === "string" ? d.branchId : null,
+    branchId: typeof d.branchId === "string" ? d.branchId : pathBranchId ?? null,
     status: d.status ?? "draft",
     currencyCode: typeof d.currencyCode === "string" ? d.currencyCode : "",
     lineItems: d.lineItems ?? [],

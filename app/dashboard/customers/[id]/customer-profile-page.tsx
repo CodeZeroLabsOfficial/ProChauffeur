@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
-import { useInvoices, useTrips } from "@/hooks/use-collections";
+import { useCompanyInvoices, useCompanyTrips } from "@/hooks/use-company-collections";
 import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
@@ -34,8 +34,8 @@ export function CustomerProfilePage({ customerId }: { customerId: string }) {
   const tabParam = searchParams.get("tab");
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
 
-  const { trips } = useTrips();
-  const { invoices } = useInvoices();
+  const { trips } = useCompanyTrips();
+  const { invoices } = useCompanyInvoices();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

@@ -19,7 +19,8 @@ import {
 import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { useInvoices, useTrips, useUsers } from "@/hooks/use-collections";
+import { useCompanyInvoices, useCompanyTrips } from "@/hooks/use-company-collections";
+import { useUsers } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { corporateMonthlySpend } from "@/lib/bookings/corporate-policy";
 import type { CorporateAccount, User } from "@/lib/models";
@@ -46,8 +47,8 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       : "overview";
   const billingDefaultSection = legacyInvoicesTab ? "invoices" : "unbilled";
   const { ready, enabled } = useFeatureEnabled("corporateAccounts");
-  const { trips } = useTrips();
-  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { trips } = useCompanyTrips();
+  const { invoices, loading: invoicesLoading } = useCompanyInvoices();
   const { users } = useUsers();
 
   const [account, setAccount] = useState<CorporateAccount | null>(null);
