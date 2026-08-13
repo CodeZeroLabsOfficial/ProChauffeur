@@ -259,6 +259,8 @@ export async function upsertBranch(branch: Branch): Promise<void> {
       officeLatitude: branch.officeLatitude ?? null,
       officeLongitude: branch.officeLongitude ?? null,
       officePhone: branch.officePhone ?? null,
+      officeEmail: branch.officeEmail ?? null,
+      contactUserId: branch.contactUserId ?? null,
       serviceArea: branch.serviceArea ?? null,
       createdAt: existing.exists() ? branch.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp()

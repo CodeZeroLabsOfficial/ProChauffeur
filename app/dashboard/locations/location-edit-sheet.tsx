@@ -2,17 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Building2, ExternalLink, ImagePlusIcon, MapPin, Phone, Power } from "lucide-react";
+import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
+import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
-import {
-  ProfileV2TabTrigger,
-  profileV2TabsListClassName
-} from "@/components/layout/profile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
@@ -25,23 +22,19 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
 import { buildBranch, type Branch } from "@/lib/models";
+import type { User } from "@/lib/models/user";
 import {
   allocateUniqueBranchId,
   createLocationWithScaffold,
+  fetchUser,
   syncOfficeFleetLocation,
   uploadBranchImage,
   upsertBranch
 } from "@/lib/services/firebase-service";
-import { LocationOperatingHoursTab } from "@/app/dashboard/locations/location-operating-hours-tab";
-import { LocationLocalePanel } from "@/app/dashboard/locations/components/location-locale-panel";
-import { LocationPricingPanel } from "@/app/dashboard/locations/components/location-pricing-panel";
-import { LocationServiceAreaForm } from "@/app/dashboard/locations/components/location-service-area-form";
-import { LocationVehicleClassesPanel } from "@/app/dashboard/locations/components/location-vehicle-classes-panel";
 
 function LocationImageUpload({
   branch,
@@ -104,6 +97,59 @@ function LocationImageUpload({
     </div>
   );
 }
+
+function LocationContactPicker({
+  contactUserId,
+  disabled,
+  onSave
+}: {
+  contactUserId: string | null | undefined;
+  disabled?: boolean;
+  onSave: (userId: string | null) => Promise<{ ok: boolean; message?: string }>;
+}) {
+  const [contact, setContact] = useState<User | null>(null);
+  const [loading, setLoading] = useState(Boolean(contactUserId?.trim()));
+
+  useEffect(() => {
+    const id = contactUserId?.trim();
+    if (!id) {
+      setContact(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    fetchUser(id)
+      .then((user) => {
+        if (!cancelled) setContact(user?.role === "admin" ? user : null);
+      })
+      .catch(() => {
+        if (!cancelled) setContact(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contactUserId]);
+
+  return (
+    <AdminUserAutocomplete
+      id="location-contact"
+      value={contact}
+      onChange={(user) => {
+        setContact(user);
+        void onSave(user?.id ?? null).then((res) => {
+          if (!res.ok) toast.error(res.message ?? "Could not save.");
+        });
+      }}
+      disabled={disabled || loading}
+      placeholder="Search team admins…"
+    />
+  );
+}
+
 function LocationOverviewFields({
   branch,
   onSaved
@@ -187,6 +233,30 @@ function LocationOverviewFields({
             </dd>
           </div>
           <div className="col-span-2 space-y-1">
+            <DetailLabel icon={Mail}>Email</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="email"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={branch.officeEmail?.trim() ?? ""}
+                inputType="email"
+                editLabel="email"
+                placeholder="Optional"
+                onSave={async (next) => saveBranch({ officeEmail: next.trim() || null })}
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <DetailLabel icon={User}>Contact</DetailLabel>
+            <dd>
+              <LocationContactPicker
+                contactUserId={branch.contactUserId}
+                onSave={async (userId) => saveBranch({ contactUserId: userId })}
+              />
+            </dd>
+          </div>
+          <div className="col-span-2 space-y-1">
             <DetailLabel icon={MapPin}>Office address</DetailLabel>
             <dd>
               <InlineOfficeAddressField
@@ -233,15 +303,15 @@ function LocationOverviewFields({
 
 function LocationCreateOverviewForm({
   canCreate,
-  saving,
   onCreated
 }: {
   canCreate: boolean;
-  saving: boolean;
   onCreated: (branch: Branch) => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [contact, setContact] = useState<User | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [office, setOffice] = useState<AddressSuggestion | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -273,6 +343,8 @@ function LocationCreateOverviewForm({
         officeLatitude: office.coordinate.latitude,
         officeLongitude: office.coordinate.longitude,
         officePhone: phone.trim() || null,
+        officeEmail: email.trim() || null,
+        contactUserId: contact?.id ?? null,
         serviceArea: null
       });
       await createLocationWithScaffold(created);
@@ -285,8 +357,6 @@ function LocationCreateOverviewForm({
     }
   }
 
-  const busy = saving || submitting;
-
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
       <div className="space-y-2">
@@ -297,19 +367,7 @@ function LocationCreateOverviewForm({
           onChange={(e) => setName(e.target.value)}
           required
           placeholder="e.g. Brisbane"
-          disabled={busy}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-office">Office address</Label>
-        <AddressAutocomplete
-          id="location-office"
-          value={office}
-          onChange={setOffice}
-          required
-          disabled={busy}
-          placeholder="Search for the office address…"
+          disabled={submitting}
         />
       </div>
 
@@ -321,7 +379,42 @@ function LocationCreateOverviewForm({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Optional"
-          disabled={busy}
+          disabled={submitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-email">Email</Label>
+        <Input
+          id="location-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Optional"
+          disabled={submitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-create-contact">Contact</Label>
+        <AdminUserAutocomplete
+          id="location-create-contact"
+          value={contact}
+          onChange={setContact}
+          disabled={submitting}
+          placeholder="Search team admins…"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location-office">Office address</Label>
+        <AddressAutocomplete
+          id="location-office"
+          value={office}
+          onChange={setOffice}
+          required
+          disabled={submitting}
+          placeholder="Search for the office address…"
         />
       </div>
 
@@ -336,14 +429,14 @@ function LocationCreateOverviewForm({
           id="location-active"
           checked={isActive}
           onCheckedChange={setIsActive}
-          disabled={busy}
+          disabled={submitting}
         />
       </div>
 
       <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
         <span />
-        <Button type="submit" disabled={busy || !canCreate}>
-          {busy ? "Saving…" : "Create"}
+        <Button type="submit" disabled={submitting || !canCreate}>
+          {submitting ? "Saving…" : "Create"}
         </Button>
       </SheetFooter>
     </form>
@@ -364,15 +457,7 @@ export function LocationEditSheet({
   onSaved: (branch: Branch) => void;
 }) {
   const isNew = branch == null;
-
-  const [tab, setTab] = useState("overview");
-  const [saving, setSaving] = useState(false);
   const [savedBranch, setSavedBranch] = useState<Branch | null>(branch);
-
-  useEffect(() => {
-    if (!open) return;
-    setTab("overview");
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -381,37 +466,15 @@ export function LocationEditSheet({
 
   const working = savedBranch ?? branch;
   const displayBranch = useSheetDisplayItem(working, open);
-  const locationExists = working != null;
 
   function handleCreated(created: Branch) {
     setSavedBranch(created);
     onSaved(created);
-    setTab("service-area");
   }
 
   function handleSaved(updated: Branch) {
     setSavedBranch(updated);
     onSaved(updated);
-  }
-
-  async function saveServiceArea(serviceArea: Branch["serviceArea"]) {
-    if (!working) return;
-
-    setSaving(true);
-    try {
-      const updated: Branch = {
-        ...working,
-        serviceArea,
-        updatedAt: new Date()
-      };
-      await upsertBranch(updated);
-      handleSaved(updated);
-      toast.success("Service area saved.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the service area.");
-    } finally {
-      setSaving(false);
-    }
   }
 
   return (
@@ -446,102 +509,11 @@ export function LocationEditSheet({
             </div>
           ) : null}
 
-          <Tabs value={tab} onValueChange={setTab} className="gap-4">
-            <TabsList className={profileV2TabsListClassName}>
-              <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="service-area" disabled={!locationExists}>
-                Service area
-              </ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="hours" disabled={!locationExists}>
-                Operating hours
-              </ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="classes" disabled={!locationExists}>
-                Vehicle classes
-              </ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="pricing" disabled={!locationExists}>
-                Pricing
-              </ProfileV2TabTrigger>
-              <ProfileV2TabTrigger value="locale" disabled={!locationExists}>
-                Locale
-              </ProfileV2TabTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="mt-0">
-              {working ? (
-                <LocationOverviewFields branch={working} onSaved={handleSaved} />
-              ) : (
-                <LocationCreateOverviewForm
-                  canCreate={canCreate}
-                  saving={saving}
-                  onCreated={handleCreated}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="service-area" className="mt-0">
-              {working ? (
-                <LocationServiceAreaForm
-                  branch={working}
-                  officeSuggestion={officeSuggestionFromBranch(working)}
-                  saving={saving}
-                  onSave={saveServiceArea}
-                  idPrefix="edit-location"
-                  footer={
-                    <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-                      <span />
-                      <Button type="submit" disabled={saving}>
-                        {saving ? "Saving…" : "Save"}
-                      </Button>
-                    </SheetFooter>
-                  }
-                />
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Save the location overview first to configure the service area.
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="hours" className="mt-0 space-y-4">
-              {working ? (
-                <LocationOperatingHoursTab branchId={working.id} nestedSheet />
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Save the location overview first to configure operating hours.
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="classes" className="mt-0 space-y-4">
-              {working ? (
-                <LocationVehicleClassesPanel branchId={working.id} nestedSheet />
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Save the location overview first to configure vehicle classes.
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="pricing" className="mt-0 space-y-4">
-              {working ? (
-                <LocationPricingPanel branchId={working.id} nestedSheet />
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Save the location overview first to configure pricing.
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="locale" className="mt-0 space-y-4">
-              {working ? (
-                <LocationLocalePanel branchId={working.id} />
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Save the location overview first to configure locale.
-                </p>
-              )}
-            </TabsContent>
-          </Tabs>
+          {working ? (
+            <LocationOverviewFields branch={working} onSaved={handleSaved} />
+          ) : (
+            <LocationCreateOverviewForm canCreate={canCreate} onCreated={handleCreated} />
+          )}
         </div>
       </SheetContent>
     </Sheet>

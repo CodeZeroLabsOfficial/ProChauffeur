@@ -38,6 +38,10 @@ export interface Branch {
   officeLatitude?: number | null;
   officeLongitude?: number | null;
   officePhone?: string | null;
+  /** Office / location contact email. */
+  officeEmail?: string | null;
+  /** Team admin `users/{uid}` with `role: "admin"`. */
+  contactUserId?: string | null;
   /** Optional service-area description for booking resolve. */
   serviceArea?: {
     type: "postcodes" | "radius" | "polygon";
@@ -90,6 +94,8 @@ export function buildBranch(
     officeLatitude: null,
     officeLongitude: null,
     officePhone: null,
+    officeEmail: null,
+    contactUserId: null,
     serviceArea: null,
     createdAt: now,
     updatedAt: now,

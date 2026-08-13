@@ -276,6 +276,8 @@ export function mapBranch(id: string, d: DocumentData): Branch {
     officeLatitude: typeof d.officeLatitude === "number" ? d.officeLatitude : null,
     officeLongitude: typeof d.officeLongitude === "number" ? d.officeLongitude : null,
     officePhone: typeof d.officePhone === "string" ? d.officePhone : null,
+    officeEmail: typeof d.officeEmail === "string" ? d.officeEmail : null,
+    contactUserId: typeof d.contactUserId === "string" ? d.contactUserId : null,
     serviceArea: d.serviceArea ?? null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()

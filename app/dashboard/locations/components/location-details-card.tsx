@@ -1,4 +1,4 @@
-import { Clock, MapPin, MapPinned, PhoneCall } from "lucide-react";
+import { Clock, Mail, MapPin, MapPinned, PhoneCall } from "lucide-react";
 
 import type { Branch } from "@/lib/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,11 @@ export function LocationDetailsCard({
 }) {
   const address = branch.officeAddressLine?.trim();
   const phone = branch.officePhone?.trim();
+  const email = branch.officeEmail?.trim();
   const zone = timezone?.trim();
   const serviceAreaDetail = formatServiceAreaDetail(branch.serviceArea);
 
-  const hasContent = Boolean(address || phone || zone || serviceAreaDetail);
+  const hasContent = Boolean(address || phone || email || zone || serviceAreaDetail);
 
   return (
     <Card>
@@ -32,6 +33,13 @@ export function LocationDetailsCard({
               <ContactRow icon={PhoneCall}>
                 <a href={`tel:${phone}`} className="hover:text-primary hover:underline">
                   {phone}
+                </a>
+              </ContactRow>
+            ) : null}
+            {email ? (
+              <ContactRow icon={Mail}>
+                <a href={`mailto:${email}`} className="hover:text-primary hover:underline">
+                  {email}
                 </a>
               </ContactRow>
             ) : null}
