@@ -10,8 +10,6 @@ const HREF = {
   profile: "/dashboard/settings/profile",
   company: "/dashboard/settings/company",
   locations: "/dashboard/locations",
-  operatingHours: "/dashboard/locations",
-  pricing: "/dashboard/locations",
   billing: "/dashboard/billing",
   team: "/dashboard/settings/team"
 } as const;
@@ -127,35 +125,101 @@ export function locationNotification(
   };
 }
 
-export function operatingHoursNotification(): CreateActivityNotificationInput {
+function locationSettingNotification(
+  category: CreateActivityNotificationInput["category"],
+  branchId: string,
+  locationName: string,
+  message: string,
+  tab: string
+): CreateActivityNotificationInput {
+  const name = locationName.trim() || branchId;
   return {
-    category: "operating_hours",
+    category,
     action: "updated",
-    title: "Operating hours",
-    message: "Operating hours updated",
-    href: HREF.operatingHours
-  };
-}
-
-export function localeNotification(branchId: string): CreateActivityNotificationInput {
-  return {
-    category: "locale",
-    action: "updated",
-    title: "Locale settings",
-    message: "Locale settings updated",
-    href: `${HREF.locations}/${branchId}?tab=locale`,
+    title: name,
+    message,
+    href: `${HREF.locations}/${branchId}?tab=${tab}`,
     entityId: branchId
   };
 }
 
-export function pricingNotification(): CreateActivityNotificationInput {
-  return {
-    category: "pricing",
-    action: "updated",
-    title: "Pricing",
-    message: "Pricing updated",
-    href: HREF.pricing
-  };
+export function operatingHoursNotification(
+  branchId: string,
+  locationName: string
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "operating_hours",
+    branchId,
+    locationName,
+    "Hours updated",
+    "hours"
+  );
+}
+
+export function localeNotification(
+  branchId: string,
+  locationName: string
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "locale",
+    branchId,
+    locationName,
+    "Locale updated",
+    "locale"
+  );
+}
+
+export function pricingNotification(
+  branchId: string,
+  locationName: string
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "pricing",
+    branchId,
+    locationName,
+    "Pricing updated",
+    "pricing"
+  );
+}
+
+export function featuresNotification(
+  branchId: string,
+  locationName: string
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "location",
+    branchId,
+    locationName,
+    "Features updated",
+    "features"
+  );
+}
+
+export function serviceAreaNotification(
+  branchId: string,
+  locationName: string
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "location",
+    branchId,
+    locationName,
+    "Service area updated",
+    "service-area"
+  );
+}
+
+export function vehicleClassesNotification(
+  branchId: string,
+  locationName: string,
+  message = "Vehicle classes updated"
+): CreateActivityNotificationInput {
+  return locationSettingNotification(
+    "location",
+    branchId,
+    locationName,
+    message,
+    "classes"
+  );
 }
 
 export function invoiceNotification(

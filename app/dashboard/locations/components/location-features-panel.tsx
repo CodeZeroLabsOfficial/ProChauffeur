@@ -49,7 +49,7 @@ export function LocationFeaturesPanel({
         [field]: enabled,
         updatedAt: new Date()
       };
-      await upsertBranch(updated);
+      await upsertBranch(updated, "features");
       onSaved(updated);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save.");

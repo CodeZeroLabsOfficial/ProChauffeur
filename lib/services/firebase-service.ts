@@ -37,11 +37,14 @@ import {
   companyNotification,
   driverNotification,
   invoiceNotification,
+  featuresNotification,
   localeNotification,
   locationNotification,
   operatingHoursNotification,
   pricingNotification,
   profileNotification,
+  serviceAreaNotification,
+  vehicleClassesNotification,
   vehicleDisplayTitle,
   vehicleNotification
 } from "@/lib/notifications/messages";
@@ -166,6 +169,19 @@ async function resolveActor(): Promise<{ actorId?: string; actorName?: string }>
   return { actorId, actorName };
 }
 
+async function notifyLocationSetting(
+  branchId: string,
+  build: (locationName: string) => CreateActivityNotificationInput
+): Promise<void> {
+  try {
+    const branch = await fetchBranch(branchId);
+    const locationName = branch?.name?.trim() || branchId;
+    await createActivityNotification(build(locationName));
+  } catch (err) {
+    console.error("Failed to write activity notification:", err);
+  }
+}
+
 /** Best-effort activity notification write; never throws to callers. */
 export async function createActivityNotification(
   input: CreateActivityNotificationInput
@@ -235,7 +251,12 @@ export async function fetchBranch(branchId: string): Promise<Branch | null> {
   return snap.exists() ? mapBranch(snap.id, snap.data()) : null;
 }
 
-export async function upsertBranch(branch: Branch): Promise<void> {
+export type BranchUpsertActivity = "features" | "service-area";
+
+export async function upsertBranch(
+  branch: Branch,
+  activity?: BranchUpsertActivity
+): Promise<void> {
   const ref = branchMetaDocRef(db(), branch.id);
   const existing = await getDoc(ref);
   if (!existing.exists()) {
@@ -270,6 +291,11 @@ export async function upsertBranch(branch: Branch): Promise<void> {
     }),
     { merge: true }
   );
+  if (activity === "features") {
+    void notifyLocationSetting(branch.id, (name) => featuresNotification(branch.id, name));
+  } else if (activity === "service-area") {
+    void notifyLocationSetting(branch.id, (name) => serviceAreaNotification(branch.id, name));
+  }
 }
 
 export type OfficeFleetSyncInput = {
@@ -1440,7 +1466,7 @@ export async function savePricingConfiguration(
     { merge: true }
   );
   invalidatePricingConfigurationCache(branchId);
-  void createActivityNotification(pricingNotification());
+  void notifyLocationSetting(branchId, (name) => pricingNotification(branchId, name));
 }
 
 // ───────────────────────── Vehicle classes ─────────────────────────
@@ -1500,6 +1526,9 @@ export async function saveVehicleClass(
   if (!res.ok) {
     await parseApiError(res, "Could not save vehicle class.");
   }
+  void notifyLocationSetting(resolvedBranchId, (name) =>
+    vehicleClassesNotification(resolvedBranchId, name)
+  );
 }
 
 export async function deleteVehicleClass(
@@ -1515,6 +1544,9 @@ export async function deleteVehicleClass(
   if (!res.ok) {
     await parseApiError(res, "Could not delete vehicle class.");
   }
+  void notifyLocationSetting(resolvedBranchId, (name) =>
+    vehicleClassesNotification(resolvedBranchId, name, "Vehicle class removed")
+  );
 }
 
 export async function fetchOperatingHours(
@@ -1538,7 +1570,7 @@ export async function saveOperatingHours(
     }),
     { merge: true }
   );
-  void createActivityNotification(operatingHoursNotification());
+  void notifyLocationSetting(branchId, (name) => operatingHoursNotification(branchId, name));
 }
 
 export async function fetchOperatorLocale(
@@ -1562,7 +1594,7 @@ export async function saveOperatorLocale(
     { merge: true }
   );
   invalidateOperatorLocaleCache(branchId);
-  void createActivityNotification(localeNotification(branchId));
+  void notifyLocationSetting(branchId, (name) => localeNotification(branchId, name));
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {

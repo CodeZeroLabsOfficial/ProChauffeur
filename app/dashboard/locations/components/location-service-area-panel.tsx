@@ -25,7 +25,7 @@ export function LocationServiceAreaPanel({
         serviceArea,
         updatedAt: new Date()
       };
-      await upsertBranch(updated);
+      await upsertBranch(updated, "service-area");
       onSaved(updated);
       toast.success("Service area saved.");
     } catch (err) {
