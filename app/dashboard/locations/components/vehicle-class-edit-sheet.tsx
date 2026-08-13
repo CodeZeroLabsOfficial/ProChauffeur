@@ -215,6 +215,7 @@ function ImageUploadField({
 type RateNumberField = {
   key: string;
   label: string;
+  tooltip: string;
   step?: number;
   decimals?: number;
   min?: number;
@@ -222,22 +223,85 @@ type RateNumberField = {
 };
 
 const transferFields: RateNumberField[] = [
-  { key: "minimumBaseRate", label: "Min. base rate" },
-  { key: "baseFare", label: "Base fare" },
-  { key: "deadheadRatePerUnit", label: "Deadhead rate", step: 0.01, decimals: 2 },
-  { key: "tripRatePerUnit", label: "Trip rate", step: 0.01, decimals: 2 },
-  { key: "returnToBaseFee", label: "Return-to-base" },
-  { key: "waitingFeeFlat", label: "Waiting fee" }
+  {
+    key: "minimumBaseRate",
+    label: "Min. base rate",
+    tooltip:
+      "Lowest transfer fare for this class. If the calculated fare is lower, the quote is raised to this amount."
+  },
+  {
+    key: "baseFare",
+    label: "Base fare",
+    tooltip: "Flat amount added to every transfer before distance and fees."
+  },
+  {
+    key: "deadheadRatePerUnit",
+    label: "Deadhead rate",
+    step: 0.01,
+    decimals: 2,
+    tooltip: "Rate per distance unit for empty travel to pickup and from drop-off."
+  },
+  {
+    key: "tripRatePerUnit",
+    label: "Trip rate",
+    step: 0.01,
+    decimals: 2,
+    tooltip: "Rate per distance unit while the customer is onboard."
+  },
+  {
+    key: "returnToBaseFee",
+    label: "Return-to-base",
+    tooltip: "Flat fee added to every transfer for returning to base."
+  },
+  {
+    key: "waitingFeeFlat",
+    label: "Waiting fee",
+    tooltip: "Stored on the class but not used in quotes today."
+  }
 ];
 
 const hourlyFields: RateNumberField[] = [
-  { key: "weekdayHourlyRate", label: "Weekday hourly" },
-  { key: "weekendHourlyRate", label: "Weekend hourly" },
-  { key: "weekdayMinimumHours", label: "Weekday min. hrs", step: 0.5, decimals: 1 },
-  { key: "weekendMinimumHours", label: "Weekend min. hrs", step: 0.5, decimals: 1 },
-  { key: "freeDeadheadMinutes", label: "Free deadhead" },
-  { key: "deadheadRatePerMinute", label: "Deadhead / min", step: 0.01, decimals: 2 },
-  { key: "displayHourlyFrom", label: "Display from" }
+  {
+    key: "weekdayHourlyRate",
+    label: "Weekday hourly",
+    tooltip: "Hourly rate charged on weekdays."
+  },
+  {
+    key: "weekendHourlyRate",
+    label: "Weekend hourly",
+    tooltip: "Hourly rate charged on weekend days."
+  },
+  {
+    key: "weekdayMinimumHours",
+    label: "Weekday min. hrs",
+    step: 0.5,
+    decimals: 1,
+    tooltip: "Minimum billable hours on weekdays, even if the booking is shorter."
+  },
+  {
+    key: "weekendMinimumHours",
+    label: "Weekend min. hrs",
+    step: 0.5,
+    decimals: 1,
+    tooltip: "Minimum billable hours on weekend days, even if the booking is shorter."
+  },
+  {
+    key: "freeDeadheadMinutes",
+    label: "Free deadhead",
+    tooltip: "Deadhead minutes included before extra deadhead time is charged."
+  },
+  {
+    key: "deadheadRatePerMinute",
+    label: "Deadhead / min",
+    step: 0.01,
+    decimals: 2,
+    tooltip: "Rate charged per minute of deadhead after free deadhead is used."
+  },
+  {
+    key: "displayHourlyFrom",
+    label: "Display from",
+    tooltip: "“From” hourly price shown to customers when browsing this class."
+  }
 ];
 
 const RATE_MIN = 0;
@@ -700,13 +764,24 @@ export function VehicleClassEditSheet({
 
               <TabsContent value="pricing" className="mt-0 space-y-4">
                 <div className="space-y-4">
-                  <SectionHeading>Point-to-point rates</SectionHeading>
+                  <div className="flex items-center gap-1">
+                    <SectionHeading>Point-to-point rates</SectionHeading>
+                    <FieldInfoTooltip label="point-to-point rates">
+                      Used for transfer trips. Distance and deadhead are billed from these rates,
+                      then floored by the min base rate.
+                    </FieldInfoTooltip>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {transferFields.map((field) => (
                       <NumberStepper
                         key={field.key}
                         id={`transfer-${field.key}`}
                         label={field.label}
+                        labelExtra={
+                          <FieldInfoTooltip label={field.label.toLowerCase()}>
+                            {field.tooltip}
+                          </FieldInfoTooltip>
+                        }
                         value={draft.transfer[field.key as keyof typeof draft.transfer]}
                         onChange={(value) => setTransferField(field.key, value)}
                         min={field.min ?? RATE_MIN}
@@ -721,13 +796,24 @@ export function VehicleClassEditSheet({
                 <Separator />
 
                 <div className="space-y-4">
-                  <SectionHeading>Hourly rates</SectionHeading>
+                  <div className="flex items-center gap-1">
+                    <SectionHeading>Hourly rates</SectionHeading>
+                    <FieldInfoTooltip label="hourly rates">
+                      Used for hourly / as-directed trips. Customers are billed the higher of booked
+                      hours or the minimum hours.
+                    </FieldInfoTooltip>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {hourlyFields.map((field) => (
                       <NumberStepper
                         key={field.key}
                         id={`hourly-${field.key}`}
                         label={field.label}
+                        labelExtra={
+                          <FieldInfoTooltip label={field.label.toLowerCase()}>
+                            {field.tooltip}
+                          </FieldInfoTooltip>
+                        }
                         value={draft.hourly[field.key as keyof typeof draft.hourly]}
                         onChange={(value) => setHourlyField(field.key, value)}
                         min={field.min ?? RATE_MIN}
