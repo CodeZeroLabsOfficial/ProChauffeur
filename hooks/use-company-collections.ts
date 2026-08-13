@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useSessionUser } from "@/components/providers/session-provider";
+import { grantedBranchIds } from "@/lib/auth/staff-access";
 import {
   listenBranches,
   listenInvoices,
@@ -9,14 +11,16 @@ import {
 } from "@/lib/services/firebase-service";
 import type { Invoice, Trip } from "@/lib/models";
 
-function useAllBranchIds(): { ids: string[]; ready: boolean } {
+function useGrantedCompanyBranchIds(): { ids: string[]; ready: boolean } {
+  const session = useSessionUser();
   const [ids, setIds] = useState<string[] | null>(null);
+  const grantKey = `${session.canAccessAllBranches}:${(session.branchIds ?? []).join(",")}`;
 
   useEffect(() => {
     return listenBranches((rows) => {
-      setIds(rows.map((branch) => branch.id).sort());
+      setIds(grantedBranchIds(session, rows.map((branch) => branch.id).sort()));
     });
-  }, []);
+  }, [grantKey, session]);
 
   return { ids: ids ?? [], ready: ids !== null };
 }
@@ -43,7 +47,7 @@ function useMergedBranchCollections<T extends { id: string; branchId?: string | 
   listen: (onUpdate: (rows: T[]) => void, branchId: string) => () => void,
   sortValue: (row: T) => number
 ): { rows: T[]; loading: boolean } {
-  const { ids, ready } = useAllBranchIds();
+  const { ids, ready } = useGrantedCompanyBranchIds();
   const idsKey = ids.join(",");
   const [byBranch, setByBranch] = useState<Record<string, T[]>>({});
   const [readyBranches, setReadyBranches] = useState<Set<string>>(new Set());
@@ -101,13 +105,13 @@ function invoiceIssuedAtMs(invoice: Invoice): number {
   return invoice.issuedAt.getTime();
 }
 
-/** Trips from every Location (including inactive). Not tied to the switcher. */
+/** Trips from granted Locations (including inactive). Not tied to the switcher. */
 export function useCompanyTrips(): { trips: Trip[]; loading: boolean } {
   const { rows, loading } = useMergedBranchCollections(listenBranchTrips, tripCreatedAtMs);
   return { trips: rows, loading };
 }
 
-/** Invoices from every Location (including inactive). Not tied to the switcher. */
+/** Invoices from granted Locations (including inactive). Not tied to the switcher. */
 export function useCompanyInvoices(): { invoices: Invoice[]; loading: boolean } {
   const { rows, loading } = useMergedBranchCollections(listenBranchInvoices, invoiceIssuedAtMs);
   return { invoices: rows, loading };

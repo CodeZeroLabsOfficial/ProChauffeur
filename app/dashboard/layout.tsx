@@ -5,6 +5,7 @@ import { fetchAppearanceAdmin } from "@/lib/firebase/admin-settings";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
+import { StaffAccessGate } from "@/components/staff-access-gate";
 import { ActiveBranchProvider } from "@/components/providers/active-branch-provider";
 import { FirebaseAuthProvider } from "@/components/providers/firebase-auth-provider";
 import { DashboardCollectionsProvider } from "@/components/providers/dashboard-collections-provider";
@@ -39,7 +40,7 @@ export default async function DashboardLayout({
                 <SiteHeader />
                 <div className="bg-muted/40 flex min-h-0 flex-1 flex-col overflow-hidden">
                   <div className="@container/main flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
-                    {children}
+                    <StaffAccessGate>{children}</StaffAccessGate>
                   </div>
                 </div>
               </SidebarInset>

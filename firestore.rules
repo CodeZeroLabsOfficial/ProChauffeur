@@ -11,9 +11,13 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
-    function callerRole() {
+    function callerUser() {
       let p = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(p) ? get(p).data.role : '';
+      return exists(p) ? get(p).data : {};
+    }
+
+    function callerRole() {
+      return signedIn() ? callerUser().role : '';
     }
 
     function isAdmin() {
@@ -22,6 +26,30 @@ service cloud.firestore {
 
     function isDriver() {
       return signedIn() && callerRole() == 'driver';
+    }
+
+    function isStaffAdminUser() {
+      let d = callerUser();
+      return isAdmin() && (!('staffRole' in d) || d.staffRole == 'admin');
+    }
+
+    function hasGrantFields() {
+      let d = callerUser();
+      return 'canAccessAllBranches' in d || 'branchIds' in d;
+    }
+
+    function canAccessBranch(branchId) {
+      let d = callerUser();
+      return isAdmin() && (
+        !hasGrantFields()
+        || d.canAccessAllBranches == true
+        || (d.branchIds is list && branchId in d.branchIds)
+      );
+    }
+
+    function grantFieldsChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['staffRole', 'branchIds', 'canAccessAllBranches']);
     }
 
     function driverIdEmpty(data) {
@@ -54,16 +82,30 @@ service cloud.firestore {
         || (isAdmin()
           && validUsersCreatePayload(userId)
           && request.resource.data.role == 'driver');
-      allow update: if isAdmin()
-        || (isSelf(userId)
+      allow update: if (
+          isStaffAdminUser()
+          && request.resource.data.role == resource.data.role
+          && (userId != request.auth.uid
+            || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['staffRole']))
+        )
+        || (
+          isAdmin()
+          && !grantFieldsChanged()
+          && request.resource.data.role == resource.data.role
+        )
+        || (
+          isSelf(userId)
           && request.resource.data.role == resource.data.role
           && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['corporateAccountId']))
-        || (isSelf(userId)
+            .hasAny(['corporateAccountId', 'staffRole', 'branchIds', 'canAccessAllBranches'])
+        )
+        || (
+          isSelf(userId)
           && customerDriverSwap()
           && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['corporateAccountId']));
-      allow delete: if isAdmin();
+            .hasAny(['corporateAccountId', 'staffRole', 'branchIds', 'canAccessAllBranches'])
+        );
+      allow delete: if isStaffAdminUser();
 
       match /payment_methods/{paymentMethodId} {
         allow read: if isSelf(userId) || isAdmin();
@@ -114,11 +156,12 @@ service cloud.firestore {
     // Branch sub-accounts: nested ops data under branches/{branchId}/…
     match /branches/{branchId} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if canAccessBranch(branchId);
 
       match /settings/{docId} {
         allow read: if signedIn();
-        allow write: if isAdmin();
+        allow write: if canAccessBranch(branchId);
       }
 
       match /trips/{tripId} {
@@ -133,46 +176,46 @@ service cloud.firestore {
         }
 
         allow read: if signedIn() && (
-          isAdmin()
+          canAccessBranch(branchId)
           || isCustomerOfTrip()
           || isDriverOfTrip()
           || (isDriver() && isOpenRequest())
         );
-        allow create: if signedIn();
+        allow create: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow update: if signedIn() && (
-          isAdmin()
+          canAccessBranch(branchId)
           || isCustomerOfTrip()
           || isDriverOfTrip()
           || (isDriver() && isOpenRequest())
         );
-        allow delete: if isAdmin();
+        allow delete: if canAccessBranch(branchId);
       }
 
       match /vehicle_classes/{classId} {
         allow read: if true;
-        allow write: if isAdmin();
+        allow write: if canAccessBranch(branchId);
       }
 
       match /vehicles/{vehicleId} {
         allow read: if signedIn();
-        allow create, update, delete: if isAdmin()
+        allow create, update, delete: if canAccessBranch(branchId)
           || (signedIn() && request.auth.uid == vehicleId);
       }
 
       match /locations/{locId} {
         allow read: if signedIn();
-        allow create, update, delete: if isAdmin();
+        allow create, update, delete: if canAccessBranch(branchId);
       }
 
       match /invoices/{invoiceId} {
-        allow read: if isAdmin()
+        allow read: if canAccessBranch(branchId)
           || (signedIn() && resource.data.customerID == request.auth.uid);
-        allow write: if isAdmin();
+        allow write: if canAccessBranch(branchId);
       }
 
       match /drivers/{driverUid} {
         allow read: if signedIn();
-        allow write: if isAdmin() || isSelf(driverUid);
+        allow write: if canAccessBranch(branchId) || isSelf(driverUid);
       }
     }
 

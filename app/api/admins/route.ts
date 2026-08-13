@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 
+import { parseStaffGrantInput, staffGrantFields } from "@/lib/auth/staff-access";
+import { requireStaffAdmin } from "@/lib/auth/require-staff";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
 import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
@@ -14,21 +16,30 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+  const denied = requireStaffAdmin(session);
+  if (denied) return denied;
 
-  let email: string | undefined;
-  let password: string | undefined;
+  let body: unknown;
   try {
-    ({ email, password } = await request.json());
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const trimmedEmail = email?.trim().toLowerCase();
+  const data = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const trimmedEmail =
+    typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+  const password = typeof data.password === "string" ? data.password : "";
   if (!trimmedEmail) {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
   }
   if (!password || password.length < 6) {
     return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+  }
+
+  const grants = parseStaffGrantInput(data, session);
+  if (!grants.ok) {
+    return NextResponse.json({ error: grants.error }, { status: 400 });
   }
 
   try {
@@ -44,7 +55,8 @@ export async function POST(request: Request) {
         id: authUser.uid,
         email: trimmedEmail,
         role: "admin",
-        createdAt: FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp(),
+        ...staffGrantFields(grants.value)
       });
 
     await createActivityNotificationAdmin(

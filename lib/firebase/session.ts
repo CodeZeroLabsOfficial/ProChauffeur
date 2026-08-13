@@ -1,10 +1,12 @@
 import "server-only";
 
+import type { DocumentData } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 
+import { parseStaffRole } from "@/lib/auth/staff-access";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
 import { SESSION_COOKIE } from "@/lib/firebase/session-cookie";
-import type { UserRole } from "@/lib/models/enums";
+import type { StaffRole, UserRole } from "@/lib/models/enums";
 
 export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/firebase/session-cookie";
 
@@ -14,7 +16,32 @@ export type SessionUser = {
   role: UserRole;
   displayName: string | null;
   photoURL: string | null;
+  staffRole: StaffRole | null;
+  canAccessAllBranches: boolean;
+  branchIds: string[] | null;
+  defaultBranchId: string | null;
 };
+
+function asStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const ids = value.filter((v): v is string => typeof v === "string" && v.length > 0);
+  return ids.length ? ids : null;
+}
+
+function mapSessionUser(uid: string, email: string | null, data: DocumentData): SessionUser {
+  const branchIds = asStringArray(data.branchIds);
+  return {
+    uid,
+    email: email ?? (typeof data.email === "string" ? data.email : null),
+    role: (data.role as UserRole) ?? "customer",
+    displayName: (data.profile?.displayName as string) ?? null,
+    photoURL: (data.profile?.photoURL as string) ?? null,
+    staffRole: parseStaffRole(data.staffRole),
+    canAccessAllBranches: data.canAccessAllBranches === true,
+    branchIds,
+    defaultBranchId: typeof data.defaultBranchId === "string" ? data.defaultBranchId : null
+  };
+}
 
 /**
  * Resolves the current admin session from the session cookie.
@@ -30,16 +57,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   try {
     const decoded = await adminAuth().verifySessionCookie(cookie, true);
-    const snap = await adminFirestore().collection("users").doc(decoded.uid).get();
+    const ref = adminFirestore().collection("users").doc(decoded.uid);
+    const snap = await ref.get();
     if (!snap.exists) return null;
     const data = snap.data() ?? {};
-    return {
-      uid: decoded.uid,
-      email: decoded.email ?? (data.email as string) ?? null,
-      role: (data.role as UserRole) ?? "customer",
-      displayName: (data.profile?.displayName as string) ?? null,
-      photoURL: (data.profile?.photoURL as string) ?? null
-    };
+    return mapSessionUser(decoded.uid, decoded.email ?? null, data);
   } catch {
     return null;
   }
@@ -48,5 +70,18 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 /** Returns the session user only if they hold the `admin` role, else null. */
 export async function getAdminSessionUser(): Promise<SessionUser | null> {
   const user = await getSessionUser();
-  return user?.role === "admin" ? user : null;
+  if (!user || user.role !== "admin") return null;
+
+  if (user.staffRole) return user;
+
+  try {
+    await adminFirestore().collection("users").doc(user.uid).update({
+      staffRole: "admin",
+      canAccessAllBranches: true
+    });
+  } catch {
+    return { ...user, staffRole: "admin", canAccessAllBranches: true };
+  }
+
+  return { ...user, staffRole: "admin", canAccessAllBranches: true };
 }

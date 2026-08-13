@@ -41,6 +41,8 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { useSessionUser } from "@/components/providers/session-provider";
+import { canAccessLocation } from "@/lib/auth/staff-access";
 import type { Branch } from "@/lib/models";
 import { formatServiceAreaSummary } from "@/lib/branch/service-area";
 import { cn } from "@/lib/utils";
@@ -71,6 +73,7 @@ export function LocationsDataTable({
   onCreateOpenChange?: (open: boolean) => void;
   canCreate: boolean;
 }) {
+  const session = useSessionUser();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Branch | null>(null);
@@ -85,10 +88,14 @@ export function LocationsDataTable({
 
   useEffect(() => {
     return listenBranches((rows) => {
-      setBranches(rows.sort((a, b) => a.name.localeCompare(b.name)));
+      setBranches(
+        rows
+          .filter((branch) => canAccessLocation(session, branch.id))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
       setLoading(false);
     });
-  }, []);
+  }, [session]);
 
   const data = useMemo<LocationRow[]>(
     () =>

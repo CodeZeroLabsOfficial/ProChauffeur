@@ -18,10 +18,29 @@ import { Button } from "@/components/ui/button";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { navGroups } from "@/components/layout/nav-config";
+import { useSessionUser } from "@/components/providers/session-provider";
+import { canUsePath } from "@/lib/auth/staff-access";
 
 export function HeaderSearch() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const session = useSessionUser();
+  const groups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .filter((item) => canUsePath(session.staffRole, item.href))
+        .map((item) =>
+          item.items?.length
+            ? {
+                ...item,
+                items: item.items.filter((sub) => canUsePath(session.staffRole, sub.href))
+              }
+            : item
+        )
+        .filter((item) => !item.items || item.items.length > 0)
+    }))
+    .filter((group) => group.items.length > 0);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -64,7 +83,7 @@ export function HeaderSearch() {
         <CommandInput placeholder="Type a command or search..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
-          {navGroups.map((group, groupIndex) => (
+          {groups.map((group, groupIndex) => (
             <React.Fragment key={group.title}>
               <CommandGroup heading={group.title}>
                 {group.items.flatMap((item) => {
@@ -96,7 +115,7 @@ export function HeaderSearch() {
                   );
                 })}
               </CommandGroup>
-              {groupIndex < navGroups.length - 1 && <CommandSeparator />}
+              {groupIndex < groups.length - 1 && <CommandSeparator />}
             </React.Fragment>
           ))}
         </CommandList>

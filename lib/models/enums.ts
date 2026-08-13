@@ -12,6 +12,24 @@ export const userRoleTitle: Record<UserRole, string> = {
   admin: "Admin"
 };
 
+/** Dashboard staff job on `users/{uid}` (Auth role stays `admin`). */
+export const STAFF_ROLES = ["admin", "manager", "dispatcher", "accounts"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export const staffRoleTitle: Record<StaffRole, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  dispatcher: "Dispatcher",
+  accounts: "Accounts"
+};
+
+export const staffRoleDescription: Record<StaffRole, string> = {
+  admin: "Full access, including Team.",
+  manager: "Ops and settings. Cannot manage Team.",
+  dispatcher: "Dispatch, bookings, customers, chauffeurs, and fleet.",
+  accounts: "Billing, reports, and corporate accounts."
+};
+
 // TripStatus.swift — note snake_case raw values for multi-word cases.
 export const TRIP_STATUSES = [
   "requested",

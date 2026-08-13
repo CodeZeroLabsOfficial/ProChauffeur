@@ -1,4 +1,10 @@
+"use client";
+
+import type { ReactNode } from "react";
+
 import { SectionLayout } from "@/components/layout/sub-nav";
+import { useSessionUser } from "@/components/providers/session-provider";
+import { canUsePath } from "@/lib/auth/staff-access";
 
 const items = [
   { title: "Account", href: "/dashboard/settings/account" },
@@ -10,9 +16,11 @@ const items = [
   { title: "Team", href: "/dashboard/settings/team" }
 ];
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default function SettingsLayout({ children }: { children: ReactNode }) {
+  const session = useSessionUser();
+  const visible = items.filter((item) => canUsePath(session.staffRole, item.href));
   return (
-    <SectionLayout title="Settings" items={items}>
+    <SectionLayout title="Settings" items={visible}>
       {children}
     </SectionLayout>
   );

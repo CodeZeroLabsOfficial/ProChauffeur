@@ -1,5 +1,5 @@
 import type { PostalAddress } from "@/lib/models/postal-address";
-import type { ChauffeurCategory, UserRole } from "@/lib/models/enums";
+import type { ChauffeurCategory, StaffRole, UserRole } from "@/lib/models/enums";
 
 /** One recurring weekly operating window (FleetWeeklyOperatingSchedule.swift). */
 export interface FleetWeeklyOperatingSchedule {
@@ -80,6 +80,8 @@ export interface User {
   profile: UserProfile;
   /** Admin/dispatcher dashboard preferences. */
   preferences?: UserPreferences | null;
+  /** Dashboard staff job. Only set on `role: admin` users. */
+  staffRole?: StaffRole | null;
   /** Driver's home branch roster. */
   homeBranchId?: string | null;
   /** Admin/dispatcher branches this user may access. */

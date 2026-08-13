@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireLocationAccess } from "@/lib/auth/require-staff";
 import { uploadBranchImage } from "@/lib/firebase/admin-storage";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 
@@ -17,6 +18,8 @@ export async function POST(
   if (!id?.trim()) {
     return NextResponse.json({ error: "Location id is required." }, { status: 400 });
   }
+  const locationDenied = requireLocationAccess(session, id);
+  if (locationDenied) return locationDenied;
 
   let formData: FormData;
   try {

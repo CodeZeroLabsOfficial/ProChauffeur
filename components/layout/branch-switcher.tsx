@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ChevronsUpDown, MapPin, PlusIcon } from "lucide-react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
+import { useSessionUser } from "@/components/providers/session-provider";
+import { canManageLocations } from "@/lib/auth/staff-access";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +35,9 @@ type BranchSwitcherProps = {
 
 export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   const { isMobile } = useSidebar();
+  const session = useSessionUser();
   const { branchId, branches, setBranchId, activeBranch, branchesLoading } = useActiveBranch();
+  const showAdd = canManageLocations(session.staffRole);
   const [license, setLicense] = useState<AppLicense | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -109,6 +113,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
               )}
             </div>
 
+            {showAdd ? (
             <div className="border-border border-t p-2">
               {canAdd ? (
                 <Button asChild className="w-full" size="sm" onClick={() => setOpen(false)}>
@@ -124,6 +129,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
                 </Button>
               )}
             </div>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

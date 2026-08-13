@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
+import { requireLocationAccess } from "@/lib/auth/require-staff";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { parseBranchId } from "@/lib/branch/require-branch-id";
@@ -36,6 +37,8 @@ export async function PUT(request: Request) {
     if (!branchId) {
       return NextResponse.json({ error: "branchId is required." }, { status: 400 });
     }
+    const locationDenied = requireLocationAccess(session, branchId);
+    if (locationDenied) return locationDenied;
     const { branchId: _branchId, ...vehicleClass } = payload;
     validateVehicleClass(vehicleClass);
 

@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/sidebar";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { navGroups, type NavGroup, type NavItem } from "@/components/layout/nav-config";
+import { useSessionUser } from "@/components/providers/session-provider";
 import { useLicenseEntitlements } from "@/hooks/use-feature-enabled";
-import type { Appearance, FeatureId } from "@/lib/models";
+import { canUsePath } from "@/lib/auth/staff-access";
+import type { Appearance, FeatureId, StaffRole } from "@/lib/models";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -43,12 +45,26 @@ function featureAllowed(
 function filterNavGroups(
   groups: NavGroup[],
   ready: boolean,
-  isEnabled: (feature: FeatureId) => boolean
+  isEnabled: (feature: FeatureId) => boolean,
+  staffRole: StaffRole | null
 ): NavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => featureAllowed(item.featureId, ready, isEnabled))
+      items: group.items
+        .filter(
+          (item) =>
+            featureAllowed(item.featureId, ready, isEnabled) && canUsePath(staffRole, item.href)
+        )
+        .map((item) =>
+          item.items?.length
+            ? {
+                ...item,
+                items: item.items.filter((sub) => canUsePath(staffRole, sub.href))
+              }
+            : item
+        )
+        .filter((item) => !item.items || item.items.length > 0)
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -105,10 +121,11 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { appearance?: Appearance | null }) {
   const pathname = usePathname();
+  const session = useSessionUser();
   const { ready, isEnabled } = useLicenseEntitlements();
   const groups = React.useMemo(
-    () => filterNavGroups(navGroups, ready, isEnabled),
-    [ready, isEnabled]
+    () => filterNavGroups(navGroups, ready, isEnabled, session.staffRole),
+    [ready, isEnabled, session.staffRole]
   );
 
   return (

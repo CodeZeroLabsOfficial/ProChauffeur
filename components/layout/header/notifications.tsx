@@ -5,8 +5,10 @@ import { useCallback, useMemo, useState } from "react";
 import { BellIcon, ClockIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useSessionUser } from "@/components/providers/session-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications, useTrips, useUsers } from "@/hooks/use-collections";
+import { canViewActivityEvent } from "@/lib/auth/staff-access";
 import { formatTime } from "@/lib/format";
 import type { ActivityNotification, Trip } from "@/lib/models";
 import { notificationCategoryIcon } from "@/lib/notifications/display";
@@ -82,9 +84,14 @@ function ActivityNotificationRow({
 
 export function HeaderNotifications() {
   const isMobile = useIsMobile();
+  const session = useSessionUser();
   const { trips } = useTrips();
-  const { notifications } = useNotifications();
+  const { notifications: allNotifications } = useNotifications();
   const { users } = useUsers();
+  const notifications = useMemo(
+    () => allNotifications.filter((n) => canViewActivityEvent(session, n)),
+    [allNotifications, session]
+  );
   const [actingOnId, setActingOnId] = useState<string | null>(null);
 
   const displayNameByCustomerId = useMemo(() => {

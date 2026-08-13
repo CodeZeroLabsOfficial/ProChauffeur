@@ -25,7 +25,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useSessionUser } from "@/components/providers/session-provider";
 import { useNotifications, useTrips, useUsers } from "@/hooks/use-collections";
+import { canViewActivityEvent } from "@/lib/auth/staff-access";
 import { timeAgo } from "@/app/dashboard/lib/dashboard-metrics";
 import type { ActivityNotification, NotificationCategory, Trip } from "@/lib/models";
 import {
@@ -200,9 +202,14 @@ function createColumns(): ColumnDef<NotificationRow>[] {
 const columns = createColumns();
 
 export function NotificationsDataTable() {
+  const session = useSessionUser();
   const { trips } = useTrips();
-  const { notifications } = useNotifications(200);
+  const { notifications: allNotifications } = useNotifications(200);
   const { users } = useUsers();
+  const notifications = useMemo(
+    () => allNotifications.filter((n) => canViewActivityEvent(session, n)),
+    [allNotifications, session]
+  );
   const [actingOnId, setActingOnId] = useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);

@@ -63,6 +63,7 @@ import type {
   VehicleSpecifications
 } from "@/lib/models/vehicle";
 import { parseVehicleInsuranceCoverType } from "@/lib/vehicle-insurance";
+import { parseStaffRole } from "@/lib/auth/staff-access";
 
 /** Pure mappers from raw Firestore document data into typed app models. */
 
@@ -250,6 +251,7 @@ export function mapUser(id: string, d: DocumentData): User {
     email: d.email ?? "",
     profile: mapUserProfile(d.profile),
     preferences: mapUserPreferences(d.preferences),
+    staffRole: parseStaffRole(d.staffRole),
     homeBranchId: d.homeBranchId ?? null,
     branchIds: Array.isArray(d.branchIds) ? d.branchIds : null,
     defaultBranchId: d.defaultBranchId ?? null,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireLocationAccess } from "@/lib/auth/require-staff";
 import { removeLiveTripLocation } from "@/lib/firebase/admin-live-location";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
@@ -45,6 +46,8 @@ export async function PATCH(
   if (!branchId) {
     return NextResponse.json({ error: "branchId is required." }, { status: 400 });
   }
+  const locationDenied = requireLocationAccess(session, branchId);
+  if (locationDenied) return locationDenied;
 
   if (!isTripStatus(status)) {
     return NextResponse.json({ error: "Invalid trip status." }, { status: 400 });

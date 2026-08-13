@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireLocationAccess } from "@/lib/auth/require-staff";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { parseBranchId } from "@/lib/branch/require-branch-id";
@@ -32,6 +33,8 @@ export async function DELETE(
   if (!branchId) {
     return NextResponse.json({ error: "branchId is required." }, { status: 400 });
   }
+  const locationDenied = requireLocationAccess(session, branchId);
+  if (locationDenied) return locationDenied;
 
   const branchRef = adminFirestore().collection("branches").doc(branchId);
   const inUseSnap = await branchRef
