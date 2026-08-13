@@ -34,8 +34,7 @@ import {
   tripTypeTitle,
   type Branch,
   type Promotion,
-  type TripType,
-  type VehicleClass
+  type TripType
 } from "@/lib/models";
 import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
 import { getActiveBranchId } from "@/lib/branch/active-branch-store";
@@ -195,7 +194,7 @@ export function PromotionEditSheet({
 }: {
   promotion: Promotion | null;
   branches: Branch[];
-  vehicleClasses: VehicleClass[];
+  vehicleClasses: { id: string; displayName: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {

@@ -61,12 +61,7 @@ Auth users live at `users/{uid}`. Operational data is scoped under branches:
 
 Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `company`).
 Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`, `locale`).
-
-Copy existing company locale onto every location, then delete `app_settings/locale`:
-
-```bash
-npm run migrate:locale
-```
+Vehicle class document ids are company-wide product slugs (`business-sedan`).
 
 Default branch id: `brisbane`.
 

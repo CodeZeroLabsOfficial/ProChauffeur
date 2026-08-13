@@ -36,7 +36,7 @@ export async function DELETE(
   const branchRef = adminFirestore().collection("branches").doc(branchId);
   const inUseSnap = await branchRef
     .collection("vehicles")
-    .where("vehicleClassId", "==", id)
+    .where("details.vehicleClassId", "==", id)
     .limit(1)
     .get();
   if (!inUseSnap.empty) {

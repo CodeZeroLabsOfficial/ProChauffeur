@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { useVehicleClasses } from "@/hooks/use-collections";
+import { useCompanyVehicleClasses } from "@/hooks/use-company-vehicle-classes";
 import {
   CORPORATE_RATE_MODES,
   corporateRateModeTitle,
@@ -53,7 +53,7 @@ export function AccountRatesTab({
   account: CorporateAccount;
   onSaved: (account: CorporateAccount) => void;
 }) {
-  const { vehicleClasses } = useVehicleClasses();
+  const { options: companyClassOptions } = useCompanyVehicleClasses();
   const [draft, setDraft] = useState(account);
   const [percentPoints, setPercentPoints] = useState(() => percentPointsFromAccount(account));
   const [saving, setSaving] = useState(false);
@@ -199,9 +199,11 @@ export function AccountRatesTab({
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        {vehicleClasses.map((vehicleClass) => (
-                          <SelectItem key={vehicleClass.id} value={vehicleClass.id}>
-                            {vehicleClass.displayName}
+                        {companyClassOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.locationNames.length > 1
+                              ? `${option.label} (${option.locationNames.join(", ")})`
+                              : option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

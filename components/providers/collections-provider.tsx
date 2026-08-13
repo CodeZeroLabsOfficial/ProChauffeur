@@ -109,7 +109,7 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
     const unsub = listenVehicleClasses((rows) => {
       setVehicleClasses(rows);
       setVehicleClassesLoading(false);
-    });
+    }, branchId);
     return () => unsub();
   }, [branchId]);
 

@@ -110,7 +110,7 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
           </TabsContent>
 
           <TabsContent value="classes" className="mt-0 space-y-4">
-            <LocationVehicleClassesPanel />
+            <LocationVehicleClassesPanel branchId={branch.id} />
           </TabsContent>
 
           <TabsContent value="pricing" className="mt-0 space-y-4">

@@ -18,7 +18,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useVehicleClasses } from "@/hooks/use-collections";
+import { useCompanyVehicleClasses } from "@/hooks/use-company-vehicle-classes";
 import {
   CORPORATE_ALLOWED_PAYMENTS,
   clampPreferredPayment,
@@ -68,7 +68,7 @@ export function AccountPolicyTab({
   account: CorporateAccount;
   onSaved: (account: CorporateAccount) => void;
 }) {
-  const { vehicleClasses } = useVehicleClasses();
+  const { options: companyClassOptions } = useCompanyVehicleClasses();
   const [draft, setDraft] = useState(account);
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState(account.id + String(account.updatedAt.getTime()));
@@ -81,11 +81,14 @@ export function AccountPolicyTab({
 
   const vehicleClassOptions = useMemo(
     () =>
-      vehicleClasses.map((vehicleClass) => ({
-        value: vehicleClass.id,
-        label: vehicleClass.displayName
+      companyClassOptions.map((option) => ({
+        value: option.id,
+        label:
+          option.locationNames.length > 1
+            ? `${option.label} (${option.locationNames.join(", ")})`
+            : option.label
       })),
-    [vehicleClasses]
+    [companyClassOptions]
   );
 
   const allowedMethods = draft.allowedPaymentMethods;

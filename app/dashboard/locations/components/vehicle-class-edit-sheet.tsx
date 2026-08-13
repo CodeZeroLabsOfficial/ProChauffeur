@@ -26,6 +26,7 @@ import { useFileUpload } from "@/hooks/use-file-upload";
 import { saveVehicleClass, uploadVehicleClassImage } from "@/lib/services/firebase-service";
 import {
   buildInitialVehicleClass,
+  isValidVehicleClassSlug,
   slugFromDisplayName,
   tripTypeTitle,
   VEHICLE_CLASS_BODY_TYPES,
@@ -315,6 +316,8 @@ const SUPPORTED_TRIP_TYPE_OPTIONS = [
 export function VehicleClassEditSheet({
   vehicleClass,
   sheetMode = "create",
+  branchId,
+  offerable = [],
   open,
   onOpenChange,
   onSaved,
@@ -322,6 +325,8 @@ export function VehicleClassEditSheet({
 }: {
   vehicleClass: VehicleClass | null;
   sheetMode?: "create" | "edit" | "clone";
+  branchId: string;
+  offerable?: { id: string; label: string; locationNames: string[]; template: VehicleClass }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
@@ -335,12 +340,9 @@ export function VehicleClassEditSheet({
         ? "Add vehicle class"
         : "Edit vehicle class";
   const [draft, setDraft] = useState<VehicleClass>(() =>
-    vehicleClass ??
-      buildInitialVehicleClass({
-        id: crypto.randomUUID(),
-        displayName: ""
-      })
+    vehicleClass ?? buildInitialVehicleClass({ displayName: "" })
   );
+  const [productSource, setProductSource] = useState("new");
   const [saving, setSaving] = useState(false);
   const [seedKey, setSeedKey] = useState("");
 
@@ -358,9 +360,10 @@ export function VehicleClassEditSheet({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const sheetKey = vehicleClass?.id ?? "__new__";
+  const sheetKey = `${sheetMode}:${vehicleClass?.id ?? "__new__"}:${branchId}`;
   if (sheetKey !== seedKey) {
     setSeedKey(sheetKey);
+    setProductSource("new");
     setDraft(
       vehicleClass
         ? buildInitialVehicleClass({
@@ -368,10 +371,7 @@ export function VehicleClassEditSheet({
             id: vehicleClass.id,
             displayName: vehicleClass.displayName
           })
-        : buildInitialVehicleClass({
-            id: crypto.randomUUID(),
-            displayName: ""
-          })
+        : buildInitialVehicleClass({ displayName: "" })
     );
   }
 
@@ -440,11 +440,15 @@ export function VehicleClassEditSheet({
     e.preventDefault();
     setSaving(true);
     try {
-      const slug = slugFromDisplayName(draft.displayName);
-      if (!slug) {
+      const id =
+        sheetMode === "create" && productSource === "new"
+          ? slugFromDisplayName(draft.displayName)
+          : draft.id;
+      if (!isValidVehicleClassSlug(id)) {
         toast.error("Display name must contain at least one letter or number.");
         return;
       }
+      const slug = id;
       if (draft.supportedTripTypes.length === 0) {
         toast.error("Select at least one supported trip type.");
         return;
@@ -465,19 +469,23 @@ export function VehicleClassEditSheet({
       const pendingImage = imageFiles[0]?.file;
       if (pendingImage instanceof File) {
         try {
-          nextImageUrl = await uploadVehicleClassImage(draft.id, pendingImage);
+          nextImageUrl = await uploadVehicleClassImage(id, pendingImage);
         } catch (err) {
           toast.error(err instanceof Error ? err.message : "Could not upload vehicle class image.");
           return;
         }
       }
-      await saveVehicleClass({
-        ...draft,
-        slug,
-        inclusions,
-        imageUrl: nextImageUrl,
-        updatedAt: new Date()
-      });
+      await saveVehicleClass(
+        {
+          ...draft,
+          id,
+          slug,
+          inclusions,
+          imageUrl: nextImageUrl,
+          updatedAt: new Date()
+        },
+        branchId
+      );
       toast.success(isNew ? "Vehicle class created." : "Vehicle class saved.");
       onSaved();
       onOpenChange(false);
@@ -505,6 +513,54 @@ export function VehicleClassEditSheet({
 
               <TabsContent value="overview" className="mt-0 space-y-4">
                 <div className="space-y-4">
+                  {sheetMode === "create" && offerable.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="productSource">Product</Label>
+                        <FieldInfoTooltip label="product">
+                          Offer a class that already exists in another Location, or create a new
+                          company product. Offered classes share the same id so accounts and
+                          promotions apply in every city.
+                        </FieldInfoTooltip>
+                      </div>
+                      <Select
+                        value={productSource}
+                        onValueChange={(value) => {
+                          setProductSource(value);
+                          if (value === "new") {
+                            setDraft(buildInitialVehicleClass({ displayName: "" }));
+                            return;
+                          }
+                          const offered = offerable.find((row) => row.id === value);
+                          if (!offered) return;
+                          setDraft(
+                            buildInitialVehicleClass({
+                              ...offered.template,
+                              id: offered.template.id,
+                              slug: offered.template.id,
+                              displayName: offered.template.displayName,
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            })
+                          );
+                        }}>
+                        <SelectTrigger id="productSource" className="w-full">
+                          <SelectValue placeholder="New product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="new">New product</SelectItem>
+                          {offerable.map((row) => (
+                            <SelectItem key={row.id} value={row.id}>
+                              {row.label}
+                              {row.locationNames.length
+                                ? ` · ${row.locationNames.join(", ")}`
+                                : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                   <SectionHeading>Class details</SectionHeading>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">

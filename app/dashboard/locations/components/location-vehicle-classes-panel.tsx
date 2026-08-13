@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { VehicleClassEditSheet } from "@/app/dashboard/locations/components/vehicle-class-edit-sheet";
-import { useVehicleClasses } from "@/hooks/use-collections";
-import { deleteVehicleClass } from "@/lib/services/firebase-service";
+import { useOfferableVehicleClasses } from "@/hooks/use-company-vehicle-classes";
+import { deleteVehicleClass, listenVehicleClasses } from "@/lib/services/firebase-service";
 import {
   buildInitialVehicleClass,
   slugFromDisplayName,
@@ -46,11 +46,29 @@ function formatTripTypes(vehicleClass: VehicleClass): string {
 
 type SheetMode = "create" | "edit" | "clone";
 
-export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedSheet?: boolean }) {
-  const { vehicleClasses, loading } = useVehicleClasses();
+export function LocationVehicleClassesPanel({
+  branchId,
+  nestedSheet = false
+}: {
+  branchId: string;
+  nestedSheet?: boolean;
+}) {
+  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<VehicleClass | null>(null);
   const [sheetMode, setSheetMode] = useState<SheetMode>("create");
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsub = listenVehicleClasses((rows) => {
+      setVehicleClasses(rows);
+      setLoading(false);
+    }, branchId);
+    return () => unsub();
+  }, [branchId]);
+
+  const { offerable } = useOfferableVehicleClasses(vehicleClasses);
 
   function openNew() {
     setSheetMode("create");
@@ -66,13 +84,14 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
 
   function openClone(source: VehicleClass) {
     const displayName = `${source.displayName} (copy)`;
+    const slug = slugFromDisplayName(displayName);
     setSheetMode("clone");
     setEditing(
       buildInitialVehicleClass({
         ...source,
-        id: crypto.randomUUID(),
         displayName,
-        slug: slugFromDisplayName(displayName),
+        slug,
+        id: slug,
         createdAt: new Date(),
         updatedAt: new Date()
       })
@@ -85,7 +104,7 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
       return;
     }
     try {
-      await deleteVehicleClass(vehicleClass.id);
+      await deleteVehicleClass(vehicleClass.id, branchId);
       toast.success("Vehicle class removed.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not remove vehicle class.");
@@ -201,6 +220,8 @@ export function LocationVehicleClassesPanel({ nestedSheet = false }: { nestedShe
       <VehicleClassEditSheet
         vehicleClass={editing}
         sheetMode={sheetMode}
+        branchId={branchId}
+        offerable={sheetMode === "create" ? offerable : []}
         open={open}
         onOpenChange={setOpen}
         onSaved={() => {}}

@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { useVehicleClasses } from "@/hooks/use-collections";
+import { useCompanyVehicleClasses } from "@/hooks/use-company-vehicle-classes";
 import { cn } from "@/lib/utils";
 import type { Branch, Promotion } from "@/lib/models";
 import {
@@ -80,7 +80,7 @@ export function PromotionsDataTable({
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
 }) {
-  const { vehicleClasses } = useVehicleClasses();
+  const { options: companyClassOptions } = useCompanyVehicleClasses();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -391,7 +391,13 @@ export function PromotionsDataTable({
       <PromotionEditSheet
         promotion={sheetPromotion}
         branches={branches}
-        vehicleClasses={vehicleClasses}
+        vehicleClasses={companyClassOptions.map((option) => ({
+          id: option.id,
+          displayName:
+            option.locationNames.length > 1
+              ? `${option.label} (${option.locationNames.join(", ")})`
+              : option.label
+        }))}
         open={sheetOpen}
         onOpenChange={(next) => {
           if (createOpen) handleCreateOpenChange(next);

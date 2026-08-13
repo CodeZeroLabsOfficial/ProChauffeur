@@ -37,8 +37,13 @@ export const VEHICLE_CLASS_BODY_TYPES = [
 
 export type VehicleClassBodyType = (typeof VEHICLE_CLASS_BODY_TYPES)[number];
 
-/** `branches/{branchId}/vehicle_classes/{id}` — service class + rate card. */
+/**
+ * `branches/{branchId}/vehicle_classes/{id}` — service class + rate card.
+ * `id` is the company-wide product key and must equal `slug` for new classes
+ * (e.g. `business-sedan`). Each Location stores its own rates under the same id.
+ */
 export interface VehicleClass {
+  /** Company-wide product key; same id in every Location that offers this class. */
   id: string;
   slug: string;
   displayName: string;
@@ -72,6 +77,55 @@ export function slugFromDisplayName(displayName: string): string {
     .replace(/^-|-$/g, "");
 }
 
+/** True when `value` is already a slug (safe to use as the class document id). */
+export function isValidVehicleClassSlug(value: string): boolean {
+  return value.length > 0 && value === slugFromDisplayName(value);
+}
+
+export type CompanyVehicleClassOption = {
+  id: string;
+  label: string;
+  locationNames: string[];
+};
+
+/** Dedupes Location class catalogues by product id for company pickers. */
+export function unionCompanyVehicleClassOptions(
+  rows: { id: string; displayName: string; locationName: string }[]
+): CompanyVehicleClassOption[] {
+  const byId = new Map<string, { names: string[]; locationNames: string[] }>();
+  for (const row of rows) {
+    const id = row.id.trim();
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (existing) {
+      existing.names.push(row.displayName);
+      if (!existing.locationNames.includes(row.locationName)) {
+        existing.locationNames.push(row.locationName);
+      }
+      continue;
+    }
+    byId.set(id, { names: [row.displayName], locationNames: [row.locationName] });
+  }
+
+  const options: CompanyVehicleClassOption[] = [];
+  for (const [id, group] of byId) {
+    const counts = new Map<string, number>();
+    for (const name of group.names) {
+      const trimmed = name.trim() || id;
+      counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
+    }
+    const label = [...counts.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    )[0]![0];
+    options.push({
+      id,
+      label,
+      locationNames: [...group.locationNames].sort((a, b) => a.localeCompare(b))
+    });
+  }
+  return options.sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function emptyVehicleClassCapacity(): VehicleClassCapacity {
   return {
     passengerCount: 4,
@@ -84,9 +138,12 @@ export function emptyVehicleClassInclusions(): VehicleClassInclusion[] {
 }
 
 export function buildInitialVehicleClass(
-  overrides: Partial<VehicleClass> & Pick<VehicleClass, "id" | "displayName">
+  overrides: Partial<VehicleClass> & Pick<VehicleClass, "displayName">
 ): VehicleClass {
   const now = new Date();
+  const displayName = overrides.displayName;
+  const slug = overrides.slug ?? slugFromDisplayName(displayName);
+  const id = overrides.id ?? slug;
   return {
     sortOrder: 0,
     serviceTier: "Business",
@@ -115,9 +172,11 @@ export function buildInitialVehicleClass(
       deadheadRatePerMinute: 1.5,
       displayHourlyFrom: 98
     },
-    slug: slugFromDisplayName(overrides.displayName),
     createdAt: now,
     updatedAt: now,
-    ...overrides
+    ...overrides,
+    displayName,
+    slug,
+    id
   };
 }

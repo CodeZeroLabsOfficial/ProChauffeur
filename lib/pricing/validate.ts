@@ -26,10 +26,11 @@ import type {
   PricingZone,
   TransferPricingRates
 } from "@/lib/models/pricing";
-import type {
-  VehicleClass,
-  VehicleClassCapacity,
-  VehicleClassInclusion
+import {
+  isValidVehicleClassSlug,
+  type VehicleClass,
+  type VehicleClassCapacity,
+  type VehicleClassInclusion
 } from "@/lib/models/vehicle-class";
 import { ConfigError } from "@/lib/pricing/errors";
 
@@ -227,9 +228,13 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
     typeof d.serviceTier === "string" && d.serviceTier.trim() ? d.serviceTier.trim() : "Business";
   const bodyType =
     typeof d.bodyType === "string" && d.bodyType.trim() ? d.bodyType.trim() : "Sedan";
+  const slug = requireString(d.slug, `${path}.slug`);
+  if (!isValidVehicleClassSlug(id) || id !== slug) {
+    throw new ConfigError(`Invalid ${path}: id must equal slug.`);
+  }
   return {
     id,
-    slug: requireString(d.slug, `${path}.slug`),
+    slug,
     displayName: requireString(d.displayName, `${path}.displayName`),
     sortOrder: requireNumber(d.sortOrder, `${path}.sortOrder`),
     serviceTier,
@@ -239,14 +244,7 @@ export function parseVehicleClass(id: string, d: DocumentData): VehicleClass {
     description: typeof d.description === "string" ? d.description : null,
     imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
     isEnabled: requireBoolean(d.isEnabled, `${path}.isEnabled`),
-    isVisible:
-      typeof d.isVisible === "boolean"
-        ? d.isVisible
-        : d.showOnBookingTool === true
-          ? true
-          : d.showOnBookingTool === false
-            ? false
-            : requireBoolean(d.isVisible, `${path}.isVisible`),
+    isVisible: requireBoolean(d.isVisible, `${path}.isVisible`),
     supportedTripTypes: supportedTripTypes as TripType[],
     transfer: parseTransferRates(d.transfer ?? {}, `${path}.transfer`),
     hourly: parseHourlyRates(d.hourly ?? {}, `${path}.hourly`),

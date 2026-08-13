@@ -71,7 +71,8 @@ export interface CorporateAccount {
   /** Team admin `users/{uid}` with `role: "admin"`. */
   accountManagerUserId?: string | null;
   /**
-   * Vehicle classes members may book. Empty = all enabled classes.
+   * Company product ids (`vehicle_classes/{id}` / slug). Empty = any class
+   * the booking Location offers.
    */
   allowedVehicleClassIds: string[];
   /** Quote total above this requires admin approval before dispatch. */

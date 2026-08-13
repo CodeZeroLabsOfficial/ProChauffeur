@@ -112,7 +112,7 @@ function mapVehicleClass(id, d) {
     : [];
   return {
     id,
-    slug: data.slug || id,
+    slug: id,
     displayName: data.displayName || id,
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
     serviceTier:

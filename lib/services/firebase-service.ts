@@ -1417,8 +1417,9 @@ export async function savePricingConfiguration(
 
 // ───────────────────────── Vehicle classes ─────────────────────────
 
-export async function fetchVehicleClasses(): Promise<VehicleClass[]> {
-  const branchId = getActiveBranchId();
+export async function fetchVehicleClasses(
+  branchId: string = getActiveBranchId()
+): Promise<VehicleClass[]> {
   const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", branchId));
   return nestedSnap.docs
     .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
@@ -1430,8 +1431,10 @@ export async function fetchVehicleClass(id: string): Promise<VehicleClass | null
   return nested.exists() ? mapVehicleClass(nested.id, nested.data()) : null;
 }
 
-export function listenVehicleClasses(onUpdate: (classes: VehicleClass[]) => void): Unsub {
-  const branchId = getActiveBranchId();
+export function listenVehicleClasses(
+  onUpdate: (classes: VehicleClass[]) => void,
+  branchId: string = getActiveBranchId()
+): Unsub {
   const nested = query(branchCollectionRef(db(), "vehicle_classes", branchId));
   return listenQuery(
     nested,
@@ -1455,23 +1458,29 @@ async function parseApiError(res: Response, fallback: string): Promise<never> {
   throw new Error(message);
 }
 
-export async function saveVehicleClass(vehicleClass: VehicleClass): Promise<void> {
+export async function saveVehicleClass(
+  vehicleClass: VehicleClass,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
   validateVehicleClass(vehicleClass);
   const res = await fetch("/api/vehicle-classes", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...vehicleClass, branchId: getActiveBranchId() })
+    body: JSON.stringify({ ...vehicleClass, branchId })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not save vehicle class.");
   }
 }
 
-export async function deleteVehicleClass(id: string): Promise<void> {
+export async function deleteVehicleClass(
+  id: string,
+  branchId: string = getActiveBranchId()
+): Promise<void> {
   const res = await fetch(`/api/vehicle-classes/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ branchId: getActiveBranchId() })
+    body: JSON.stringify({ branchId })
   });
   if (!res.ok) {
     await parseApiError(res, "Could not delete vehicle class.");

@@ -570,7 +570,7 @@ export function LocationEditSheet({
 
             <TabsContent value="classes" className="mt-0 space-y-4">
               {working ? (
-                <LocationVehicleClassesPanel nestedSheet />
+                <LocationVehicleClassesPanel branchId={working.id} nestedSheet />
               ) : (
                 <p className="text-muted-foreground text-sm">
                   Save the location overview first to configure vehicle classes.

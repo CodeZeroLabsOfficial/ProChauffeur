@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { DEFAULT_BRANCH_ID, type VehicleClass } from "@/lib/models";
+import {
+  DEFAULT_BRANCH_ID,
+  isValidVehicleClassSlug,
+  type VehicleClass
+} from "@/lib/models";
 import { validateVehicleClass } from "@/lib/pricing/validate";
 
 function vehicleClassesCollection(branchId: string) {
@@ -36,6 +40,19 @@ export async function PUT(request: Request) {
     validateVehicleClass(vehicleClass);
 
     const col = vehicleClassesCollection(branchId);
+    const ref = col.doc(vehicleClass.id);
+    const existing = await ref.get();
+
+    if (
+      !isValidVehicleClassSlug(vehicleClass.id) ||
+      vehicleClass.id !== vehicleClass.slug
+    ) {
+      return NextResponse.json(
+        { error: "Vehicle class id must be the product slug." },
+        { status: 400 }
+      );
+    }
+
     const slugSnap = await col.where("slug", "==", vehicleClass.slug).get();
     const slugConflict = slugSnap.docs.find((docSnap) => docSnap.id !== vehicleClass.id);
     if (slugConflict) {
@@ -44,9 +61,6 @@ export async function PUT(request: Request) {
         { status: 409 }
       );
     }
-
-    const ref = col.doc(vehicleClass.id);
-    const existing = await ref.get();
     const { createdAt: _createdAt, updatedAt: _updatedAt, ...data } = vehicleClass;
 
     await ref.set(
