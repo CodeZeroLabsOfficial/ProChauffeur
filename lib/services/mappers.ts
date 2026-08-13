@@ -211,7 +211,6 @@ function mapDriverProfile(d: DocumentData | undefined | null): DriverProfile | n
       startTime: s.startTime ?? null,
       endTime: s.endTime ?? null
     })),
-    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     preferredOfficeLocationId:
       typeof d.preferredOfficeLocationId === "string" ? d.preferredOfficeLocationId : null,
     driversLicense: mapDriversLicense(d.driversLicense),
@@ -272,7 +271,6 @@ export function mapBranch(id: string, d: DocumentData): Branch {
     id,
     name: d.name ?? id,
     isActive: d.isActive !== false,
-    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : null,
     officeAddressLine: typeof d.officeAddressLine === "string" ? d.officeAddressLine : null,
     officeLatitude: typeof d.officeLatitude === "number" ? d.officeLatitude : null,
@@ -499,7 +497,6 @@ export function mapFleetLocation(id: string, d: DocumentData): FleetLocation {
     latitude: d.latitude ?? 0,
     longitude: d.longitude ?? 0,
     isDefault: d.isDefault === true,
-    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     createdAt: toDate(d.createdAt) ?? new Date()
   };
 }
@@ -510,7 +507,6 @@ export function mapPricingConfig(d: DocumentData): PricingConfig {
 
 export function mapOperatingHours(d: DocumentData): AppFleetOperatingHours {
   return {
-    timeZoneIdentifier: d.timeZoneIdentifier ?? null,
     schedules: (d.schedules ?? []).map((s: DocumentData) => ({
       id: s.id ?? crypto.randomUUID(),
       name: s.name ?? null,

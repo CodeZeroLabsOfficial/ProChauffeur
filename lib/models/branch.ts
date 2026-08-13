@@ -31,7 +31,6 @@ export interface Branch {
   id: string;
   name: string;
   isActive: boolean;
-  timeZoneIdentifier?: string | null;
   /** Optional square image for location profile / sheet hero. */
   imageUrl?: string | null;
   /** Office / operates-from address for deadhead and map centering. */
@@ -86,7 +85,6 @@ export function buildBranch(
   const now = new Date();
   return {
     isActive: true,
-    timeZoneIdentifier: null,
     imageUrl: null,
     officeAddressLine: null,
     officeLatitude: null,

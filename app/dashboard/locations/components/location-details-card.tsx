@@ -5,13 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContactRow } from "@/components/contact-row";
 import { formatServiceAreaDetail } from "@/lib/branch/service-area";
 
-export function LocationDetailsCard({ branch }: { branch: Branch }) {
+export function LocationDetailsCard({
+  branch,
+  timezone
+}: {
+  branch: Branch;
+  timezone?: string | null;
+}) {
   const address = branch.officeAddressLine?.trim();
   const phone = branch.officePhone?.trim();
-  const timezone = branch.timeZoneIdentifier?.trim();
+  const zone = timezone?.trim();
   const serviceAreaDetail = formatServiceAreaDetail(branch.serviceArea);
 
-  const hasContent = Boolean(address || phone || timezone || serviceAreaDetail);
+  const hasContent = Boolean(address || phone || zone || serviceAreaDetail);
 
   return (
     <Card>
@@ -29,7 +35,7 @@ export function LocationDetailsCard({ branch }: { branch: Branch }) {
                 </a>
               </ContactRow>
             ) : null}
-            {timezone ? <ContactRow icon={Clock}>{timezone}</ContactRow> : null}
+            {zone ? <ContactRow icon={Clock}>{zone}</ContactRow> : null}
             {serviceAreaDetail ? (
               <ContactRow icon={MapPinned}>{serviceAreaDetail}</ContactRow>
             ) : null}

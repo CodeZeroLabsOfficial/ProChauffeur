@@ -16,7 +16,6 @@ export function branchDriverToProfile(driver: BranchDriver): DriverProfile {
     serviceSpecialties: driver.serviceSpecialties,
     vehicleOrServiceFocus: driver.vehicleOrServiceFocus,
     availabilitySchedules: driver.availabilitySchedules,
-    timeZoneIdentifier: driver.timeZoneIdentifier,
     preferredOfficeLocationId: driver.preferredOfficeLocationId,
     driversLicense: driver.driversLicense ?? null,
     operatorAccreditation: driver.operatorAccreditation ?? null,

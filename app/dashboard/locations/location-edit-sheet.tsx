@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Building2, ExternalLink, Globe2, ImagePlusIcon, MapPin, Phone, Power } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, ExternalLink, ImagePlusIcon, MapPin, Phone, Power } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
-import { InlineEditableSelectField } from "@/components/inline-editable-select-field";
 import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
 import {
   ProfileV2TabTrigger,
@@ -18,13 +17,6 @@ import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -37,12 +29,7 @@ import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
-import {
-  buildBranch,
-  COMMON_TIMEZONES,
-  optionsWithCurrent,
-  type Branch
-} from "@/lib/models";
+import { buildBranch, type Branch } from "@/lib/models";
 import {
   allocateUniqueBranchId,
   createLocationWithScaffold,
@@ -126,11 +113,6 @@ function LocationOverviewFields({
 }) {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const office = officeSuggestionFromBranch(branch);
-  const timezone = branch.timeZoneIdentifier?.trim() || "Australia/Brisbane";
-  const timezoneOptions = useMemo(
-    () => optionsWithCurrent(COMMON_TIMEZONES, timezone),
-    [timezone]
-  );
 
   async function saveBranch(
     patch: Partial<Branch>,
@@ -150,8 +132,7 @@ function LocationOverviewFields({
           name: updated.name,
           addressLine: nextOffice.addressLine,
           latitude: nextOffice.coordinate.latitude,
-          longitude: nextOffice.coordinate.longitude,
-          timeZoneIdentifier: updated.timeZoneIdentifier
+          longitude: nextOffice.coordinate.longitude
         });
       }
 
@@ -227,20 +208,6 @@ function LocationOverviewFields({
               />
             </dd>
           </div>
-          <div className="col-span-2 space-y-1">
-            <DetailLabel icon={Globe2}>Time zone</DetailLabel>
-            <dd>
-              <InlineEditableSelectField
-                fieldId="timezone"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={timezone}
-                options={timezoneOptions}
-                editLabel="time zone"
-                onSave={async (next) => saveBranch({ timeZoneIdentifier: next.trim() || null })}
-              />
-            </dd>
-          </div>
         </dl>
         <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
           <div className="space-y-0.5">
@@ -275,15 +242,9 @@ function LocationCreateOverviewForm({
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [timezone, setTimezone] = useState("Australia/Brisbane");
   const [isActive, setIsActive] = useState(true);
   const [office, setOffice] = useState<AddressSuggestion | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const timezoneOptions = useMemo(
-    () => optionsWithCurrent(COMMON_TIMEZONES, timezone),
-    [timezone]
-  );
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -308,7 +269,6 @@ function LocationCreateOverviewForm({
         id,
         name: trimmedName,
         isActive,
-        timeZoneIdentifier: timezone.trim() || null,
         officeAddressLine: office.addressLine,
         officeLatitude: office.coordinate.latitude,
         officeLongitude: office.coordinate.longitude,
@@ -363,22 +323,6 @@ function LocationCreateOverviewForm({
           placeholder="Optional"
           disabled={busy}
         />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-tz">Time zone</Label>
-        <Select value={timezone} onValueChange={setTimezone} disabled={busy}>
-          <SelectTrigger id="location-tz" className="w-full">
-            <SelectValue placeholder="Select time zone" />
-          </SelectTrigger>
-          <SelectContent>
-            {timezoneOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="flex items-center justify-between gap-4 rounded-lg border p-3">

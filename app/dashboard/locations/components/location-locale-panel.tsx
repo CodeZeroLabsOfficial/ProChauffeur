@@ -277,7 +277,7 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
           <SelectField
             id="locale-timezone"
             label="Time zone"
-            tooltip="Pickup times and weekend rates use this zone."
+            tooltip="Pickup times, operating hours, and chauffeur schedules use this zone."
             value={draft.timezone}
             placeholder="Select time zone"
             disabled={saving}

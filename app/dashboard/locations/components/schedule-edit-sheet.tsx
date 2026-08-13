@@ -115,6 +115,7 @@ export function ScheduleEditSheet({
   allowDelete = false,
   defaultLocationId = BRANCH_OFFICE_FLEET_LOCATION_ID,
   activeHelpText = "Inactive schedules are excluded when checking operating hours.",
+  timezoneLabel,
   nested = false
 }: {
   schedule: FleetWeeklyOperatingSchedule | null;
@@ -126,6 +127,7 @@ export function ScheduleEditSheet({
   allowDelete?: boolean;
   defaultLocationId?: string | null;
   activeHelpText?: string;
+  timezoneLabel?: string | null;
   nested?: boolean;
 }) {
   const isNew = schedule === null;
@@ -241,6 +243,9 @@ export function ScheduleEditSheet({
                 />
               </div>
             </div>
+            {timezoneLabel ? (
+              <p className="text-muted-foreground text-xs">Times are in {timezoneLabel}.</p>
+            ) : null}
 
             <div className="space-y-2">
               <Label>Days</Label>

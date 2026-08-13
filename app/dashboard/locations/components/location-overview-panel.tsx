@@ -50,12 +50,14 @@ export function LocationOverviewPanel({
   const [hoursConfigured, setHoursConfigured] = useState(false);
   const [pricingConfigured, setPricingConfigured] = useState(false);
   const [localeConfigured, setLocaleConfigured] = useState(false);
+  const [timezone, setTimezone] = useState<string | null>(null);
 
   const officeSet = Boolean(branch.officeAddressLine?.trim());
   const serviceAreaSet = isServiceAreaConfigured(branch.serviceArea);
   const classesSet = vehicleClasses.length > 0;
 
   useEffect(() => {
+    setTimezone(null);
     fetchOperatingHours(branch.id)
       .then((hours) => setHoursConfigured(hours.schedules.length > 0))
       .catch(() => setHoursConfigured(false));
@@ -65,14 +67,20 @@ export function LocationOverviewPanel({
       .catch(() => setPricingConfigured(false));
 
     fetchOperatorLocale(branch.id)
-      .then(() => setLocaleConfigured(true))
-      .catch(() => setLocaleConfigured(false));
+      .then((locale) => {
+        setLocaleConfigured(true);
+        setTimezone(locale.timezone);
+      })
+      .catch(() => {
+        setLocaleConfigured(false);
+        setTimezone(null);
+      });
   }, [branch.id]);
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-1">
-        <LocationDetailsCard branch={branch} />
+        <LocationDetailsCard branch={branch} timezone={timezone} />
 
         <Card>
           <CardHeader>

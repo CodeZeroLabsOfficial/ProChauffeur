@@ -253,7 +253,7 @@ export async function upsertBranch(branch: Branch): Promise<void> {
       id: branch.id,
       name: branch.name,
       isActive: branch.isActive,
-      timeZoneIdentifier: branch.timeZoneIdentifier ?? null,
+      timeZoneIdentifier: deleteField(),
       imageUrl: branch.imageUrl ?? null,
       officeAddressLine: branch.officeAddressLine ?? null,
       officeLatitude: branch.officeLatitude ?? null,
@@ -272,7 +272,6 @@ export type OfficeFleetSyncInput = {
   addressLine: string;
   latitude: number;
   longitude: number;
-  timeZoneIdentifier?: string | null;
 };
 
 /**
@@ -302,7 +301,7 @@ export async function syncOfficeFleetLocation(
       latitude: office.latitude,
       longitude: office.longitude,
       isDefault: true,
-      timeZoneIdentifier: office.timeZoneIdentifier ?? null,
+      timeZoneIdentifier: deleteField(),
       createdAt: existing.exists()
         ? (existing.data()?.createdAt ?? serverTimestamp())
         : serverTimestamp()
@@ -356,8 +355,7 @@ export async function createLocationWithScaffold(
       name: branch.name,
       addressLine: branch.officeAddressLine,
       latitude: branch.officeLatitude,
-      longitude: branch.officeLongitude,
-      timeZoneIdentifier: branch.timeZoneIdentifier
+      longitude: branch.officeLongitude
     });
   }
 
@@ -365,7 +363,11 @@ export async function createLocationWithScaffold(
   for (const docId of settingsToCopy) {
     const source = await getDoc(branchSettingsDocRef(db(), docId, sourceBranchId));
     if (source.exists()) {
-      await setDoc(branchSettingsDocRef(db(), docId, branch.id), source.data());
+      const data = { ...source.data() };
+      if (docId === BranchSettingsDocs.operatingHours) {
+        delete data.timeZoneIdentifier;
+      }
+      await setDoc(branchSettingsDocRef(db(), docId, branch.id), data);
     }
   }
 
@@ -1215,6 +1217,7 @@ export async function upsertBranchDriver(
       id: uid,
       userId: uid,
       ...profile,
+      timeZoneIdentifier: deleteField(),
       createdAt: existing.exists() ? (existing.data()?.createdAt ?? now) : now,
       updatedAt: now
     }),
@@ -1520,7 +1523,10 @@ export async function saveOperatingHours(
 ): Promise<void> {
   await setDoc(
     branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, branchId),
-    stripUndefined({ ...hours }),
+    stripUndefined({
+      schedules: hours.schedules,
+      timeZoneIdentifier: deleteField()
+    }),
     { merge: true }
   );
   void createActivityNotification(operatingHoursNotification());
@@ -1546,10 +1552,6 @@ export async function saveOperatorLocale(
     stripUndefined({ ...locale }),
     { merge: true }
   );
-  const branch = await fetchBranch(branchId);
-  if (branch && branch.timeZoneIdentifier !== locale.timezone) {
-    await upsertBranch({ ...branch, timeZoneIdentifier: locale.timezone, updatedAt: new Date() });
-  }
   invalidateOperatorLocaleCache(branchId);
   void createActivityNotification(localeNotification(branchId));
 }

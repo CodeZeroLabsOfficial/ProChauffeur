@@ -1,12 +1,20 @@
 const admin = require("firebase-admin");
 const {
+  Collections,
   invoicesCollection,
   requireBranchId,
   resolveTripRef,
 } = require("../lib/collections");
 
-/** Operator-facing timezone for invoice transfer labels. */
-const INVOICE_TIME_ZONE = "Australia/Brisbane";
+async function loadLocaleTimezone(db, branchId) {
+  const resolved = requireBranchId(branchId);
+  const snap = await db.doc(`${Collections.branches}/${resolved}/settings/locale`).get();
+  const timezone = snap.exists() ? snap.data()?.timezone : null;
+  if (typeof timezone !== "string" || !timezone.trim()) {
+    throw new Error("Locale is not configured for this Location.");
+  }
+  return timezone.trim();
+}
 
 /**
  * Resolves `scheduledPickupAt` from Firestore Timestamp, Date, ISO string, or
@@ -44,9 +52,10 @@ function tripPickupDate(trip) {
  * - Extra legs: `Transfer 3 · …`
  *
  * @param {object} trip
+ * @param {string} timezone IANA zone from Location locale
  * @param {"oneWay"|"outbound"|"return"|string} [legKind="oneWay"]
  */
-function transferLineLabel(trip, legKind = "oneWay") {
+function transferLineLabel(trip, timezone, legKind = "oneWay") {
   const base =
     legKind === "outbound"
       ? "Outbound transfer"
@@ -60,7 +69,7 @@ function transferLineLabel(trip, legKind = "oneWay") {
   if (!date) return base;
 
   const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: INVOICE_TIME_ZONE,
+    timeZone: timezone,
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -87,17 +96,20 @@ function taxLabelFromTrip(trip) {
 /**
  * Line items for one trip: transfer fare row, then add-ons, optional tax.
  *
- * @param {{ includeTax?: boolean, legKind?: string }} options When `includeTax`
+ * @param {{ includeTax?: boolean, legKind?: string, timezone: string }} options When `includeTax`
  *   is false, tax is omitted (multi-leg invoices append a single combined GST).
  */
-function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay" } = {}) {
+function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay", timezone } = {}) {
+  if (typeof timezone !== "string" || !timezone.trim()) {
+    throw new Error("timezone is required.");
+  }
   const breakdown = Array.isArray(trip.quote?.quoteBreakdown) ? trip.quote.quoteBreakdown : [];
   const addons = breakdown.filter((line) => line && line.category === "addon");
 
   const addonTotal = addons.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
   const subtotal = Number(trip.quote?.quotedSubtotal) || 0;
   const farePortion = subtotal - addonTotal;
-  const fareLabel = transferLineLabel(trip, legKind);
+  const fareLabel = transferLineLabel(trip, timezone.trim(), legKind);
 
   const items = [];
 
@@ -152,10 +164,10 @@ function legKindForIndex(index) {
  * Multi-trip invoices use `Outbound transfer` / `Return transfer` (with date ·
  * time), plus that leg's add-ons, then a single combined tax row.
  */
-function lineItemsFromTrips(trips) {
+function lineItemsFromTrips(trips, timezone) {
   if (!Array.isArray(trips) || trips.length === 0) return [];
   if (trips.length === 1) {
-    return lineItemsFromTrip(trips[0], { includeTax: true, legKind: "oneWay" });
+    return lineItemsFromTrip(trips[0], { includeTax: true, legKind: "oneWay", timezone });
   }
 
   const items = [];
@@ -167,6 +179,7 @@ function lineItemsFromTrips(trips) {
       ...lineItemsFromTrip(trip, {
         includeTax: false,
         legKind: legKindForIndex(index),
+        timezone,
       })
     );
     const tripTax = Number(trip.quote?.quotedTaxAmount) || 0;
@@ -298,9 +311,10 @@ async function createFirestoreInvoice(db, {
     throw new Error("createFirestoreInvoice requires a non-empty trips array.");
   }
 
+  const timezone = await loadLocaleTimezone(db, resolvedBranchId);
   const primary = trips[0];
   const tripIDs = trips.map((t) => t.id).filter(Boolean);
-  const lineItems = lineItemsFromTrips(trips);
+  const lineItems = lineItemsFromTrips(trips, timezone);
   const totals = totalsFromTrips(trips);
 
   const now = admin.firestore.Timestamp.now();
@@ -348,6 +362,7 @@ module.exports = {
   lineItemsFromTrips,
   createFirestoreInvoice,
   loadTripsForPaymentInvoice,
+  loadLocaleTimezone,
   normalizeTripIdList,
   transferLineLabel,
 };

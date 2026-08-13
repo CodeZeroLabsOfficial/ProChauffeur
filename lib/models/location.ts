@@ -7,7 +7,6 @@ export interface FleetLocation {
   longitude: number;
   /** Default site — used for map centering and pricing deadhead (Location office). */
   isDefault: boolean;
-  timeZoneIdentifier?: string | null;
   createdAt: Date;
 }
 

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { emptyOperatingHours, type AppFleetOperatingHours, type FleetWeeklyOperatingSchedule } from "@/lib/models";
 import { fetchOperatingHours, saveOperatingHours } from "@/lib/services/firebase-service";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
 
 function formatScheduleName(schedule: FleetWeeklyOperatingSchedule): string {
@@ -58,6 +59,7 @@ export function LocationOperatingHoursTab({
   nestedSheet?: boolean;
 }) {
   const [operatingHours, setOperatingHours] = useState<AppFleetOperatingHours>(emptyOperatingHours);
+  const [timezoneLabel, setTimezoneLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<FleetWeeklyOperatingSchedule | null>(null);
@@ -74,6 +76,20 @@ export function LocationOperatingHoursTab({
       .catch(() => setOperatingHours(emptyOperatingHours))
       .finally(() => setLoading(false));
   }, [loadData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCachedOperatorLocale(branchId)
+      .then((locale) => {
+        if (!cancelled) setTimezoneLabel(locale.timezone);
+      })
+      .catch(() => {
+        if (!cancelled) setTimezoneLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   function openAddSheet() {
     setEditingSchedule(null);
@@ -110,7 +126,14 @@ export function LocationOperatingHoursTab({
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Operating hours</CardTitle>
+          <div className="space-y-1">
+            <CardTitle>Operating hours</CardTitle>
+            {timezoneLabel ? (
+              <p className="text-muted-foreground text-xs font-normal">
+                Times are in {timezoneLabel}.
+              </p>
+            ) : null}
+          </div>
           <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
             <PlusIcon /> Add schedule
           </Button>
@@ -202,6 +225,7 @@ export function LocationOperatingHoursTab({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         nested={nestedSheet}
+        timezoneLabel={timezoneLabel}
         onPersist={async (schedules) => {
           await saveOperatingHours({ ...operatingHours, schedules }, branchId);
         }}

@@ -59,7 +59,6 @@ export interface DriverProfile {
   serviceSpecialties: string[];
   vehicleOrServiceFocus: string[];
   availabilitySchedules: FleetWeeklyOperatingSchedule[];
-  timeZoneIdentifier?: string | null;
   /** Preferred office FleetLocation id for this chauffeur. */
   preferredOfficeLocationId?: string | null;
   driversLicense?: DriversLicense | null;

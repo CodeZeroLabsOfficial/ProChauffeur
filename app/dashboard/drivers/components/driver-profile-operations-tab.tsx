@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { assignedVehicle } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
 import {
   formatScheduleDays,
@@ -24,6 +25,7 @@ import {
   unassignFleetVehicle,
   saveDriverProfile
 } from "@/lib/services/firebase-service";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -63,8 +65,10 @@ export function DriverProfileOperationsTab({
   vehicles: Vehicle[];
   onUserUpdated?: () => void;
 }) {
+  const { branchId } = useActiveBranch();
   const profile = branchDriverToProfile(roster);
   const { vehicleClasses } = useVehicleClasses();
+  const [timezoneLabel, setTimezoneLabel] = useState<string | null>(null);
   const vehicle = assignedVehicle(vehicles, user.id);
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -74,6 +78,20 @@ export function DriverProfileOperationsTab({
     () => new Map(vehicleClasses.map((c) => [c.id, c.displayName])),
     [vehicleClasses]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    getCachedOperatorLocale(branchId)
+      .then((locale) => {
+        if (!cancelled) setTimezoneLabel(locale.timezone);
+      })
+      .catch(() => {
+        if (!cancelled) setTimezoneLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   const classLabel = vehicle?.details?.vehicleClassId
     ? (classesById.get(vehicle.details.vehicleClassId) ?? vehicle.details.vehicleClassId)
@@ -131,7 +149,14 @@ export function DriverProfileOperationsTab({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Availability schedules</CardTitle>
+            <div className="space-y-1">
+              <CardTitle>Availability schedules</CardTitle>
+              {timezoneLabel ? (
+                <p className="text-muted-foreground text-xs font-normal">
+                  Times are in {timezoneLabel}.
+                </p>
+              ) : null}
+            </div>
             <CardAction>
               <Button type="button" variant="outline" size="sm" onClick={openAddSheet}>
                 <PlusIcon /> Add schedule
@@ -237,6 +262,7 @@ export function DriverProfileOperationsTab({
         allowDelete
         defaultLocationId={profile.preferredOfficeLocationId ?? null}
         activeHelpText="Inactive schedules are excluded when checking chauffeur availability."
+        timezoneLabel={timezoneLabel}
         onPersist={persistSchedules}
         onSaved={() => onUserUpdated?.()}
       />
