@@ -4,6 +4,7 @@ export type LocaleOption = {
 };
 
 export const COMMON_LANGUAGES: LocaleOption[] = [
+  { value: "en", label: "English" },
   { value: "en-AU", label: "English (Australia)" },
   { value: "en-NZ", label: "English (New Zealand)" },
   { value: "en-GB", label: "English (United Kingdom)" },

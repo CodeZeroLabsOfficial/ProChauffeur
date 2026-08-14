@@ -16,6 +16,7 @@ import {
 import { Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
+import { LocationCreateForm } from "@/app/dashboard/locations/location-create-form";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
@@ -246,9 +247,6 @@ export function LocationsDataTable({
     }
   }
 
-  const sheetOpen = Boolean(createOpen) || editOpen;
-  const sheetBranch = createOpen ? null : editing;
-
   return (
     <>
       <div className="w-full">
@@ -358,23 +356,19 @@ export function LocationsDataTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      <LocationEditSheet
-        open={sheetOpen}
-        onOpenChange={(next) => {
-          if (createOpen) handleCreateOpenChange(next);
-          else handleEditOpenChange(next);
-        }}
-        branch={sheetBranch}
+      <LocationCreateForm
+        open={Boolean(createOpen)}
+        onOpenChange={handleCreateOpenChange}
         canCreate={canCreate}
-        onSaved={(b) => {
-          if (createOpen) {
-            onCreateOpenChange?.(false);
-            setEditing(b);
-            setEditOpen(true);
-          } else {
-            setEditing(b);
-          }
+        onCreated={() => {
+          onCreateOpenChange?.(false);
         }}
+      />
+      <LocationEditSheet
+        open={editOpen}
+        onOpenChange={handleEditOpenChange}
+        branch={editing}
+        onSaved={(b) => setEditing(b)}
       />
     </>
   );

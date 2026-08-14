@@ -94,6 +94,53 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
     ]
   },
   {
+    id: "eu",
+    label: "European Union",
+    classes: [
+      { value: "AM", label: "AM — Moped" },
+      { value: "A1", label: "A1 — Light motorcycle" },
+      { value: "A2", label: "A2 — Medium motorcycle" },
+      { value: "A", label: "A — Motorcycle" },
+      { value: "B", label: "B — Car" },
+      { value: "BE", label: "BE — Car + trailer" },
+      { value: "C1", label: "C1 — Medium goods" },
+      { value: "C", label: "C — Large goods" },
+      { value: "C1E", label: "C1E — Medium goods + trailer" },
+      { value: "CE", label: "CE — Large goods + trailer" },
+      { value: "D1", label: "D1 — Minibus" },
+      { value: "D", label: "D — Bus" }
+    ],
+    jurisdictions: [
+      { value: "AT", label: "AT — Austria" },
+      { value: "BE", label: "BE — Belgium" },
+      { value: "BG", label: "BG — Bulgaria" },
+      { value: "HR", label: "HR — Croatia" },
+      { value: "CY", label: "CY — Cyprus" },
+      { value: "CZ", label: "CZ — Czechia" },
+      { value: "DK", label: "DK — Denmark" },
+      { value: "EE", label: "EE — Estonia" },
+      { value: "FI", label: "FI — Finland" },
+      { value: "FR", label: "FR — France" },
+      { value: "DE", label: "DE — Germany" },
+      { value: "GR", label: "GR — Greece" },
+      { value: "HU", label: "HU — Hungary" },
+      { value: "IE", label: "IE — Ireland" },
+      { value: "IT", label: "IT — Italy" },
+      { value: "LV", label: "LV — Latvia" },
+      { value: "LT", label: "LT — Lithuania" },
+      { value: "LU", label: "LU — Luxembourg" },
+      { value: "MT", label: "MT — Malta" },
+      { value: "NL", label: "NL — Netherlands" },
+      { value: "PL", label: "PL — Poland" },
+      { value: "PT", label: "PT — Portugal" },
+      { value: "RO", label: "RO — Romania" },
+      { value: "SK", label: "SK — Slovakia" },
+      { value: "SI", label: "SI — Slovenia" },
+      { value: "ES", label: "ES — Spain" },
+      { value: "SE", label: "SE — Sweden" }
+    ]
+  },
+  {
     id: "us",
     label: "United States",
     classes: [

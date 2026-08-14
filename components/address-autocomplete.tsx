@@ -26,7 +26,9 @@ export function AddressAutocomplete({
   required,
   disabled,
   invalid,
-  className
+  className,
+  country,
+  proximity
 }: {
   id?: string;
   value: AddressSuggestion | null;
@@ -36,6 +38,8 @@ export function AddressAutocomplete({
   disabled?: boolean;
   invalid?: boolean;
   className?: string;
+  country?: string | null;
+  proximity?: { longitude: number; latitude: number } | null;
 }) {
   const listboxId = useId();
   const [query, setQuery] = useState(value?.addressLine ?? "");
@@ -44,7 +48,8 @@ export function AddressAutocomplete({
   const selectionComplete = Boolean(value && query === value.addressLine);
   const { suggestions, loading, error } = useAddressSuggestions(
     query,
-    focused && !disabled && !selectionComplete
+    focused && !disabled && !selectionComplete,
+    { country, proximity }
   );
 
   useEffect(() => {

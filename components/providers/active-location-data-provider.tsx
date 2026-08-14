@@ -52,11 +52,16 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
   const [vehicleClassesLoading, setVehicleClassesLoading] = useState(true);
 
   useEffect(() => {
+    if (!branchId) {
+      setTrips([]);
+      setTripsLoading(false);
+      return;
+    }
     setTripsLoading(true);
     const unsub = listenTrips((rows) => {
       setTrips(rows);
       setTripsLoading(false);
-    });
+    }, 800, branchId);
     return () => unsub();
   }, [branchId]);
 
@@ -69,6 +74,11 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
   }, []);
 
   useEffect(() => {
+    if (!branchId) {
+      setBranchDrivers([]);
+      setBranchDriversLoading(false);
+      return;
+    }
     setBranchDriversLoading(true);
     const unsub = listenBranchDrivers((rows) => {
       setBranchDrivers(rows);
@@ -78,6 +88,11 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
   }, [branchId]);
 
   useEffect(() => {
+    if (!branchId) {
+      setVehicles([]);
+      setVehiclesLoading(false);
+      return;
+    }
     setVehiclesLoading(true);
     const unsub = listenVehicles((rows) => {
       setVehicles(rows);
@@ -87,6 +102,11 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
   }, [branchId]);
 
   useEffect(() => {
+    if (!branchId) {
+      setLocations([]);
+      setLocationsLoading(false);
+      return;
+    }
     setLocationsLoading(true);
     const unsub = listenFleetLocations((rows) => {
       setLocations(rows);
@@ -96,15 +116,25 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
   }, [branchId]);
 
   useEffect(() => {
+    if (!branchId) {
+      setInvoices([]);
+      setInvoicesLoading(false);
+      return;
+    }
     setInvoicesLoading(true);
     const unsub = listenInvoices((rows) => {
       setInvoices(rows);
       setInvoicesLoading(false);
-    });
+    }, branchId);
     return () => unsub();
   }, [branchId]);
 
   useEffect(() => {
+    if (!branchId) {
+      setVehicleClasses([]);
+      setVehicleClassesLoading(false);
+      return;
+    }
     setVehicleClassesLoading(true);
     const unsub = listenVehicleClasses((rows) => {
       setVehicleClasses(rows);

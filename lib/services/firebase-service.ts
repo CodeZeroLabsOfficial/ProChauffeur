@@ -119,7 +119,6 @@ import { listenQuery } from "@/lib/branch/listen-query";
 import {
   BRANCH_SUBCOLLECTIONS,
   BranchSettingsDocs,
-  DEFAULT_BRANCH_ID,
   BRANCH_OFFICE_FLEET_LOCATION_ID,
   type Branch,
   type BranchDriver
@@ -345,71 +344,39 @@ export async function syncOfficeFleetLocation(
   );
 }
 
-/** Allocates a unique branch id from a display name (slug, then -2, -3, …). */
-export async function allocateUniqueBranchId(name: string): Promise<string> {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64);
-  if (!base) {
-    throw new Error("Enter a location name with letters or numbers.");
-  }
-  const existing = await fetchBranches();
-  const used = new Set(existing.map((b) => b.id));
-  if (!used.has(base)) return base;
-  for (let n = 2; n < 1000; n += 1) {
-    const candidate = `${base.slice(0, 60)}-${n}`;
-    if (!used.has(candidate)) return candidate;
-  }
-  throw new Error("Could not allocate a unique location id.");
-}
+export type CreateLocationFromSeedInput = {
+  regionId: string;
+  city: string;
+  name: string;
+  officeAddressLine: string;
+  officeLatitude: number;
+  officeLongitude: number;
+  officePhone?: string | null;
+  officeEmail?: string | null;
+  contactUserId?: string | null;
+  isActive: boolean;
+};
 
-/**
- * Creates a Location (branch) and copies pricing, operating hours, and vehicle
- * classes from `sourceBranchId` (default Brisbane).
- */
-export async function createLocationWithScaffold(
-  branch: Branch,
-  options?: { sourceBranchId?: string }
-): Promise<void> {
-  const sourceBranchId = options?.sourceBranchId ?? DEFAULT_BRANCH_ID;
-  const existing = await getDoc(branchMetaDocRef(db(), branch.id));
-  if (existing.exists()) {
-    throw new Error(`A location with id "${branch.id}" already exists.`);
+/** Creates a Location from the chosen country seed file (Admin API). */
+export async function createLocationFromSeed(
+  input: CreateLocationFromSeedInput
+): Promise<Branch> {
+  const res = await fetch("/api/locations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!res.ok) {
+    await parseApiError(res, "Could not create the location.");
   }
-  await upsertBranch(branch);
-
-  if (
-    branch.officeAddressLine?.trim() &&
-    typeof branch.officeLatitude === "number" &&
-    typeof branch.officeLongitude === "number"
-  ) {
-    await syncOfficeFleetLocation(branch.id, {
-      name: branch.name,
-      addressLine: branch.officeAddressLine,
-      latitude: branch.officeLatitude,
-      longitude: branch.officeLongitude
-    });
-  }
-
-  const settingsToCopy = [BranchSettingsDocs.pricing, BranchSettingsDocs.operatingHours] as const;
-  for (const docId of settingsToCopy) {
-    const source = await getDoc(branchSettingsDocRef(db(), docId, sourceBranchId));
-    if (source.exists()) {
-      const data = { ...source.data() };
-      if (docId === BranchSettingsDocs.operatingHours) {
-        delete data.timeZoneIdentifier;
-      }
-      await setDoc(branchSettingsDocRef(db(), docId, branch.id), data);
-    }
-  }
-
-  const classesSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", sourceBranchId));
-  for (const classDoc of classesSnap.docs) {
-    await setDoc(branchDocRef(db(), "vehicle_classes", classDoc.id, branch.id), classDoc.data());
-  }
+  const body = (await res.json()) as { branch: Branch & { createdAt: string; updatedAt: string } };
+  const created: Branch = {
+    ...body.branch,
+    createdAt: new Date(body.branch.createdAt),
+    updatedAt: new Date(body.branch.updatedAt)
+  };
+  void createActivityNotification(locationNotification("created", created.name, created.id));
+  return created;
 }
 
 async function deleteCollectionInBatches(colRef: ReturnType<typeof collection>): Promise<void> {
@@ -455,7 +422,7 @@ export async function deleteBranch(branchId: string): Promise<void> {
   }
 
   const remaining = siblings.filter((b) => b.id !== id);
-  const fallbackId = remaining[0]?.id ?? DEFAULT_BRANCH_ID;
+  const fallbackId = remaining[0]?.id ?? "";
   if (getActiveBranchId() === id) {
     setActiveBranchId(fallbackId);
   }

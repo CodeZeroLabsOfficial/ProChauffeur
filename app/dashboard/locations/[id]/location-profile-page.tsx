@@ -140,7 +140,6 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
         open={editOpen}
         onOpenChange={setEditOpen}
         branch={branch}
-        canCreate={false}
         onSaved={(updated) => setBranch(updated)}
       />
     </>

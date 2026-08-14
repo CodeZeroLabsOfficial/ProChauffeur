@@ -1,8 +1,5 @@
 import type { DriverProfile } from "@/lib/models/user";
 
-/** Fallback Location id when none is selected or resolved. */
-export const DEFAULT_BRANCH_ID = "brisbane";
-
 /** Subcollections under `branches/{branchId}/`. */
 export const BRANCH_SUBCOLLECTIONS = [
   "settings",

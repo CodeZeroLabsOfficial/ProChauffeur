@@ -2,16 +2,28 @@
 
 import { useEffect, useState } from "react";
 
-import { fetchAddressSuggestions, type AddressSuggestion } from "@/lib/mapbox/geocoding";
+import {
+  fetchAddressSuggestions,
+  type AddressSearchOptions,
+  type AddressSuggestion
+} from "@/lib/mapbox/geocoding";
 import { getMapboxToken } from "@/lib/env";
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 
-export function useAddressSuggestions(query: string, enabled = true) {
+export function useAddressSuggestions(
+  query: string,
+  enabled = true,
+  options?: AddressSearchOptions
+) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const country = options?.country ?? "";
+  const proximityKey = options?.proximity
+    ? `${options.proximity.longitude},${options.proximity.latitude}`
+    : "";
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -29,7 +41,10 @@ export function useAddressSuggestions(query: string, enabled = true) {
         setError(false);
         try {
           const token = getMapboxToken();
-          const results = await fetchAddressSuggestions(trimmed, token);
+          const results = await fetchAddressSuggestions(trimmed, token, {
+            country: country || null,
+            proximity: options?.proximity ?? null
+          });
           if (!cancelled) setSuggestions(results);
         } catch {
           if (!cancelled) {
@@ -46,7 +61,7 @@ export function useAddressSuggestions(query: string, enabled = true) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, enabled]);
+  }, [query, enabled, country, proximityKey]);
 
   return { suggestions, loading, error };
 }

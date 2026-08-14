@@ -63,8 +63,6 @@ Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `
 Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`, `locale`).
 Vehicle class document ids are company-wide product slugs (`business-sedan`).
 
-Default branch id: `brisbane`.
-
 ### Live locations
 
 The Dispatch map reads `liveTrips/{branchId}/{tripId}` from Realtime Database.

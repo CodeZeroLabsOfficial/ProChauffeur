@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 
-import { canAccessLocation, isStaffAdmin } from "@/lib/auth/staff-access";
+import { canAccessLocation, canManageLocations, isStaffAdmin } from "@/lib/auth/staff-access";
 import type { SessionUser } from "@/lib/firebase/session";
 
 export function requireStaffAdmin(session: SessionUser): NextResponse | null {
   if (isStaffAdmin(session.staffRole)) return null;
   return NextResponse.json(
     { error: "You do not have permission to manage Team." },
+    { status: 403 }
+  );
+}
+
+export function requireCanManageLocations(session: SessionUser): NextResponse | null {
+  if (canManageLocations(session.staffRole)) return null;
+  return NextResponse.json(
+    { error: "You do not have permission to manage Locations." },
     { status: 403 }
   );
 }

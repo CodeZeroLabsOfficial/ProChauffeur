@@ -8,6 +8,11 @@ export type AddressSuggestion = {
   postalAddress?: PostalAddress;
 };
 
+export type AddressSearchOptions = {
+  country?: string | null;
+  proximity?: { longitude: number; latitude: number } | null;
+};
+
 type MapboxContext = {
   id: string;
   text: string;
@@ -28,9 +33,6 @@ type MapboxGeocodingResponse = {
   features?: MapboxGeocodingFeature[];
 };
 
-/** Sydney CBD — default proximity bias for AU chauffeur searches. */
-const DEFAULT_PROXIMITY = { longitude: 151.2093, latitude: -33.8688 };
-
 function contextEntry(context: MapboxContext[] | undefined, prefix: string): MapboxContext | undefined {
   return context?.find((entry) => entry.id.startsWith(`${prefix}.`));
 }
@@ -49,7 +51,9 @@ function parsePostalAddress(feature: MapboxGeocodingFeature): PostalAddress {
   }
 
   const region = contextEntry(feature.context, "region");
-  const stateFromCode = region?.short_code?.match(/^AU-(.+)$/)?.[1];
+  const country = contextEntry(feature.context, "country");
+  const countryCode = country?.short_code?.replace(/^AU-/, "") ?? null;
+  const stateFromCode = region?.short_code?.match(/^[A-Z]{2}-(.+)$/i)?.[1];
   const city =
     contextEntry(feature.context, "place")?.text ??
     contextEntry(feature.context, "locality")?.text ??
@@ -60,7 +64,7 @@ function parsePostalAddress(feature: MapboxGeocodingFeature): PostalAddress {
     city: city || null,
     state: stateFromCode || region?.text || null,
     postcode: contextEntry(feature.context, "postcode")?.text ?? null,
-    country: contextEntry(feature.context, "country")?.text ?? null
+    country: country?.text || countryCode || null
   };
 }
 
@@ -76,7 +80,8 @@ function mapFeature(feature: MapboxGeocodingFeature): AddressSuggestion {
 
 export async function fetchAddressSuggestions(
   query: string,
-  token: string
+  token: string,
+  options?: AddressSearchOptions
 ): Promise<AddressSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
@@ -85,14 +90,21 @@ export async function fetchAddressSuggestions(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(trimmed)}.json`
   );
   url.searchParams.set("access_token", token);
-  url.searchParams.set("country", "au");
   url.searchParams.set("types", "address,place,poi");
   url.searchParams.set("limit", "5");
   url.searchParams.set("language", "en");
-  url.searchParams.set(
-    "proximity",
-    `${DEFAULT_PROXIMITY.longitude},${DEFAULT_PROXIMITY.latitude}`
-  );
+  const country = options?.country?.trim();
+  if (country) {
+    url.searchParams.set("country", country);
+  }
+  const proximity = options?.proximity;
+  if (
+    proximity &&
+    Number.isFinite(proximity.longitude) &&
+    Number.isFinite(proximity.latitude)
+  ) {
+    url.searchParams.set("proximity", `${proximity.longitude},${proximity.latitude}`);
+  }
 
   const res = await fetch(url);
   if (!res.ok) return [];

@@ -1,10 +1,8 @@
-import { DEFAULT_BRANCH_ID } from "@/lib/models/branch";
-
 const STORAGE_KEY = "activeBranchId";
 
 type Listener = (branchId: string) => void;
 
-let activeBranchId = DEFAULT_BRANCH_ID;
+let activeBranchId = "";
 const listeners = new Set<Listener>();
 
 function readStored(): string | null {
@@ -17,18 +15,22 @@ function readStored(): string | null {
   }
 }
 
-/** Current branch for ops reads/writes (dashboard scope). */
+/** Current branch for ops reads/writes (dashboard scope). Empty when none. */
 export function getActiveBranchId(): string {
   return activeBranchId;
 }
 
 export function setActiveBranchId(branchId: string): void {
-  const next = branchId.trim() || DEFAULT_BRANCH_ID;
+  const next = branchId.trim();
   if (next === activeBranchId) return;
   activeBranchId = next;
   if (typeof window !== "undefined") {
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      if (next) {
+        window.localStorage.setItem(STORAGE_KEY, next);
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       /* ignore */
     }

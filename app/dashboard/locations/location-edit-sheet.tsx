@@ -5,31 +5,22 @@ import { useEffect, useState } from "react";
 import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power, UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
-import { buildBranch, type Branch } from "@/lib/models";
+import type { AddressSuggestion } from "@/lib/mapbox/geocoding";
+import type { Branch } from "@/lib/models";
 import type { User } from "@/lib/models/user";
 import {
-  allocateUniqueBranchId,
-  createLocationWithScaffold,
   fetchUser,
   syncOfficeFleetLocation,
   uploadBranchImage,
@@ -206,7 +197,7 @@ function LocationOverviewFields({
                 onActiveFieldIdChange={setActiveFieldId}
                 value={branch.name}
                 editLabel="name"
-                placeholder="e.g. Brisbane"
+                placeholder="e.g. city name"
                 onSave={async (next) => {
                   const trimmed = next.trim();
                   if (!trimmed) {
@@ -301,162 +292,17 @@ function LocationOverviewFields({
   );
 }
 
-function LocationCreateOverviewForm({
-  canCreate,
-  onCreated
-}: {
-  canCreate: boolean;
-  onCreated: (branch: Branch) => void;
-}) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [contact, setContact] = useState<User | null>(null);
-  const [isActive, setIsActive] = useState(true);
-  const [office, setOffice] = useState<AddressSuggestion | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      toast.error("Enter a location name.");
-      return;
-    }
-    if (!office) {
-      toast.error("Select an office address from the suggestions.");
-      return;
-    }
-    if (!canCreate) {
-      toast.error("Location limit reached.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const id = await allocateUniqueBranchId(trimmedName);
-      const created = buildBranch({
-        id,
-        name: trimmedName,
-        isActive,
-        officeAddressLine: office.addressLine,
-        officeLatitude: office.coordinate.latitude,
-        officeLongitude: office.coordinate.longitude,
-        officePhone: phone.trim() || null,
-        officeEmail: email.trim() || null,
-        contactUserId: contact?.id ?? null,
-        serviceArea: null
-      });
-      await createLocationWithScaffold(created);
-      onCreated(created);
-      toast.success("Location created.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the location.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="location-name">Name</Label>
-        <Input
-          id="location-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="e.g. Brisbane"
-          disabled={submitting}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-phone">Phone</Label>
-        <Input
-          id="location-phone"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Optional"
-          disabled={submitting}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-email">Email</Label>
-        <Input
-          id="location-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Optional"
-          disabled={submitting}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-create-contact">Contact</Label>
-        <AdminUserAutocomplete
-          id="location-create-contact"
-          value={contact}
-          onChange={setContact}
-          disabled={submitting}
-          placeholder="Search team admins…"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="location-office">Office address</Label>
-        <AddressAutocomplete
-          id="location-office"
-          value={office}
-          onChange={setOffice}
-          required
-          disabled={submitting}
-          placeholder="Search for the office address…"
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-        <div className="space-y-0.5">
-          <Label htmlFor="location-active">Active</Label>
-          <p className="text-muted-foreground text-xs">
-            Inactive locations are hidden from the switcher and resolve.
-          </p>
-        </div>
-        <Switch
-          id="location-active"
-          checked={isActive}
-          onCheckedChange={setIsActive}
-          disabled={submitting}
-        />
-      </div>
-
-      <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-        <span />
-        <Button type="submit" disabled={submitting || !canCreate}>
-          {submitting ? "Saving…" : "Create"}
-        </Button>
-      </SheetFooter>
-    </form>
-  );
-}
-
 export function LocationEditSheet({
   open,
   onOpenChange,
   branch,
-  canCreate,
   onSaved
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branch: Branch | null;
-  canCreate: boolean;
   onSaved: (branch: Branch) => void;
 }) {
-  const isNew = branch == null;
   const [savedBranch, setSavedBranch] = useState<Branch | null>(branch);
 
   useEffect(() => {
@@ -466,11 +312,6 @@ export function LocationEditSheet({
 
   const working = savedBranch ?? branch;
   const displayBranch = useSheetDisplayItem(working, open);
-
-  function handleCreated(created: Branch) {
-    setSavedBranch(created);
-    onSaved(created);
-  }
 
   function handleSaved(updated: Branch) {
     setSavedBranch(updated);
@@ -482,7 +323,7 @@ export function LocationEditSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <div className="flex flex-wrap items-start justify-between gap-2 pe-6">
-            <SheetTitle>{isNew && !working ? "New location" : "Location details"}</SheetTitle>
+            <SheetTitle>Location details</SheetTitle>
             {displayBranch ? (
               <Button variant="outline" asChild>
                 <Link
@@ -498,22 +339,19 @@ export function LocationEditSheet({
 
         <div className="space-y-4 px-4 pb-4">
           {working ? (
-            <div className="inline-flex items-center gap-4 align-top">
-              <LocationImageUpload key={working.id} branch={working} onSaved={handleSaved} />
-              <div className="space-y-2">
-                <p className="text-lg font-semibold">{working.name.trim() || "Location"}</p>
-                <DetailSheetIconBadge icon={Power}>
-                  {working.isActive !== false ? "Active" : "Inactive"}
-                </DetailSheetIconBadge>
+            <>
+              <div className="inline-flex items-center gap-4 align-top">
+                <LocationImageUpload key={working.id} branch={working} onSaved={handleSaved} />
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold">{working.name.trim() || "Location"}</p>
+                  <DetailSheetIconBadge icon={Power}>
+                    {working.isActive !== false ? "Active" : "Inactive"}
+                  </DetailSheetIconBadge>
+                </div>
               </div>
-            </div>
+              <LocationOverviewFields branch={working} onSaved={handleSaved} />
+            </>
           ) : null}
-
-          {working ? (
-            <LocationOverviewFields branch={working} onSaved={handleSaved} />
-          ) : (
-            <LocationCreateOverviewForm canCreate={canCreate} onCreated={handleCreated} />
-          )}
         </div>
       </SheetContent>
     </Sheet>

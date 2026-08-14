@@ -1,0 +1,122 @@
+{
+  "id": "gb",
+  "label": "United Kingdom",
+  "mapboxCountry": "gb",
+  "locale": {
+    "locale": "en-GB",
+    "currency": "GBP",
+    "timezone": "Europe/London",
+    "distanceUnit": "mile",
+    "defaultTaxRate": 0.2,
+    "taxName": "VAT",
+    "taxDisplayMode": "inclusive",
+    "showTaxOnQuotes": true,
+    "driverLicenceCountry": "uk"
+  },
+  "pricing": {
+    "schemaVersion": 2,
+    "minimumFare": 55,
+    "weekendWeekdays": [6, 7],
+    "quoteRounding": "dollar",
+    "addons": [
+      {
+        "id": "child_seat",
+        "title": "Child seat",
+        "price": 12,
+        "isEnabled": true,
+        "tripTypes": ["transfer", "hourly"],
+        "vehicleClassIds": []
+      },
+      {
+        "id": "meet_greet",
+        "title": "Meet & greet (airport)",
+        "price": 30,
+        "isEnabled": true,
+        "tripTypes": ["transfer"],
+        "vehicleClassIds": []
+      }
+    ],
+    "zones": [],
+    "rules": []
+  },
+  "vehicleClasses": [
+    {
+      "id": "business-sedan",
+      "slug": "business-sedan",
+      "displayName": "Business Sedan",
+      "sortOrder": 0,
+      "serviceTier": "Business",
+      "bodyType": "Sedan",
+      "capacity": {
+        "passengerCount": 3,
+        "luggage": { "smallCount": 2, "largeCount": 2 }
+      },
+      "inclusions": [
+        { "id": "chauffeur", "label": "Chauffeur", "value": "Professional chauffeur" },
+        { "id": "water", "label": "Refreshments", "value": "Bottled water" }
+      ],
+      "description": "Executive sedan for airport and city transfers.",
+      "imageUrl": null,
+      "isEnabled": true,
+      "isVisible": true,
+      "supportedTripTypes": ["transfer", "hourly"],
+      "transfer": {
+        "minimumBaseRate": 55,
+        "baseFare": 32,
+        "deadheadRatePerUnit": 1.8,
+        "tripRatePerUnit": 2.2,
+        "returnToBaseFee": 35,
+        "waitingFeeFlat": 0
+      },
+      "hourly": {
+        "weekdayHourlyRate": 65,
+        "weekendHourlyRate": 80,
+        "weekdayMinimumHours": 2,
+        "weekendMinimumHours": 3,
+        "freeDeadheadMinutes": 60,
+        "deadheadRatePerMinute": 1,
+        "displayHourlyFrom": 65
+      }
+    },
+    {
+      "id": "business-suv",
+      "slug": "business-suv",
+      "displayName": "Business SUV",
+      "sortOrder": 1,
+      "serviceTier": "Business",
+      "bodyType": "SUV",
+      "capacity": {
+        "passengerCount": 6,
+        "luggage": { "smallCount": 4, "largeCount": 4 }
+      },
+      "inclusions": [
+        { "id": "chauffeur", "label": "Chauffeur", "value": "Professional chauffeur" },
+        { "id": "water", "label": "Refreshments", "value": "Bottled water" }
+      ],
+      "description": "Spacious SUV for families and extra luggage.",
+      "imageUrl": null,
+      "isEnabled": true,
+      "isVisible": true,
+      "supportedTripTypes": ["transfer", "hourly"],
+      "transfer": {
+        "minimumBaseRate": 68,
+        "baseFare": 38,
+        "deadheadRatePerUnit": 2.1,
+        "tripRatePerUnit": 2.6,
+        "returnToBaseFee": 42,
+        "waitingFeeFlat": 0
+      },
+      "hourly": {
+        "weekdayHourlyRate": 78,
+        "weekendHourlyRate": 95,
+        "weekdayMinimumHours": 2,
+        "weekendMinimumHours": 3,
+        "freeDeadheadMinutes": 60,
+        "deadheadRatePerMinute": 1.2,
+        "displayHourlyFrom": 78
+      }
+    }
+  ],
+  "operatingHours": { "schedules": [] },
+  "serviceArea": null
+}

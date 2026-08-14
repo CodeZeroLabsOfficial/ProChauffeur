@@ -21,8 +21,8 @@ import {
   grantedBranchIds,
   resolveGrantedBranchId
 } from "@/lib/auth/staff-access";
-import { DEFAULT_BRANCH_ID, type Branch } from "@/lib/models/branch";
 import { listenBranches } from "@/lib/services/firebase-service";
+import type { Branch } from "@/lib/models/branch";
 
 type ActiveBranchContextValue = {
   branchId: string;
@@ -37,7 +37,7 @@ const ActiveBranchContext = createContext<ActiveBranchContextValue | null>(null)
 
 export function ActiveBranchProvider({ children }: { children: ReactNode }) {
   const session = useSessionUser();
-  const [branchId, setBranchIdState] = useState(DEFAULT_BRANCH_ID);
+  const [branchId, setBranchIdState] = useState("");
   const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
 
@@ -63,7 +63,10 @@ export function ActiveBranchProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (branchesLoading) return;
     const grantedIds = branches.map((b) => b.id);
-    if (grantedIds.length === 0) return;
+    if (grantedIds.length === 0) {
+      if (branchId) setStoreBranchId("");
+      return;
+    }
     const next = resolveGrantedBranchId(session, branchId, grantedIds);
     if (next !== branchId) setStoreBranchId(next);
   }, [branchId, branches, branchesLoading, session]);
