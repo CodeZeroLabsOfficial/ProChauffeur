@@ -141,6 +141,9 @@ function db() {
   return firestore();
 }
 
+let licensePromise: Promise<AppLicense> | null = null;
+let plansCatalogPromise: Promise<AppPlansCatalog> | null = null;
+
 function snapToList<T>(
   snap: QuerySnapshot<DocumentData>,
   map: (id: string, d: DocumentData) => T
@@ -1611,6 +1614,16 @@ export async function saveCompanyProfile(profile: CompanyProfile): Promise<void>
 }
 
 export async function fetchLicense(): Promise<AppLicense> {
+  if (!licensePromise) {
+    licensePromise = loadLicense().catch((err) => {
+      licensePromise = null;
+      throw err;
+    });
+  }
+  return licensePromise;
+}
+
+async function loadLicense(): Promise<AppLicense> {
   const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.license));
   return snap.exists() ? mapLicense(snap.data()) : defaultLicense;
 }
@@ -1621,9 +1634,20 @@ export async function saveLicense(license: AppLicense): Promise<void> {
     stripUndefined({ ...license }),
     { merge: true }
   );
+  licensePromise = null;
 }
 
 export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
+  if (!plansCatalogPromise) {
+    plansCatalogPromise = loadPlansCatalog().catch((err) => {
+      plansCatalogPromise = null;
+      throw err;
+    });
+  }
+  return plansCatalogPromise;
+}
+
+async function loadPlansCatalog(): Promise<AppPlansCatalog> {
   const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.plans));
   return snap.exists() ? mapPlansCatalog(snap.data()) : defaultPlansCatalog;
 }

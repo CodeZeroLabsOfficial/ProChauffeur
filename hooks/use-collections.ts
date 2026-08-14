@@ -2,88 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { useCollectionsContext } from "@/components/providers/collections-provider";
-import {
-  listenBranchDrivers,
-  listenFleetLocations,
-  listenInvoices,
-  listenNotifications,
-  listenTrips,
-  listenTrip,
-  listenUsers,
-  listenVehicleClasses,
-  listenVehicles
-} from "@/lib/services/firebase-service";
+import { useActiveLocationData } from "@/components/providers/active-location-data-provider";
+import { listenNotifications, listenTrip } from "@/lib/services/firebase-service";
 import { joinRosterChauffeurs } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
-import type {
-  ActivityNotification,
-  FleetLocation,
-  Invoice,
-  Trip,
-  User,
-  Vehicle,
-  VehicleClass
-} from "@/lib/models";
-import type { BranchDriver } from "@/lib/models/branch";
+import type { ActivityNotification, Trip } from "@/lib/models";
 
 export function useTrips() {
-  const ctx = useCollectionsContext();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenTrips((rows) => {
-      setTrips(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { trips: ctx.trips, loading: ctx.tripsLoading };
-  }
-  return { trips, loading };
+  const { trips, tripsLoading } = useActiveLocationData();
+  return { trips, loading: tripsLoading };
 }
 
 export function useUsers() {
-  const ctx = useCollectionsContext();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenUsers((rows) => {
-      setUsers(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { users: ctx.users, loading: ctx.usersLoading };
-  }
-  return { users, loading };
+  const { users, usersLoading } = useActiveLocationData();
+  return { users, loading: usersLoading };
 }
 
 export function useBranchDrivers() {
-  const ctx = useCollectionsContext();
-  const [branchDrivers, setBranchDrivers] = useState<BranchDriver[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenBranchDrivers((rows) => {
-      setBranchDrivers(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { branchDrivers: ctx.branchDrivers, loading: ctx.branchDriversLoading };
-  }
-  return { branchDrivers, loading };
+  const { branchDrivers, branchDriversLoading } = useActiveLocationData();
+  return { branchDrivers, loading: branchDriversLoading };
 }
 
 /** Active Location chauffeurs: identity from users, ops from roster. */
@@ -98,83 +34,23 @@ export function useRosterChauffeurs() {
 }
 
 export function useVehicles() {
-  const ctx = useCollectionsContext();
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenVehicles((rows) => {
-      setVehicles(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { vehicles: ctx.vehicles, loading: ctx.vehiclesLoading };
-  }
-  return { vehicles, loading };
+  const { vehicles, vehiclesLoading } = useActiveLocationData();
+  return { vehicles, loading: vehiclesLoading };
 }
 
 export function useFleetLocations() {
-  const ctx = useCollectionsContext();
-  const [locations, setLocations] = useState<FleetLocation[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenFleetLocations((rows) => {
-      setLocations(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { locations: ctx.locations, loading: ctx.locationsLoading };
-  }
-  return { locations, loading };
+  const { locations, locationsLoading } = useActiveLocationData();
+  return { locations, loading: locationsLoading };
 }
 
 export function useInvoices() {
-  const ctx = useCollectionsContext();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenInvoices((rows) => {
-      setInvoices(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { invoices: ctx.invoices, loading: ctx.invoicesLoading };
-  }
-  return { invoices, loading };
+  const { invoices, invoicesLoading } = useActiveLocationData();
+  return { invoices, loading: invoicesLoading };
 }
 
 export function useVehicleClasses() {
-  const ctx = useCollectionsContext();
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClass[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (ctx) return;
-    const unsub = listenVehicleClasses((rows) => {
-      setVehicleClasses(rows);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [ctx]);
-
-  if (ctx) {
-    return { vehicleClasses: ctx.vehicleClasses, loading: ctx.vehicleClassesLoading };
-  }
-  return { vehicleClasses, loading };
+  const { vehicleClasses, vehicleClassesLoading } = useActiveLocationData();
+  return { vehicleClasses, loading: vehicleClassesLoading };
 }
 
 export function useTrip(id: string) {

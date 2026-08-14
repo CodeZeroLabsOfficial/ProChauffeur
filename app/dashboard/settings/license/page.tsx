@@ -69,7 +69,7 @@ function LimitUsageBar({ label, used, max }: LimitRow) {
 
 export default function LicensePage() {
   const { users, loading: usersLoading } = useUsers();
-  const { branches, branchesLoading } = useActiveBranch();
+  const { allBranches, branchesLoading } = useActiveBranch();
   const [license, setLicense] = useState<AppLicense | null>(null);
   const [catalog, setCatalog] = useState<AppPlansCatalog | null>(null);
   const [licenseLoading, setLicenseLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function LicensePage() {
   const rows: LimitRow[] = [
     { label: "Admin accounts", used: adminCount, max: resolved.maxAdmins },
     { label: "Drivers", used: driverCount, max: resolved.maxDrivers },
-    { label: "Locations", used: branches.length, max: resolved.maxLocations }
+    { label: "Locations", used: allBranches.length, max: resolved.maxLocations }
   ];
 
   const label = planLabel(resolved, plans);

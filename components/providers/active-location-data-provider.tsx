@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
@@ -15,7 +15,7 @@ import {
 import type { FleetLocation, Invoice, Trip, User, Vehicle, VehicleClass } from "@/lib/models";
 import type { BranchDriver } from "@/lib/models/branch";
 
-type CollectionsContextValue = {
+type ActiveLocationDataValue = {
   trips: Trip[];
   tripsLoading: boolean;
   users: User[];
@@ -32,9 +32,9 @@ type CollectionsContextValue = {
   vehicleClassesLoading: boolean;
 };
 
-const CollectionsContext = createContext<CollectionsContextValue | null>(null);
+const ActiveLocationDataContext = createContext<ActiveLocationDataValue | null>(null);
 
-export function CollectionsProvider({ children }: { children: ReactNode }) {
+export function ActiveLocationDataProvider({ children }: { children: ReactNode }) {
   const { branchId } = useActiveBranch();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
@@ -113,29 +113,50 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
     return () => unsub();
   }, [branchId]);
 
+  const value = useMemo(
+    () => ({
+      trips,
+      tripsLoading,
+      users,
+      usersLoading,
+      branchDrivers,
+      branchDriversLoading,
+      vehicles,
+      vehiclesLoading,
+      locations,
+      locationsLoading,
+      invoices,
+      invoicesLoading,
+      vehicleClasses,
+      vehicleClassesLoading
+    }),
+    [
+      trips,
+      tripsLoading,
+      users,
+      usersLoading,
+      branchDrivers,
+      branchDriversLoading,
+      vehicles,
+      vehiclesLoading,
+      locations,
+      locationsLoading,
+      invoices,
+      invoicesLoading,
+      vehicleClasses,
+      vehicleClassesLoading
+    ]
+  );
+
   return (
-    <CollectionsContext.Provider
-      value={{
-        trips,
-        tripsLoading,
-        users,
-        usersLoading,
-        branchDrivers,
-        branchDriversLoading,
-        vehicles,
-        vehiclesLoading,
-        locations,
-        locationsLoading,
-        invoices,
-        invoicesLoading,
-        vehicleClasses,
-        vehicleClassesLoading
-      }}>
-      {children}
-    </CollectionsContext.Provider>
+    <ActiveLocationDataContext.Provider value={value}>{children}</ActiveLocationDataContext.Provider>
   );
 }
 
-export function useCollectionsContext(): CollectionsContextValue | null {
-  return useContext(CollectionsContext);
+export function useActiveLocationData(): ActiveLocationDataValue {
+  const ctx = useContext(ActiveLocationDataContext);
+  if (!ctx) {
+    throw new Error("useActiveLocationData must be used within ActiveLocationDataProvider.");
+  }
+  return ctx;
 }

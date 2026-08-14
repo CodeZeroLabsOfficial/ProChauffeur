@@ -27,6 +27,7 @@ import { listenBranches } from "@/lib/services/firebase-service";
 type ActiveBranchContextValue = {
   branchId: string;
   branches: Branch[];
+  allBranches: Branch[];
   branchesLoading: boolean;
   setBranchId: (branchId: string) => void;
   activeBranch: Branch | null;
@@ -37,9 +38,8 @@ const ActiveBranchContext = createContext<ActiveBranchContextValue | null>(null)
 export function ActiveBranchProvider({ children }: { children: ReactNode }) {
   const session = useSessionUser();
   const [branchId, setBranchIdState] = useState(DEFAULT_BRANCH_ID);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
-  const grantKey = `${session.canAccessAllBranches}:${(session.branchIds ?? []).join(",")}`;
 
   useEffect(() => {
     setBranchIdState(hydrateActiveBranchId());
@@ -48,13 +48,17 @@ export function ActiveBranchProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsub = listenBranches((rows) => {
-      const active = rows.filter((b) => b.isActive).sort((a, b) => a.name.localeCompare(b.name));
-      const allowed = new Set(grantedBranchIds(session, active.map((b) => b.id)));
-      setBranches(active.filter((b) => allowed.has(b.id)));
+      setAllBranches([...rows].sort((a, b) => a.name.localeCompare(b.name)));
       setBranchesLoading(false);
     });
     return () => unsub();
-  }, [grantKey, session]);
+  }, []);
+
+  const branches = useMemo(() => {
+    const active = allBranches.filter((b) => b.isActive);
+    const allowed = new Set(grantedBranchIds(session, active.map((b) => b.id)));
+    return active.filter((b) => allowed.has(b.id));
+  }, [allBranches, session]);
 
   useEffect(() => {
     if (branchesLoading) return;
@@ -77,11 +81,12 @@ export function ActiveBranchProvider({ children }: { children: ReactNode }) {
     () => ({
       branchId,
       branches,
+      allBranches,
       branchesLoading,
       setBranchId,
       activeBranch
     }),
-    [branchId, branches, branchesLoading, setBranchId, activeBranch]
+    [branchId, branches, allBranches, branchesLoading, setBranchId, activeBranch]
   );
 
   return <ActiveBranchContext.Provider value={value}>{children}</ActiveBranchContext.Provider>;
@@ -93,6 +98,7 @@ export function useActiveBranch(): ActiveBranchContextValue {
     return {
       branchId: getActiveBranchId(),
       branches: [],
+      allBranches: [],
       branchesLoading: false,
       setBranchId: setStoreBranchId,
       activeBranch: null

@@ -7,8 +7,8 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StaffAccessGate } from "@/components/staff-access-gate";
 import { ActiveBranchProvider } from "@/components/providers/active-branch-provider";
+import { ActiveLocationDataProvider } from "@/components/providers/active-location-data-provider";
 import { FirebaseAuthProvider } from "@/components/providers/firebase-auth-provider";
-import { DashboardCollectionsProvider } from "@/components/providers/dashboard-collections-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
@@ -26,7 +26,7 @@ export default async function DashboardLayout({
     <SessionProvider user={user}>
       <FirebaseAuthProvider>
         <ActiveBranchProvider>
-          <DashboardCollectionsProvider>
+          <ActiveLocationDataProvider>
             <SidebarProvider
               defaultOpen={defaultOpen}
               style={
@@ -45,7 +45,7 @@ export default async function DashboardLayout({
                 </div>
               </SidebarInset>
             </SidebarProvider>
-          </DashboardCollectionsProvider>
+          </ActiveLocationDataProvider>
         </ActiveBranchProvider>
       </FirebaseAuthProvider>
     </SessionProvider>

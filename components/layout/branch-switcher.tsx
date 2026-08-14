@@ -36,7 +36,8 @@ type BranchSwitcherProps = {
 export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   const { isMobile } = useSidebar();
   const session = useSessionUser();
-  const { branchId, branches, setBranchId, activeBranch, branchesLoading } = useActiveBranch();
+  const { branchId, branches, allBranches, setBranchId, activeBranch, branchesLoading } =
+    useActiveBranch();
   const showAdd = canManageLocations(session.staffRole);
   const [license, setLicense] = useState<AppLicense | null>(null);
   const [open, setOpen] = useState(false);
@@ -50,7 +51,7 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   const workspaceName = appearance?.workspaceName ?? "ProChauffeur";
   const locationLabel = activeBranch?.name ?? (branchesLoading ? "Loading…" : "No location");
   const resolved = license ?? defaultLicense;
-  const canAdd = canCreateLocation(branches.length, resolved.maxLocations);
+  const canAdd = canCreateLocation(allBranches.length, resolved.maxLocations);
 
   return (
     <SidebarMenu>

@@ -42,14 +42,11 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useCompanyVehicleClasses } from "@/hooks/use-company-vehicle-classes";
 import { cn } from "@/lib/utils";
-import type { Branch, Promotion } from "@/lib/models";
-import {
-  deletePromotion,
-  listenBranches,
-  listenPromotions
-} from "@/lib/services/firebase-service";
+import type { Promotion } from "@/lib/models";
+import { deletePromotion, listenPromotions } from "@/lib/services/firebase-service";
 
 type PromotionRow = Promotion & {
   searchLabel: string;
@@ -81,8 +78,8 @@ export function PromotionsDataTable({
   onCreateOpenChange?: (open: boolean) => void;
 }) {
   const { options: companyClassOptions } = useCompanyVehicleClasses();
+  const { allBranches } = useActiveBranch();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
@@ -101,11 +98,7 @@ export function PromotionsDataTable({
       setPromotions(rows);
       setLoading(false);
     });
-    const unsubBranches = listenBranches(setBranches);
-    return () => {
-      unsubPromo();
-      unsubBranches();
-    };
+    return () => unsubPromo();
   }, []);
 
   const rows = useMemo<PromotionRow[]>(
@@ -390,7 +383,7 @@ export function PromotionsDataTable({
 
       <PromotionEditSheet
         promotion={sheetPromotion}
-        branches={branches}
+        branches={allBranches}
         vehicleClasses={companyClassOptions.map((option) => ({
           id: option.id,
           displayName: option.label

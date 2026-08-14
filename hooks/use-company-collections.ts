@@ -2,28 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
+import { useActiveLocationData } from "@/components/providers/active-location-data-provider";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { grantedBranchIds } from "@/lib/auth/staff-access";
-import {
-  listenBranches,
-  listenInvoices,
-  listenTrips
-} from "@/lib/services/firebase-service";
+import { listenInvoices, listenTrips } from "@/lib/services/firebase-service";
 import type { Invoice, Trip } from "@/lib/models";
-
-function useGrantedCompanyBranchIds(): { ids: string[]; ready: boolean } {
-  const session = useSessionUser();
-  const [ids, setIds] = useState<string[] | null>(null);
-  const grantKey = `${session.canAccessAllBranches}:${(session.branchIds ?? []).join(",")}`;
-
-  useEffect(() => {
-    return listenBranches((rows) => {
-      setIds(grantedBranchIds(session, rows.map((branch) => branch.id).sort()));
-    });
-  }, [grantKey, session]);
-
-  return { ids: ids ?? [], ready: ids !== null };
-}
 
 function mergeBranchRows<T extends { id: string; branchId?: string | null }>(
   byBranch: Record<string, T[]>,
@@ -45,47 +29,68 @@ function mergeBranchRows<T extends { id: string; branchId?: string | null }>(
 
 function useMergedBranchCollections<T extends { id: string; branchId?: string | null }>(
   listen: (onUpdate: (rows: T[]) => void, branchId: string) => () => void,
-  sortValue: (row: T) => number
+  sortValue: (row: T) => number,
+  activeRows: T[],
+  activeLoading: boolean
 ): { rows: T[]; loading: boolean } {
-  const { ids, ready } = useGrantedCompanyBranchIds();
-  const idsKey = ids.join(",");
+  const session = useSessionUser();
+  const { branchId, allBranches, branchesLoading } = useActiveBranch();
+  const ids = useMemo(
+    () => grantedBranchIds(session, allBranches.map((branch) => branch.id)),
+    [session, allBranches]
+  );
+  const otherIds = useMemo(
+    () => ids.filter((id) => id !== branchId),
+    [ids, branchId]
+  );
+  const otherIdsKey = otherIds.join(",");
   const [byBranch, setByBranch] = useState<Record<string, T[]>>({});
   const [readyBranches, setReadyBranches] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!ready) return;
-    const branchIds = idsKey ? idsKey.split(",") : [];
-    if (branchIds.length === 0) {
-      setByBranch({});
-      setReadyBranches(new Set());
-      return;
-    }
-
+    if (branchesLoading) return;
+    const branchIds = otherIdsKey ? otherIdsKey.split(",") : [];
     let cancelled = false;
     setByBranch({});
     setReadyBranches(new Set());
 
-    const unsubs = branchIds.map((branchId) =>
+    if (branchIds.length === 0) {
+      return;
+    }
+
+    const unsubs = branchIds.map((id) =>
       listen((rows) => {
         if (cancelled) return;
-        setByBranch((prev) => ({ ...prev, [branchId]: rows }));
+        setByBranch((prev) => ({ ...prev, [id]: rows }));
         setReadyBranches((prev) => {
-          if (prev.has(branchId)) return prev;
+          if (prev.has(id)) return prev;
           const next = new Set(prev);
-          next.add(branchId);
+          next.add(id);
           return next;
         });
-      }, branchId)
+      }, id)
     );
 
     return () => {
       cancelled = true;
       for (const unsub of unsubs) unsub();
     };
-  }, [ready, idsKey, listen]);
+  }, [branchesLoading, otherIdsKey, listen]);
 
-  const rows = useMemo(() => mergeBranchRows(byBranch, sortValue), [byBranch, sortValue]);
-  const loading = !ready || (ids.length > 0 && ids.some((id) => !readyBranches.has(id)));
+  const mergedByBranch = useMemo(() => {
+    const next = { ...byBranch };
+    if (ids.includes(branchId)) {
+      next[branchId] = activeRows;
+    }
+    return next;
+  }, [byBranch, branchId, activeRows, ids]);
+
+  const rows = useMemo(() => mergeBranchRows(mergedByBranch, sortValue), [mergedByBranch, sortValue]);
+  const loading =
+    branchesLoading ||
+    (ids.length > 0 &&
+      ((ids.includes(branchId) && activeLoading) ||
+        otherIds.some((id) => !readyBranches.has(id))));
   return { rows, loading };
 }
 
@@ -107,12 +112,24 @@ function invoiceIssuedAtMs(invoice: Invoice): number {
 
 /** Trips from granted Locations (including inactive). Not tied to the switcher. */
 export function useCompanyTrips(): { trips: Trip[]; loading: boolean } {
-  const { rows, loading } = useMergedBranchCollections(listenBranchTrips, tripCreatedAtMs);
+  const { trips, tripsLoading } = useActiveLocationData();
+  const { rows, loading } = useMergedBranchCollections(
+    listenBranchTrips,
+    tripCreatedAtMs,
+    trips,
+    tripsLoading
+  );
   return { trips: rows, loading };
 }
 
 /** Invoices from granted Locations (including inactive). Not tied to the switcher. */
 export function useCompanyInvoices(): { invoices: Invoice[]; loading: boolean } {
-  const { rows, loading } = useMergedBranchCollections(listenBranchInvoices, invoiceIssuedAtMs);
+  const { invoices, invoicesLoading } = useActiveLocationData();
+  const { rows, loading } = useMergedBranchCollections(
+    listenBranchInvoices,
+    invoiceIssuedAtMs,
+    invoices,
+    invoicesLoading
+  );
   return { invoices: rows, loading };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -41,12 +41,10 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { useSessionUser } from "@/components/providers/session-provider";
-import { canAccessLocation } from "@/lib/auth/staff-access";
 import type { Branch } from "@/lib/models";
 import { formatServiceAreaSummary } from "@/lib/branch/service-area";
 import { cn } from "@/lib/utils";
-import { deleteBranch, listenBranches } from "@/lib/services/firebase-service";
+import { deleteBranch } from "@/lib/services/firebase-service";
 
 type LocationRow = Branch & {
   searchLabel: string;
@@ -65,17 +63,18 @@ function multiSelectFilter(
 }
 
 export function LocationsDataTable({
+  branches,
+  loading,
   createOpen,
   onCreateOpenChange,
   canCreate
 }: {
+  branches: Branch[];
+  loading: boolean;
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
   canCreate: boolean;
 }) {
-  const session = useSessionUser();
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Branch | null>(null);
@@ -85,17 +84,6 @@ export function LocationsDataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-
-  useEffect(() => {
-    return listenBranches((rows) => {
-      setBranches(
-        rows
-          .filter((branch) => canAccessLocation(session, branch.id))
-          .sort((a, b) => a.name.localeCompare(b.name))
-      );
-      setLoading(false);
-    });
-  }, [session]);
 
   const data = useMemo<LocationRow[]>(
     () =>
