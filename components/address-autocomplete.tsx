@@ -90,6 +90,7 @@ export function AddressAutocomplete({
             placeholder={placeholder}
             required={required}
             aria-invalid={invalid || undefined}
+            className="peer"
             disabled={disabled}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => setFocused(true)}

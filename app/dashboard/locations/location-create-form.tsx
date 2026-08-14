@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Building2, Globe, ListChecks } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
@@ -27,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { Branch, User } from "@/lib/models";
 import {
   COMMON_CURRENCIES,
@@ -47,15 +47,33 @@ const STEPS: FormWizardStep[] = [
   { id: "review", label: "Review", icon: ListChecks }
 ];
 
+type FieldErrors = Partial<Record<"name" | "phone" | "email" | "office", string>>;
+
 function displayOrDash(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : "—";
 }
 
+function isValidPhone(value: string): boolean {
+  return value.replace(/\D/g, "").length >= 6;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p
+      aria-live="polite"
+      className="peer-aria-invalid:text-destructive text-destructive text-xs"
+      role="alert">
+      {message}
+    </p>
+  );
+}
+
 function ReviewRow({ label, value }: { label: string; value: string }) {
   const isEmpty = value === "—";
   return (
-    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-x-4 py-1.5">
+    <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-x-3 py-1.5">
       <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {label}
       </dt>
@@ -67,6 +85,23 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
         {value}
       </dd>
     </div>
+  );
+}
+
+function ReviewSection({
+  title,
+  children,
+  className
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("p-4", className)}>
+      <SectionHeading>{title}</SectionHeading>
+      <dl className="mt-2">{children}</dl>
+    </section>
   );
 }
 
@@ -94,8 +129,8 @@ export function LocationCreateForm({
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState<User | null>(null);
   const [office, setOffice] = useState<AddressSuggestion | null>(null);
-  const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const selected = useMemo(
     () => regions.find((row) => row.id === regionId) ?? null,
@@ -111,7 +146,7 @@ export function LocationCreateForm({
     setEmail("");
     setContact(null);
     setOffice(null);
-    setIsActive(true);
+    setFieldErrors({});
     setRegionsError(null);
     setRegionsLoading(true);
     void fetch("/api/location-seed")
@@ -141,6 +176,27 @@ export function LocationCreateForm({
     setOffice(null);
   }
 
+  function clearFieldError(key: keyof FieldErrors) {
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function validateDetails(): boolean {
+    const next: FieldErrors = {};
+    if (!name.trim()) next.name = "Name is required";
+    if (phone.trim() && !isValidPhone(phone)) next.phone = "Phone number is invalid";
+    if (email.trim() && !z.string().email().safeParse(email.trim()).success) {
+      next.email = "Email is invalid";
+    }
+    if (!office) next.office = "Address is required";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
   function goNext() {
     if (step === 0) {
       if (!regionId) {
@@ -156,14 +212,7 @@ export function LocationCreateForm({
       return;
     }
     if (step === 1) {
-      if (!name.trim()) {
-        toast.error("Enter a location name.");
-        return;
-      }
-      if (!office) {
-        toast.error("Select an office address from the suggestions.");
-        return;
-      }
+      if (!validateDetails()) return;
       setStep(2);
     }
   }
@@ -186,7 +235,7 @@ export function LocationCreateForm({
         officePhone: phone.trim() || null,
         officeEmail: email.trim() || null,
         contactUserId: contact?.id ?? null,
-        isActive
+        isActive: true
       });
       if (created.isActive !== false) setPendingBranchId(created.id);
       onCreated(created);
@@ -253,37 +302,55 @@ export function LocationCreateForm({
         {step === 1 ? (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="*:not-first:mt-2">
                 <Label htmlFor="location-name">Name</Label>
                 <Input
                   id="location-name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. city name"
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    clearFieldError("name");
+                  }}
+                  placeholder="Location name"
                   disabled={submitting}
+                  aria-invalid={fieldErrors.name ? true : undefined}
+                  className="peer"
                 />
+                <FieldError message={fieldErrors.name} />
               </div>
-              <div className="space-y-2">
+              <div className="*:not-first:mt-2">
                 <Label htmlFor="location-phone">Phone</Label>
                 <Input
                   id="location-phone"
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Optional"
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    clearFieldError("phone");
+                  }}
+                  placeholder="Phone number"
                   disabled={submitting}
+                  aria-invalid={fieldErrors.phone ? true : undefined}
+                  className="peer"
                 />
+                <FieldError message={fieldErrors.phone} />
               </div>
-              <div className="space-y-2">
+              <div className="*:not-first:mt-2">
                 <Label htmlFor="location-email">Email</Label>
                 <Input
                   id="location-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Optional"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearFieldError("email");
+                  }}
+                  placeholder="email@example.com"
                   disabled={submitting}
+                  aria-invalid={fieldErrors.email ? true : undefined}
+                  className="peer"
                 />
+                <FieldError message={fieldErrors.email} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="location-create-contact">Contact</Label>
@@ -296,88 +363,78 @@ export function LocationCreateForm({
                 />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="*:not-first:mt-2">
               <Label htmlFor="location-office">Office address</Label>
               <AddressAutocomplete
                 id="location-office"
                 value={office}
-                onChange={setOffice}
+                onChange={(next) => {
+                  setOffice(next);
+                  if (next) clearFieldError("office");
+                }}
                 required
                 disabled={submitting}
+                invalid={Boolean(fieldErrors.office)}
                 country={selected?.mapboxCountry || null}
                 proximity={office?.coordinate ?? null}
                 placeholder="Search for the office address…"
               />
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="location-active">Active</Label>
-                <p className="text-muted-foreground text-xs">
-                  Inactive locations are hidden from the switcher and resolve.
-                </p>
-              </div>
-              <Switch
-                id="location-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-                disabled={submitting}
-              />
+              <FieldError message={fieldErrors.office} />
             </div>
           </div>
         ) : null}
 
         {step === 2 ? (
           <div className="overflow-hidden rounded-lg border">
-            <section className="p-4">
-              <SectionHeading>Location</SectionHeading>
-              <dl className="mt-2">
+            <div className="grid sm:grid-cols-2">
+              <ReviewSection title="Location" className="border-b sm:border-e">
                 <ReviewRow label="Name" value={displayOrDash(name)} />
                 <ReviewRow label="City" value={displayOrDash(city)} />
-                <ReviewRow label="Office address" value={displayOrDash(office?.addressLine)} />
+                <ReviewRow label="Office" value={displayOrDash(office?.addressLine)} />
+              </ReviewSection>
+              <ReviewSection title="Contact" className="border-b">
                 <ReviewRow label="Phone" value={displayOrDash(phone)} />
                 <ReviewRow label="Email" value={displayOrDash(email)} />
                 <ReviewRow
                   label="Contact"
                   value={contact ? customerDisplayName(contact) : "—"}
                 />
-                <ReviewRow label="Active" value={isActive ? "Yes" : "No"} />
-              </dl>
-            </section>
-            {selected ? (
-              <section className="border-t p-4">
-                <SectionHeading>{`${selected.label} defaults`}</SectionHeading>
-                <dl className="mt-2">
-                  <ReviewRow
-                    label="Language"
-                    value={labelForOption(COMMON_LANGUAGES, selected.locale.locale)}
-                  />
-                  <ReviewRow
-                    label="Currency"
-                    value={labelForOption(COMMON_CURRENCIES, selected.locale.currency)}
-                  />
-                  <ReviewRow
-                    label="Time zone"
-                    value={labelForOption(COMMON_TIMEZONES, selected.locale.timezone)}
-                  />
-                  <ReviewRow
-                    label="Distance"
-                    value={distanceUnitTitle[selected.locale.distanceUnit]}
-                  />
-                  <ReviewRow
-                    label="Tax"
-                    value={
-                      selected.locale.defaultTaxRate > 0
+              </ReviewSection>
+              <ReviewSection title="Locale" className="border-b sm:border-b-0 sm:border-e">
+                <ReviewRow
+                  label="Language"
+                  value={selected ? labelForOption(COMMON_LANGUAGES, selected.locale.locale) : "—"}
+                />
+                <ReviewRow
+                  label="Time zone"
+                  value={selected ? labelForOption(COMMON_TIMEZONES, selected.locale.timezone) : "—"}
+                />
+                <ReviewRow
+                  label="Distance"
+                  value={selected ? distanceUnitTitle[selected.locale.distanceUnit] : "—"}
+                />
+              </ReviewSection>
+              <ReviewSection title="Pricing">
+                <ReviewRow
+                  label="Currency"
+                  value={selected ? labelForOption(COMMON_CURRENCIES, selected.locale.currency) : "—"}
+                />
+                <ReviewRow
+                  label="Tax"
+                  value={
+                    selected
+                      ? selected.locale.defaultTaxRate > 0
                         ? `${selected.locale.taxName} ${Math.round(selected.locale.defaultTaxRate * 1000) / 10}%`
                         : selected.locale.taxName
-                    }
-                  />
-                  <ReviewRow
-                    label="Classes"
-                    value={displayOrDash(selected.vehicleClassNames.join(", "))}
-                  />
-                </dl>
-              </section>
-            ) : null}
+                      : "—"
+                  }
+                />
+                <ReviewRow
+                  label="Classes"
+                  value={displayOrDash(selected?.vehicleClassNames.join(", "))}
+                />
+              </ReviewSection>
+            </div>
           </div>
         ) : null}
         </div>
