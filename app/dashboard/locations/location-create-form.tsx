@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Globe, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import type { Branch, User } from "@/lib/models";
 import {
   COMMON_CURRENCIES,
@@ -70,38 +71,23 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+function ReviewItem({ label, value }: { label: string; value: string }) {
   const isEmpty = value === "—";
   return (
-    <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-x-3 py-1.5">
-      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "min-w-0 break-words text-sm",
-          isEmpty ? "text-muted-foreground" : "text-foreground"
-        )}>
-        {value}
-      </dd>
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-sm">{label}</p>
+      <p className={cn("break-words font-medium", isEmpty && "text-muted-foreground")}>{value}</p>
     </div>
   );
 }
 
-function ReviewSection({
-  title,
-  children,
-  className
-}: {
-  title: string;
-  children: ReactNode;
-  className?: string;
-}) {
+function ReviewGrid({ items }: { items: { label: string; value: string }[] }) {
   return (
-    <section className={cn("p-4", className)}>
-      <SectionHeading>{title}</SectionHeading>
-      <dl className="mt-2">{children}</dl>
-    </section>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((item) => (
+        <ReviewItem key={item.label} label={item.label} value={item.value} />
+      ))}
+    </div>
   );
 }
 
@@ -385,55 +371,64 @@ export function LocationCreateForm({
         ) : null}
 
         {step === 2 ? (
-          <div className="overflow-hidden rounded-lg border">
-            <div className="grid sm:grid-cols-2">
-              <ReviewSection title="Location" className="border-b sm:border-e">
-                <ReviewRow label="Name" value={displayOrDash(name)} />
-                <ReviewRow label="City" value={displayOrDash(city)} />
-                <ReviewRow label="Office" value={displayOrDash(office?.addressLine)} />
-              </ReviewSection>
-              <ReviewSection title="Contact" className="border-b">
-                <ReviewRow label="Phone" value={displayOrDash(phone)} />
-                <ReviewRow label="Email" value={displayOrDash(email)} />
-                <ReviewRow
-                  label="Contact"
-                  value={contact ? customerDisplayName(contact) : "—"}
-                />
-              </ReviewSection>
-              <ReviewSection title="Locale" className="border-b sm:border-b-0 sm:border-e">
-                <ReviewRow
-                  label="Language"
-                  value={selected ? labelForOption(COMMON_LANGUAGES, selected.locale.locale) : "—"}
-                />
-                <ReviewRow
-                  label="Time zone"
-                  value={selected ? labelForOption(COMMON_TIMEZONES, selected.locale.timezone) : "—"}
-                />
-                <ReviewRow
-                  label="Distance"
-                  value={selected ? distanceUnitTitle[selected.locale.distanceUnit] : "—"}
-                />
-              </ReviewSection>
-              <ReviewSection title="Pricing">
-                <ReviewRow
-                  label="Currency"
-                  value={selected ? labelForOption(COMMON_CURRENCIES, selected.locale.currency) : "—"}
-                />
-                <ReviewRow
-                  label="Tax"
-                  value={
-                    selected
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <SectionHeading>Location details</SectionHeading>
+              <ReviewGrid
+                items={[
+                  { label: "Name", value: displayOrDash(name) },
+                  { label: "City", value: displayOrDash(city) },
+                  { label: "Office", value: displayOrDash(office?.addressLine) },
+                  { label: "Phone", value: displayOrDash(phone) },
+                  { label: "Email", value: displayOrDash(email) },
+                  {
+                    label: "Contact",
+                    value: contact ? customerDisplayName(contact) : "—"
+                  }
+                ]}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-3">
+              <SectionHeading>Region defaults</SectionHeading>
+              <ReviewGrid
+                items={[
+                  {
+                    label: "Language",
+                    value: selected
+                      ? labelForOption(COMMON_LANGUAGES, selected.locale.locale)
+                      : "—"
+                  },
+                  {
+                    label: "Time zone",
+                    value: selected
+                      ? labelForOption(COMMON_TIMEZONES, selected.locale.timezone)
+                      : "—"
+                  },
+                  {
+                    label: "Distance",
+                    value: selected ? distanceUnitTitle[selected.locale.distanceUnit] : "—"
+                  },
+                  {
+                    label: "Currency",
+                    value: selected
+                      ? labelForOption(COMMON_CURRENCIES, selected.locale.currency)
+                      : "—"
+                  },
+                  {
+                    label: "Tax",
+                    value: selected
                       ? selected.locale.defaultTaxRate > 0
                         ? `${selected.locale.taxName} ${Math.round(selected.locale.defaultTaxRate * 1000) / 10}%`
                         : selected.locale.taxName
                       : "—"
+                  },
+                  {
+                    label: "Classes",
+                    value: displayOrDash(selected?.vehicleClassNames.join(", "))
                   }
-                />
-                <ReviewRow
-                  label="Classes"
-                  value={displayOrDash(selected?.vehicleClassNames.join(", "))}
-                />
-              </ReviewSection>
+                ]}
+              />
             </div>
           </div>
         ) : null}
