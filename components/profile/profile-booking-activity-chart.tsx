@@ -4,6 +4,8 @@ import { useMemo } from "react";
 
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
+import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
+import { formatChartDay } from "@/lib/format";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models";
 import {
   overviewPeriodOption,
@@ -39,13 +41,13 @@ const chartConfig = {
   }
 };
 
-function buildDailySeries(trips: Trip[], days: number, end: Date) {
+function buildDailySeries(trips: Trip[], days: number, end: Date, locale: string) {
   const buckets: { date: string; booked: number; completed: number }[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = startOfDay(new Date(end));
     d.setDate(end.getDate() - i);
     buckets.push({
-      date: new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short" }).format(d),
+      date: formatChartDay(d, locale),
       booked: 0,
       completed: 0
     });
@@ -85,11 +87,11 @@ function chartYDomain(chartData: { booked: number; completed: number }[]) {
   return { domain: [0, ceiling] as [number, number], ticks };
 }
 
-function getRangeData(trips: Trip[], period: ProfileOverviewPeriod, now: Date) {
+function getRangeData(trips: Trip[], period: ProfileOverviewPeriod, now: Date, locale: string) {
   const days = overviewPeriodDays(period);
   const { current, previous } = overviewPeriodRanges(period, now);
   const inRange = tripsInRange(trips, current.start, current.end);
-  const chartData = buildDailySeries(inRange, days, current.end);
+  const chartData = buildDailySeries(inRange, days, current.end, locale);
   const completed = countCompletedInRange(trips, current.start, current.end);
   const prevCompleted = countCompletedInRange(trips, previous.start, previous.end);
 
@@ -112,8 +114,12 @@ export function ProfileBookingActivityChart({
   period: ProfileOverviewPeriod;
   onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
+  const locale = useActiveFormatLocale();
   const now = useMemo(() => new Date(), []);
-  const metrics = useMemo(() => getRangeData(trips, period, now), [trips, period, now]);
+  const metrics = useMemo(
+    () => getRangeData(trips, period, now, locale),
+    [trips, period, now, locale]
+  );
   const selectedOption = overviewPeriodOption(period);
   const performancePositive = metrics.performanceChange >= 0;
 

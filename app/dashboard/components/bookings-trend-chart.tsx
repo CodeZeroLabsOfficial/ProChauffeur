@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { CalendarIcon, Download } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
+import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
 import { useTrips } from "@/hooks/use-collections";
+import { formatChartDay, formatChartMonth } from "@/lib/format";
 import { tripPickupReferenceDate } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +40,12 @@ const chartConfig = {
   }
 };
 
-function buildDailySeries(trips: ReturnType<typeof useTrips>["trips"], days: number, end: Date) {
+function buildDailySeries(
+  trips: ReturnType<typeof useTrips>["trips"],
+  days: number,
+  end: Date,
+  locale: string
+) {
   const bucketByDay = new Map<number, { date: string; scheduled: number; completed: number }>();
   const buckets: { date: string; scheduled: number; completed: number }[] = [];
 
@@ -46,7 +53,7 @@ function buildDailySeries(trips: ReturnType<typeof useTrips>["trips"], days: num
     const d = startOfDay(new Date(end));
     d.setDate(end.getDate() - i);
     const bucket = {
-      date: new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short" }).format(d),
+      date: formatChartDay(d, locale),
       scheduled: 0,
       completed: 0
     };
@@ -66,7 +73,12 @@ function buildDailySeries(trips: ReturnType<typeof useTrips>["trips"], days: num
   return buckets;
 }
 
-function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeKey, now: Date) {
+function getRangeData(
+  trips: ReturnType<typeof useTrips>["trips"],
+  range: RangeKey,
+  now: Date,
+  locale: string
+) {
   switch (range) {
     case "this-week": {
       const { start, end } = getWeekRange(now, 0);
@@ -81,7 +93,7 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
         scheduled,
         completed,
         performanceChange: percentChange(completed, prevTotal) ?? 0,
-        chartData: buildDailySeries(trips, 7, end)
+        chartData: buildDailySeries(trips, 7, end, locale)
       };
     }
     case "last-week": {
@@ -97,7 +109,7 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
         scheduled,
         completed,
         performanceChange: percentChange(completed, prevTotal) ?? 0,
-        chartData: buildDailySeries(trips, 7, end)
+        chartData: buildDailySeries(trips, 7, end, locale)
       };
     }
     case "this-month": {
@@ -114,7 +126,7 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
         scheduled,
         completed,
         performanceChange: percentChange(completed, prevTotal) ?? 0,
-        chartData: buildDailySeries(trips, Math.min(dayCount, 14), end)
+        chartData: buildDailySeries(trips, Math.min(dayCount, 14), end, locale)
       };
     }
     case "last-month": {
@@ -131,7 +143,7 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
         scheduled,
         completed,
         performanceChange: percentChange(completed, prevTotal) ?? 0,
-        chartData: buildDailySeries(trips, Math.min(dayCount, 14), end)
+        chartData: buildDailySeries(trips, Math.min(dayCount, 14), end, locale)
       };
     }
     case "last-3-months": {
@@ -150,7 +162,7 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
         const monthEnd = endOfDay(new Date(now.getFullYear(), now.getMonth() - (2 - offset) + 1, 0));
         const monthTrips = tripsInRange(trips, monthStart, monthEnd);
         return {
-          date: new Intl.DateTimeFormat("en-AU", { month: "short" }).format(monthStart),
+          date: formatChartMonth(monthStart, locale),
           scheduled: monthTrips.filter((t) => t.status !== "completed" && t.status !== "cancelled")
             .length,
           completed: monthTrips.filter((t) => t.status === "completed").length
@@ -168,11 +180,12 @@ function getRangeData(trips: ReturnType<typeof useTrips>["trips"], range: RangeK
 
 export function BookingsTrendChart() {
   const { trips } = useTrips();
+  const locale = useActiveFormatLocale();
   const [dateRange, setDateRange] = useState<RangeKey>("this-week");
 
   const campaignData = useMemo(
-    () => getRangeData(trips, dateRange, new Date()),
-    [trips, dateRange]
+    () => getRangeData(trips, dateRange, new Date(), locale),
+    [trips, dateRange, locale]
   );
 
   const maxY = Math.max(

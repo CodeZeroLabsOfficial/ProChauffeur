@@ -5,7 +5,8 @@ import { Calendar, TrendingDown, TrendingUp } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
 import { useInvoices } from "@/hooks/use-collections";
-import { formatCurrency } from "@/lib/format";
+import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
+import { formatChartMonth, formatCurrency } from "@/lib/format";
 import type { Invoice } from "@/lib/models/invoice";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -87,12 +88,12 @@ function buildMonthlyData(invoices: Invoice[], now: Date) {
   });
 }
 
-function buildYearlyData(invoices: Invoice[], now: Date) {
+function buildYearlyData(invoices: Invoice[], now: Date, locale: string) {
   return Array.from({ length: 12 }, (_, index) => {
     const monthStart = startOfDay(new Date(now.getFullYear(), index, 1));
     const monthEnd = endOfDay(new Date(now.getFullYear(), index + 1, 0));
     const revenue = invoiceRevenueInRange(invoices, monthStart, monthEnd);
-    const label = new Intl.DateTimeFormat("en-AU", { month: "short" }).format(monthStart);
+    const label = formatChartMonth(monthStart, locale);
     return { day: label, revenue, projected: Math.max(revenue * 0.25, 0) };
   });
 }
@@ -100,6 +101,7 @@ function buildYearlyData(invoices: Invoice[], now: Date) {
 export function RevenueStat({ invoices: scopedInvoices }: { invoices?: Invoice[] } = {}) {
   const { invoices: collectionInvoices } = useInvoices();
   const invoices = scopedInvoices ?? collectionInvoices;
+  const locale = useActiveFormatLocale();
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("weekly");
   const now = new Date();
 
@@ -121,7 +123,7 @@ export function RevenueStat({ invoices: scopedInvoices }: { invoices?: Invoice[]
       currentTotal = invoiceRevenueInRange(invoices, thisMonth.start, thisMonth.end);
       previousTotal = invoiceRevenueInRange(invoices, lastMonth.start, lastMonth.end);
     } else {
-      chartData = buildYearlyData(invoices, now);
+      chartData = buildYearlyData(invoices, now, locale);
       const yearStart = startOfDay(new Date(now.getFullYear(), 0, 1));
       const yearEnd = endOfDay(new Date(now.getFullYear(), 11, 31));
       const prevYearStart = startOfDay(new Date(now.getFullYear() - 1, 0, 1));
@@ -136,7 +138,7 @@ export function RevenueStat({ invoices: scopedInvoices }: { invoices?: Invoice[]
       percentageChange: percentChange(currentTotal, previousTotal) ?? 0
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoices, selectedPeriod]);
+  }, [invoices, selectedPeriod, locale]);
 
   const maxRevenue = Math.max(...data.map((d) => d.revenue + d.projected), 100);
 

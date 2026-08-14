@@ -6,14 +6,22 @@ const {
   resolveTripRef,
 } = require("../lib/collections");
 
-async function loadLocaleTimezone(db, branchId) {
+async function loadOperatorLocale(db, branchId) {
   const resolved = requireBranchId(branchId);
   const snap = await db.doc(`${Collections.branches}/${resolved}/settings/locale`).get();
-  const timezone = snap.exists() ? snap.data()?.timezone : null;
+  const data = snap.exists() ? snap.data() : null;
+  const timezone = data?.timezone;
   if (typeof timezone !== "string" || !timezone.trim()) {
     throw new Error("Locale is not configured for this Location.");
   }
-  return timezone.trim();
+  const locale =
+    typeof data?.locale === "string" && data.locale.trim() ? data.locale.trim() : "en";
+  return { locale, timezone: timezone.trim() };
+}
+
+async function loadLocaleTimezone(db, branchId) {
+  const { timezone } = await loadOperatorLocale(db, branchId);
+  return timezone;
 }
 
 /**
@@ -54,8 +62,9 @@ function tripPickupDate(trip) {
  * @param {object} trip
  * @param {string} timezone IANA zone from Location locale
  * @param {"oneWay"|"outbound"|"return"|string} [legKind="oneWay"]
+ * @param {string} [locale="en"] BCP-47 tag from Location locale
  */
-function transferLineLabel(trip, timezone, legKind = "oneWay") {
+function transferLineLabel(trip, timezone, legKind = "oneWay", locale = "en") {
   const base =
     legKind === "outbound"
       ? "Outbound transfer"
@@ -68,14 +77,27 @@ function transferLineLabel(trip, timezone, legKind = "oneWay") {
   const date = tripPickupDate(trip);
   if (!date) return base;
 
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: timezone,
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
+  const localeTag = typeof locale === "string" && locale.trim() ? locale.trim() : "en";
+  let parts;
+  try {
+    parts = new Intl.DateTimeFormat(localeTag, {
+      timeZone: timezone,
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+  } catch {
+    parts = new Intl.DateTimeFormat("en", {
+      timeZone: timezone,
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+  }
 
   const get = (type) => parts.find((part) => part.type === type)?.value;
   const day = get("day");
@@ -96,10 +118,10 @@ function taxLabelFromTrip(trip) {
 /**
  * Line items for one trip: transfer fare row, then add-ons, optional tax.
  *
- * @param {{ includeTax?: boolean, legKind?: string, timezone: string }} options When `includeTax`
+ * @param {{ includeTax?: boolean, legKind?: string, timezone: string, locale?: string }} options When `includeTax`
  *   is false, tax is omitted (multi-leg invoices append a single combined GST).
  */
-function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay", timezone } = {}) {
+function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay", timezone, locale = "en" } = {}) {
   if (typeof timezone !== "string" || !timezone.trim()) {
     throw new Error("timezone is required.");
   }
@@ -109,7 +131,7 @@ function lineItemsFromTrip(trip, { includeTax = true, legKind = "oneWay", timezo
   const addonTotal = addons.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
   const subtotal = Number(trip.quote?.quotedSubtotal) || 0;
   const farePortion = subtotal - addonTotal;
-  const fareLabel = transferLineLabel(trip, timezone.trim(), legKind);
+  const fareLabel = transferLineLabel(trip, timezone.trim(), legKind, locale);
 
   const items = [];
 
@@ -164,10 +186,10 @@ function legKindForIndex(index) {
  * Multi-trip invoices use `Outbound transfer` / `Return transfer` (with date ·
  * time), plus that leg's add-ons, then a single combined tax row.
  */
-function lineItemsFromTrips(trips, timezone) {
+function lineItemsFromTrips(trips, timezone, locale = "en") {
   if (!Array.isArray(trips) || trips.length === 0) return [];
   if (trips.length === 1) {
-    return lineItemsFromTrip(trips[0], { includeTax: true, legKind: "oneWay", timezone });
+    return lineItemsFromTrip(trips[0], { includeTax: true, legKind: "oneWay", timezone, locale });
   }
 
   const items = [];
@@ -180,6 +202,7 @@ function lineItemsFromTrips(trips, timezone) {
         includeTax: false,
         legKind: legKindForIndex(index),
         timezone,
+        locale,
       })
     );
     const tripTax = Number(trip.quote?.quotedTaxAmount) || 0;
@@ -311,10 +334,10 @@ async function createFirestoreInvoice(db, {
     throw new Error("createFirestoreInvoice requires a non-empty trips array.");
   }
 
-  const timezone = await loadLocaleTimezone(db, resolvedBranchId);
+  const { locale, timezone } = await loadOperatorLocale(db, resolvedBranchId);
   const primary = trips[0];
   const tripIDs = trips.map((t) => t.id).filter(Boolean);
-  const lineItems = lineItemsFromTrips(trips, timezone);
+  const lineItems = lineItemsFromTrips(trips, timezone, locale);
   const totals = totalsFromTrips(trips);
 
   const now = admin.firestore.Timestamp.now();
@@ -362,6 +385,7 @@ module.exports = {
   lineItemsFromTrips,
   createFirestoreInvoice,
   loadTripsForPaymentInvoice,
+  loadOperatorLocale,
   loadLocaleTimezone,
   normalizeTripIdList,
   transferLineLabel,

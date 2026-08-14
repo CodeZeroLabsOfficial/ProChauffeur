@@ -77,6 +77,22 @@ Set every variable from `.env.example` in Project Settings → Environment Varia
 `FIREBASE_SERVICE_ACCOUNT_KEY` must be the **base64-encoded** service-account JSON and
 must NOT be prefixed with `NEXT_PUBLIC_`.
 
+`NEXT_PUBLIC_FUNCTIONS_REGION` must match `FUNCTIONS_REGION` used when deploying Cloud Functions.
+
+## Cloud Functions
+
+On the **first** `firebase deploy --only functions` for a Firebase project, set region and
+schedule timezone (copy `functions/.env.example` to `functions/.env` or
+`functions/.env.<project-id>`). Later Functions deploys reuse those values.
+
+```bash
+cp functions/.env.example functions/.env
+# Edit FUNCTIONS_REGION and SCHEDULE_TIMEZONE if this stamp is not Sydney.
+firebase deploy --only functions
+```
+
+If those files are omitted, deploy uses `australia-southeast1` and `Australia/Sydney`.
+
 ## Firebase rules & indexes
 
 - `firestore.rules` — admin-gated Firestore access

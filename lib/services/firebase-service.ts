@@ -108,6 +108,7 @@ import {
 } from "@/lib/pricing/validate";
 import { getActiveBranchId, setActiveBranchId } from "@/lib/branch/active-branch-store";
 import { requireBranchId } from "@/lib/branch/require-branch-id";
+import { setActiveFormatLocale } from "@/lib/locale/active-format-locale";
 import {
   branchCollectionRef,
   branchDocRef,
@@ -1563,6 +1564,9 @@ export async function saveOperatorLocale(
     { merge: true }
   );
   invalidateOperatorLocaleCache(branchId);
+  if (branchId === getActiveBranchId()) {
+    setActiveFormatLocale({ locale: locale.locale, currency: locale.currency });
+  }
   void notifyLocationSetting(branchId, (name) => localeNotification(branchId, name));
 }
 

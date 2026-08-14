@@ -7,6 +7,7 @@ import {
   startOfDay,
   tripsInRange
 } from "@/app/dashboard/lib/dashboard-metrics";
+import { formatChartDay, formatChartMonth } from "@/lib/format";
 
 export type ProfileOverviewPeriod = "7d" | "30d" | "90d" | "1y";
 
@@ -78,18 +79,19 @@ function projectedTop(revenue: number, period: ProfileOverviewPeriod) {
   return Math.max(revenue * factor, 0);
 }
 
-function formatDayLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short" }).format(date);
+function formatDayLabel(date: Date, locale?: string) {
+  return formatChartDay(date, locale);
 }
 
-function formatMonthLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-AU", { month: "short" }).format(date);
+function formatMonthLabel(date: Date, locale?: string) {
+  return formatChartMonth(date, locale);
 }
 
 export function buildOverviewRevenueSeries(
   invoices: Invoice[],
   period: ProfileOverviewPeriod,
-  now = new Date()
+  now = new Date(),
+  locale?: string
 ) {
   const days = overviewPeriodDays(period);
   const { end } = rollingWindow(now, days);
@@ -100,7 +102,7 @@ export function buildOverviewRevenueSeries(
       d.setDate(end.getDate() - (days - 1 - index));
       const dayEnd = endOfDay(d);
       const revenue = invoiceRevenueInRange(invoices, d, dayEnd);
-      return { day: formatDayLabel(d), revenue, projected: projectedTop(revenue, period) };
+      return { day: formatDayLabel(d, locale), revenue, projected: projectedTop(revenue, period) };
     });
   }
 
@@ -116,7 +118,7 @@ export function buildOverviewRevenueSeries(
       if (weekStart < rangeStart) weekStart.setTime(rangeStart.getTime());
       const revenue = invoiceRevenueInRange(invoices, weekStart, weekEnd);
       return {
-        day: formatDayLabel(weekEnd),
+        day: formatDayLabel(weekEnd, locale),
         revenue,
         projected: projectedTop(revenue, period)
       };
@@ -135,7 +137,7 @@ export function buildOverviewRevenueSeries(
     if (bucketStart < rangeStart) bucketStart.setTime(rangeStart.getTime());
     const revenue = invoiceRevenueInRange(invoices, bucketStart, bucketEnd);
     return {
-      day: formatMonthLabel(bucketEnd),
+      day: formatMonthLabel(bucketEnd, locale),
       revenue,
       projected: projectedTop(revenue, period)
     };
@@ -145,12 +147,13 @@ export function buildOverviewRevenueSeries(
 export function overviewRevenueMetrics(
   invoices: Invoice[],
   period: ProfileOverviewPeriod,
-  now = new Date()
+  now = new Date(),
+  locale?: string
 ) {
   const { current, previous } = overviewPeriodRanges(period, now);
   const currentTotal = invoiceRevenueInRange(invoices, current.start, current.end);
   const previousTotal = invoiceRevenueInRange(invoices, previous.start, previous.end);
-  const data = buildOverviewRevenueSeries(invoices, period, now);
+  const data = buildOverviewRevenueSeries(invoices, period, now, locale);
 
   return {
     data,

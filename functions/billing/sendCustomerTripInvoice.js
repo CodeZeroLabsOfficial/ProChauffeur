@@ -6,7 +6,7 @@ const {
   lineItemsFromTrips,
   createFirestoreInvoice,
   loadTripsForPaymentInvoice,
-  loadLocaleTimezone,
+  loadOperatorLocale,
 } = require("./invoiceFromTrip");
 
 /**
@@ -102,8 +102,8 @@ async function sendCustomerTripInvoiceHandler(request) {
     throw new HttpsError("failed-precondition", "Quote is missing currency.");
   }
   const currency = quotedCurrency.trim().toLowerCase();
-  const timezone = await loadLocaleTimezone(db, branchId);
-  const lineItems = lineItemsFromTrips(trips, timezone);
+  const { locale, timezone } = await loadOperatorLocale(db, branchId);
+  const lineItems = lineItemsFromTrips(trips, timezone, locale);
 
   const firestoreInvoice = await createFirestoreInvoice(db, {
     trips,

@@ -12,6 +12,8 @@ import {
   listenVehicleClasses,
   listenVehicles
 } from "@/lib/services/firebase-service";
+import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
+import { setActiveFormatLocale } from "@/lib/locale/active-format-locale";
 import type { FleetLocation, Invoice, Trip, User, Vehicle, VehicleClass } from "@/lib/models";
 import type { BranchDriver } from "@/lib/models/branch";
 
@@ -127,6 +129,26 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
       setInvoicesLoading(false);
     }, branchId);
     return () => unsub();
+  }, [branchId]);
+
+  useEffect(() => {
+    if (!branchId) {
+      setActiveFormatLocale(null);
+      return;
+    }
+    let cancelled = false;
+    void getCachedOperatorLocale(branchId)
+      .then((locale) => {
+        if (!cancelled) {
+          setActiveFormatLocale({ locale: locale.locale, currency: locale.currency });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActiveFormatLocale(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [branchId]);
 
   useEffect(() => {

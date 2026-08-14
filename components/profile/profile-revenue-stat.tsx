@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
+import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
 import { formatCurrency } from "@/lib/format";
 import type { Invoice } from "@/lib/models/invoice";
 import {
@@ -56,10 +57,11 @@ export function ProfileRevenueStat({
   invoices: Invoice[];
   period: ProfileOverviewPeriod;
 }) {
+  const locale = useActiveFormatLocale();
   const now = useMemo(() => new Date(), []);
   const { data, total, percentageChange } = useMemo(
-    () => overviewRevenueMetrics(invoices, period, now),
-    [invoices, period, now]
+    () => overviewRevenueMetrics(invoices, period, now, locale),
+    [invoices, period, now, locale]
   );
 
   const maxRevenue = Math.max(...data.map((d) => d.revenue + d.projected), 100);

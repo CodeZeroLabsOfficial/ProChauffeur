@@ -3,6 +3,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 
+const { functionsRegion, scheduleTimezone } = require("./params");
 const { stripeSecretKey, stripeWebhookSecret } = require("./stripe/client");
 const { mapboxAccessToken } = require("./quoting/mapbox-token");
 const { stripeWebhookHandler } = require("./stripe/webhook");
@@ -25,7 +26,7 @@ const {
 } = require("./billing/syncCorporateStripeCustomer");
 const { markInvoicePaidHandler } = require("./billing/markInvoicePaid");
 
-setGlobalOptions({ region: "australia-southeast1" });
+setGlobalOptions({ region: functionsRegion });
 
 admin.initializeApp();
 
@@ -34,7 +35,7 @@ const tripCardPaymentOptions = { secrets: [stripeSecretKey, mapboxAccessToken] }
 const computeQuoteOptions = { secrets: [mapboxAccessToken] };
 const consolidateScheduleOptions = {
   schedule: "0 1 * * *",
-  timeZone: "Australia/Sydney",
+  timeZone: scheduleTimezone,
   secrets: [stripeSecretKey],
 };
 
