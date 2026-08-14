@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
 import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
+import { SectionHeading } from "@/components/detail-sheet-fields";
 import { FormWizardSteps, type FormWizardStep } from "@/components/layout/form-wizard-steps";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { Branch, OperatorLocale, User } from "@/lib/models";
+import type { Branch, User } from "@/lib/models";
 import {
   COMMON_CURRENCIES,
   COMMON_LANGUAGES,
@@ -37,6 +38,8 @@ import {
 } from "@/lib/models";
 import type { LocationRegionSummary } from "@/lib/seed/location/schema";
 import { createLocationFromSeed } from "@/lib/services/firebase-service";
+import { customerDisplayName } from "@/lib/users/customer-display";
+import { cn } from "@/lib/utils";
 
 const STEPS: FormWizardStep[] = [
   { id: "region", label: "Region & city", icon: Globe },
@@ -44,13 +47,27 @@ const STEPS: FormWizardStep[] = [
   { id: "review", label: "Review", icon: ListChecks }
 ];
 
-function localeSummary(locale: OperatorLocale): string {
-  const language = labelForOption(COMMON_LANGUAGES, locale.locale);
-  const currency = labelForOption(COMMON_CURRENCIES, locale.currency);
-  const timezone = labelForOption(COMMON_TIMEZONES, locale.timezone);
-  const taxPct = Math.round(locale.defaultTaxRate * 1000) / 10;
-  const tax = locale.defaultTaxRate > 0 ? `${locale.taxName} ${taxPct}%` : locale.taxName;
-  return `${language} · ${currency} · ${timezone} · ${distanceUnitTitle[locale.distanceUnit]} · ${tax}`;
+function displayOrDash(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "—";
+}
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  const isEmpty = value === "—";
+  return (
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-x-4 py-1.5">
+      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "min-w-0 break-words text-sm",
+          isEmpty ? "text-muted-foreground" : "text-foreground"
+        )}>
+        {value}
+      </dd>
+    </div>
+  );
 }
 
 export function LocationCreateForm({
@@ -184,9 +201,9 @@ export function LocationCreateForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="flex h-[min(36rem,90vh)] flex-col overflow-hidden sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Add Location</DialogTitle>
+          <DialogTitle className="text-base">Add Location</DialogTitle>
           <DialogDescription className="sr-only">
             Create a location from a country seed file.
           </DialogDescription>
@@ -194,7 +211,8 @@ export function LocationCreateForm({
 
         <FormWizardSteps steps={STEPS} currentIndex={step} />
 
-        {step === 0 ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {step === 0 ? (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="location-region">Region</Label>
@@ -217,17 +235,6 @@ export function LocationCreateForm({
               </Select>
               {regionsError ? (
                 <p className="text-destructive text-xs">{regionsError}</p>
-              ) : selected ? (
-                <div className="bg-muted/50 rounded-lg border px-3 py-2 text-xs leading-relaxed">
-                  <p>{localeSummary(selected.locale)}</p>
-                  <p className="text-muted-foreground mt-1">
-                    Starter classes and pricing for this region
-                    {selected.vehicleClassNames.length
-                      ? ` (${selected.vehicleClassNames.join(", ")})`
-                      : ""}
-                    .
-                  </p>
-                </div>
               ) : null}
             </div>
             <div className="space-y-2">
@@ -320,66 +327,62 @@ export function LocationCreateForm({
         ) : null}
 
         {step === 2 ? (
-          <div className="space-y-4 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Location
-              </p>
-              <p className="mt-1 text-base font-medium">{name.trim() || "Location"}</p>
-              {city.trim() ? (
-                <p className="text-muted-foreground">{city.trim()}</p>
-              ) : null}
-              <p className="text-muted-foreground">{office?.addressLine}</p>
-            </div>
+          <div className="overflow-hidden rounded-lg border">
+            <section className="p-4">
+              <SectionHeading>Location</SectionHeading>
+              <dl className="mt-2">
+                <ReviewRow label="Name" value={displayOrDash(name)} />
+                <ReviewRow label="City" value={displayOrDash(city)} />
+                <ReviewRow label="Office address" value={displayOrDash(office?.addressLine)} />
+                <ReviewRow label="Phone" value={displayOrDash(phone)} />
+                <ReviewRow label="Email" value={displayOrDash(email)} />
+                <ReviewRow
+                  label="Contact"
+                  value={contact ? customerDisplayName(contact) : "—"}
+                />
+                <ReviewRow label="Active" value={isActive ? "Yes" : "No"} />
+              </dl>
+            </section>
             {selected ? (
-              <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  {selected.label} defaults — not editable here
-                </p>
-                <dl className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-muted-foreground">Language</dt>
-                    <dd>{labelForOption(COMMON_LANGUAGES, selected.locale.locale)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Currency</dt>
-                    <dd>{labelForOption(COMMON_CURRENCIES, selected.locale.currency)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Time zone</dt>
-                    <dd>{labelForOption(COMMON_TIMEZONES, selected.locale.timezone)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Distance</dt>
-                    <dd>{distanceUnitTitle[selected.locale.distanceUnit]}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Tax</dt>
-                    <dd>
-                      {selected.locale.defaultTaxRate > 0
+              <section className="border-t p-4">
+                <SectionHeading>{`${selected.label} defaults`}</SectionHeading>
+                <dl className="mt-2">
+                  <ReviewRow
+                    label="Language"
+                    value={labelForOption(COMMON_LANGUAGES, selected.locale.locale)}
+                  />
+                  <ReviewRow
+                    label="Currency"
+                    value={labelForOption(COMMON_CURRENCIES, selected.locale.currency)}
+                  />
+                  <ReviewRow
+                    label="Time zone"
+                    value={labelForOption(COMMON_TIMEZONES, selected.locale.timezone)}
+                  />
+                  <ReviewRow
+                    label="Distance"
+                    value={distanceUnitTitle[selected.locale.distanceUnit]}
+                  />
+                  <ReviewRow
+                    label="Tax"
+                    value={
+                      selected.locale.defaultTaxRate > 0
                         ? `${selected.locale.taxName} ${Math.round(selected.locale.defaultTaxRate * 1000) / 10}%`
-                        : selected.locale.taxName}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Classes</dt>
-                    <dd>
-                      {selected.vehicleClassNames.join(", ")}
-                      {selected.vehicleClassNames.length
-                        ? ` (${selected.vehicleClassNames.length} starter classes)`
-                        : ""}
-                    </dd>
-                  </div>
+                        : selected.locale.taxName
+                    }
+                  />
+                  <ReviewRow
+                    label="Classes"
+                    value={displayOrDash(selected.vehicleClassNames.join(", "))}
+                  />
                 </dl>
-                <p className="text-muted-foreground mt-3 text-xs">
-                  You can change locale, rates, and hours on the Location page after create.
-                </p>
-              </div>
+              </section>
             ) : null}
           </div>
         ) : null}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button
             type="button"
             variant="outline"
