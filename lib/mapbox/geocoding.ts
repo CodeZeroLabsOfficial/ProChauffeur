@@ -11,6 +11,7 @@ export type AddressSuggestion = {
 export type AddressSearchOptions = {
   country?: string | null;
   proximity?: { longitude: number; latitude: number } | null;
+  limit?: number;
 };
 
 type MapboxContext = {
@@ -91,11 +92,11 @@ export async function fetchAddressSuggestions(
   );
   url.searchParams.set("access_token", token);
   url.searchParams.set("types", "address,place,poi");
-  url.searchParams.set("limit", "5");
+  url.searchParams.set("limit", String(options?.limit ?? 10));
   url.searchParams.set("language", "en");
   const country = options?.country?.trim();
   if (country) {
-    url.searchParams.set("country", country);
+    url.searchParams.set("country", country.toLowerCase());
   }
   const proximity = options?.proximity;
   if (

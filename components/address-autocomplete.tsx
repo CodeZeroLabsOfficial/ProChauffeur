@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Loader2Icon, MapPinIcon } from "lucide-react";
+import { Loader2Icon, MapPinIcon, PlaneIcon } from "lucide-react";
 
 import { useAddressSuggestions } from "@/hooks/use-address-suggestions";
+import type { AddressSearchHit } from "@/lib/mapbox/address-search";
 import type { AddressSuggestion } from "@/lib/mapbox/geocoding";
 import { cn } from "@/lib/utils";
 import {
@@ -44,9 +45,12 @@ export function AddressAutocomplete({
   const listboxId = useId();
   const [query, setQuery] = useState(value?.addressLine ?? "");
   const [focused, setFocused] = useState(false);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const resolving = resolvingId !== null;
+  const [resolveFailed, setResolveFailed] = useState(false);
 
   const selectionComplete = Boolean(value && query === value.addressLine);
-  const { suggestions, loading, error } = useAddressSuggestions(
+  const { suggestions, loading, error, resolveHit } = useAddressSuggestions(
     query,
     focused && !disabled && !selectionComplete,
     { country, proximity }
@@ -60,16 +64,25 @@ export function AddressAutocomplete({
     focused &&
     !selectionComplete &&
     query.trim().length >= 2 &&
-    (loading || error || suggestions.length > 0);
+    (loading || resolving || error || resolveFailed || suggestions.length > 0);
 
   function handleInputChange(next: string) {
     setQuery(next);
+    setResolveFailed(false);
     if (value && next !== value.addressLine) {
       onChange(null);
     }
   }
 
-  function selectSuggestion(suggestion: AddressSuggestion) {
+  async function selectHit(hit: AddressSearchHit) {
+    setResolvingId(hit.id);
+    setResolveFailed(false);
+    const suggestion = await resolveHit(hit);
+    setResolvingId(null);
+    if (!suggestion) {
+      setResolveFailed(true);
+      return;
+    }
     setQuery(suggestion.addressLine);
     onChange(suggestion);
     setFocused(false);
@@ -104,7 +117,7 @@ export function AddressAutocomplete({
         onOpenAutoFocus={(e) => e.preventDefault()}>
         <Command shouldFilter={false} className="rounded-md border-0 shadow-none">
           <CommandList id={listboxId}>
-            {loading ? (
+            {loading && suggestions.length === 0 ? (
               <CommandEmpty className="flex items-center justify-center gap-2 py-6">
                 <Loader2Icon className="size-4 animate-spin" />
                 Searching…
@@ -112,16 +125,27 @@ export function AddressAutocomplete({
             ) : error ? (
               <CommandEmpty className="py-6">Address search is unavailable.</CommandEmpty>
             ) : suggestions.length === 0 ? (
-              <CommandEmpty className="py-6">No addresses found.</CommandEmpty>
+              <CommandEmpty className="py-6">
+                {resolveFailed
+                  ? "Could not resolve that place. Try another result."
+                  : "No addresses found."}
+              </CommandEmpty>
             ) : (
               <CommandGroup>
                 {suggestions.map((suggestion) => (
                   <CommandItem
                     key={suggestion.id}
                     value={suggestion.id}
-                    onSelect={() => selectSuggestion(suggestion)}
+                    disabled={resolving}
+                    onSelect={() => void selectHit(suggestion)}
                     onMouseDown={(e) => e.preventDefault()}>
-                    <MapPinIcon className="text-muted-foreground size-4 shrink-0" />
+                    {resolvingId === suggestion.id ? (
+                      <Loader2Icon className="text-muted-foreground size-4 shrink-0 animate-spin" />
+                    ) : suggestion.showsAirportIcon ? (
+                      <PlaneIcon className="text-muted-foreground size-4 shrink-0" />
+                    ) : (
+                      <MapPinIcon className="text-muted-foreground size-4 shrink-0" />
+                    )}
                     <span className="truncate">{suggestion.addressLine}</span>
                   </CommandItem>
                 ))}

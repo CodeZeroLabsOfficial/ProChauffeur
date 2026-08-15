@@ -1,29 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  fetchAddressSuggestions,
-  type AddressSearchOptions,
-  type AddressSuggestion
-} from "@/lib/mapbox/geocoding";
+  searchAddresses,
+  type AddressSearchHit
+} from "@/lib/mapbox/address-search";
+import type { AddressSearchOptions, AddressSuggestion } from "@/lib/mapbox/geocoding";
+import { retrieveSearchBoxFeature } from "@/lib/mapbox/search-box";
 import { getMapboxToken } from "@/lib/env";
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
+
+function newSessionToken(): string {
+  return crypto.randomUUID();
+}
 
 export function useAddressSuggestions(
   query: string,
   enabled = true,
   options?: AddressSearchOptions
 ) {
-  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<AddressSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const country = options?.country ?? "";
   const proximityKey = options?.proximity
     ? `${options.proximity.longitude},${options.proximity.latitude}`
     : "";
+  const sessionTokenRef = useRef(newSessionToken());
+
+  const beginNewSession = useCallback(() => {
+    sessionTokenRef.current = newSessionToken();
+  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -31,6 +41,7 @@ export function useAddressSuggestions(
       setSuggestions([]);
       setLoading(false);
       setError(false);
+      if (!trimmed) beginNewSession();
       return;
     }
 
@@ -41,7 +52,7 @@ export function useAddressSuggestions(
         setError(false);
         try {
           const token = getMapboxToken();
-          const results = await fetchAddressSuggestions(trimmed, token, {
+          const results = await searchAddresses(trimmed, token, sessionTokenRef.current, {
             country: country || null,
             proximity: options?.proximity ?? null
           });
@@ -61,7 +72,27 @@ export function useAddressSuggestions(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, enabled, country, proximityKey]);
+  }, [query, enabled, country, proximityKey, beginNewSession]);
 
-  return { suggestions, loading, error };
+  const resolveHit = useCallback(async (hit: AddressSearchHit): Promise<AddressSuggestion | null> => {
+    if (hit.kind === "geocoding") {
+      beginNewSession();
+      return hit.suggestion;
+    }
+
+    try {
+      const token = getMapboxToken();
+      const suggestion = await retrieveSearchBoxFeature(
+        hit.mapboxId,
+        token,
+        sessionTokenRef.current
+      );
+      beginNewSession();
+      return suggestion;
+    } catch {
+      return null;
+    }
+  }, [beginNewSession]);
+
+  return { suggestions, loading, error, resolveHit };
 }
