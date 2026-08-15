@@ -6,7 +6,7 @@ export type ServiceAreaEditorType = "postcodes" | "radius";
 
 export const RADIUS_KM_MIN = 5;
 export const RADIUS_KM_MAX = 250;
-export const RADIUS_KM_DEFAULT = 25;
+export const RADIUS_KM_DEFAULT = 100;
 
 export function parsePostcodes(raw: string): string[] {
   return raw

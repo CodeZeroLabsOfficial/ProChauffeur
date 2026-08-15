@@ -5,7 +5,6 @@
   "locale": {
     "locale": "en-US",
     "currency": "USD",
-    "timezone": "America/New_York",
     "distanceUnit": "mile",
     "defaultTaxRate": 0,
     "taxName": "Sales tax",
@@ -13,6 +12,22 @@
     "showTaxOnQuotes": false,
     "operatorJurisdiction": "us",
     "mapboxJurisdiction": "us"
+  },
+  "cities": {
+    "new york": { "timezone": "America/New_York" },
+    "miami": { "timezone": "America/New_York" },
+    "atlanta": { "timezone": "America/New_York" },
+    "boston": { "timezone": "America/New_York" },
+    "washington": { "timezone": "America/New_York" },
+    "chicago": { "timezone": "America/Chicago" },
+    "houston": { "timezone": "America/Chicago" },
+    "dallas": { "timezone": "America/Chicago" },
+    "denver": { "timezone": "America/Denver" },
+    "phoenix": { "timezone": "America/Phoenix" },
+    "los angeles": { "timezone": "America/Los_Angeles" },
+    "san francisco": { "timezone": "America/Los_Angeles" },
+    "seattle": { "timezone": "America/Los_Angeles" },
+    "las vegas": { "timezone": "America/Los_Angeles" }
   },
   "pricing": {
     "schemaVersion": 2,
@@ -119,5 +134,8 @@
     }
   ],
   "operatingHours": { "schedules": [] },
-  "serviceArea": null
+  "serviceArea": {
+    "type": "radius",
+    "radiusMeters": 100000
+  }
 }

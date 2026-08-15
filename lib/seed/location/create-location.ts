@@ -24,9 +24,10 @@ import {
 } from "@/lib/pricing/validate";
 import { loadLocationRegionSeed } from "@/lib/seed/location/load-location-seed";
 import {
+  localeFromSeed,
   seedOperatingHours,
   seedPricingConfig,
-  seedServiceArea
+  seedServiceAreaFromOffice
 } from "@/lib/seed/location/schema";
 
 export type CreateLocationFromSeedInput = {
@@ -80,11 +81,16 @@ export async function createLocationFromSeedAdmin(
   }
 
   const seed = await loadLocationRegionSeed(input.regionId);
-  validateOperatorLocale(seed.locale);
+  const locale = localeFromSeed(seed, city);
+  validateOperatorLocale(locale);
   const pricing = preparePricingConfigForSave(seedPricingConfig(seed));
   validatePricingConfig(pricing);
   const hours = seedOperatingHours(seed);
-  const serviceArea = seedServiceArea(seed);
+  const serviceArea = seedServiceAreaFromOffice(seed, {
+    addressLine: officeAddressLine,
+    latitude: input.officeLatitude,
+    longitude: input.officeLongitude
+  });
 
   const licenseSnap = await fetchAppSettingAdmin(AppSettingsDocs.license);
   const license = licenseSnap ? mapLicense(licenseSnap) : defaultLicense;
@@ -141,7 +147,7 @@ export async function createLocationFromSeedAdmin(
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
-  batch.set(settings.doc(BranchSettingsDocs.locale), { ...seed.locale });
+  batch.set(settings.doc(BranchSettingsDocs.locale), { ...locale });
   batch.set(settings.doc(BranchSettingsDocs.pricing), pricing);
   batch.set(settings.doc(BranchSettingsDocs.operatingHours), {
     schedules: hours.schedules

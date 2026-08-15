@@ -5,7 +5,6 @@
   "locale": {
     "locale": "en-GB",
     "currency": "GBP",
-    "timezone": "Europe/London",
     "distanceUnit": "mile",
     "defaultTaxRate": 0.2,
     "taxName": "VAT",
@@ -13,6 +12,18 @@
     "showTaxOnQuotes": true,
     "operatorJurisdiction": "uk",
     "mapboxJurisdiction": "gb"
+  },
+  "cities": {
+    "london": { "timezone": "Europe/London" },
+    "manchester": { "timezone": "Europe/London" },
+    "birmingham": { "timezone": "Europe/London" },
+    "edinburgh": { "timezone": "Europe/London" },
+    "glasgow": { "timezone": "Europe/London" },
+    "liverpool": { "timezone": "Europe/London" },
+    "leeds": { "timezone": "Europe/London" },
+    "bristol": { "timezone": "Europe/London" },
+    "cardiff": { "timezone": "Europe/London" },
+    "belfast": { "timezone": "Europe/London" }
   },
   "pricing": {
     "schemaVersion": 2,
@@ -119,5 +130,8 @@
     }
   ],
   "operatingHours": { "schedules": [] },
-  "serviceArea": null
+  "serviceArea": {
+    "type": "radius",
+    "radiusMeters": 100000
+  }
 }

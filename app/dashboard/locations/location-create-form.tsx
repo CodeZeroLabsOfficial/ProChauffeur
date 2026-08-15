@@ -37,7 +37,13 @@ import {
   distanceUnitTitle,
   labelForOption
 } from "@/lib/models";
-import type { LocationRegionSummary } from "@/lib/seed/location/schema";
+import {
+  formatCityLabel,
+  listedCityNames,
+  resolveCityTimezone,
+  unknownCityTimezoneError,
+  type LocationRegionSummary
+} from "@/lib/seed/location/schema";
 import { createLocationFromSeed } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { cn } from "@/lib/utils";
@@ -122,6 +128,15 @@ export function LocationCreateForm({
     () => regions.find((row) => row.id === regionId) ?? null,
     [regions, regionId]
   );
+  const cityOptions = useMemo(
+    () => (selected ? listedCityNames(selected.cities) : []),
+    [selected]
+  );
+  const cityTimezone = selected ? resolveCityTimezone(city, selected.cities) : null;
+  const serviceAreaSummary =
+    selected?.serviceAreaRadiusMeters != null
+      ? `${Math.round(selected.serviceAreaRadiusMeters / 1000)} km around office`
+      : "—";
 
   useEffect(() => {
     if (!open) return;
@@ -159,6 +174,7 @@ export function LocationCreateForm({
 
   function selectRegion(nextId: string) {
     setRegionId(nextId);
+    setCity("");
     setOffice(null);
   }
 
@@ -190,10 +206,18 @@ export function LocationCreateForm({
         return;
       }
       if (!city.trim()) {
-        toast.error("Enter a city.");
+        toast.error("Select a city.");
         return;
       }
-      if (!name.trim()) setName(city.trim());
+      if (!selected || !resolveCityTimezone(city, selected.cities)) {
+        toast.error(
+          selected
+            ? unknownCityTimezoneError(city, selected.cities)
+            : "Select a region."
+        );
+        return;
+      }
+      if (!name.trim()) setName(formatCityLabel(city));
       setStep(1);
       return;
     }
@@ -274,13 +298,21 @@ export function LocationCreateForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="location-city">City</Label>
-              <Input
-                id="location-city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="e.g. city name"
-                disabled={submitting}
-              />
+              <Select
+                value={city || undefined}
+                onValueChange={setCity}
+                disabled={!selected || submitting}>
+                <SelectTrigger id="location-city" className="w-full">
+                  <SelectValue placeholder="Select a city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cityOptions.map((label) => (
+                    <SelectItem key={label} value={label}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         ) : null}
@@ -401,9 +433,13 @@ export function LocationCreateForm({
                   },
                   {
                     label: "Time zone",
-                    value: selected
-                      ? labelForOption(COMMON_TIMEZONES, selected.locale.timezone)
+                    value: cityTimezone
+                      ? labelForOption(COMMON_TIMEZONES, cityTimezone)
                       : "—"
+                  },
+                  {
+                    label: "Service area",
+                    value: serviceAreaSummary
                   },
                   {
                     label: "Distance",

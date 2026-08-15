@@ -5,7 +5,6 @@
   "locale": {
     "locale": "en",
     "currency": "EUR",
-    "timezone": "Europe/Paris",
     "distanceUnit": "km",
     "defaultTaxRate": 0.2,
     "taxName": "VAT",
@@ -13,6 +12,23 @@
     "showTaxOnQuotes": true,
     "operatorJurisdiction": "eu",
     "mapboxJurisdiction": "at,be,bg,hr,cy,cz,dk,ee,fi,fr,de,gr,hu,ie,it,lv,lt,lu,mt,nl,pl,pt,ro,sk,si,es,se"
+  },
+  "cities": {
+    "amsterdam": { "timezone": "Europe/Amsterdam" },
+    "athens": { "timezone": "Europe/Athens" },
+    "berlin": { "timezone": "Europe/Berlin" },
+    "brussels": { "timezone": "Europe/Brussels" },
+    "dublin": { "timezone": "Europe/Dublin" },
+    "helsinki": { "timezone": "Europe/Helsinki" },
+    "lisbon": { "timezone": "Europe/Lisbon" },
+    "luxembourg": { "timezone": "Europe/Luxembourg" },
+    "madrid": { "timezone": "Europe/Madrid" },
+    "paris": { "timezone": "Europe/Paris" },
+    "prague": { "timezone": "Europe/Prague" },
+    "rome": { "timezone": "Europe/Rome" },
+    "stockholm": { "timezone": "Europe/Stockholm" },
+    "vienna": { "timezone": "Europe/Vienna" },
+    "warsaw": { "timezone": "Europe/Warsaw" }
   },
   "pricing": {
     "schemaVersion": 2,
@@ -119,5 +135,8 @@
     }
   ],
   "operatingHours": { "schedules": [] },
-  "serviceArea": null
+  "serviceArea": {
+    "type": "radius",
+    "radiusMeters": 100000
+  }
 }
