@@ -20,7 +20,7 @@ function formatWithLocale(
   }
 }
 
-/** Formats a number as currency using Location locale, or stamp env if none. */
+/** Formats a number as currency using Location locale, or a plain amount if none. */
 export function formatCurrency(
   value: number,
   currency?: string,
@@ -28,6 +28,16 @@ export function formatCurrency(
 ): string {
   const code = currency?.trim() || getActiveFormatCurrency();
   const tag = resolveLocale(localeOverride);
+  if (!code) {
+    try {
+      return new Intl.NumberFormat(tag, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    } catch {
+      return value.toFixed(2);
+    }
+  }
   try {
     return new Intl.NumberFormat(tag, {
       style: "currency",

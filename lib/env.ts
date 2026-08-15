@@ -15,9 +15,6 @@ const firebaseClientSchema = z.object({
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_APP_ID: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_DATABASE_URL: z.string().min(1).optional(),
-  NEXT_PUBLIC_DEFAULT_LOCALE: z.string().min(1),
-  NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().min(1),
-  NEXT_PUBLIC_DEFAULT_TIMEZONE: z.string().min(1),
   NEXT_PUBLIC_FUNCTIONS_REGION: z.string().min(1)
 });
 
@@ -37,9 +34,6 @@ const rawClientEnv = {
   NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   NEXT_PUBLIC_FIREBASE_DATABASE_URL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
-  NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
-  NEXT_PUBLIC_DEFAULT_CURRENCY: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY,
-  NEXT_PUBLIC_DEFAULT_TIMEZONE: process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE,
   NEXT_PUBLIC_FUNCTIONS_REGION: process.env.NEXT_PUBLIC_FUNCTIONS_REGION
 };
 
@@ -105,17 +99,8 @@ export function getServerEnv(): z.infer<typeof serverSchema> {
   return cachedServerEnv;
 }
 
-/** Public stamp defaults from env. Missing values fail in `getFirebaseClientEnv`. */
+/** Cloud Functions region for this stamp. Missing values fail in `getFirebaseClientEnv`. */
 export const appConfig = {
-  get locale() {
-    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_LOCALE;
-  },
-  get currency() {
-    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_CURRENCY;
-  },
-  get timezone() {
-    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_TIMEZONE;
-  },
   get functionsRegion() {
     return getFirebaseClientEnv().NEXT_PUBLIC_FUNCTIONS_REGION;
   }

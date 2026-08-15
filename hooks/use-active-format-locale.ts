@@ -8,7 +8,7 @@ import {
   subscribeActiveFormatLocale
 } from "@/lib/locale/active-format-locale";
 
-/** Subscribe to Location (or stamp) locale so chart labels recompute when it loads. */
+/** Subscribe to Location locale so chart labels recompute when it loads. */
 export function useActiveFormatLocale(): string {
   return useSyncExternalStore(
     subscribeActiveFormatLocale,
