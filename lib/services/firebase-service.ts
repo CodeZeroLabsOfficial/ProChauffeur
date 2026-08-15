@@ -1560,7 +1560,11 @@ export async function saveOperatorLocale(
   validateOperatorLocale(locale);
   await setDoc(
     branchSettingsDocRef(db(), BranchSettingsDocs.locale, branchId),
-    stripUndefined({ ...locale }),
+    stripUndefined({
+      ...locale,
+      driverLicenceCountry: deleteField(),
+      mapboxCountry: deleteField()
+    }),
     { merge: true }
   );
   invalidateOperatorLocaleCache(branchId);

@@ -199,10 +199,16 @@ function mapOperatorLocale(d) {
       "Locale is not configured for this Location (showTaxOnQuotes)."
     );
   }
-  if (typeof d.driverLicenceCountry !== "string" || !d.driverLicenceCountry.trim()) {
+  if (typeof d.operatorJurisdiction !== "string" || !d.operatorJurisdiction.trim()) {
     throw new HttpsError(
       "failed-precondition",
-      "Locale is not configured for this Location (driverLicenceCountry)."
+      "Locale is not configured for this Location (operatorJurisdiction)."
+    );
+  }
+  if (typeof d.mapboxJurisdiction !== "string" || !d.mapboxJurisdiction.trim()) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Locale is not configured for this Location (mapboxJurisdiction)."
     );
   }
   return {
@@ -214,7 +220,8 @@ function mapOperatorLocale(d) {
     taxName: requireString(d.taxName, "taxName"),
     taxDisplayMode: d.taxDisplayMode,
     showTaxOnQuotes: d.showTaxOnQuotes,
-    driverLicenceCountry: d.driverLicenceCountry.trim(),
+    operatorJurisdiction: d.operatorJurisdiction.trim(),
+    mapboxJurisdiction: d.mapboxJurisdiction.trim(),
   };
 }
 

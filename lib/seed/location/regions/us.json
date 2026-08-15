@@ -1,7 +1,7 @@
 {
   "id": "us",
   "label": "United States",
-  "mapboxCountry": "us",
+  "mapboxJurisdiction": "us",
   "locale": {
     "locale": "en-US",
     "currency": "USD",
@@ -11,7 +11,8 @@
     "taxName": "Sales tax",
     "taxDisplayMode": "exclusive",
     "showTaxOnQuotes": false,
-    "driverLicenceCountry": "us"
+    "operatorJurisdiction": "us",
+    "mapboxJurisdiction": "us"
   },
   "pricing": {
     "schemaVersion": 2,

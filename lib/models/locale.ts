@@ -10,6 +10,8 @@ export interface OperatorLocale {
   taxName: string;
   taxDisplayMode: TaxDisplayMode;
   showTaxOnQuotes: boolean;
-  /** Country preset that supplies driver licence class options. */
-  driverLicenceCountry: string;
+  /** Licence-class preset for this Location (`au` | `nz` | `uk` | `us` | `eu`). */
+  operatorJurisdiction: string;
+  /** Mapbox `country=` filter (ISO codes, comma-separated for multi-country). */
+  mapboxJurisdiction: string;
 }

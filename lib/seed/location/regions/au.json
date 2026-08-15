@@ -1,7 +1,7 @@
 {
   "id": "au",
   "label": "Australia",
-  "mapboxCountry": "au",
+  "mapboxJurisdiction": "au",
   "locale": {
     "locale": "en-AU",
     "currency": "AUD",
@@ -11,7 +11,8 @@
     "taxName": "GST",
     "taxDisplayMode": "exclusive",
     "showTaxOnQuotes": true,
-    "driverLicenceCountry": "au"
+    "operatorJurisdiction": "au",
+    "mapboxJurisdiction": "au"
   },
   "pricing": {
     "schemaVersion": 2,

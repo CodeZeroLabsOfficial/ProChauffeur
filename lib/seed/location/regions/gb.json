@@ -1,7 +1,7 @@
 {
   "id": "gb",
   "label": "United Kingdom",
-  "mapboxCountry": "gb",
+  "mapboxJurisdiction": "gb",
   "locale": {
     "locale": "en-GB",
     "currency": "GBP",
@@ -11,7 +11,8 @@
     "taxName": "VAT",
     "taxDisplayMode": "inclusive",
     "showTaxOnQuotes": true,
-    "driverLicenceCountry": "uk"
+    "operatorJurisdiction": "uk",
+    "mapboxJurisdiction": "gb"
   },
   "pricing": {
     "schemaVersion": 2,

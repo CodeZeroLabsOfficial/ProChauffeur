@@ -1,7 +1,7 @@
 {
   "id": "eu",
   "label": "European Union",
-  "mapboxCountry": "at,be,bg,hr,cy,cz,dk,ee,fi,fr,de,gr,hu,ie,it,lv,lt,lu,mt,nl,pl,pt,ro,sk,si,es,se",
+  "mapboxJurisdiction": "at,be,bg,hr,cy,cz,dk,ee,fi,fr,de,gr,hu,ie,it,lv,lt,lu,mt,nl,pl,pt,ro,sk,si,es,se",
   "locale": {
     "locale": "en",
     "currency": "EUR",
@@ -11,7 +11,8 @@
     "taxName": "VAT",
     "taxDisplayMode": "inclusive",
     "showTaxOnQuotes": true,
-    "driverLicenceCountry": "eu"
+    "operatorJurisdiction": "eu",
+    "mapboxJurisdiction": "at,be,bg,hr,cy,cz,dk,ee,fi,fr,de,gr,hu,ie,it,lv,lt,lu,mt,nl,pl,pt,ro,sk,si,es,se"
   },
   "pricing": {
     "schemaVersion": 2,

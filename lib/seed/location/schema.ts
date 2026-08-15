@@ -41,7 +41,8 @@ const localeSchema = z.object({
   taxName: z.string().min(1),
   taxDisplayMode: z.enum(TAX_DISPLAY_MODES),
   showTaxOnQuotes: z.boolean(),
-  driverLicenceCountry: z.string().min(1)
+  operatorJurisdiction: z.string().min(1),
+  mapboxJurisdiction: z.string().min(1)
 });
 
 const pricingAddonSchema = z.object({
@@ -117,7 +118,7 @@ export const locationSeedManifestSchema = z.object({
 export const locationRegionSeedSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  mapboxCountry: z.string(),
+  mapboxJurisdiction: z.string(),
   locale: localeSchema,
   pricing: pricingSchema,
   vehicleClasses: z.array(seedVehicleClassSchema).min(1),
@@ -131,7 +132,7 @@ export type LocationRegionSeed = z.infer<typeof locationRegionSeedSchema>;
 export type LocationRegionSummary = {
   id: string;
   label: string;
-  mapboxCountry: string;
+  mapboxJurisdiction: string;
   locale: OperatorLocale;
   vehicleClassNames: string[];
 };
@@ -140,7 +141,7 @@ export function toRegionSummary(seed: LocationRegionSeed): LocationRegionSummary
   return {
     id: seed.id,
     label: seed.label,
-    mapboxCountry: seed.mapboxCountry,
+    mapboxJurisdiction: seed.mapboxJurisdiction,
     locale: seed.locale,
     vehicleClassNames: seed.vehicleClasses.map((row) => row.displayName)
   };

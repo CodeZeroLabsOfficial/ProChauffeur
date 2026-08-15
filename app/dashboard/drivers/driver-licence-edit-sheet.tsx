@@ -88,7 +88,7 @@ export function DriverLicenceEditSheet({
     let cancelled = false;
     getCachedOperatorLocale(getActiveBranchId())
       .then((locale) => {
-        if (!cancelled) setLicenceCountry(locale.driverLicenceCountry);
+        if (!cancelled) setLicenceCountry(locale.operatorJurisdiction);
       })
       .catch(() => {
         if (!cancelled) setLicenceCountry("");

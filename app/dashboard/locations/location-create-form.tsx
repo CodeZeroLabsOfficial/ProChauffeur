@@ -361,7 +361,7 @@ export function LocationCreateForm({
                 required
                 disabled={submitting}
                 invalid={Boolean(fieldErrors.office)}
-                country={selected?.mapboxCountry || null}
+                country={selected?.mapboxJurisdiction || null}
                 proximity={office?.coordinate ?? null}
                 placeholder="Search for the office address…"
               />

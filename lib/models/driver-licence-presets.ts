@@ -206,42 +206,22 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
   }
 ];
 
-export const DEFAULT_DRIVER_LICENCE_COUNTRY = "au";
-
-export const DRIVER_LICENCE_COUNTRY_IDS = DRIVER_LICENCE_COUNTRY_PRESETS.map(
+export const OPERATOR_JURISDICTION_IDS = DRIVER_LICENCE_COUNTRY_PRESETS.map(
   (preset) => preset.id
 ) as readonly string[];
 
-export function normalizeDriverLicenceCountry(value: unknown): string {
-  if (typeof value === "string" && DRIVER_LICENCE_COUNTRY_IDS.includes(value)) {
-    return value;
-  }
-  return DEFAULT_DRIVER_LICENCE_COUNTRY;
-}
-
-export function driverLicenceCountryLabel(countryId: string): string {
-  return (
-    DRIVER_LICENCE_COUNTRY_PRESETS.find((preset) => preset.id === countryId)?.label ??
-    DRIVER_LICENCE_COUNTRY_PRESETS.find((preset) => preset.id === DEFAULT_DRIVER_LICENCE_COUNTRY)!
-      .label
-  );
-}
-
-function presetForCountry(countryId: string): DriverLicenceCountryPreset {
-  return (
-    DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === countryId) ??
-    DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === DEFAULT_DRIVER_LICENCE_COUNTRY)!
-  );
+function presetForJurisdiction(jurisdictionId: string): DriverLicenceCountryPreset | undefined {
+  return DRIVER_LICENCE_COUNTRY_PRESETS.find((item) => item.id === jurisdictionId);
 }
 
 export function licenceClassesForCountry(countryId: string): DriverLicenceClassOption[] {
-  return presetForCountry(countryId).classes;
+  return presetForJurisdiction(countryId)?.classes ?? [];
 }
 
 export function licenceJurisdictionsForCountry(
   countryId: string
 ): DriverLicenceJurisdictionOption[] {
-  return presetForCountry(countryId).jurisdictions;
+  return presetForJurisdiction(countryId)?.jurisdictions ?? [];
 }
 
 /** Parse stored free-text / joined class codes into multi-select values. */

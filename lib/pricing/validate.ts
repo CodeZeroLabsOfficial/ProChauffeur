@@ -17,7 +17,7 @@ import {
   type WeekdayNumber
 } from "@/lib/models/enums";
 import type { OperatorLocale } from "@/lib/models/locale";
-import { DRIVER_LICENCE_COUNTRY_IDS } from "@/lib/models/driver-licence-presets";
+import { OPERATOR_JURISDICTION_IDS } from "@/lib/models/driver-licence-presets";
 import type {
   HourlyPricingRates,
   PricingAddon,
@@ -263,7 +263,12 @@ export function parseOperatorLocale(d: DocumentData): OperatorLocale {
     taxName: requireString(d.taxName, "taxName"),
     taxDisplayMode: requireEnum(d.taxDisplayMode, "taxDisplayMode", TAX_DISPLAY_MODES),
     showTaxOnQuotes: requireBoolean(d.showTaxOnQuotes, "showTaxOnQuotes"),
-    driverLicenceCountry: requireEnum(d.driverLicenceCountry, "driverLicenceCountry", DRIVER_LICENCE_COUNTRY_IDS)
+    operatorJurisdiction: requireEnum(
+      d.operatorJurisdiction,
+      "operatorJurisdiction",
+      OPERATOR_JURISDICTION_IDS
+    ),
+    mapboxJurisdiction: requireString(d.mapboxJurisdiction, "mapboxJurisdiction")
   };
 }
 

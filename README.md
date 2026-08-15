@@ -79,19 +79,31 @@ must NOT be prefixed with `NEXT_PUBLIC_`.
 
 `NEXT_PUBLIC_FUNCTIONS_REGION` must match `FUNCTIONS_REGION` used when deploying Cloud Functions.
 
+## Firebase project (CLI)
+
+`.firebaserc` only tells the Firebase CLI which project this checkout deploys to. It is not
+product identity. The committed default is `prochauffeur-app` (current Brisbane stamp).
+
+Leave it if you are working on that project. For another stamp, point this checkout at that
+Firebase project, then deploy — do not edit source to switch.
+
+```bash
+firebase use --add    # first time: pick the Firebase project
+firebase use          # show the active project
+```
+
 ## Cloud Functions
 
 On the **first** `firebase deploy --only functions` for a Firebase project, set region and
 schedule timezone (copy `functions/.env.example` to `functions/.env` or
 `functions/.env.<project-id>`). Later Functions deploys reuse those values.
+There is no code default — deploy fails if these params are unset.
 
 ```bash
 cp functions/.env.example functions/.env
-# Edit FUNCTIONS_REGION and SCHEDULE_TIMEZONE if this stamp is not Sydney.
+# Edit FUNCTIONS_REGION and SCHEDULE_TIMEZONE for this stamp.
 firebase deploy --only functions
 ```
-
-If those files are omitted, deploy uses `australia-southeast1` and `Australia/Sydney`.
 
 ## Firebase rules & indexes
 

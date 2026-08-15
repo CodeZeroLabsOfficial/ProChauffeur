@@ -45,7 +45,8 @@ type LocaleDraft = {
   taxDisplayName: string;
   taxDisplayMode: string;
   showTaxOnQuotes: boolean;
-  driverLicenceCountry: string;
+  operatorJurisdiction: string;
+  mapboxJurisdiction: string;
 };
 
 function emptyDraft(): LocaleDraft {
@@ -58,7 +59,8 @@ function emptyDraft(): LocaleDraft {
     taxDisplayName: "",
     taxDisplayMode: "",
     showTaxOnQuotes: false,
-    driverLicenceCountry: ""
+    operatorJurisdiction: "",
+    mapboxJurisdiction: ""
   };
 }
 
@@ -72,7 +74,8 @@ function draftFromLocale(locale: OperatorLocale): LocaleDraft {
     taxDisplayName: locale.taxName,
     taxDisplayMode: locale.taxDisplayMode,
     showTaxOnQuotes: locale.showTaxOnQuotes,
-    driverLicenceCountry: locale.driverLicenceCountry
+    operatorJurisdiction: locale.operatorJurisdiction,
+    mapboxJurisdiction: locale.mapboxJurisdiction
   };
 }
 
@@ -82,7 +85,8 @@ function isDraftComplete(draft: LocaleDraft): boolean {
     draft.currency.trim() !== "" &&
     draft.timezone.trim() !== "" &&
     draft.taxDisplayName.trim() !== "" &&
-    draft.driverLicenceCountry.trim() !== "" &&
+    draft.operatorJurisdiction.trim() !== "" &&
+    draft.mapboxJurisdiction.trim() !== "" &&
     DISTANCE_UNITS.includes(draft.distanceUnit as DistanceUnit) &&
     TAX_DISPLAY_MODES.includes(draft.taxDisplayMode as TaxDisplayMode)
   );
@@ -202,7 +206,8 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
       taxName: draft.taxDisplayName.trim(),
       taxDisplayMode: draft.taxDisplayMode as TaxDisplayMode,
       showTaxOnQuotes: draft.showTaxOnQuotes,
-      driverLicenceCountry: draft.driverLicenceCountry
+      operatorJurisdiction: draft.operatorJurisdiction,
+      mapboxJurisdiction: draft.mapboxJurisdiction.trim()
     };
 
     setSaving(true);
@@ -250,10 +255,10 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
             id="locale-country"
             label="Country"
             tooltip="The country this location operates in. Used for local compliance and regulations."
-            value={draft.driverLicenceCountry}
+            value={draft.operatorJurisdiction}
             placeholder="Select country"
             disabled={saving}
-            onValueChange={(value) => update("driverLicenceCountry", value)}>
+            onValueChange={(value) => update("operatorJurisdiction", value)}>
             {DRIVER_LICENCE_COUNTRY_PRESETS.map((preset) => (
               <SelectItem key={preset.id} value={preset.id}>
                 {preset.label}

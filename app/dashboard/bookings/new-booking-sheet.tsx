@@ -1442,6 +1442,7 @@ export function NewBookingSheet({
                 }}
                 placeholder="Search pickup address…"
                 invalid={fieldErrors.pickup}
+                country={operatorLocale?.mapboxJurisdiction ?? null}
               />
             </div>
 
@@ -1456,6 +1457,7 @@ export function NewBookingSheet({
                 }}
                 placeholder="Search drop-off address…"
                 invalid={fieldErrors.dropoff}
+                country={operatorLocale?.mapboxJurisdiction ?? null}
               />
             </div>
 

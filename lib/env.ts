@@ -15,10 +15,10 @@ const firebaseClientSchema = z.object({
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_APP_ID: z.string().min(1),
   NEXT_PUBLIC_FIREBASE_DATABASE_URL: z.string().min(1).optional(),
-  NEXT_PUBLIC_DEFAULT_LOCALE: z.string().default("en-AU"),
-  NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().default("AUD"),
-  NEXT_PUBLIC_DEFAULT_TIMEZONE: z.string().default("Australia/Sydney"),
-  NEXT_PUBLIC_FUNCTIONS_REGION: z.string().default("australia-southeast1")
+  NEXT_PUBLIC_DEFAULT_LOCALE: z.string().min(1),
+  NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().min(1),
+  NEXT_PUBLIC_DEFAULT_TIMEZONE: z.string().min(1),
+  NEXT_PUBLIC_FUNCTIONS_REGION: z.string().min(1)
 });
 
 export type FirebaseClientEnv = z.infer<typeof firebaseClientSchema>;
@@ -105,10 +105,18 @@ export function getServerEnv(): z.infer<typeof serverSchema> {
   return cachedServerEnv;
 }
 
-/** Public app defaults derived from env, with AU fallbacks. */
+/** Public stamp defaults from env. Missing values fail in `getFirebaseClientEnv`. */
 export const appConfig = {
-  locale: rawClientEnv.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en-AU",
-  currency: rawClientEnv.NEXT_PUBLIC_DEFAULT_CURRENCY ?? "AUD",
-  timezone: rawClientEnv.NEXT_PUBLIC_DEFAULT_TIMEZONE ?? "Australia/Sydney",
-  functionsRegion: rawClientEnv.NEXT_PUBLIC_FUNCTIONS_REGION ?? "australia-southeast1"
-} as const;
+  get locale() {
+    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_LOCALE;
+  },
+  get currency() {
+    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_CURRENCY;
+  },
+  get timezone() {
+    return getFirebaseClientEnv().NEXT_PUBLIC_DEFAULT_TIMEZONE;
+  },
+  get functionsRegion() {
+    return getFirebaseClientEnv().NEXT_PUBLIC_FUNCTIONS_REGION;
+  }
+};
