@@ -21,7 +21,7 @@ import {
   grantedBranchIds,
   resolveGrantedBranchId
 } from "@/lib/auth/staff-access";
-import { listenBranches } from "@/lib/services/firebase-service";
+import { listenBranches, listenGrantedBranches } from "@/lib/services/firebase-service";
 import type { Branch } from "@/lib/models/branch";
 
 type ActiveBranchContextValue = {
@@ -46,13 +46,23 @@ export function ActiveBranchProvider({ children }: { children: ReactNode }) {
     return subscribeActiveBranch(setBranchIdState);
   }, []);
 
+  const grantedIdsKey = session.canAccessAllBranches
+    ? "*"
+    : (session.branchIds ?? []).join(",");
+
   useEffect(() => {
-    const unsub = listenBranches((rows) => {
+    setBranchesLoading(true);
+    const apply = (rows: Branch[]) => {
       setAllBranches([...rows].sort((a, b) => a.name.localeCompare(b.name)));
       setBranchesLoading(false);
-    });
-    return () => unsub();
-  }, []);
+    };
+
+    if (session.canAccessAllBranches) {
+      return listenBranches(apply);
+    }
+
+    return listenGrantedBranches(session.branchIds ?? [], apply);
+  }, [session.canAccessAllBranches, session.branchIds, grantedIdsKey]);
 
   const branches = useMemo(() => {
     const active = allBranches.filter((b) => b.isActive);

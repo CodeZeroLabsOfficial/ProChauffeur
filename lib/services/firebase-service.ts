@@ -246,6 +246,48 @@ export function listenBranches(onUpdate: (branches: Branch[]) => void): Unsub {
   );
 }
 
+/** Per-document snapshots for staff who cannot list the whole `branches` collection. */
+export function listenGrantedBranches(
+  ids: string[],
+  onUpdate: (branches: Branch[]) => void
+): Unsub {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  const byId = new Map<string, Branch>();
+  const ready = new Set<string>();
+
+  function emitIfReady() {
+    if (ready.size !== unique.length) return;
+    onUpdate([...byId.values()]);
+  }
+
+  const unsubs = unique.map((id) =>
+    onSnapshot(
+      branchMetaDocRef(db(), id),
+      (snap) => {
+        if (snap.exists()) byId.set(id, mapBranch(snap.id, snap.data()));
+        else byId.delete(id);
+        ready.add(id);
+        emitIfReady();
+      },
+      (error) => {
+        console.error(`Firestore branches/${id} listener failed:`, error.code, error.message);
+        byId.delete(id);
+        ready.add(id);
+        emitIfReady();
+      }
+    )
+  );
+
+  return () => {
+    for (const unsub of unsubs) unsub();
+  };
+}
+
 export async function fetchBranches(): Promise<Branch[]> {
   return snapToList(await getDocs(branchesCollectionRef(db())), mapBranch);
 }
