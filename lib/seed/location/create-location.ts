@@ -11,6 +11,7 @@ import {
   Collections,
   canCreateLocation,
   isValidVehicleClassSlug,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
   preparePricingConfigForSave,
   type Branch,
   type VehicleClass
@@ -93,7 +94,7 @@ export async function createLocationFromSeedAdmin(
 
   const licenseSnap = await fetchAppSettingAdmin(AppSettingsDocs.license);
   if (!licenseSnap) {
-    throw new Error("Licence is not configured for this workspace.");
+    throw new Error(LICENSE_NOT_CONFIGURED_MESSAGE);
   }
   const license = mapLicense(licenseSnap);
   const existing = await adminFirestore().collection(Collections.branches).get();

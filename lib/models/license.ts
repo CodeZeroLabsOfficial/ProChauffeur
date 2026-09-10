@@ -77,33 +77,11 @@ export const UNLIMITED = Number.MAX_SAFE_INTEGER;
 
 /** Shown when `app_settings/license` is missing — never invent a licence. */
 export const LICENSE_NOT_CONFIGURED_MESSAGE =
-  "Licence is not configured for this workspace.";
+  "This workspace doesn’t have an active licence. Contact your provider to finish setup.";
 
-/** In-app catalog when `app_settings/plans` is missing. */
-export const defaultPlansCatalog: AppPlansCatalog = {
-  defaultPlanId: "professional",
-  plans: {
-    essentials: {
-      label: "Essentials",
-      features: ["driverRatings"]
-    },
-    professional: {
-      label: "Professional",
-      features: ["driverRatings", "corporateAccounts"]
-    },
-    premium: {
-      label: "Premium",
-      features: [
-        "autoDispatch",
-        "bookingValidation",
-        "driverRatings",
-        "dynamicPricing",
-        "loyaltyPromos",
-        "corporateAccounts"
-      ]
-    }
-  }
-};
+/** Shown when `app_settings/plans` is missing or empty — never invent a catalog. */
+export const PLANS_NOT_CONFIGURED_MESSAGE =
+  "This workspace doesn’t have an active plan. Contact your provider to finish setup.";
 
 export function isFeatureId(value: string): value is FeatureId {
   return (FEATURE_IDS as readonly string[]).includes(value);

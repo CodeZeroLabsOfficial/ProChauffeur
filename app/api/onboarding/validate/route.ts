@@ -4,6 +4,8 @@ import {
   isOnboardingCompleted,
   LICENSE_NOT_CONFIGURED_MESSAGE,
   loadStampLicense,
+  loadStampPlansCatalog,
+  PLANS_NOT_CONFIGURED_MESSAGE,
   validateOnboardingInvite
 } from "@/lib/onboarding/server";
 
@@ -29,6 +31,10 @@ export async function POST(request: Request) {
   const license = await loadStampLicense();
   if (!license) {
     return NextResponse.json({ error: LICENSE_NOT_CONFIGURED_MESSAGE }, { status: 503 });
+  }
+  const plans = await loadStampPlansCatalog();
+  if (!plans) {
+    return NextResponse.json({ error: PLANS_NOT_CONFIGURED_MESSAGE }, { status: 503 });
   }
 
   const result = await validateOnboardingInvite(token);

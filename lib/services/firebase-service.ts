@@ -53,8 +53,8 @@ import {
   Collections,
   emptyCompanyProfile,
   emptyOperatingHours,
-  defaultPlansCatalog,
   LICENSE_NOT_CONFIGURED_MESSAGE,
+  PLANS_NOT_CONFIGURED_MESSAGE,
   isFeatureEnabled,
   type ActivityNotification,
   type CompanyProfile,
@@ -1673,7 +1673,10 @@ export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
 
 async function loadPlansCatalog(): Promise<AppPlansCatalog> {
   const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.plans));
-  return snap.exists() ? mapPlansCatalog(snap.data()) : defaultPlansCatalog;
+  if (!snap.exists()) {
+    throw new Error(PLANS_NOT_CONFIGURED_MESSAGE);
+  }
+  return mapPlansCatalog(snap.data());
 }
 
 // ─────────────────────────────── Invoices ───────────────────────────────

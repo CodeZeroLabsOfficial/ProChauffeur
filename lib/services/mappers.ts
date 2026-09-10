@@ -49,7 +49,7 @@ import {
 import { TRIP_APPROVAL_STATUSES, emptyTripCapacity } from "@/lib/models/trip";
 import {
   UNLIMITED,
-  defaultPlansCatalog,
+  PLANS_NOT_CONFIGURED_MESSAGE,
   isFeatureFlagValue,
   isFeatureId
 } from "@/lib/models/license";
@@ -581,9 +581,9 @@ export function mapPlansCatalog(d: DocumentData): AppPlansCatalog {
   const defaultPlanId =
     typeof d.defaultPlanId === "string" && d.defaultPlanId.trim()
       ? d.defaultPlanId.trim()
-      : defaultPlansCatalog.defaultPlanId;
-  if (Object.keys(plans).length === 0) {
-    return defaultPlansCatalog;
+      : "";
+  if (Object.keys(plans).length === 0 || !defaultPlanId) {
+    throw new Error(PLANS_NOT_CONFIGURED_MESSAGE);
   }
   return { defaultPlanId, plans };
 }

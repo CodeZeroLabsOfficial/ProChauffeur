@@ -3,12 +3,22 @@ import "server-only";
 import { createHash } from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
-import { AppSettingsDocs, Collections, LICENSE_NOT_CONFIGURED_MESSAGE, type AppLicense } from "@/lib/models";
+import {
+  AppSettingsDocs,
+  Collections,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
+  PLANS_NOT_CONFIGURED_MESSAGE,
+  type AppLicense,
+  type AppPlansCatalog
+} from "@/lib/models";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { fetchAppSettingAdmin } from "@/lib/firebase/admin-settings";
-import { mapLicense as mapLicenseFromData } from "@/lib/services/mappers";
+import {
+  mapLicense as mapLicenseFromData,
+  mapPlansCatalog as mapPlansCatalogFromData
+} from "@/lib/services/mappers";
 
-export { LICENSE_NOT_CONFIGURED_MESSAGE };
+export { LICENSE_NOT_CONFIGURED_MESSAGE, PLANS_NOT_CONFIGURED_MESSAGE };
 
 export type OnboardingInviteDoc = {
   tokenHash: string;
@@ -82,6 +92,20 @@ export async function loadStampLicense(): Promise<AppLicense | null> {
     .get();
   if (!snap.exists) return null;
   return mapLicenseFromData(snap.data() ?? {});
+}
+
+/** Returns null when `app_settings/plans` was never seeded or is empty. */
+export async function loadStampPlansCatalog(): Promise<AppPlansCatalog | null> {
+  const snap = await adminFirestore()
+    .collection(Collections.appSettings)
+    .doc(AppSettingsDocs.plans)
+    .get();
+  if (!snap.exists) return null;
+  try {
+    return mapPlansCatalogFromData(snap.data() ?? {});
+  } catch {
+    return null;
+  }
 }
 
 export async function countAdminUsers(): Promise<number> {
