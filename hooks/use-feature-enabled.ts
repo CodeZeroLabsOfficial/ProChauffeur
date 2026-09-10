@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 
 import {
-  defaultLicense,
-  defaultPlansCatalog,
   isFeatureEnabled,
   type AppLicense,
   type AppPlansCatalog,
@@ -15,8 +13,8 @@ import { fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service
 /** License + plans catalog for resolving feature entitlements. */
 export function useLicenseEntitlements(): {
   ready: boolean;
-  license: AppLicense;
-  plans: AppPlansCatalog;
+  license: AppLicense | null;
+  plans: AppPlansCatalog | null;
   isEnabled: (feature: FeatureId) => boolean;
 } {
   const [license, setLicense] = useState<AppLicense | null>(null);
@@ -33,8 +31,8 @@ export function useLicenseEntitlements(): {
       })
       .catch(() => {
         if (cancelled) return;
-        setLicense(defaultLicense);
-        setPlans(defaultPlansCatalog);
+        setLicense(null);
+        setPlans(null);
       })
       .finally(() => {
         if (!cancelled) setReady(true);
@@ -44,16 +42,13 @@ export function useLicenseEntitlements(): {
     };
   }, []);
 
-  const resolvedLicense = license ?? defaultLicense;
-  const resolvedPlans = plans ?? defaultPlansCatalog;
-
   return {
     ready,
-    license: resolvedLicense,
-    plans: resolvedPlans,
-    // Fail closed until catalog loads — avoids flash of Pro features from defaultPlansCatalog.
+    license,
+    plans,
+    // Fail closed until both load — never invent a licence.
     isEnabled: (feature: FeatureId) =>
-      ready ? isFeatureEnabled(resolvedLicense, resolvedPlans, feature) : false
+      ready && license && plans ? isFeatureEnabled(license, plans, feature) : false
   };
 }
 

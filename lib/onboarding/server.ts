@@ -3,10 +3,12 @@ import "server-only";
 import { createHash } from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
-import { AppSettingsDocs, Collections, defaultLicense } from "@/lib/models";
+import { AppSettingsDocs, Collections, LICENSE_NOT_CONFIGURED_MESSAGE, type AppLicense } from "@/lib/models";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { fetchAppSettingAdmin } from "@/lib/firebase/admin-settings";
 import { mapLicense as mapLicenseFromData } from "@/lib/services/mappers";
+
+export { LICENSE_NOT_CONFIGURED_MESSAGE };
 
 export type OnboardingInviteDoc = {
   tokenHash: string;
@@ -17,6 +19,7 @@ export type OnboardingInviteDoc = {
 };
 
 export type OnboardingDoc = {
+  /** Audit only — written when the invite wizard finishes; not used for readiness. */
   completedAt?: Timestamp | Date | null;
   completedByUid?: string | null;
 };
@@ -25,12 +28,12 @@ export function hashOnboardingToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Stamp is ready when at least one admin user exists.
+ * Not based on wizard `completedAt` or Locations.
+ */
 export async function isOnboardingCompleted(): Promise<boolean> {
-  const doc = await fetchAppSettingAdmin<OnboardingDoc>(AppSettingsDocs.onboarding);
-  if (doc?.completedAt) return true;
-  // Legacy stamps (pre-invite onboarding) already have Locations.
-  const branches = await countBranches();
-  return branches > 0;
+  return (await countAdminUsers()) > 0;
 }
 
 export async function getOnboardingInvite(): Promise<OnboardingInviteDoc | null> {
@@ -53,9 +56,6 @@ export async function validateOnboardingInvite(rawToken: string): Promise<Invite
   if (!token) {
     return { ok: false, error: "Invite token is required.", status: 400 };
   }
-  if (await isOnboardingCompleted()) {
-    return { ok: false, error: "This workspace is already set up. Sign in instead.", status: 410 };
-  }
 
   const invite = await getOnboardingInvite();
   if (!invite?.tokenHash) {
@@ -74,12 +74,13 @@ export async function validateOnboardingInvite(rawToken: string): Promise<Invite
   return { ok: true, invite };
 }
 
-export async function loadStampLicense() {
+/** Returns null when `app_settings/license` was never seeded. */
+export async function loadStampLicense(): Promise<AppLicense | null> {
   const snap = await adminFirestore()
     .collection(Collections.appSettings)
     .doc(AppSettingsDocs.license)
     .get();
-  if (!snap.exists) return defaultLicense;
+  if (!snap.exists) return null;
   return mapLicenseFromData(snap.data() ?? {});
 }
 
@@ -106,6 +107,7 @@ export async function bindInviteToUid(uid: string): Promise<void> {
 export async function completeOnboarding(uid: string): Promise<void> {
   const db = adminFirestore();
   const batch = db.batch();
+  // Audit trail only — stamp readiness is ≥1 admin, not this doc.
   batch.set(
     db.collection(Collections.appSettings).doc(AppSettingsDocs.onboarding),
     {

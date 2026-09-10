@@ -9,10 +9,9 @@ import {
   FEATURE_IDS,
   FEATURE_LABELS,
   capLabel,
-  defaultLicense,
-  defaultPlansCatalog,
   featureSource,
   isFeatureEnabled,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
   planLabel,
   UNLIMITED,
   usagePercent,
@@ -72,6 +71,7 @@ export default function LicensePage() {
   const { allBranches, branchesLoading } = useActiveBranch();
   const [license, setLicense] = useState<AppLicense | null>(null);
   const [catalog, setCatalog] = useState<AppPlansCatalog | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [licenseLoading, setLicenseLoading] = useState(true);
 
   useEffect(() => {
@@ -81,11 +81,15 @@ export default function LicensePage() {
         if (cancelled) return;
         setLicense(nextLicense);
         setCatalog(nextCatalog);
+        setLoadError(null);
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        setLicense(defaultLicense);
-        setCatalog(defaultPlansCatalog);
+        setLicense(null);
+        setCatalog(null);
+        setLoadError(
+          err instanceof Error ? err.message : LICENSE_NOT_CONFIGURED_MESSAGE
+        );
       })
       .finally(() => {
         if (!cancelled) setLicenseLoading(false);
@@ -96,24 +100,35 @@ export default function LicensePage() {
   }, []);
 
   const loading = usersLoading || branchesLoading || licenseLoading;
-  const resolved = license ?? defaultLicense;
-  const plans = catalog ?? defaultPlansCatalog;
+
+  if (loading) {
+    return <p className="text-muted-foreground text-sm">Loading…</p>;
+  }
+
+  if (!license || !catalog || loadError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Licence</CardTitle>
+          <CardDescription>
+            {loadError ?? LICENSE_NOT_CONFIGURED_MESSAGE}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   const adminCount = users.filter((u) => u.role === "admin").length;
   const driverCount = users.filter((u) => u.role === "driver").length;
 
   const rows: LimitRow[] = [
-    { label: "Admin accounts", used: adminCount, max: resolved.maxAdmins },
-    { label: "Drivers", used: driverCount, max: resolved.maxDrivers },
-    { label: "Locations", used: allBranches.length, max: resolved.maxLocations }
+    { label: "Admin accounts", used: adminCount, max: license.maxAdmins },
+    { label: "Drivers", used: driverCount, max: license.maxDrivers },
+    { label: "Locations", used: allBranches.length, max: license.maxLocations }
   ];
 
-  const label = planLabel(resolved, plans);
+  const label = planLabel(license, catalog);
   const planTitle = label ? `You're on ${label} plan` : "Your subscription";
-
-  if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading…</p>;
-  }
 
   return (
     <Card>
@@ -140,8 +155,8 @@ export default function LicensePage() {
           <p className="font-semibold">Features</p>
           <ul className="space-y-3">
             {FEATURE_IDS.map((feature) => {
-              const enabled = isFeatureEnabled(resolved, plans, feature);
-              const source = featureSource(resolved, plans, feature);
+              const enabled = isFeatureEnabled(license, catalog, feature);
+              const source = featureSource(license, catalog, feature);
               return (
                 <li
                   key={feature}

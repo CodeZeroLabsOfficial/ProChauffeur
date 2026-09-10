@@ -22,7 +22,6 @@ import { LogoMark } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import {
   canCreateLocation,
-  defaultLicense,
   type Appearance,
   type AppLicense
 } from "@/lib/models";
@@ -45,13 +44,14 @@ export function BranchSwitcher({ appearance }: BranchSwitcherProps) {
   useEffect(() => {
     fetchLicense()
       .then(setLicense)
-      .catch(() => setLicense(defaultLicense));
+      .catch(() => setLicense(null));
   }, []);
 
   const workspaceName = appearance?.workspaceName ?? "ProChauffeur";
   const locationLabel = activeBranch?.name ?? (branchesLoading ? "Loading…" : "No location");
-  const resolved = license ?? defaultLicense;
-  const canAdd = canCreateLocation(allBranches.length, resolved.maxLocations);
+  const canAdd = license
+    ? canCreateLocation(allBranches.length, license.maxLocations)
+    : false;
 
   return (
     <SidebarMenu>

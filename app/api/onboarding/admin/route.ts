@@ -7,6 +7,7 @@ import { Collections, UNLIMITED } from "@/lib/models";
 import {
   bindInviteToUid,
   countAdminUsers,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
   loadStampLicense,
   validateOnboardingInvite
 } from "@/lib/onboarding/server";
@@ -67,6 +68,9 @@ export async function POST(request: Request) {
   }
 
   const license = await loadStampLicense();
+  if (!license) {
+    return NextResponse.json({ error: LICENSE_NOT_CONFIGURED_MESSAGE }, { status: 503 });
+  }
   const adminCount = await countAdminUsers();
   if (license.maxAdmins < UNLIMITED && adminCount >= license.maxAdmins) {
     return NextResponse.json(

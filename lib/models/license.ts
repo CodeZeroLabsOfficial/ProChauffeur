@@ -75,18 +75,9 @@ export interface AppLicense {
 /** Sentinel used when a numeric cap field is absent (admins/drivers decay to unlimited). */
 export const UNLIMITED = Number.MAX_SAFE_INTEGER;
 
-/**
- * Default when the license document is missing or fetch fails.
- * `maxLocations` defaults to 1 so multi-Location stays off until explicitly raised.
- * No plan / features until configured.
- */
-export const defaultLicense: AppLicense = {
-  planId: "",
-  maxAdmins: UNLIMITED,
-  maxDrivers: UNLIMITED,
-  maxLocations: 1,
-  featureFlags: {}
-};
+/** Shown when `app_settings/license` is missing — never invent a licence. */
+export const LICENSE_NOT_CONFIGURED_MESSAGE =
+  "Licence is not configured for this workspace.";
 
 /** In-app catalog when `app_settings/plans` is missing. */
 export const defaultPlansCatalog: AppPlansCatalog = {

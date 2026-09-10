@@ -9,7 +9,7 @@ import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { canAccessLocation } from "@/lib/auth/staff-access";
-import { canCreateLocation, defaultLicense, type AppLicense } from "@/lib/models";
+import { canCreateLocation, type AppLicense } from "@/lib/models";
 import { fetchLicense } from "@/lib/services/firebase-service";
 
 export default function LocationsPage() {
@@ -21,7 +21,7 @@ export default function LocationsPage() {
   useEffect(() => {
     fetchLicense()
       .then(setLicense)
-      .catch(() => setLicense(defaultLicense));
+      .catch(() => setLicense(null));
   }, []);
 
   const tableBranches = useMemo(
@@ -32,8 +32,9 @@ export default function LocationsPage() {
     [allBranches, session]
   );
 
-  const resolved = license ?? defaultLicense;
-  const canAdd = canCreateLocation(allBranches.length, resolved.maxLocations);
+  const canAdd = license
+    ? canCreateLocation(allBranches.length, license.maxLocations)
+    : false;
 
   return (
     <>

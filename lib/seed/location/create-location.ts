@@ -10,7 +10,6 @@ import {
   BranchSettingsDocs,
   Collections,
   canCreateLocation,
-  defaultLicense,
   isValidVehicleClassSlug,
   preparePricingConfigForSave,
   type Branch,
@@ -93,7 +92,10 @@ export async function createLocationFromSeedAdmin(
   });
 
   const licenseSnap = await fetchAppSettingAdmin(AppSettingsDocs.license);
-  const license = licenseSnap ? mapLicense(licenseSnap) : defaultLicense;
+  if (!licenseSnap) {
+    throw new Error("Licence is not configured for this workspace.");
+  }
+  const license = mapLicense(licenseSnap);
   const existing = await adminFirestore().collection(Collections.branches).get();
   if (!canCreateLocation(existing.size, license.maxLocations)) {
     throw new Error(

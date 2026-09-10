@@ -49,15 +49,15 @@ function hashToken(token) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+async function countAdmins(db) {
+  const snap = await db.collection("users").where("role", "==", "admin").limit(1).get();
+  return snap.size;
+}
+
 async function seed() {
   const db = initAdmin();
-  const onboardingSnap = await db.collection("app_settings").doc("onboarding").get();
-  if (onboardingSnap.exists && onboardingSnap.data()?.completedAt) {
-    throw new Error("Stamp already onboarded — refuse to re-seed plans/license.");
-  }
-  const branches = await db.collection("branches").limit(1).get();
-  if (!branches.empty) {
-    throw new Error("Stamp already has Locations — refuse to re-seed plans/license.");
+  if ((await countAdmins(db)) > 0) {
+    throw new Error("Stamp already has an admin — refuse to re-seed plans/license.");
   }
 
   const plans = readStampJson("plans.json");
@@ -74,13 +74,8 @@ async function seed() {
 
 async function invite(argv) {
   const db = initAdmin();
-  const onboardingSnap = await db.collection("app_settings").doc("onboarding").get();
-  if (onboardingSnap.exists && onboardingSnap.data()?.completedAt) {
-    throw new Error("Stamp already onboarded — refuse to mint invite.");
-  }
-  const branches = await db.collection("branches").limit(1).get();
-  if (!branches.empty) {
-    throw new Error("Stamp already has Locations — refuse to mint invite.");
+  if ((await countAdmins(db)) > 0) {
+    throw new Error("Stamp already has an admin — refuse to mint invite.");
   }
 
   let host = process.env.STAMP_PUBLIC_HOST?.trim() || "http://localhost:3000";

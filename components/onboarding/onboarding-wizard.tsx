@@ -144,16 +144,16 @@ export function OnboardingWizard() {
         completed?: boolean;
         mapboxConfigured?: boolean;
       };
-      if (status.completed) {
-        router.replace("/login");
-        return;
-      }
       if (!cancelled) setMapboxConfigured(Boolean(status.mapboxConfigured));
 
       const stored =
         typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY)?.trim() ?? "" : "";
       const nextToken = urlToken || stored;
       if (!nextToken) {
+        if (status.completed) {
+          router.replace("/login");
+          return;
+        }
         setGateError("Open your invite link to set up this workspace.");
         setReady(true);
         return;

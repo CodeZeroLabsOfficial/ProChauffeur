@@ -53,8 +53,8 @@ import {
   Collections,
   emptyCompanyProfile,
   emptyOperatingHours,
-  defaultLicense,
   defaultPlansCatalog,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
   isFeatureEnabled,
   type ActivityNotification,
   type CompanyProfile,
@@ -1628,11 +1628,7 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
   await setDoc(
     doc(db(), Collections.appSettings, AppSettingsDocs.company),
-    stripUndefined({
-      ...profile,
-      abn: deleteField(),
-      acn: deleteField()
-    }),
+    stripUndefined({ ...profile }),
     { merge: true }
   );
   void createActivityNotification(companyNotification());
@@ -1650,7 +1646,10 @@ export async function fetchLicense(): Promise<AppLicense> {
 
 async function loadLicense(): Promise<AppLicense> {
   const snap = await getDoc(doc(db(), Collections.appSettings, AppSettingsDocs.license));
-  return snap.exists() ? mapLicense(snap.data()) : defaultLicense;
+  if (!snap.exists()) {
+    throw new Error(LICENSE_NOT_CONFIGURED_MESSAGE);
+  }
+  return mapLicense(snap.data());
 }
 
 export async function saveLicense(license: AppLicense): Promise<void> {

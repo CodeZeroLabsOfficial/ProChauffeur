@@ -588,24 +588,24 @@ export function mapPlansCatalog(d: DocumentData): AppPlansCatalog {
   return { defaultPlanId, plans };
 }
 
-function companyString(d: DocumentData, camel: string, pascal: string): string | null {
-  const value = d[camel] ?? d[pascal];
+function companyString(d: DocumentData, key: string): string | null {
+  const value = d[key];
   return typeof value === "string" ? value : null;
 }
 
 /** Maps `app_settings/company` — address fields are top-level on the document. */
 export function mapCompanyProfile(d: DocumentData): CompanyProfile {
   return {
-    name: companyString(d, "name", "Name"),
-    phone: companyString(d, "phone", "Phone"),
-    email: companyString(d, "email", "Email"),
-    website: companyString(d, "website", "Website"),
-    taxId: companyString(d, "taxId", "TaxId"),
-    street: companyString(d, "street", "Street"),
-    city: companyString(d, "city", "City"),
-    state: companyString(d, "state", "State"),
-    postcode: companyString(d, "postcode", "Postcode"),
-    country: companyString(d, "country", "Country")
+    name: companyString(d, "name"),
+    phone: companyString(d, "phone"),
+    email: companyString(d, "email"),
+    website: companyString(d, "website"),
+    taxId: companyString(d, "taxId"),
+    street: companyString(d, "street"),
+    city: companyString(d, "city"),
+    state: companyString(d, "state"),
+    postcode: companyString(d, "postcode"),
+    country: companyString(d, "country")
   };
 }
 

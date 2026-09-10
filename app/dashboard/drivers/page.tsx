@@ -7,7 +7,7 @@ import { DriversDataTable } from "@/app/dashboard/drivers/data-table";
 import { ListPageHeader } from "@/components/list-page-header";
 import { Button } from "@/components/ui/button";
 import { useUsers } from "@/hooks/use-collections";
-import { canAddDriver, defaultLicense, type AppLicense } from "@/lib/models";
+import { canAddDriver, type AppLicense } from "@/lib/models";
 import { fetchLicense } from "@/lib/services/firebase-service";
 
 export default function DriversPage() {
@@ -18,12 +18,11 @@ export default function DriversPage() {
   useEffect(() => {
     fetchLicense()
       .then(setLicense)
-      .catch(() => setLicense(defaultLicense));
+      .catch(() => setLicense(null));
   }, []);
 
-  const resolved = license ?? defaultLicense;
   const driverCount = users.filter((u) => u.role === "driver").length;
-  const canAdd = canAddDriver(driverCount, resolved.maxDrivers);
+  const canAdd = license ? canAddDriver(driverCount, license.maxDrivers) : false;
 
   return (
     <>

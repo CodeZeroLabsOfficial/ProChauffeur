@@ -41,7 +41,7 @@ export const AppSettingsDocs = {
   appearance: "workspace",
   integrations: "integrations",
   company: "company",
-  /** First-run onboarding completion (`completedAt`, `completedByUid`). */
+  /** Invite-wizard audit (`completedAt`, `completedByUid`) — not stamp readiness. */
   onboarding: "onboarding",
   /** Single-use onboarding invite (`tokenHash`, `expiresAt`, `status`, `boundUid`). */
   onboardingInvite: "onboardingInvite"

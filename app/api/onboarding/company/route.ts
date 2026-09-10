@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { adminFirestore } from "@/lib/firebase/admin";
@@ -66,9 +65,7 @@ export async function POST(request: Request) {
         city,
         state: state || null,
         postcode: postcode || null,
-        country,
-        abn: FieldValue.delete(),
-        acn: FieldValue.delete()
+        country
       },
       { merge: true }
     );
