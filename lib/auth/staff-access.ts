@@ -17,7 +17,8 @@ const LOCATION_EVENT_CATEGORIES = new Set([
 const PERSONAL_SETTINGS_PREFIXES = [
   "/dashboard/settings/profile",
   "/dashboard/settings/account",
-  "/dashboard/notifications"
+  "/dashboard/notifications",
+  "/dashboard/activities"
 ] as const;
 
 const DISPATCHER_PREFIXES = [

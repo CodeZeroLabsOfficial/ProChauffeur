@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+import { useSessionUser } from "@/components/providers/session-provider";
 import { useNotifications } from "@/hooks/use-collections";
+import { canViewActivityEvent } from "@/lib/auth/staff-access";
 import type { ActivityNotification } from "@/lib/models";
 import { notificationCategoryIcon, notificationCategoryLabel } from "@/lib/notifications/display";
 import { markNotificationRead } from "@/lib/services/firebase-service";
@@ -33,11 +35,14 @@ function ActivityIcon({ notification }: { notification: ActivityNotification }) 
 }
 
 export function RecentActivities() {
-  const { notifications } = useNotifications(8);
+  const session = useSessionUser();
+  const { notifications } = useNotifications(20);
   const [selected, setSelected] = useState<ActivityNotification | null>(null);
 
-  const items = useMemo(() => notifications.slice(0, 8), [notifications]);
-  const viewAllHref = items[0]?.href ?? "/dashboard";
+  const items = useMemo(
+    () => notifications.filter((n) => canViewActivityEvent(session, n)).slice(0, 4),
+    [notifications, session]
+  );
 
   async function openActivity(notification: ActivityNotification) {
     setSelected(notification);
@@ -79,7 +84,7 @@ export function RecentActivities() {
 
           <div className="mt-4">
             <Button variant="outline" className="w-full" size="sm" asChild>
-              <Link href={viewAllHref}>
+              <Link href="/dashboard/activities">
                 View all <ChevronRight />
               </Link>
             </Button>
