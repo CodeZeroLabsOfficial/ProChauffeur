@@ -55,8 +55,8 @@ export interface CorporateAccount {
   billingEmail?: string | null;
   /** Company phone (not billing contact). */
   phone?: string | null;
-  abn?: string | null;
-  acn?: string | null;
+  /** Primary business / tax registration id for the account country. */
+  taxId?: string | null;
   industry?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
@@ -188,8 +188,7 @@ export function buildNewCorporateAccount(
     email: null,
     billingEmail: null,
     phone: null,
-    abn: null,
-    acn: null,
+    taxId: null,
     industry: null,
     addressLine1: null,
     addressLine2: null,

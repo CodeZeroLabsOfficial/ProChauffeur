@@ -41,6 +41,7 @@ import {
   corporateAccountStatusTitle,
   corporateRateModeTitle,
   normalizeCorporateJoinCode,
+  taxIdLabelForCountry,
   type CorporateAccount,
   type CorporateAccountStatus,
   type CorporateRateMode,
@@ -327,8 +328,7 @@ export function AccountEditSheet({
         email: draft.email?.trim() || null,
         billingEmail: draft.billingEmail?.trim() || null,
         phone: draft.phone?.trim() || null,
-        abn: draft.abn?.trim() || null,
-        acn: draft.acn?.trim() || null,
+        taxId: draft.taxId?.trim() || null,
         industry: draft.industry?.trim() || null,
         ...accountAddressFromPostal(address),
         primaryContactUserId,
@@ -496,23 +496,13 @@ export function AccountEditSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-abn">ABN</Label>
-                  <Input
-                    id="account-abn"
-                    value={draft.abn ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, abn: e.target.value }))}
-                  />
-                </div>
-                <div className="*:not-first:mt-2">
-                  <Label htmlFor="account-acn">ACN</Label>
-                  <Input
-                    id="account-acn"
-                    value={draft.acn ?? ""}
-                    onChange={(e) => setDraft((c) => ({ ...c, acn: e.target.value }))}
-                  />
-                </div>
+              <div className="*:not-first:mt-2">
+                <Label htmlFor="account-taxId">{taxIdLabelForCountry(address.country)}</Label>
+                <Input
+                  id="account-taxId"
+                  value={draft.taxId ?? ""}
+                  onChange={(e) => setDraft((c) => ({ ...c, taxId: e.target.value }))}
+                />
               </div>
 
               <div className="*:not-first:mt-2">

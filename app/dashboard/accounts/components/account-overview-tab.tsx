@@ -20,6 +20,7 @@ import { ProfileRevenueStat } from "@/components/profile/profile-revenue-stat";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   formatCorporateAddress,
+  taxIdLabelForCountry,
   type CorporateAccount,
   type User as AccountUser
 } from "@/lib/models";
@@ -131,11 +132,10 @@ export function AccountOverviewTab({
                   </a>
                 </ContactRow>
               ) : null}
-              {account.abn?.trim() ? (
-                <ContactRow icon={IdCard}>ABN {account.abn}</ContactRow>
-              ) : null}
-              {account.acn?.trim() ? (
-                <ContactRow icon={IdCard}>ACN {account.acn}</ContactRow>
+              {account.taxId?.trim() ? (
+                <ContactRow icon={IdCard}>
+                  {taxIdLabelForCountry(account.country)} {account.taxId}
+                </ContactRow>
               ) : null}
               {account.industry?.trim() ? (
                 <ContactRow icon={Briefcase}>{account.industry}</ContactRow>

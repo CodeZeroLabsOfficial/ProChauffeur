@@ -130,10 +130,8 @@ function corporateStripeCustomerPayload(accountId, account, email) {
   if (billingContactUserId) {
     metadata.billingContactUserId = billingContactUserId;
   }
-  const abn = typeof account.abn === "string" ? account.abn.trim() : "";
-  if (abn) metadata.abn = abn;
-  const acn = typeof account.acn === "string" ? account.acn.trim() : "";
-  if (acn) metadata.acn = acn;
+  const taxId = typeof account.taxId === "string" ? account.taxId.trim() : "";
+  if (taxId) metadata.taxId = taxId;
 
   return {
     email,
