@@ -13,26 +13,13 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 import { AccountEditSheet } from "@/app/dashboard/accounts/account-edit-sheet";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -46,20 +33,21 @@ import { useUsers } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
 import {
   corporateAccountStatusTitle,
-  corporateRateModeTitle,
-  type CorporateAccount,
-  type CorporateBillingDay
+  formatCorporateAddress,
+  type CorporateAccount
 } from "@/lib/models";
-import { deleteCorporateAccount, listenCorporateAccounts } from "@/lib/services/firebase-service";
+import { listenCorporateAccounts } from "@/lib/services/firebase-service";
 
 type AccountRow = CorporateAccount & {
   searchLabel: string;
+  addressLabel: string;
   membersCount: number;
 };
 
-function formatBillingDay(day: CorporateBillingDay): string {
-  if (day === "last") return "Last day";
-  return String(day);
+function truncateAddress(value: string | null | undefined, max = 40): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return "—";
+  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
 }
 
 function multiSelectFilter(
@@ -83,8 +71,6 @@ export function AccountsDataTable({
   const { users } = useUsers();
   const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingDelete, setPendingDelete] = useState<CorporateAccount | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -111,13 +97,17 @@ export function AccountsDataTable({
 
   const rows = useMemo<AccountRow[]>(
     () =>
-      accounts.map((account) => ({
-        ...account,
-        searchLabel: [account.name, account.email, account.phone, account.joinCode]
-          .filter(Boolean)
-          .join(" "),
-        membersCount: memberCounts.get(account.id) ?? 0
-      })),
+      accounts.map((account) => {
+        const addressLabel = formatCorporateAddress(account) ?? "";
+        return {
+          ...account,
+          addressLabel,
+          searchLabel: [account.name, account.email, account.phone, addressLabel, account.joinCode]
+            .filter(Boolean)
+            .join(" "),
+          membersCount: memberCounts.get(account.id) ?? 0
+        };
+      }),
     [accounts, memberCounts]
   );
 
@@ -178,16 +168,14 @@ export function AccountsDataTable({
         filterFn: multiSelectFilter
       },
       {
-        id: "rateMode",
-        accessorKey: "rateMode",
-        header: "Rate mode",
-        cell: ({ row }) => corporateRateModeTitle[row.original.rateMode],
-        enableColumnFilter: false
-      },
-      {
-        id: "billingDay",
-        accessorFn: (row) => formatBillingDay(row.billingDay),
-        header: "Billing day",
+        id: "address",
+        accessorKey: "addressLabel",
+        header: "Address",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {truncateAddress(row.original.addressLabel)}
+          </span>
+        ),
         enableColumnFilter: false
       },
       {
@@ -210,28 +198,6 @@ export function AccountsDataTable({
         header: "Members",
         cell: ({ row }) => row.original.membersCount,
         enableColumnFilter: false
-      },
-      {
-        id: "actions",
-        header: () => null,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="hover:bg-destructive/10 hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPendingDelete(row.original);
-              }}>
-              <Trash2Icon className="size-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false
       }
     ],
     []
@@ -258,21 +224,6 @@ export function AccountsDataTable({
 
   function handleCreateOpenChange(next: boolean) {
     onCreateOpenChange?.(next);
-  }
-
-  async function confirmDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await deleteCorporateAccount(pendingDelete.id);
-      toast.success("Account deleted.");
-      setPendingDelete(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete account.");
-    } finally {
-      setDeleting(false);
-    }
   }
 
   return (
@@ -304,9 +255,7 @@ export function AccountsDataTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className={header.id === "actions" ? "w-12" : undefined}>
+                    <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -336,7 +285,7 @@ export function AccountsDataTable({
                       <TableCell
                         key={cell.id}
                         onClick={
-                          cell.column.id === "actions" || cell.column.id === "select"
+                          cell.column.id === "select"
                             ? (e) => e.stopPropagation()
                             : undefined
                         }>
@@ -357,31 +306,6 @@ export function AccountsDataTable({
         </div>
         <ListTablePagination table={table} />
       </div>
-
-      <AlertDialog
-        open={pendingDelete !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !deleting) setPendingDelete(null);
-        }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {pendingDelete?.name || "this account"}. Unlink all
-              members first. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleting}
-              onClick={(e) => void confirmDelete(e)}>
-              {deleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AccountEditSheet
         account={null}
