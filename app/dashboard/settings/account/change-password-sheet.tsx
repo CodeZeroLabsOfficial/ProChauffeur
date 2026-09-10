@@ -7,9 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 
-import { changePassword } from "@/lib/firebase/account-auth";
-import { authErrorMessage } from "@/lib/firebase/auth-errors";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { PasswordStrengthField } from "@/components/password-strength-field";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -28,11 +26,18 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
+import { isPasswordStrong } from "@/lib/auth/password-strength";
+import { changePassword } from "@/lib/firebase/account-auth";
+import { authErrorMessage } from "@/lib/firebase/auth-errors";
+import { firebaseAuth } from "@/lib/firebase/client";
 
 const passwordFormSchema = z
   .object({
     currentPassword: z.string().min(1, { message: "Current password is required." }),
-    newPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
+    newPassword: z.string().refine(isPasswordStrong, {
+      message:
+        "Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character."
+    }),
     confirmPassword: z.string().min(1, { message: "Confirm your new password." })
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -64,6 +69,9 @@ export function ChangePasswordSheet({
       confirmPassword: ""
     }
   });
+
+  const newPassword = form.watch("newPassword");
+  const confirmPassword = form.watch("confirmPassword");
 
   useEffect(() => {
     if (!open) return;
@@ -135,35 +143,34 @@ export function ChangePasswordSheet({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New password</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm new password</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <PasswordStrengthField
+                password={newPassword}
+                onPasswordChange={(value) =>
+                  form.setValue("newPassword", value, { shouldValidate: true, shouldDirty: true })
+                }
+                confirm={confirmPassword}
+                onConfirmChange={(value) =>
+                  form.setValue("confirmPassword", value, {
+                    shouldValidate: true,
+                    shouldDirty: true
+                  })
+                }
+                disabled={saving}
+                passwordLabel="New password"
+                confirmLabel="Confirm new password"
+                passwordPlaceholder="New password"
+                confirmPlaceholder="Confirm new password"
               />
               <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
                 <span />
-                <Button type="submit" disabled={saving || resetting}>
+                <Button
+                  type="submit"
+                  disabled={
+                    saving ||
+                    resetting ||
+                    !isPasswordStrong(newPassword) ||
+                    newPassword !== confirmPassword
+                  }>
                   {saving ? "Updating…" : "Update password"}
                 </Button>
               </SheetFooter>

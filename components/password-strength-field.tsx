@@ -23,13 +23,21 @@ export function PasswordStrengthField({
   onPasswordChange,
   confirm,
   onConfirmChange,
-  disabled
+  disabled,
+  passwordLabel = "Password",
+  confirmLabel = "Confirm password",
+  passwordPlaceholder = "Create a password",
+  confirmPlaceholder = "Confirm password"
 }: {
   password: string;
   onPasswordChange: (value: string) => void;
   confirm: string;
   onConfirmChange: (value: string) => void;
   disabled?: boolean;
+  passwordLabel?: string;
+  confirmLabel?: string;
+  passwordPlaceholder?: string;
+  confirmPlaceholder?: string;
 }) {
   const passwordId = useId();
   const confirmId = useId();
@@ -43,7 +51,7 @@ export function PasswordStrengthField({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={passwordId}>Password</Label>
+        <Label htmlFor={passwordId}>{passwordLabel}</Label>
         <InputGroup>
           <InputGroupInput
             id={passwordId}
@@ -52,7 +60,7 @@ export function PasswordStrengthField({
             value={password}
             disabled={disabled}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="Create a password"
+            placeholder={passwordPlaceholder}
           />
           <InputGroupAddon align="inline-end">
             <Button
@@ -106,7 +114,7 @@ export function PasswordStrengthField({
       </ul>
 
       <div className="space-y-2">
-        <Label htmlFor={confirmId}>Confirm password</Label>
+        <Label htmlFor={confirmId}>{confirmLabel}</Label>
         <InputGroup>
           <InputGroupInput
             id={confirmId}
@@ -116,7 +124,7 @@ export function PasswordStrengthField({
             disabled={disabled}
             aria-invalid={confirmMismatch || undefined}
             onChange={(e) => onConfirmChange(e.target.value)}
-            placeholder="Confirm password"
+            placeholder={confirmPlaceholder}
           />
           <InputGroupAddon align="inline-end">
             <Button
