@@ -6,7 +6,11 @@ import { PencilIcon } from "lucide-react";
 import { CompanyEditSheet } from "@/app/dashboard/settings/company/company-edit-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { emptyCompanyProfile, type CompanyProfile } from "@/lib/models";
+import {
+  emptyCompanyProfile,
+  taxIdLabelForCountry,
+  type CompanyProfile
+} from "@/lib/models";
 import { fetchCompanyProfile } from "@/lib/services/firebase-service";
 
 function displayValue(value: string | null | undefined): string {
@@ -88,8 +92,7 @@ export default function CompanyDetailsPage() {
               href={company.email ? `mailto:${company.email}` : undefined}
             />
             <DetailField label="Company website" value={company.website} href={websiteHref(company.website)} />
-            <DetailField label="Company ABN" value={company.abn} />
-            <DetailField label="Company ACN" value={company.acn} />
+            <DetailField label={taxIdLabelForCountry(company.country)} value={company.taxId} />
           </CardContent>
         </Card>
 

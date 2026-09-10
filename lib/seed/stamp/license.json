@@ -1,0 +1,7 @@
+{
+  "planId": "essentials",
+  "maxAdmins": 1,
+  "maxDrivers": 3,
+  "maxLocations": 1,
+  "featureFlags": {}
+}

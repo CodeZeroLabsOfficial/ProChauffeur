@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { saveCompanyProfile } from "@/lib/services/firebase-service";
-import type { CompanyProfile } from "@/lib/models";
+import { taxIdLabelForCountry, type CompanyProfile } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,7 @@ function profileFromForm(form: FormData): CompanyProfile {
     phone: orNull("phone"),
     email: orNull("email"),
     website: orNull("website"),
-    abn: orNull("abn"),
-    acn: orNull("acn"),
+    taxId: orNull("taxId"),
     street: orNull("street"),
     city: orNull("city"),
     state: orNull("state"),
@@ -51,10 +50,14 @@ export function CompanyEditSheet({
 }) {
   const [saving, setSaving] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [country, setCountry] = useState(company.country ?? "");
 
   useEffect(() => {
-    if (open) setFormKey((n) => n + 1);
-  }, [open]);
+    if (open) {
+      setFormKey((n) => n + 1);
+      setCountry(company.country ?? "");
+    }
+  }, [open, company.country]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,6 +74,8 @@ export function CompanyEditSheet({
       setSaving(false);
     }
   }
+
+  const taxLabel = taxIdLabelForCountry(country);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -104,15 +109,9 @@ export function CompanyEditSheet({
                 defaultValue={company.website ?? ""}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="abn">Company ABN</Label>
-                <Input id="abn" name="abn" defaultValue={company.abn ?? ""} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="acn">Company ACN</Label>
-                <Input id="acn" name="acn" defaultValue={company.acn ?? ""} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxId">{taxLabel}</Label>
+              <Input id="taxId" name="taxId" defaultValue={company.taxId ?? ""} />
             </div>
           </div>
 
@@ -139,7 +138,12 @@ export function CompanyEditSheet({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
-                <Input id="country" name="country" defaultValue={company.country ?? ""} />
+                <Input
+                  id="country"
+                  name="country"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
               </div>
             </div>
           </div>

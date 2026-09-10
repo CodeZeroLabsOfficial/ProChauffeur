@@ -1,0 +1,24 @@
+{
+  "defaultPlanId": "essentials",
+  "plans": {
+    "essentials": {
+      "label": "Essentials",
+      "features": ["driverRatings"]
+    },
+    "professional": {
+      "label": "Professional",
+      "features": ["driverRatings", "corporateAccounts"]
+    },
+    "premium": {
+      "label": "Premium",
+      "features": [
+        "autoDispatch",
+        "bookingValidation",
+        "driverRatings",
+        "dynamicPricing",
+        "loyaltyPromos",
+        "corporateAccounts"
+      ]
+    }
+  }
+}

@@ -23,14 +23,35 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const denied = requireCanManageLocations(session);
-  if (denied) return denied;
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const data = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const onboardingToken = typeof data.token === "string" ? data.token.trim() : "";
+
+  if (onboardingToken) {
+    const { assertOnboardingSession } = await import("@/lib/onboarding/server");
+    const inviteCheck = await assertOnboardingSession(session.uid, onboardingToken);
+    if (!inviteCheck.ok) {
+      return NextResponse.json({ error: inviteCheck.error }, { status: inviteCheck.status });
+    }
+    if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            "Mapbox is not configured for this workspace. Contact your provider before creating a Location."
+        },
+        { status: 503 }
+      );
+    }
+  } else {
+    const denied = requireCanManageLocations(session);
+    if (denied) return denied;
   }
 
   const parsed = createLocationBodySchema.safeParse(body);

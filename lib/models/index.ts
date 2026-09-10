@@ -40,7 +40,11 @@ export const AppSettingsDocs = {
   /** Appearance settings (workspace name, logo, fonts, primary colour). */
   appearance: "workspace",
   integrations: "integrations",
-  company: "company"
+  company: "company",
+  /** First-run onboarding completion (`completedAt`, `completedByUid`). */
+  onboarding: "onboarding",
+  /** Single-use onboarding invite (`tokenHash`, `expiresAt`, `status`, `boundUid`). */
+  onboardingInvite: "onboardingInvite"
 } as const;
 
 /** RTDB root for live trip positions (`liveTrips/{branchId}/{tripId}`). */

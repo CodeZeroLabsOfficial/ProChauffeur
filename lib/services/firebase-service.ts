@@ -398,6 +398,8 @@ export type CreateLocationFromSeedInput = {
   officeEmail?: string | null;
   contactUserId?: string | null;
   isActive: boolean;
+  /** Present during invite onboarding so the API can gate Mapbox + invite. */
+  token?: string;
 };
 
 /** Creates a Location from the chosen country seed file (Admin API). */
@@ -418,7 +420,9 @@ export async function createLocationFromSeed(
     createdAt: new Date(body.branch.createdAt),
     updatedAt: new Date(body.branch.updatedAt)
   };
-  void createActivityNotification(locationNotification("created", created.name, created.id));
+  if (!input.token) {
+    void createActivityNotification(locationNotification("created", created.name, created.id));
+  }
   return created;
 }
 
@@ -1624,7 +1628,11 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
 export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
   await setDoc(
     doc(db(), Collections.appSettings, AppSettingsDocs.company),
-    stripUndefined({ ...profile }),
+    stripUndefined({
+      ...profile,
+      abn: deleteField(),
+      acn: deleteField()
+    }),
     { merge: true }
   );
   void createActivityNotification(companyNotification());

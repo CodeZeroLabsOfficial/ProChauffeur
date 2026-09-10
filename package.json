@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "stamp:seed": "node --env-file=.env.local scripts/stamp.mjs seed",
+    "stamp:invite": "node --env-file=.env.local scripts/stamp.mjs invite"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

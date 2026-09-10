@@ -71,6 +71,42 @@ Payload shape: `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 When a trip is **completed** or **cancelled**, `tripId` is cleared on that node
 while keeping the last GPS fix.
 
+## Stamp checklist (new Firebase + Vercel)
+
+Use this when standing up a **blank** customer stamp from this repo. Do not copy
+production Firestore data.
+
+1. Create the Firebase project (Auth, Firestore, RTDB, Storage) and a matching Vercel project.
+2. Point the CLI at that project: `firebase use --add`, then `firebase use`.
+3. Deploy rules, indexes, Functions, and secrets:
+
+```bash
+cp functions/.env.example functions/.env
+# Set FUNCTIONS_REGION and SCHEDULE_TIMEZONE for this stamp.
+firebase deploy --only firestore:rules,firestore:indexes,storage,database,functions
+```
+
+4. Seed plans + license (Essentials, 1 Location / 1 Admin / 3 Drivers). Edit
+   `lib/seed/stamp/license.json` or the Firestore doc before inviting if needed:
+
+```bash
+npm run stamp:seed
+```
+
+5. Set every variable from `.env.example` on Vercel (and locally in `.env.local`),
+   including `NEXT_PUBLIC_FUNCTIONS_REGION` and **`NEXT_PUBLIC_MAPBOX_TOKEN`**
+   (required before the customer can create Location 1).
+6. Mint a single-use onboarding invite and send the URL to the customer:
+
+```bash
+npm run stamp:invite -- --host https://your-vercel-host
+```
+
+7. Customer opens `/onboarding?token=…`, completes the wizard (admin → company →
+   workspace → integrations optional → first Location), then uses `/login` afterwards.
+8. **iOS:** ship that project’s `GoogleService-Info.plist`, bundle id, signing, and
+   `FUNCTIONS_REGION` in Info.plist. Checklist only — not configured from this repo.
+
 ## Deployment (Vercel)
 
 Set every variable from `.env.example` in Project Settings → Environment Variables.

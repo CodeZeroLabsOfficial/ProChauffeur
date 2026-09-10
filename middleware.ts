@@ -5,10 +5,16 @@ import { SESSION_COOKIE } from "@/lib/firebase/session-cookie";
 /**
  * Auth gate for dashboard routes. Uses middleware.ts (not proxy.ts) for broad
  * Vercel runtime compatibility — Next.js 16 proxy can cause sitewide 404s on Vercel.
+ *
+ * Onboarding completeness is enforced in the dashboard layout (Admin SDK), not here.
  */
 export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/onboarding")) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/dashboard") && !hasSession) {
     const loginUrl = new URL("/login", request.url);
@@ -24,5 +30,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"]
+  matcher: ["/dashboard/:path*", "/login", "/onboarding", "/onboarding/:path*"]
 };

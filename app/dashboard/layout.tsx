@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { fetchAppearanceAdmin } from "@/lib/firebase/admin-settings";
 import { getAdminSessionUser } from "@/lib/firebase/session";
+import { isOnboardingCompleted } from "@/lib/onboarding/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StaffAccessGate } from "@/components/staff-access-gate";
@@ -17,6 +18,10 @@ export default async function DashboardLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await getAdminSessionUser();
   if (!user) redirect("/login");
+
+  if (!(await isOnboardingCompleted())) {
+    redirect("/onboarding");
+  }
 
   const appearance = await fetchAppearanceAdmin();
   const cookieStore = await cookies();
