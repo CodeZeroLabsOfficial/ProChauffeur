@@ -16,7 +16,7 @@ const {
   syncSavedCardsHandler,
 } = require("./billing/savedCards");
 const { claimCorporateJoinCodeHandler } = require("./billing/claimCorporateJoinCode");
-const { computeQuoteHandler } = require("./billing/computeQuote");
+const { buildTripQuoteHandler } = require("./billing/buildTripQuote");
 const {
   consolidateCorporateInvoicesHandler,
   consolidateCorporateInvoicesCallableHandler,
@@ -32,7 +32,7 @@ admin.initializeApp();
 
 const callableOptions = { secrets: [stripeSecretKey] };
 const tripCardPaymentOptions = { secrets: [stripeSecretKey, mapboxAccessToken] };
-const computeQuoteOptions = { secrets: [mapboxAccessToken] };
+const buildTripQuoteOptions = { secrets: [mapboxAccessToken] };
 const consolidateScheduleOptions = {
   schedule: "0 1 * * *",
   timeZone: scheduleTimezone,
@@ -52,7 +52,7 @@ exports.syncCorporateStripeCustomer = onCall(
 exports.markInvoicePaid = onCall(callableOptions, markInvoicePaidHandler);
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
-exports.computeQuote = onCall(computeQuoteOptions, computeQuoteHandler);
+exports.buildTripQuote = onCall(buildTripQuoteOptions, buildTripQuoteHandler);
 exports.generateCorporatePeriodInvoice = onCall(
   callableOptions,
   consolidateCorporateInvoicesCallableHandler

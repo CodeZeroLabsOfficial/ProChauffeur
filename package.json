@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "stamp:seed": "node --env-file=.env.local scripts/stamp.mjs seed",
-    "stamp:invite": "node --env-file=.env.local scripts/stamp.mjs invite"
+    "stamp:invite": "node --env-file=.env.local scripts/stamp.mjs invite",
+    "build:pricing": "node scripts/build-pricing-for-functions.mjs",
+    "test:vectors": "npm run build:pricing && node scripts/run-pricing-vectors.mjs",
+    "test": "npm run test:vectors"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -84,6 +87,7 @@
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.2",
     "eslint-config-next": "^15.5.9",
     "prettier": "^3.7.4",

@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@prochauffeur/pricing": ["./packages/pricing/src/index.ts"]
     }
   },
   "include": [

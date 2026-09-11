@@ -1,57 +1,79 @@
-const { randomUUID } = require("crypto");
-const { applyPromoDiscountLayer } = require("./apply-promo");
-const {
+import type { FleetLocation } from "../../../lib/models/location";
+import type { OperatorLocale } from "../../../lib/models/locale";
+import type {
+  PricingAddon,
+  PricingConfig,
+  PricingRule,
+  PricingZone
+} from "../../../lib/models/pricing";
+import type { VehicleClass } from "../../../lib/models/vehicle-class";
+import type {
+  QuoteRequest,
+  QuoteResult,
+  QuoteLineItem,
+  TripQuoteSnapshot
+} from "../../../lib/models/quote";
+import { PRICING_WEEKEND_WEEKDAYS, type WeekdayNumber } from "../../../lib/models/enums";
+import { applyPromoDiscountLayer } from "./apply-promo";
+import {
   applyCorporateFixedRatesToVehicleClass,
   applyCorporatePercentOffLayer,
-  findCorporateFixedOverride,
-} = require("./apply-corporate-rate");
-const { metersToDistanceUnit } = require("./distance");
+  findCorporateFixedOverride
+} from "./apply-corporate-rate";
+import { metersToDistanceUnit } from "./distance";
+import { QuoteError } from "./errors";
 
-class QuoteError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "QuoteError";
-  }
+export interface QuoteEngineContext {
+  pricing: PricingConfig;
+  locale: OperatorLocale;
+  vehicleClass: VehicleClass;
+  officeLocation: FleetLocation;
+  routeDistanceMeters: number;
+  deadheadDistanceMeters: number;
+  deadheadDurationMinutes: number;
+  /**
+   * When true, apply peak_hours / holiday / date_range rules.
+   * Resolved by callers from company `dynamicPricing` + Location `dynamicPricingEnabled`.
+   */
+  dynamicPricingActive: boolean;
 }
 
-function lineId() {
-  return randomUUID();
+function lineId(): string {
+  return crypto.randomUUID();
 }
 
-function isoWeekdayInTimezone(date, timeZone) {
+function isoWeekdayInTimezone(date: Date, timeZone: string): WeekdayNumber {
   const weekday = new Intl.DateTimeFormat("en-US", {
     timeZone,
-    weekday: "short",
+    weekday: "short"
   }).format(date);
-  const map = {
+  const map: Record<string, WeekdayNumber> = {
     Mon: 1,
     Tue: 2,
     Wed: 3,
     Thu: 4,
     Fri: 5,
     Sat: 6,
-    Sun: 7,
+    Sun: 7
   };
   return map[weekday] ?? 1;
 }
 
-function timeStringInTimezone(date, timeZone) {
+function timeStringInTimezone(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hour12: false
   }).format(date);
 }
 
-function parseTimeToMinutes(value) {
-  const parts = value.split(":").map((part) => parseInt(part, 10));
-  const h = parts[0] ?? 0;
-  const m = parts[1] ?? 0;
-  return h * 60 + m;
+function parseTimeToMinutes(value: string): number {
+  const [h, m] = value.split(":").map((part) => parseInt(part, 10));
+  return (h ?? 0) * 60 + (m ?? 0);
 }
 
-function isTimeWithinRange(now, start, end) {
+function isTimeWithinRange(now: string, start: string, end: string): boolean {
   const current = parseTimeToMinutes(now);
   const from = parseTimeToMinutes(start);
   const to = parseTimeToMinutes(end);
@@ -59,12 +81,12 @@ function isTimeWithinRange(now, start, end) {
   return current >= from || current < to;
 }
 
-function dateStringInTimezone(date, timeZone) {
+function dateStringInTimezone(date: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",
-    day: "2-digit",
+    day: "2-digit"
   }).formatToParts(date);
   const y = parts.find((p) => p.type === "year")?.value ?? "1970";
   const m = parts.find((p) => p.type === "month")?.value ?? "01";
@@ -72,33 +94,37 @@ function dateStringInTimezone(date, timeZone) {
   return `${y}-${m}-${d}`;
 }
 
-function roundTotal(total, mode) {
+function roundTotal(total: number, mode: PricingConfig["quoteRounding"]): number {
   if (mode === "dollar") return Math.round(total);
   if (mode === "half_dollar") return Math.round(total * 2) / 2;
   return Math.round(total * 100) / 100;
 }
 
-function requireVehicleClass(vehicleClass) {
+function requireVehicleClass(vehicleClass: VehicleClass): VehicleClass {
   if (!vehicleClass.isEnabled) {
     throw new QuoteError(`Vehicle class "${vehicleClass.displayName}" is not enabled.`);
   }
   return vehicleClass;
 }
 
-function computeTransferBase(vehicleClass, onboardUnits, deadheadUnits) {
+function computeTransferBase(
+  vehicleClass: VehicleClass,
+  onboardUnits: number,
+  deadheadUnits: number
+): { amount: number; lines: QuoteLineItem[] } {
   const rates = vehicleClass.transfer;
   const distanceCharge =
     deadheadUnits * rates.deadheadRatePerUnit + onboardUnits * rates.tripRatePerUnit;
   const raw = rates.baseFare + distanceCharge + rates.returnToBaseFee;
   const amount = Math.max(rates.minimumBaseRate, raw);
-  const lines = [
+  const lines: QuoteLineItem[] = [
     {
       id: lineId(),
       label: "Base fare",
       amount: rates.baseFare,
       category: "base",
-      isInternal: true,
-    },
+      isInternal: true
+    }
   ];
   if (deadheadUnits > 0) {
     lines.push({
@@ -106,7 +132,7 @@ function computeTransferBase(vehicleClass, onboardUnits, deadheadUnits) {
       label: "Deadhead",
       amount: deadheadUnits * rates.deadheadRatePerUnit,
       category: "deadhead",
-      isInternal: true,
+      isInternal: true
     });
   }
   if (onboardUnits > 0) {
@@ -115,7 +141,7 @@ function computeTransferBase(vehicleClass, onboardUnits, deadheadUnits) {
       label: "Distance",
       amount: onboardUnits * rates.tripRatePerUnit,
       category: "distance",
-      isInternal: true,
+      isInternal: true
     });
   }
   if (amount > raw) {
@@ -124,19 +150,19 @@ function computeTransferBase(vehicleClass, onboardUnits, deadheadUnits) {
       label: "Minimum fare",
       amount: amount - raw,
       category: "minimum",
-      isInternal: true,
+      isInternal: true
     });
   }
   return { amount, lines };
 }
 
 function computeHourlyBase(
-  vehicleClass,
-  weekday,
-  weekendWeekdays,
-  bookedHours,
-  deadheadDurationMinutes
-) {
+  vehicleClass: VehicleClass,
+  weekday: WeekdayNumber,
+  weekendWeekdays: Set<WeekdayNumber>,
+  bookedHours: number,
+  deadheadDurationMinutes: number
+): { amount: number; lines: QuoteLineItem[] } {
   const rates = vehicleClass.hourly;
   const isWeekend = weekendWeekdays.has(weekday);
   const hourlyRate = isWeekend ? rates.weekendHourlyRate : rates.weekdayHourlyRate;
@@ -145,14 +171,14 @@ function computeHourlyBase(
   const chargeableDeadhead = Math.max(0, deadheadDurationMinutes - rates.freeDeadheadMinutes);
   const deadheadCharge = (chargeableDeadhead / 60) * rates.deadheadRatePerMinute;
   const amount = billableHours * hourlyRate + deadheadCharge;
-  const lines = [
+  const lines: QuoteLineItem[] = [
     {
       id: lineId(),
       label: `${billableHours} hr @ ${hourlyRate}`,
       amount: billableHours * hourlyRate,
       category: "hourly",
-      isInternal: true,
-    },
+      isInternal: true
+    }
   ];
   if (deadheadCharge > 0) {
     lines.push({
@@ -160,7 +186,7 @@ function computeHourlyBase(
       label: "Deadhead time",
       amount: deadheadCharge,
       category: "deadhead",
-      isInternal: true,
+      isInternal: true
     });
   }
   if (billableHours > bookedHours) {
@@ -169,32 +195,45 @@ function computeHourlyBase(
       label: "Minimum hours",
       amount: 0,
       category: "minimum",
-      isInternal: true,
+      isInternal: true
     });
   }
   return { amount, lines };
 }
 
-function normalizedZonePostcodes(zone) {
-  const postcodes = (zone.match && zone.match.postcodes) || [];
-  return new Set(postcodes.map((p) => String(p).trim().toUpperCase()));
+type PickupTimeContext = {
+  weekday: WeekdayNumber;
+  time: string;
+  date: string;
+};
+
+function normalizedZonePostcodes(zone: PricingZone): Set<string> {
+  const postcodes = zone.match.postcodes ?? [];
+  return new Set(postcodes.map((p) => p.trim().toUpperCase()));
 }
 
-function zoneMatchesPostcode(normalized, pickupPostcode, dropoffPostcode) {
-  const pickup = String(pickupPostcode || "").trim().toUpperCase();
-  const dropoff = String(dropoffPostcode || "").trim().toUpperCase();
+function zoneMatchesPostcode(
+  normalized: Set<string>,
+  pickupPostcode: string,
+  dropoffPostcode: string
+): boolean {
+  const pickup = pickupPostcode.trim().toUpperCase();
+  const dropoff = dropoffPostcode.trim().toUpperCase();
   return (
     (pickup.length > 0 && normalized.has(pickup)) ||
     (dropoff.length > 0 && normalized.has(dropoff))
   );
 }
 
-function matchingZones(pricing, pickupPostcode, dropoffPostcode) {
-  const matched = [];
-  const zones = Array.isArray(pricing.zones) ? pricing.zones : [];
-  for (const zone of zones) {
+function matchingZones(
+  pricing: PricingConfig,
+  pickupPostcode: string,
+  dropoffPostcode: string
+): PricingZone[] {
+  const matched: PricingZone[] = [];
+  for (const zone of pricing.zones) {
     if (!zone.isEnabled) continue;
-    if (!zone.match || zone.match.type !== "postcode") continue;
+    if (zone.match.type !== "postcode") continue;
     const normalized = normalizedZonePostcodes(zone);
     if (zoneMatchesPostcode(normalized, pickupPostcode, dropoffPostcode)) {
       matched.push(zone);
@@ -203,12 +242,22 @@ function matchingZones(pricing, pickupPostcode, dropoffPostcode) {
   return matched;
 }
 
-function applyZoneLayer(baseAmount, baseLines, zones) {
+function applyZoneLayer(
+  baseAmount: number,
+  baseLines: QuoteLineItem[],
+  zones: PricingZone[]
+): {
+  amount: number;
+  lines: QuoteLineItem[];
+  matchedZoneIds: string[];
+  appliedFixedZoneId: string | null;
+  appliedZoneSurchargeIds: string[];
+} {
   const matchedZoneIds = zones.map((z) => z.id);
   let amount = baseAmount;
   let lines = [...baseLines];
-  let appliedFixedZoneId = null;
-  const appliedZoneSurchargeIds = [];
+  let appliedFixedZoneId: string | null = null;
+  const appliedZoneSurchargeIds: string[] = [];
 
   const fixedZone = [...zones]
     .filter((z) => typeof z.fixedTransferRate === "number")
@@ -221,8 +270,8 @@ function applyZoneLayer(baseAmount, baseLines, zones) {
         label: `${fixedZone.name} fixed rate`,
         amount,
         category: "zone_fixed",
-        isInternal: true,
-      },
+        isInternal: true
+      }
     ];
     appliedFixedZoneId = fixedZone.id;
   }
@@ -236,7 +285,7 @@ function applyZoneLayer(baseAmount, baseLines, zones) {
         label: zone.name,
         amount: zone.flatSurcharge,
         category: "zone_surcharge",
-        isInternal: true,
+        isInternal: true
       });
     }
   }
@@ -244,20 +293,18 @@ function applyZoneLayer(baseAmount, baseLines, zones) {
   return { amount, lines, matchedZoneIds, appliedFixedZoneId, appliedZoneSurchargeIds };
 }
 
-function ruleMatches(rule, pickupTime) {
+function ruleMatches(rule: PricingRule, pickupTime: PickupTimeContext): boolean {
   const { weekday, time, date } = pickupTime;
 
   if (rule.type === "peak_hours") {
-    if (rule.weekdays && rule.weekdays.length && !rule.weekdays.includes(weekday)) {
-      return false;
-    }
+    if (rule.weekdays?.length && !rule.weekdays.includes(weekday)) return false;
     if (rule.startTime && rule.endTime && !isTimeWithinRange(time, rule.startTime, rule.endTime)) {
       return false;
     }
     return true;
   }
   if (rule.type === "holiday") {
-    return Boolean(rule.dates && rule.dates.includes(date));
+    return Boolean(rule.dates?.includes(date));
   }
   if (rule.type === "date_range") {
     if (!rule.startDate || !rule.endDate) return false;
@@ -266,60 +313,68 @@ function ruleMatches(rule, pickupTime) {
   return false;
 }
 
-function applyTimeRuleLayer(amount, lines, pricing, request, pickupTime) {
+function applyTimeRuleLayer(
+  amount: number,
+  lines: QuoteLineItem[],
+  pricing: PricingConfig,
+  request: QuoteRequest,
+  pickupTime: PickupTimeContext
+): { amount: number; lines: QuoteLineItem[]; appliedRuleId: string | null } {
   if (request.tripType !== "transfer") {
     return { amount, lines, appliedRuleId: null };
   }
 
-  const rules = Array.isArray(pricing.rules) ? pricing.rules : [];
-  const winner = rules
+  const winner = pricing.rules
     .filter((rule) => rule.isEnabled && ruleMatches(rule, pickupTime))
     .sort((a, b) => b.priority - a.priority)[0];
 
   if (!winner) return { amount, lines, appliedRuleId: null };
 
   let nextAmount = amount;
-  let nextLines = lines;
   if (typeof winner.percentAdjustment === "number") {
     const adjustment = amount * winner.percentAdjustment;
     nextAmount += adjustment;
-    nextLines = [
+    lines = [
       ...lines,
       {
         id: lineId(),
         label: winner.name,
         amount: adjustment,
         category: "time_adjustment",
-        isInternal: true,
-      },
+        isInternal: true
+      }
     ];
   } else if (typeof winner.flatSurcharge === "number") {
     nextAmount += winner.flatSurcharge;
-    nextLines = [
+    lines = [
       ...lines,
       {
         id: lineId(),
         label: winner.name,
         amount: winner.flatSurcharge,
         category: "time_adjustment",
-        isInternal: true,
-      },
+        isInternal: true
+      }
     ];
   }
 
-  return { amount: nextAmount, lines: nextLines, appliedRuleId: winner.id };
+  return { amount: nextAmount, lines, appliedRuleId: winner.id };
 }
 
-function applyAddons(amount, lines, addons, request, selectedAddonIds) {
+function applyAddons(
+  amount: number,
+  lines: QuoteLineItem[],
+  addons: PricingAddon[],
+  request: QuoteRequest,
+  selectedAddonIds: Set<string>
+): { amount: number; lines: QuoteLineItem[] } {
   let nextAmount = amount;
   const nextLines = [...lines];
-  const list = Array.isArray(addons) ? addons : [];
-  for (const addon of list) {
+  for (const addon of addons) {
     if (!addon.isEnabled) continue;
     if (!selectedAddonIds.has(addon.id)) continue;
-    if (!Array.isArray(addon.tripTypes) || !addon.tripTypes.includes(request.tripType)) continue;
+    if (!addon.tripTypes.includes(request.tripType)) continue;
     if (
-      Array.isArray(addon.vehicleClassIds) &&
       addon.vehicleClassIds.length > 0 &&
       !addon.vehicleClassIds.includes(request.vehicleClassId)
     ) {
@@ -331,13 +386,17 @@ function applyAddons(amount, lines, addons, request, selectedAddonIds) {
       label: addon.title,
       amount: addon.price,
       category: "addon",
-      isInternal: false,
+      isInternal: false
     });
   }
   return { amount: nextAmount, lines: nextLines };
 }
 
-function applyTax(amount, lines, locale) {
+function applyTax(
+  amount: number,
+  lines: QuoteLineItem[],
+  locale: OperatorLocale
+): { subtotal: number; taxAmount: number; total: number; lines: QuoteLineItem[] } {
   if (locale.taxDisplayMode === "inclusive") {
     const total = amount;
     const taxAmount = total - total / (1 + locale.defaultTaxRate);
@@ -353,9 +412,9 @@ function applyTax(amount, lines, locale) {
           label: locale.taxName,
           amount: taxAmount,
           category: "tax",
-          isInternal: !locale.showTaxOnQuotes,
-        },
-      ],
+          isInternal: !locale.showTaxOnQuotes
+        }
+      ]
     };
   }
 
@@ -373,13 +432,17 @@ function applyTax(amount, lines, locale) {
         label: locale.taxName,
         amount: taxAmount,
         category: "tax",
-        isInternal: !locale.showTaxOnQuotes,
-      },
-    ],
+        isInternal: !locale.showTaxOnQuotes
+      }
+    ]
   };
 }
 
-function computeQuote(request, context) {
+/** Pure fare calculator. Callers resolve entitlements before building context. */
+export function buildTripQuote(
+  request: QuoteRequest,
+  context: QuoteEngineContext
+): QuoteResult {
   if (request.tripType === "round_trip") {
     throw new QuoteError("Round trip must be quoted as separate point-to-point legs.");
   }
@@ -399,13 +462,13 @@ function computeQuote(request, context) {
       : null;
   const vehicleClass = applyCorporateFixedRatesToVehicleClass(vehicleClassRaw, fixedOverride);
 
-  const pickupTime = {
+  const pickupTime: PickupTimeContext = {
     weekday: isoWeekdayInTimezone(request.scheduledPickupAt, context.locale.timezone),
     time: timeStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
-    date: dateStringInTimezone(request.scheduledPickupAt, context.locale.timezone),
+    date: dateStringInTimezone(request.scheduledPickupAt, context.locale.timezone)
   };
-  const weekendWeekdays = new Set([6, 7]); // Sat–Sun (Mon=1 … Sun=7)
-  const selectedAddonIds = new Set(request.addonIds || []);
+  const weekendWeekdays = new Set<WeekdayNumber>(PRICING_WEEKEND_WEEKDAYS);
+  const selectedAddonIds = new Set(request.addonIds);
   const onboardUnits = metersToDistanceUnit(
     context.routeDistanceMeters,
     context.locale.distanceUnit
@@ -416,12 +479,11 @@ function computeQuote(request, context) {
   );
 
   let baseAmount = 0;
-  let lines = [];
+  let lines: QuoteLineItem[] = [];
 
   if (
     request.tripType === "transfer" &&
-    fixedOverride &&
-    fixedOverride.fixedTransferRate != null &&
+    fixedOverride?.fixedTransferRate != null &&
     fixedOverride.fixedTransferRate > 0
   ) {
     baseAmount = fixedOverride.fixedTransferRate;
@@ -431,8 +493,8 @@ function computeQuote(request, context) {
         label: "Corporate fixed transfer",
         amount: baseAmount,
         category: "base",
-        isInternal: false,
-      },
+        isInternal: false
+      }
     ];
   } else if (request.tripType === "transfer") {
     const transfer = computeTransferBase(vehicleClass, onboardUnits, deadheadUnits);
@@ -444,7 +506,7 @@ function computeQuote(request, context) {
         label: "Global minimum fare",
         amount: baseAmount - transfer.amount,
         category: "minimum",
-        isInternal: true,
+        isInternal: true
       });
     }
   } else {
@@ -452,7 +514,7 @@ function computeQuote(request, context) {
       vehicleClass,
       pickupTime.weekday,
       weekendWeekdays,
-      request.bookedHours,
+      request.bookedHours!,
       context.deadheadDurationMinutes
     );
     baseAmount = hourly.amount;
@@ -464,7 +526,9 @@ function computeQuote(request, context) {
   let amount = zoneResult.amount;
   lines = zoneResult.lines;
 
-  const timeResult = applyTimeRuleLayer(amount, lines, context.pricing, request, pickupTime);
+  const timeResult = context.dynamicPricingActive
+    ? applyTimeRuleLayer(amount, lines, context.pricing, request, pickupTime)
+    : { amount, lines, appliedRuleId: null as string | null };
   amount = timeResult.amount;
   lines = timeResult.lines;
 
@@ -479,13 +543,12 @@ function computeQuote(request, context) {
   lines = addonResult.lines;
 
   const useCorporateRates = Boolean(corporate && corporate.status === "active");
-  if (useCorporateRates && corporate.rateMode === "percentOff") {
+  if (useCorporateRates && corporate?.rateMode === "percentOff") {
     const corpResult = applyCorporatePercentOffLayer(amount, lines, corporate, lineId);
     amount = corpResult.amount;
     lines = corpResult.lines;
   }
 
-  // Corporate rates do not stack with promo codes.
   const appliedPromo = useCorporateRates ? null : (request.appliedPromo ?? null);
   const promoResult = applyPromoDiscountLayer(amount, lines, appliedPromo, lineId);
   amount = promoResult.amount;
@@ -494,7 +557,7 @@ function computeQuote(request, context) {
   const taxed = applyTax(amount, lines, context.locale);
   const roundedTotal = roundTotal(taxed.total, context.pricing.quoteRounding);
 
-  const snapshot = {
+  const snapshot: TripQuoteSnapshot = {
     schemaVersion: context.pricing.schemaVersion,
     tripType: request.tripType,
     vehicleClassId: request.vehicleClassId,
@@ -508,14 +571,14 @@ function computeQuote(request, context) {
     appliedFixedZoneId: zoneResult.appliedFixedZoneId,
     appliedZoneSurchargeIds: zoneResult.appliedZoneSurchargeIds,
     appliedRuleId: timeResult.appliedRuleId,
-    addonIds: request.addonIds || [],
-    appliedPromoId: appliedPromo ? appliedPromo.id : null,
-    promoCode: appliedPromo ? appliedPromo.code : null,
-    corporateAccountId: useCorporateRates ? corporate.id : null,
-    corporateRateMode: useCorporateRates ? corporate.rateMode : null,
+    addonIds: request.addonIds,
+    appliedPromoId: appliedPromo?.id ?? null,
+    promoCode: appliedPromo?.code ?? null,
+    corporateAccountId: useCorporateRates ? corporate!.id : null,
+    corporateRateMode: useCorporateRates ? corporate!.rateMode : null,
     pickupPostcode: request.pickupPostcode,
     dropoffPostcode: request.dropoffPostcode,
-    scheduledPickupAt: request.scheduledPickupAt,
+    scheduledPickupAt: request.scheduledPickupAt
   };
 
   return {
@@ -527,11 +590,6 @@ function computeQuote(request, context) {
     snapshot,
     displayTotal: roundedTotal,
     quotedPricesIncludeTax: context.locale.taxDisplayMode === "inclusive",
-    quotedTaxRate: context.locale.defaultTaxRate,
+    quotedTaxRate: context.locale.defaultTaxRate
   };
 }
-
-module.exports = {
-  computeQuote,
-  QuoteError,
-};

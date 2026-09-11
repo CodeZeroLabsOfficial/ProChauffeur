@@ -1,4 +1,4 @@
-/** Re-export shared license entitlements. Source of truth: `@prochauffeur/pricing`. */
+/** Shared license entitlements and QuoteEngine fare math. */
 export {
   FEATURE_IDS,
   LOCATION_OPS_FEATURE_IDS,
@@ -27,4 +27,14 @@ export {
   type AppPlansCatalog,
   type AppLicense,
   type LocationOpsFlags
-} from "@prochauffeur/pricing";
+} from "./license";
+
+export { ConfigError, QuoteError } from "./errors";
+export { metersToDistanceUnit, distanceUnitLabel } from "./distance";
+export {
+  findCorporateFixedOverride,
+  applyCorporateFixedRatesToVehicleClass,
+  applyCorporatePercentOffLayer
+} from "./apply-corporate-rate";
+export { applyPromoDiscountLayer } from "./apply-promo";
+export { buildTripQuote, type QuoteEngineContext } from "./quote-engine";

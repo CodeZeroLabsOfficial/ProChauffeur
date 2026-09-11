@@ -7,7 +7,7 @@ import type { CoordinateField } from "@/lib/models/trip";
 import type { TripType } from "@/lib/models/enums";
 
 /** Flat quote inputs used by the dashboard; wrapped into nested journey/quote for the callable. */
-export type ComputeQuoteTripInput = {
+export type BuildTripQuoteTripInput = {
   tripType: TripType;
   vehicleClassId: string;
   pickup: CoordinateField;
@@ -21,16 +21,16 @@ export type ComputeQuoteTripInput = {
   addonIds: string[];
 };
 
-export type ComputeQuoteRequest = {
+export type BuildTripQuoteRequest = {
   branchId: string;
   customerId: string;
   settlement: CorporateAllowedPayment;
-  trip: ComputeQuoteTripInput;
+  trip: BuildTripQuoteTripInput;
   promoCode?: string | null;
 };
 
-/** Nested trip payload expected by the `computeQuote` Cloud Function. */
-type ComputeQuoteNestedTrip = {
+/** Nested trip payload expected by the `buildTripQuote` Cloud Function. */
+type BuildTripQuoteNestedTrip = {
   journey: {
     tripType: TripType;
     pickup: CoordinateField;
@@ -46,13 +46,13 @@ type ComputeQuoteNestedTrip = {
   };
 };
 
-type ComputeQuoteRemoteResult = Omit<QuoteResult, "snapshot"> & {
+type BuildTripQuoteRemoteResult = Omit<QuoteResult, "snapshot"> & {
   snapshot: Omit<TripQuoteSnapshot, "scheduledPickupAt"> & {
     scheduledPickupAt: string | Date;
   };
 };
 
-function nestedTripPayload(trip: ComputeQuoteTripInput): ComputeQuoteNestedTrip {
+function nestedTripPayload(trip: BuildTripQuoteTripInput): BuildTripQuoteNestedTrip {
   return {
     journey: {
       tripType: trip.tripType,
@@ -70,7 +70,7 @@ function nestedTripPayload(trip: ComputeQuoteTripInput): ComputeQuoteNestedTrip 
   };
 }
 
-function reviveQuoteResult(raw: ComputeQuoteRemoteResult): QuoteResult {
+function reviveQuoteResult(raw: BuildTripQuoteRemoteResult): QuoteResult {
   const scheduled = raw.snapshot?.scheduledPickupAt;
   const scheduledPickupAt =
     scheduled instanceof Date
@@ -89,17 +89,17 @@ function reviveQuoteResult(raw: ComputeQuoteRemoteResult): QuoteResult {
 }
 
 /** Server quote with corporate rates (and optional promo when retail settlement path). */
-export async function computeQuoteRemote(request: ComputeQuoteRequest): Promise<QuoteResult> {
+export async function buildTripQuoteRemote(request: BuildTripQuoteRequest): Promise<QuoteResult> {
   const callable = httpsCallable<
     {
       branchId: string;
       customerId: string;
       settlement: CorporateAllowedPayment;
-      trip: ComputeQuoteNestedTrip;
+      trip: BuildTripQuoteNestedTrip;
       promoCode?: string | null;
     },
-    ComputeQuoteRemoteResult
-  >(firebaseFunctions(), "computeQuote");
+    BuildTripQuoteRemoteResult
+  >(firebaseFunctions(), "buildTripQuote");
 
   const result = await callable({
     branchId: request.branchId,

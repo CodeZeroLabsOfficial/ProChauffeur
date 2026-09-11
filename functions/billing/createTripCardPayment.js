@@ -11,7 +11,7 @@ const {
   createTripCardPaymentIntent,
   toStripeAmount,
 } = require("../stripe/payments");
-const { runComputeQuote } = require("./computeQuote");
+const { runBuildTripQuote } = require("./buildTripQuote");
 
 function validateTripPayload(trip, customerUid) {
   if (!trip || typeof trip !== "object") {
@@ -97,7 +97,7 @@ async function applyServerQuotes(db, uid, trips, branchId) {
     const dropoffAddressLine =
       typeof journey.dropoffAddressLine === "string" ? journey.dropoffAddressLine : "";
 
-    const quoteResult = await runComputeQuote(db, {
+    const quoteResult = await runBuildTripQuote(db, {
       customerId: uid,
       settlement: "card",
       branchIdHint: branchId,

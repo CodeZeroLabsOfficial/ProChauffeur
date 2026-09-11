@@ -63,6 +63,10 @@ Company-wide: `app_settings` (`license`, `plans`, `workspace`, `integrations`, `
 Branch settings: `branches/{branchId}/settings` (`pricing`, `operating_hours`, `locale`).
 Vehicle class document ids are company-wide product slugs (`business-sedan`).
 
+Fare math and license entitlements live in `@prochauffeur/pricing` (`packages/pricing/`).
+The Cloud Function callable is **`buildTripQuote`** only (no `computeQuote` alias). Run
+`npm test` for golden quote vectors before changing pricing rules.
+
 ### Live locations
 
 The Dispatch map reads `liveTrips/{branchId}/{tripId}` from Realtime Database.

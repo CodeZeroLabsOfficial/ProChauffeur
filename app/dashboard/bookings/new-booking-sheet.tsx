@@ -57,7 +57,7 @@ import {
 import type { QuotePromoApplication, QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { resolvePromoApplication } from "@/lib/pricing/apply-promo";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
-import { computeQuoteRemote } from "@/lib/services/quote-service";
+import { buildTripQuoteRemote } from "@/lib/services/quote-service";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
@@ -136,7 +136,7 @@ async function resolveBookingQuote(
   }
 ): Promise<QuoteResult> {
   if (request.corporateAccount && opts.customerId && opts.settlement) {
-    return computeQuoteRemote({
+    return buildTripQuoteRemote({
       branchId: getActiveBranchId(),
       customerId: opts.customerId,
       settlement: opts.settlement,

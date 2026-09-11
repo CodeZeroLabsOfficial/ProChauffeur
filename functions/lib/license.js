@@ -1,100 +1,24 @@
+const admin = require("firebase-admin");
 const { HttpsError } = require("firebase-functions/v2/https");
+const {
+  isFeatureEnabled,
+  isLocationFeatureEnabled,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
+  PLANS_NOT_CONFIGURED_MESSAGE,
+  FEATURE_IDS,
+  LOCATION_OPS_FEATURE_IDS,
+  FEATURE_LABELS,
+  UNLIMITED,
+  isFeatureId,
+  isFeatureFlagValue,
+} = require("./pricing");
 
-const FEATURE_IDS = [
-  "autoDispatch",
-  "bookingValidation",
-  "driverRatings",
-  "dynamicPricing",
-  "loyaltyPromos",
-  "corporateAccounts",
-];
-
-const LOCATION_OPS_FEATURE_IDS = ["autoDispatch", "dynamicPricing", "bookingValidation"];
-
-const LOCATION_OPS_FEATURE_FIELDS = {
-  autoDispatch: "autoDispatchEnabled",
-  dynamicPricing: "dynamicPricingEnabled",
-  bookingValidation: "bookingValidationEnabled",
+const Collections = {
+  appSettings: "app_settings",
 };
 
-const FEATURE_LABELS = {
-  autoDispatch: "Auto-Dispatch",
-  bookingValidation: "Booking Validation",
-  driverRatings: "Driver ratings",
-  dynamicPricing: "Dynamic trip pricing",
-  loyaltyPromos: "Loyalty & promotional tools",
-  corporateAccounts: "Accounts",
-};
-
-const UNLIMITED = Number.MAX_SAFE_INTEGER;
-
-const defaultLicense = {
-  planId: "",
-  maxAdmins: UNLIMITED,
-  maxDrivers: UNLIMITED,
-  maxLocations: 1,
-  featureFlags: {},
-};
-
-const defaultPlansCatalog = {
-  defaultPlanId: "professional",
-  plans: {
-    essentials: {
-      label: "Essentials",
-      features: ["driverRatings"],
-    },
-    professional: {
-      label: "Professional",
-      features: ["driverRatings", "corporateAccounts"],
-    },
-    premium: {
-      label: "Premium",
-      features: [
-        "autoDispatch",
-        "bookingValidation",
-        "driverRatings",
-        "dynamicPricing",
-        "loyaltyPromos",
-        "corporateAccounts",
-      ],
-    },
-  },
-};
-
-function isFeatureId(value) {
-  return FEATURE_IDS.includes(value);
-}
-
-function isFeatureFlagValue(value) {
-  return value === "inherit" || value === "forceOn" || value === "forceOff";
-}
-
-function planIncludes(catalog, planId, feature) {
-  const id = (planId || "").trim() || catalog.defaultPlanId;
-  const plan = catalog.plans[id];
-  if (!plan) return false;
-  return Array.isArray(plan.features) && plan.features.includes(feature);
-}
-
-/** Effective entitlement: forceOff → off; forceOn → on; else inherit from plan catalog. */
-function isFeatureEnabled(license, catalog, feature) {
-  const flag =
-    (license && license.featureFlags && license.featureFlags[feature]) || "inherit";
-  if (flag === "forceOff") return false;
-  if (flag === "forceOn") return true;
-  return planIncludes(catalog, license.planId, feature);
-}
-
-/**
- * Runtime check: company license allows the feature AND this Location has it on.
- * Missing Location flags are off.
- */
-function isLocationFeatureEnabled(license, catalog, branch, feature) {
-  if (!isFeatureEnabled(license, catalog, feature)) return false;
-  const field = LOCATION_OPS_FEATURE_FIELDS[feature];
-  if (!field || !branch) return false;
-  return branch[field] === true;
-}
+const LICENSE_DOC = "license";
+const PLANS_DOC = "plans";
 
 function mapLicense(d) {
   const data = d || {};
@@ -146,25 +70,32 @@ function mapPlansCatalog(d) {
   const defaultPlanId =
     typeof data.defaultPlanId === "string" && data.defaultPlanId.trim()
       ? data.defaultPlanId.trim()
-      : defaultPlansCatalog.defaultPlanId;
-  if (Object.keys(plans).length === 0) {
-    return defaultPlansCatalog;
+      : "";
+  if (!defaultPlanId || Object.keys(plans).length === 0) {
+    throw new HttpsError("failed-precondition", PLANS_NOT_CONFIGURED_MESSAGE);
   }
   return { defaultPlanId, plans };
 }
 
 /**
  * Load `app_settings/license` and `app_settings/plans`.
+ * Fail-closed: never invent a licence or plan catalog.
  * @param {FirebaseFirestore.Firestore} db
  * @returns {Promise<{ license: object, catalog: object }>}
  */
 async function loadLicenseAndPlans(db) {
   const [licenseSnap, plansSnap] = await Promise.all([
-    db.collection("app_settings").doc("license").get(),
-    db.collection("app_settings").doc("plans").get(),
+    db.collection(Collections.appSettings).doc(LICENSE_DOC).get(),
+    db.collection(Collections.appSettings).doc(PLANS_DOC).get(),
   ]);
-  const license = licenseSnap.exists ? mapLicense(licenseSnap.data()) : defaultLicense;
-  const catalog = plansSnap.exists ? mapPlansCatalog(plansSnap.data()) : defaultPlansCatalog;
+  if (!licenseSnap.exists) {
+    throw new HttpsError("failed-precondition", LICENSE_NOT_CONFIGURED_MESSAGE);
+  }
+  if (!plansSnap.exists) {
+    throw new HttpsError("failed-precondition", PLANS_NOT_CONFIGURED_MESSAGE);
+  }
+  const license = mapLicense(licenseSnap.data());
+  const catalog = mapPlansCatalog(plansSnap.data());
   return { license, catalog };
 }
 
@@ -187,8 +118,8 @@ module.exports = {
   FEATURE_LABELS,
   LOCATION_OPS_FEATURE_IDS,
   UNLIMITED,
-  defaultLicense,
-  defaultPlansCatalog,
+  LICENSE_NOT_CONFIGURED_MESSAGE,
+  PLANS_NOT_CONFIGURED_MESSAGE,
   isFeatureId,
   isFeatureFlagValue,
   isFeatureEnabled,

@@ -5,9 +5,10 @@ const { requireAuth } = require("../lib/auth");
 const { resolveBookingBranchId } = require("../lib/resolve-branch");
 const {
   isFeatureEnabled,
+  isLocationFeatureEnabled,
   loadLicenseAndPlans,
 } = require("../lib/license");
-const { computeQuote, QuoteError } = require("../quoting/quote-engine");
+const { buildTripQuote, QuoteError } = require("../lib/pricing");
 const { fetchRouteMetrics } = require("../quoting/mapbox-directions");
 const { getMapboxToken } = require("../quoting/mapbox-token");
 const { extractPostcodeFromAddress } = require("../lib/resolve-branch");
@@ -313,7 +314,7 @@ function serializeQuoteResult(result) {
  * }} args `trip` is a nested payload mirroring the Trip document's
  *   `journey` / `quote` maps.
  */
-async function runComputeQuote(db, {
+async function runBuildTripQuote(db, {
   customerId,
   settlement,
   trip,
@@ -397,6 +398,7 @@ async function runComputeQuote(db, {
     vehicleClassSnap,
     locationsSnap,
     customerSnap,
+    branchSnap,
     { license, catalog },
   ] = await Promise.all([
     db.doc(`${Collections.branches}/${branchId}/settings/pricing`).get(),
@@ -404,6 +406,7 @@ async function runComputeQuote(db, {
     db.doc(`${Collections.branches}/${branchId}/vehicle_classes/${vehicleClassId}`).get(),
     db.collection(`${Collections.branches}/${branchId}/locations`).get(),
     db.doc(`${Collections.users}/${customerId}`).get(),
+    db.doc(`${Collections.branches}/${branchId}`).get(),
     loadLicenseAndPlans(db),
   ]);
 
@@ -445,6 +448,17 @@ async function runComputeQuote(db, {
   };
 
   const corporateAccountsEnabled = isFeatureEnabled(license, catalog, "corporateAccounts");
+  const branchData = branchSnap.exists ? branchSnap.data() || {} : {};
+  const dynamicPricingActive = isLocationFeatureEnabled(
+    license,
+    catalog,
+    {
+      autoDispatchEnabled: branchData.autoDispatchEnabled === true,
+      dynamicPricingEnabled: branchData.dynamicPricingEnabled === true,
+      bookingValidationEnabled: branchData.bookingValidationEnabled === true,
+    },
+    "dynamicPricing"
+  );
   if (!corporateAccountsEnabled && settlement === "on_account") {
     throw new HttpsError(
       "failed-precondition",
@@ -532,7 +546,7 @@ async function runComputeQuote(db, {
 
   let result;
   try {
-    result = computeQuote(quoteRequest, {
+    result = buildTripQuote(quoteRequest, {
       pricing,
       locale,
       vehicleClass,
@@ -542,9 +556,10 @@ async function runComputeQuote(db, {
         officeToPickup.distanceMeters + dropoffToOffice.distanceMeters,
       deadheadDurationMinutes:
         (officeToPickup.durationSeconds + dropoffToOffice.durationSeconds) / 60,
+      dynamicPricingActive,
     });
   } catch (err) {
-    if (err instanceof QuoteError) {
+    if (err instanceof QuoteError || (err && err.name === "QuoteError")) {
       throw new HttpsError("failed-precondition", err.message);
     }
     throw err;
@@ -558,14 +573,14 @@ async function runComputeQuote(db, {
 }
 
 /**
- * Callable handler: compute a trip quote.
+ * Callable handler: build a trip quote.
  * data: {
  *   branchId?, customerId, settlement: 'on_account'|'card',
  *   trip: { journey: { tripType, pickup, dropoff, ... }, quote: { vehicleClassId } },
  *   promoCode?
  * }
  */
-async function computeQuoteHandler(request) {
+async function buildTripQuoteHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
 
@@ -595,7 +610,7 @@ async function computeQuoteHandler(request) {
     throw new HttpsError("permission-denied", "Customers may only quote themselves.");
   }
 
-  return runComputeQuote(db, {
+  return runBuildTripQuote(db, {
     customerId,
     settlement,
     trip,
@@ -609,6 +624,6 @@ async function computeQuoteHandler(request) {
 
 
 module.exports = {
-  computeQuoteHandler,
-  runComputeQuote,
+  buildTripQuoteHandler,
+  runBuildTripQuote,
 };
