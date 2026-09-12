@@ -678,7 +678,6 @@ export async function queryInvoicesForCustomer(
     query(
       collectionGroup(db(), "invoices"),
       where("customerID", "==", uid),
-      orderBy("createdAt", "desc"),
       fsLimit(pageSize)
     )
   );

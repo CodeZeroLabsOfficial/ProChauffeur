@@ -61,13 +61,6 @@
       "collectionGroup": "trips",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "journey.scheduledPickupAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "trips",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "journey.scheduledPickupAt", "order": "DESCENDING" }
       ]
@@ -86,21 +79,6 @@
       "fields": [
         { "fieldPath": "customerID", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "invoices",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "customerID", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "invoices",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "issuedAt", "order": "DESCENDING" }
       ]
     },
     {
