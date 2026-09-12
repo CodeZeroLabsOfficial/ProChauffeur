@@ -10,6 +10,7 @@ import {
   updateUserEmail,
   updateUserProfile
 } from "@/lib/services/firebase-service";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
@@ -88,6 +89,7 @@ export function DriverEditSheet({
   nested?: boolean;
 }) {
   const isNew = !user;
+  const { branchId } = useActiveBranch();
   const [selectedUserId, setSelectedUserId] = useState("");
   const selectedCandidate = candidates.find((u) => u.id === selectedUserId);
   const activeUser = user ?? selectedCandidate ?? null;
@@ -184,7 +186,7 @@ export function DriverEditSheet({
 
     setSaving(true);
     try {
-      await saveDriverProfile(uid, nextDriverProfile, {
+      await saveDriverProfile(uid, nextDriverProfile, branchId, {
         driverTitle: displayName,
         isNew
       });

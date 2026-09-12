@@ -11,6 +11,7 @@ import {
   PackageIcon
 } from "lucide-react";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
@@ -194,7 +195,8 @@ function SectionCard({
 }
 
 export function BookingDetail({ tripId }: { tripId: string }) {
-  const { trip, loading, notFound } = useTrip(tripId);
+  const { branchId } = useActiveBranch();
+  const { trip, loading, notFound } = useTrip(tripId, branchId);
   const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();

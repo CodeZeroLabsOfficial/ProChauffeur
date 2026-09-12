@@ -18,6 +18,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
 import { useRosterChauffeurs, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
@@ -117,6 +118,7 @@ export function BookingsDataTable({
   onOpenLive: (trip: Trip) => void;
 }) {
   const { user: authUser } = useFirebaseAuth();
+  const { branchId: activeBranchId } = useActiveBranch();
   const { trips, loading } = useTrips();
   const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
@@ -186,10 +188,16 @@ export function BookingsDataTable({
   }, []);
 
   const reassignChauffeur = useCallback(
-    async (tripId: string, chauffeurId: string | null, vehicle?: (typeof vehicles)[number]) => {
+    async (trip: Trip, chauffeurId: string | null, vehicle?: (typeof vehicles)[number]) => {
+      const branchId = trip.branchId?.trim() || activeBranchId;
+      if (!branchId) {
+        toast.error("Booking is missing a Location.");
+        return;
+      }
       try {
         await assignTripDriver(
-          tripId,
+          trip.id,
+          branchId,
           chauffeurId,
           vehicle?.driverID ?? null,
           vehicle ?? null
@@ -199,7 +207,7 @@ export function BookingsDataTable({
         toast.error("Could not reassign the chauffeur.");
       }
     },
-    []
+    [activeBranchId]
   );
 
   const driverNameById = useMemo(() => {
@@ -403,14 +411,14 @@ export function BookingsDataTable({
                 <DropdownMenuSubContent>
                   <DropdownMenuItem
                     disabled={!row.original.driverID}
-                    onClick={() => reassignChauffeur(row.original.id, null)}>
+                    onClick={() => reassignChauffeur(row.original, null)}>
                     Unassigned
                   </DropdownMenuItem>
                   {reassignableChauffeurs.map(({ id, label, vehicle }) => (
                     <DropdownMenuItem
                       key={id}
                       disabled={row.original.driverID === id}
-                      onClick={() => reassignChauffeur(row.original.id, id, vehicle)}>
+                      onClick={() => reassignChauffeur(row.original, id, vehicle)}>
                       {label}
                     </DropdownMenuItem>
                   ))}

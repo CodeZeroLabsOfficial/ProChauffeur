@@ -17,6 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   useRosterChauffeurs,
   useUsers,
@@ -87,6 +88,7 @@ export function FleetDataTable({
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
 }) {
+  const { branchId } = useActiveBranch();
   const { vehicles, loading } = useVehicles();
   const { users } = useUsers();
   const { chauffeurs: drivers } = useRosterChauffeurs();
@@ -135,23 +137,23 @@ export function FleetDataTable({
   const handleAssignVehicle = useCallback(
     async (vehicle: Vehicle, chauffeurUserId: string) => {
       try {
-        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId);
+        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId, branchId);
         toast.success("Vehicle assigned.");
       } catch {
         toast.error("Could not assign the vehicle.");
       }
     },
-    [vehicles]
+    [branchId, vehicles]
   );
 
   const handleUnassignVehicle = useCallback(async (vehicle: Vehicle) => {
     try {
-      await unassignFleetVehicle(vehicle.driverID);
+      await unassignFleetVehicle(vehicle.driverID, branchId);
       toast.success("Vehicle unassigned.");
     } catch {
       toast.error("Could not unassign the vehicle.");
     }
-  }, []);
+  }, [branchId]);
 
   const handleDeleteVehicle = useCallback(
     async (vehicle: Vehicle) => {
@@ -160,7 +162,7 @@ export function FleetDataTable({
         return;
       }
       try {
-        await deleteVehicle(vehicle.driverID);
+        await deleteVehicle(vehicle.driverID, branchId);
         if (selectedId === vehicle.driverID) {
           setDetailOpen(false);
           setEditOpen(false);
@@ -171,7 +173,7 @@ export function FleetDataTable({
         toast.error("Could not delete the vehicle.");
       }
     },
-    [selectedId]
+    [branchId, selectedId]
   );
 
   const openVehicleEdit = useCallback(

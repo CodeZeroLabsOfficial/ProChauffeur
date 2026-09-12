@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { AssignedDriverCard } from "@/app/dashboard/fleet/components/assigned-driver-card";
 import type { RosterChauffeur } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { effectiveChauffeurUserId, type User, type Vehicle } from "@/lib/models";
@@ -34,6 +35,7 @@ export function VehicleProfileOperationsTab({
   assignedChauffeur: User | undefined;
   assignedChauffeurCategoryLabel: string | null;
 }) {
+  const { branchId } = useActiveBranch();
   const availableChauffeurs = useMemo(() => {
     const assignedIds = new Set(
       vehicles.map((v) => effectiveChauffeurUserId(v)).filter((id): id is string => Boolean(id))
@@ -44,23 +46,23 @@ export function VehicleProfileOperationsTab({
   const handleAssign = useCallback(
     async (chauffeurUserId: string) => {
       try {
-        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId);
+        await assignFleetVehicle(vehicles, vehicle.driverID, chauffeurUserId, branchId);
         toast.success("Driver assigned.");
       } catch {
         toast.error("Could not assign the driver.");
       }
     },
-    [vehicle.driverID, vehicles]
+    [branchId, vehicle.driverID, vehicles]
   );
 
   const handleUnassign = useCallback(async () => {
     try {
-      await unassignFleetVehicle(vehicle.driverID);
+      await unassignFleetVehicle(vehicle.driverID, branchId);
       toast.success("Driver unassigned.");
     } catch {
       toast.error("Could not unassign the driver.");
     }
-  }, [vehicle.driverID]);
+  }, [branchId, vehicle.driverID]);
 
   const assignmentAction = assignedChauffeur ? (
     <Button size="sm" variant="outline" onClick={() => void handleUnassign()}>

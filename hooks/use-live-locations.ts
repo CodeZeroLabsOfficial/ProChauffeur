@@ -45,7 +45,7 @@ function parseLiveLocations(value: unknown): DriverLiveLocation[] {
     );
 }
 
-/** Subscribes to live trip positions for the active branch. */
+/** Subscribes to live trip positions for the switcher's Location. */
 export function useLiveLocations(): { locations: DriverLiveLocation[]; ready: boolean } {
   const { branchId } = useActiveBranch();
   const [locations, setLocations] = useState<DriverLiveLocation[]>([]);

@@ -17,7 +17,7 @@ import {
   type BranchDriver,
   type User
 } from "@/lib/models";
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export function DriverLicenceEditSheet({
   onSaved?: () => void;
   nested?: boolean;
 }) {
+  const { branchId } = useActiveBranch();
   const profile = branchDriverToProfile(roster);
   const isNew = !hasComplianceDetails(profile.driversLicense);
   const license = profile.driversLicense;
@@ -86,7 +87,7 @@ export function DriverLicenceEditSheet({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    getCachedOperatorLocale(getActiveBranchId())
+    getCachedOperatorLocale(branchId)
       .then((locale) => {
         if (!cancelled) setLicenceCountry(locale.operatorJurisdiction);
       })
@@ -96,7 +97,7 @@ export function DriverLicenceEditSheet({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, branchId]);
 
   const classOptions = useMemo(() => {
     if (!licenceCountry) {
@@ -145,7 +146,7 @@ export function DriverLicenceEditSheet({
     setSaving(true);
     try {
       const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
-      await saveDriverProfile(user.id, driverProfile, { driverTitle });
+      await saveDriverProfile(user.id, driverProfile, branchId, { driverTitle });
       toast.success("Driver licence saved.");
       onOpenChange(false);
       onSaved?.();

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
 import type { Vehicle, VehicleInsurancePolicy } from "@/lib/models";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   parseVehicleInsuranceCoverType,
   VEHICLE_INSURANCE_COVER_TYPE_OPTIONS
@@ -63,6 +64,7 @@ export function VehicleInsuranceEditSheet({
   nested?: boolean;
 }) {
   const isNew = !policy;
+  const { branchId } = useActiveBranch();
   const [coverType, setCoverType] = useState(policy?.coverType ?? "");
   const [policyStart, setPolicyStart] = useState<Date | undefined>(
     policy?.policyStart ?? undefined
@@ -133,7 +135,7 @@ export function VehicleInsuranceEditSheet({
       : existing.map((entry) => (entry.id === nextPolicy.id ? nextPolicy : entry));
 
     setSaving(true);
-    const result = await saveVehicleFields(vehicle, { insurancePolicies });
+    const result = await saveVehicleFields(vehicle, { insurancePolicies }, branchId);
     setSaving(false);
 
     if (!result.ok) {
@@ -151,7 +153,7 @@ export function VehicleInsuranceEditSheet({
     const insurancePolicies = (vehicle.insurancePolicies ?? []).filter(
       (entry) => entry.id !== policy.id
     );
-    const result = await saveVehicleFields(vehicle, { insurancePolicies });
+    const result = await saveVehicleFields(vehicle, { insurancePolicies }, branchId);
     setDeleting(false);
     setConfirmDeleteOpen(false);
 

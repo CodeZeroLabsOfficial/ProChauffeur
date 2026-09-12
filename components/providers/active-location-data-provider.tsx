@@ -60,10 +60,14 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
       return;
     }
     setTripsLoading(true);
-    const unsub = listenTrips((rows) => {
-      setTrips(rows);
-      setTripsLoading(false);
-    }, 800, branchId);
+    const unsub = listenTrips(
+      (rows) => {
+        setTrips(rows);
+        setTripsLoading(false);
+      },
+      branchId,
+      800
+    );
     return () => unsub();
   }, [branchId]);
 
@@ -82,7 +86,7 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
       return;
     }
     setBranchDriversLoading(true);
-    const unsub = listenBranchDrivers((rows) => {
+    const unsub = listenBranchDrivers(branchId, (rows) => {
       setBranchDrivers(rows);
       setBranchDriversLoading(false);
     });
@@ -96,7 +100,7 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
       return;
     }
     setVehiclesLoading(true);
-    const unsub = listenVehicles((rows) => {
+    const unsub = listenVehicles(branchId, (rows) => {
       setVehicles(rows);
       setVehiclesLoading(false);
     });
@@ -110,7 +114,7 @@ export function ActiveLocationDataProvider({ children }: { children: ReactNode }
       return;
     }
     setLocationsLoading(true);
-    const unsub = listenFleetLocations((rows) => {
+    const unsub = listenFleetLocations(branchId, (rows) => {
       setLocations(rows);
       setLocationsLoading(false);
     });

@@ -12,14 +12,13 @@ import {
   type BranchSettingsDocId,
   type BranchSubcollection
 } from "@/lib/models/branch";
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 
 type OpsSubcollection = Exclude<BranchSubcollection, "settings">;
 
 export function branchCollectionRef(
   db: Firestore,
   sub: OpsSubcollection,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): CollectionReference {
   const [a, b, c] = branchCollectionSegments(branchId, sub);
   return collection(db, a, b, c);
@@ -29,7 +28,7 @@ export function branchDocRef(
   db: Firestore,
   sub: OpsSubcollection,
   docId: string,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): DocumentReference {
   return doc(branchCollectionRef(db, sub, branchId), docId);
 }
@@ -37,7 +36,7 @@ export function branchDocRef(
 export function branchSettingsDocRef(
   db: Firestore,
   settingsDocId: BranchSettingsDocId,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): DocumentReference {
   const [a, b, c, d] = branchSettingsSegments(branchId, settingsDocId);
   return doc(db, a, b, c, d);

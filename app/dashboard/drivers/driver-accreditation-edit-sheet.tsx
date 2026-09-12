@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { saveDriverProfile } from "@/lib/services/firebase-service";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import type { BranchDriver, User } from "@/lib/models";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
 import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
@@ -38,6 +39,7 @@ export function DriverAccreditationEditSheet({
   onSaved?: () => void;
   nested?: boolean;
 }) {
+  const { branchId } = useActiveBranch();
   const profile = branchDriverToProfile(roster);
   const isNew = !hasComplianceDetails(profile.operatorAccreditation);
   const [accreditationExpiry, setAccreditationExpiry] = useState<Date | undefined>(
@@ -67,7 +69,7 @@ export function DriverAccreditationEditSheet({
     setSaving(true);
     try {
       const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
-      await saveDriverProfile(user.id, driverProfile, { driverTitle });
+      await saveDriverProfile(user.id, driverProfile, branchId, { driverTitle });
       toast.success("Operator accreditation saved.");
       onOpenChange(false);
       onSaved?.();

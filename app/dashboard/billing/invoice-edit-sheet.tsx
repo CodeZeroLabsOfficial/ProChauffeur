@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { createInvoice, fetchOperatorLocale } from "@/lib/services/firebase-service";
 import {
   computeInvoiceTotals,
@@ -45,6 +45,7 @@ export function InvoiceEditSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { branchId } = useActiveBranch();
   const [status, setStatus] = useState<InvoiceStatus>("draft");
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([newLine()]);
   const [taxRate, setTaxRate] = useState(0);
@@ -61,7 +62,7 @@ export function InvoiceEditSheet({
     setCurrencyCode("");
     setLocaleReady(false);
     setFormKey((k) => k + 1);
-    fetchOperatorLocale(getActiveBranchId())
+    fetchOperatorLocale(branchId)
       .then((locale) => {
         setTaxRate(locale.defaultTaxRate * 100);
         setCurrencyCode(locale.currency);
@@ -71,7 +72,7 @@ export function InvoiceEditSheet({
         toast.error(err instanceof Error ? err.message : "Locale is not configured.");
         setLocaleReady(false);
       });
-  }, [open]);
+  }, [open, branchId]);
 
   const totals = computeInvoiceTotals(lineItems, taxRate / 100);
 
@@ -110,7 +111,7 @@ export function InvoiceEditSheet({
 
     setSaving(true);
     try {
-      await createInvoice(payload);
+      await createInvoice(payload, branchId);
       toast.success("Invoice created.");
       onOpenChange(false);
     } catch {

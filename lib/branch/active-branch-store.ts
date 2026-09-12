@@ -15,7 +15,7 @@ function readStored(): string | null {
   }
 }
 
-/** Current branch for ops reads/writes (dashboard scope). Empty when none. */
+/** UI memory for the Location switcher only. Do not use in services or path helpers. */
 export function getActiveBranchId(): string {
   return activeBranchId;
 }

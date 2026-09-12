@@ -37,7 +37,7 @@ import {
   type TripType
 } from "@/lib/models";
 import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
 
@@ -199,6 +199,7 @@ export function PromotionEditSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const isNew = !promotion;
+  const { branchId } = useActiveBranch();
   const [draft, setDraft] = useState<Promotion>(() => promotion ?? buildNewPromotion());
   const [percentPoints, setPercentPoints] = useState(() =>
     percentPointsFromPromo(promotion ?? buildNewPromotion())
@@ -247,10 +248,10 @@ export function PromotionEditSheet({
 
   useEffect(() => {
     if (!open) return;
-    getCachedOperatorLocale(getActiveBranchId())
+    getCachedOperatorLocale(branchId)
       .then((locale) => setCurrency(locale.currency))
       .catch(() => setCurrency(""));
-  }, [open]);
+  }, [open, branchId]);
 
   const branchOptions = branches.map((branch) => ({
     value: branch.id,

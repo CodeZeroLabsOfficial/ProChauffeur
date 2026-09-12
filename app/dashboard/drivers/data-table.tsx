@@ -18,6 +18,7 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUsers, useRosterChauffeurs } from "@/hooks/use-collections";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   removeDriver,
   saveDriverProfile
@@ -89,6 +90,7 @@ export function DriversDataTable({
   onCreateOpenChange?: (open: boolean) => void;
   canAdd?: boolean;
 }) {
+  const { branchId } = useActiveBranch();
   const { users } = useUsers();
   const { chauffeurs, loading } = useRosterChauffeurs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -143,6 +145,7 @@ export function DriversDataTable({
               visibleOnCustomerApp: active
             }
           },
+          branchId,
           { driverTitle: driverTitle(c) }
         );
         toast.success(
@@ -152,7 +155,7 @@ export function DriversDataTable({
         toast.error("Could not update driver visibility.");
       }
     },
-    [driverTitle]
+    [branchId, driverTitle]
   );
 
   const setDispatchAcceptance = useCallback(
@@ -168,6 +171,7 @@ export function DriversDataTable({
               acceptsDispatchAssignments: accepting
             }
           },
+          branchId,
           { driverTitle: driverTitle(c) }
         );
         toast.success(
@@ -177,7 +181,7 @@ export function DriversDataTable({
         toast.error("Could not update dispatch settings.");
       }
     },
-    [driverTitle]
+    [branchId, driverTitle]
   );
 
   const handleRemoveDriver = useCallback(
@@ -191,7 +195,7 @@ export function DriversDataTable({
         return;
       }
       try {
-        await removeDriver(c.user.id, name);
+        await removeDriver(c.user.id, branchId, name);
         if (selectedId === c.user.id) {
           setDetailOpen(false);
           setEditOpen(false);
@@ -202,7 +206,7 @@ export function DriversDataTable({
         toast.error(err instanceof Error ? err.message : "Could not delete the chauffeur.");
       }
     },
-    [driverTitle, selectedId]
+    [branchId, driverTitle, selectedId]
   );
 
   const columns = useMemo<ColumnDef<DriverRow>[]>(

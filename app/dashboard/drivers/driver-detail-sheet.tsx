@@ -28,6 +28,7 @@ import {
   type User
 } from "@/lib/models";
 import { branchDriverToProfile } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { InlineEditableDateField } from "@/components/inline-editable-date-field";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineProfileAddressField } from "@/components/inline-profile-address-field";
@@ -70,6 +71,7 @@ function DriverOverviewFields({
   user: User;
   profile: DriverProfile;
 }) {
+  const { branchId } = useActiveBranch();
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const displayName = user.profile.displayName.trim() || user.email || "";
   const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
@@ -89,7 +91,7 @@ function DriverOverviewFields({
     patch: Partial<DriverProfile>
   ): Promise<{ ok: boolean; message?: string }> {
     try {
-      await saveDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      await saveDriverProfile(user.id, { ...profile, ...patch }, branchId, { driverTitle });
       return { ok: true };
     } catch {
       return { ok: false, message: "Could not save." };
@@ -250,6 +252,7 @@ function DriverOverviewFields({
 }
 
 function DriverComplianceFields({ user, profile }: { user: User; profile: DriverProfile }) {
+  const { branchId } = useActiveBranch();
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const driverTitle = user.profile.displayName?.trim() || user.email || "Chauffeur";
 
@@ -257,7 +260,7 @@ function DriverComplianceFields({ user, profile }: { user: User; profile: Driver
     patch: Partial<DriverProfile>
   ): Promise<{ ok: boolean; message?: string }> {
     try {
-      await saveDriverProfile(user.id, { ...profile, ...patch }, { driverTitle });
+      await saveDriverProfile(user.id, { ...profile, ...patch }, branchId, { driverTitle });
       return { ok: true };
     } catch {
       return { ok: false, message: "Could not save." };

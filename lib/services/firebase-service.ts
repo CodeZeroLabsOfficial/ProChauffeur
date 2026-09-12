@@ -359,15 +359,16 @@ export async function syncOfficeFleetLocation(
   branchId: string,
   office: OfficeFleetSyncInput
 ): Promise<void> {
+  const resolved = requireBranchId(branchId);
   const addressLine = office.addressLine.trim();
   if (!addressLine) return;
   if (!Number.isFinite(office.latitude) || !Number.isFinite(office.longitude)) {
     throw new Error("Select an office address from the suggestions.");
   }
 
-  await clearOtherDefaultFleetLocationsInBranch(branchId, BRANCH_OFFICE_FLEET_LOCATION_ID);
+  await clearOtherDefaultFleetLocationsInBranch(resolved, BRANCH_OFFICE_FLEET_LOCATION_ID);
 
-  const ref = branchDocRef(db(), "locations", BRANCH_OFFICE_FLEET_LOCATION_ID, branchId);
+  const ref = branchDocRef(db(), "locations", BRANCH_OFFICE_FLEET_LOCATION_ID, resolved);
   const existing = await getDoc(ref);
   await setDoc(
     ref,
@@ -526,48 +527,51 @@ export async function deleteBranch(branchId: string): Promise<void> {
 /** Admin overview listener: recent trips for a Location, newest first. */
 export function listenTrips(
   onUpdate: (trips: Trip[]) => void,
-  max = 800,
-  branchId: string = getActiveBranchId()
+  branchId: string,
+  max = 800
 ): Unsub {
+  const id = requireBranchId(branchId);
   const nested = query(
-    branchCollectionRef(db(), "trips", branchId),
+    branchCollectionRef(db(), "trips", id),
     orderBy("createdAt", "desc"),
     fsLimit(max)
   );
   return listenQuery(
     nested,
-    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId)),
+    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), id)),
     onUpdate,
     onSnapshotError("trips", onUpdate)
   );
 }
 
-export async function fetchTrips(max = 800): Promise<Trip[]> {
-  const branchId = getActiveBranchId();
+export async function fetchTrips(branchId: string, max = 800): Promise<Trip[]> {
+  const id = requireBranchId(branchId);
   const nested = query(
-    branchCollectionRef(db(), "trips", branchId),
+    branchCollectionRef(db(), "trips", id),
     orderBy("createdAt", "desc"),
     fsLimit(max)
   );
   const snap = await getDocs(nested);
-  return snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId));
+  return snap.docs.map((dc) => mapTrip(dc.id, dc.data(), id));
 }
 
-export async function fetchTrip(
-  id: string,
-  branchId: string = getActiveBranchId()
-): Promise<Trip | null> {
-  const nested = await getDoc(branchDocRef(db(), "trips", id, branchId));
-  return nested.exists() ? mapTrip(nested.id, nested.data(), branchId) : null;
+export async function fetchTrip(id: string, branchId: string): Promise<Trip | null> {
+  const resolved = requireBranchId(branchId);
+  const nested = await getDoc(branchDocRef(db(), "trips", id, resolved));
+  return nested.exists() ? mapTrip(nested.id, nested.data(), resolved) : null;
 }
 
 /** Realtime listener for a single trip document. */
-export function listenTrip(id: string, onUpdate: (trip: Trip | null) => void): Unsub {
-  const branchId = getActiveBranchId();
+export function listenTrip(
+  id: string,
+  branchId: string,
+  onUpdate: (trip: Trip | null) => void
+): Unsub {
+  const resolved = requireBranchId(branchId);
   return onSnapshot(
-    branchDocRef(db(), "trips", id, branchId),
+    branchDocRef(db(), "trips", id, resolved),
     (snap) => {
-      onUpdate(snap.exists() ? mapTrip(snap.id, snap.data(), branchId) : null);
+      onUpdate(snap.exists() ? mapTrip(snap.id, snap.data(), resolved) : null);
     },
     (error) => {
       console.error("Firestore trip listener failed:", error.code, error.message);
@@ -602,12 +606,14 @@ export async function updateTripStatus(
 
 export async function assignTripDriver(
   id: string,
+  branchId: string,
   driverID: string | null,
   vehicleDocumentId?: string | null,
   vehicleSnapshot?: Vehicle | null
 ): Promise<void> {
+  const resolved = requireBranchId(branchId);
   await updateDoc(
-    branchDocRef(db(), "trips", id),
+    branchDocRef(db(), "trips", id, resolved),
     stripUndefined({
       driverID,
       "vehicle.vehicleDocumentId": driverID ? vehicleDocumentId : null,
@@ -618,7 +624,12 @@ export async function assignTripDriver(
   );
 }
 
-export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void> {
+export async function updateTrip(
+  id: string,
+  branchId: string,
+  patch: Partial<Trip>
+): Promise<void> {
+  const resolved = requireBranchId(branchId);
   const journey = patch.journey
     ? stripUndefined({
         ...patch.journey,
@@ -632,7 +643,7 @@ export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void
     : undefined;
 
   await updateDoc(
-    branchDocRef(db(), "trips", id),
+    branchDocRef(db(), "trips", id, resolved),
     stripUndefined({
       ...patch,
       journey,
@@ -729,11 +740,12 @@ export async function fetchPromotionByCode(code: string): Promise<Promotion | nu
 export async function countCustomerPromoRedemptions(
   customerId: string,
   promoId: string,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<number> {
   if (!customerId.trim() || !promoId.trim()) return 0;
+  const id = requireBranchId(branchId);
   const snap = await getDocs(
-    query(branchCollectionRef(db(), "trips", branchId), where("customerID", "==", customerId))
+    query(branchCollectionRef(db(), "trips", id), where("customerID", "==", customerId))
   );
   return snap.docs.filter((docSnap) => docSnap.data()?.quote?.appliedPromoId === promoId).length;
 }
@@ -1173,18 +1185,19 @@ export async function uploadCorporateAccountLogo(accountId: string, file: File):
   return body.logoUrl;
 }
 
-/** Writes ops profile to the active Location roster; sets homeBranchId when needed. */
+/** Writes ops profile to a Location roster; sets homeBranchId when needed. */
 export async function saveDriverProfile(
   uid: string,
   driverProfile: DriverProfile,
+  branchId: string,
   options?: { driverTitle?: string; isNew?: boolean }
 ): Promise<void> {
-  const branchId = getActiveBranchId();
+  const resolved = requireBranchId(branchId);
   const userRef = doc(db(), Collections.users, uid);
   const userSnap = await getDoc(userRef);
   const homeBranchId =
     typeof userSnap.data()?.homeBranchId === "string" ? userSnap.data()?.homeBranchId : null;
-  if (homeBranchId && homeBranchId !== branchId) {
+  if (homeBranchId && homeBranchId !== resolved) {
     throw new Error("This chauffeur is assigned to another Location.");
   }
   const patch: Record<string, unknown> = {};
@@ -1198,14 +1211,14 @@ export async function saveDriverProfile(
       throw new Error("Driver limit reached on the current license.");
     }
     patch.role = "driver";
-    patch.homeBranchId = branchId;
+    patch.homeBranchId = resolved;
   } else if (!homeBranchId) {
-    patch.homeBranchId = branchId;
+    patch.homeBranchId = resolved;
   }
   if (Object.keys(patch).length > 0) {
     await updateDoc(userRef, patch);
   }
-  await upsertBranchDriver(uid, driverProfile, branchId);
+  await upsertBranchDriver(uid, driverProfile, resolved);
   if (options?.driverTitle) {
     const action = options.isNew ? "created" : "updated";
     void createActivityNotification(driverNotification(action, options.driverTitle, uid));
@@ -1213,12 +1226,16 @@ export async function saveDriverProfile(
 }
 
 /** Deletes the chauffeur Auth account, user doc, and home roster. */
-export async function removeDriver(uid: string, driverTitle?: string): Promise<void> {
-  const branchId = getActiveBranchId();
+export async function removeDriver(
+  uid: string,
+  branchId: string,
+  driverTitle?: string
+): Promise<void> {
+  const resolved = requireBranchId(branchId);
   const res = await fetch(`/api/drivers/${encodeURIComponent(uid)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ branchId, driverTitle })
+    body: JSON.stringify({ branchId: resolved, driverTitle })
   });
   const body = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) {
@@ -1228,9 +1245,12 @@ export async function removeDriver(uid: string, driverTitle?: string): Promise<v
 
 // ────────────────────────── Branch drivers (roster) ──────────────────────────
 
-export function listenBranchDrivers(onUpdate: (drivers: BranchDriver[]) => void): Unsub {
-  const branchId = getActiveBranchId();
-  const nested = query(branchCollectionRef(db(), "drivers", branchId));
+export function listenBranchDrivers(
+  branchId: string,
+  onUpdate: (drivers: BranchDriver[]) => void
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(branchCollectionRef(db(), "drivers", id));
   return listenQuery(
     nested,
     (snap) => snapToList(snap, mapBranchDriver),
@@ -1239,27 +1259,28 @@ export function listenBranchDrivers(onUpdate: (drivers: BranchDriver[]) => void)
   );
 }
 
-export async function fetchBranchDrivers(
-  branchId: string = getActiveBranchId()
-): Promise<BranchDriver[]> {
-  const snap = await getDocs(branchCollectionRef(db(), "drivers", branchId));
+export async function fetchBranchDrivers(branchId: string): Promise<BranchDriver[]> {
+  const id = requireBranchId(branchId);
+  const snap = await getDocs(branchCollectionRef(db(), "drivers", id));
   return snap.docs.map((dc) => mapBranchDriver(dc.id, dc.data()));
 }
 
 export async function fetchBranchDriver(
   uid: string,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<BranchDriver | null> {
-  const snap = await getDoc(branchDocRef(db(), "drivers", uid, branchId));
+  const id = requireBranchId(branchId);
+  const snap = await getDoc(branchDocRef(db(), "drivers", uid, id));
   return snap.exists() ? mapBranchDriver(snap.id, snap.data()) : null;
 }
 
 export async function upsertBranchDriver(
   uid: string,
   profile: DriverProfile,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
-  const ref = branchDocRef(db(), "drivers", uid, branchId);
+  const id = requireBranchId(branchId);
+  const ref = branchDocRef(db(), "drivers", uid, id);
   const existing = await getDoc(ref);
   const now = serverTimestamp();
   await setDoc(
@@ -1278,9 +1299,12 @@ export async function upsertBranchDriver(
 
 // ────────────────────────────── Vehicles ─────────────────────────────
 
-export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
-  const branchId = getActiveBranchId();
-  const nested = query(branchCollectionRef(db(), "vehicles", branchId));
+export function listenVehicles(
+  branchId: string,
+  onUpdate: (vehicles: Vehicle[]) => void
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(branchCollectionRef(db(), "vehicles", id));
   return listenQuery(
     nested,
     (snap) => {
@@ -1293,19 +1317,24 @@ export function listenVehicles(onUpdate: (vehicles: Vehicle[]) => void): Unsub {
   );
 }
 
-export async function fetchVehicles(): Promise<Vehicle[]> {
-  const branchId = getActiveBranchId();
-  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicles", branchId));
+export async function fetchVehicles(branchId: string): Promise<Vehicle[]> {
+  const id = requireBranchId(branchId);
+  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicles", id));
   return nestedSnap.docs.map((dc) => mapVehicle(dc.data()));
 }
 
-export async function fetchVehicle(vehicleDocumentId: string): Promise<Vehicle | null> {
-  const nested = await getDoc(branchDocRef(db(), "vehicles", vehicleDocumentId));
+export async function fetchVehicle(
+  vehicleDocumentId: string,
+  branchId: string
+): Promise<Vehicle | null> {
+  const id = requireBranchId(branchId);
+  const nested = await getDoc(branchDocRef(db(), "vehicles", vehicleDocumentId, id));
   return nested.exists() ? mapVehicle(nested.data()) : null;
 }
 
-export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
-  const ref = branchDocRef(db(), "vehicles", vehicle.driverID);
+export async function upsertVehicle(vehicle: Vehicle, branchId: string): Promise<void> {
+  const id = requireBranchId(branchId);
+  const ref = branchDocRef(db(), "vehicles", vehicle.driverID, id);
   const existing = await getDoc(ref);
   const action = existing.exists() ? "updated" : "created";
   await setDoc(ref, stripUndefined({ ...vehicle }));
@@ -1314,8 +1343,9 @@ export async function upsertVehicle(vehicle: Vehicle): Promise<void> {
   );
 }
 
-export async function deleteVehicle(driverID: string): Promise<void> {
-  const ref = branchDocRef(db(), "vehicles", driverID);
+export async function deleteVehicle(driverID: string, branchId: string): Promise<void> {
+  const id = requireBranchId(branchId);
+  const ref = branchDocRef(db(), "vehicles", driverID, id);
   const snap = await getDoc(ref);
   const title = snap.exists() ? vehicleDisplayTitle(mapVehicle(snap.data())) : "Fleet vehicle";
   await deleteDoc(ref);
@@ -1326,37 +1356,48 @@ export async function deleteVehicle(driverID: string): Promise<void> {
 export async function assignFleetVehicle(
   vehicles: Vehicle[],
   vehicleDocumentId: string,
-  toChauffeurUserId: string
+  toChauffeurUserId: string,
+  branchId: string
 ): Promise<void> {
+  const id = requireBranchId(branchId);
   const batch = writeBatch(db());
   let found = false;
   for (const v of vehicles) {
     if (v.driverID === vehicleDocumentId) found = true;
     const linked = effectiveChauffeurUserId(v);
     if (linked === toChauffeurUserId && v.driverID !== vehicleDocumentId) {
-      batch.update(branchDocRef(db(), "vehicles", v.driverID), { assignedChauffeurUserId: "" });
+      batch.update(branchDocRef(db(), "vehicles", v.driverID, id), {
+        assignedChauffeurUserId: ""
+      });
     }
   }
   if (!found) throw new Error("That fleet vehicle no longer exists. Refresh and try again.");
-  batch.update(branchDocRef(db(), "vehicles", vehicleDocumentId), {
+  batch.update(branchDocRef(db(), "vehicles", vehicleDocumentId, id), {
     assignedChauffeurUserId: toChauffeurUserId
   });
   await batch.commit();
 }
 
 /** Clears the chauffeur linked to a fleet vehicle. */
-export async function unassignFleetVehicle(vehicleDocumentId: string): Promise<void> {
-  await updateDoc(branchDocRef(db(), "vehicles", vehicleDocumentId), {
+export async function unassignFleetVehicle(
+  vehicleDocumentId: string,
+  branchId: string
+): Promise<void> {
+  const id = requireBranchId(branchId);
+  await updateDoc(branchDocRef(db(), "vehicles", vehicleDocumentId, id), {
     assignedChauffeurUserId: ""
   });
 }
 
 // ───────────────────────────── Locations ─────────────────────────────
 
-export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => void): Unsub {
-  const branchId = getActiveBranchId();
+export function listenFleetLocations(
+  branchId: string,
+  onUpdate: (locations: FleetLocation[]) => void
+): Unsub {
+  const id = requireBranchId(branchId);
   const nested = query(
-    branchCollectionRef(db(), "locations", branchId),
+    branchCollectionRef(db(), "locations", id),
     orderBy("createdAt", "desc")
   );
   return listenQuery(
@@ -1367,27 +1408,21 @@ export function listenFleetLocations(onUpdate: (locations: FleetLocation[]) => v
   );
 }
 
-export async function fetchFleetLocations(): Promise<FleetLocation[]> {
-  const branchId = getActiveBranchId();
+export async function fetchFleetLocations(branchId: string): Promise<FleetLocation[]> {
+  const id = requireBranchId(branchId);
   const nested = query(
-    branchCollectionRef(db(), "locations", branchId),
+    branchCollectionRef(db(), "locations", id),
     orderBy("createdAt", "desc")
   );
   return snapToList(await getDocs(nested), mapFleetLocation);
-}
-
-async function clearOtherDefaultFleetLocations(
-  exceptId: string,
-  branchId: string = getActiveBranchId()
-): Promise<void> {
-  await clearOtherDefaultFleetLocationsInBranch(branchId, exceptId);
 }
 
 async function clearOtherDefaultFleetLocationsInBranch(
   branchId: string,
   exceptId: string
 ): Promise<void> {
-  const snap = await getDocs(branchCollectionRef(db(), "locations", branchId));
+  const id = requireBranchId(branchId);
+  const snap = await getDocs(branchCollectionRef(db(), "locations", id));
   const batch = writeBatch(db());
   let hasUpdates = false;
 
@@ -1401,22 +1436,26 @@ async function clearOtherDefaultFleetLocationsInBranch(
   if (hasUpdates) await batch.commit();
 }
 
-export async function createFleetLocation(input: {
-  name: string;
-  addressLine: string;
-  latitude: number;
-  longitude: number;
-  isDefault?: boolean;
-}): Promise<void> {
+export async function createFleetLocation(
+  branchId: string,
+  input: {
+    name: string;
+    addressLine: string;
+    latitude: number;
+    longitude: number;
+    isDefault?: boolean;
+  }
+): Promise<void> {
+  const resolved = requireBranchId(branchId);
   const name = input.name.trim();
   const addressLine = input.addressLine.trim();
   if (!name || !addressLine) throw new Error("Enter a name and address before saving this office.");
   const id = crypto.randomUUID();
   const isDefault = input.isDefault === true;
 
-  if (isDefault) await clearOtherDefaultFleetLocations(id);
+  if (isDefault) await clearOtherDefaultFleetLocationsInBranch(resolved, id);
 
-  await setDoc(branchDocRef(db(), "locations", id), {
+  await setDoc(branchDocRef(db(), "locations", id, resolved), {
     id,
     name,
     addressLine,
@@ -1428,15 +1467,19 @@ export async function createFleetLocation(input: {
   void createActivityNotification(locationNotification("created", name, id));
 }
 
-export async function updateFleetLocation(location: FleetLocation): Promise<void> {
+export async function updateFleetLocation(
+  location: FleetLocation,
+  branchId: string
+): Promise<void> {
+  const resolved = requireBranchId(branchId);
   const name = location.name.trim();
   const addressLine = location.addressLine.trim();
   if (!name || !addressLine) throw new Error("Enter a name and address before saving this office.");
   const isDefault = location.isDefault === true;
 
-  if (isDefault) await clearOtherDefaultFleetLocations(location.id);
+  if (isDefault) await clearOtherDefaultFleetLocationsInBranch(resolved, location.id);
 
-  await updateDoc(branchDocRef(db(), "locations", location.id), {
+  await updateDoc(branchDocRef(db(), "locations", location.id, resolved), {
     name,
     addressLine,
     latitude: location.latitude,
@@ -1446,8 +1489,9 @@ export async function updateFleetLocation(location: FleetLocation): Promise<void
   void createActivityNotification(locationNotification("updated", name, location.id));
 }
 
-export async function deleteFleetLocation(id: string): Promise<void> {
-  const ref = branchDocRef(db(), "locations", id);
+export async function deleteFleetLocation(id: string, branchId: string): Promise<void> {
+  const resolved = requireBranchId(branchId);
+  const ref = branchDocRef(db(), "locations", id, resolved);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const location = mapFleetLocation(snap.id, snap.data());
@@ -1460,10 +1504,9 @@ export async function deleteFleetLocation(id: string): Promise<void> {
 
 // ───────────────────────── App settings (config) ─────────────────────
 
-export async function fetchPricingConfiguration(
-  branchId: string = getActiveBranchId()
-): Promise<PricingConfig> {
-  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing, branchId));
+export async function fetchPricingConfiguration(branchId: string): Promise<PricingConfig> {
+  const id = requireBranchId(branchId);
+  const nested = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.pricing, id));
   if (!nested.exists()) {
     throw new ConfigError("Pricing is not configured. Set pricing for this location first.");
   }
@@ -1472,39 +1515,44 @@ export async function fetchPricingConfiguration(
 
 export async function savePricingConfiguration(
   config: PricingConfig,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
+  const id = requireBranchId(branchId);
   validatePricingConfig(config);
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.pricing, branchId),
+    branchSettingsDocRef(db(), BranchSettingsDocs.pricing, id),
     stripUndefined({ ...config }),
     { merge: true }
   );
-  invalidatePricingConfigurationCache(branchId);
-  void notifyLocationSetting(branchId, (name) => pricingNotification(branchId, name));
+  invalidatePricingConfigurationCache(id);
+  void notifyLocationSetting(id, (name) => pricingNotification(id, name));
 }
 
 // ───────────────────────── Vehicle classes ─────────────────────────
 
-export async function fetchVehicleClasses(
-  branchId: string = getActiveBranchId()
-): Promise<VehicleClass[]> {
-  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", branchId));
+export async function fetchVehicleClasses(branchId: string): Promise<VehicleClass[]> {
+  const id = requireBranchId(branchId);
+  const nestedSnap = await getDocs(branchCollectionRef(db(), "vehicle_classes", id));
   return nestedSnap.docs
     .map((docSnap) => mapVehicleClass(docSnap.id, docSnap.data()))
     .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
 }
 
-export async function fetchVehicleClass(id: string): Promise<VehicleClass | null> {
-  const nested = await getDoc(branchDocRef(db(), "vehicle_classes", id));
+export async function fetchVehicleClass(
+  id: string,
+  branchId: string
+): Promise<VehicleClass | null> {
+  const resolved = requireBranchId(branchId);
+  const nested = await getDoc(branchDocRef(db(), "vehicle_classes", id, resolved));
   return nested.exists() ? mapVehicleClass(nested.id, nested.data()) : null;
 }
 
 export function listenVehicleClasses(
   onUpdate: (classes: VehicleClass[]) => void,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Unsub {
-  const nested = query(branchCollectionRef(db(), "vehicle_classes", branchId));
+  const id = requireBranchId(branchId);
+  const nested = query(branchCollectionRef(db(), "vehicle_classes", id));
   return listenQuery(
     nested,
     (snap) =>
@@ -1564,34 +1612,33 @@ export async function deleteVehicleClass(
   );
 }
 
-export async function fetchOperatingHours(
-  branchId: string = getActiveBranchId()
-): Promise<AppFleetOperatingHours> {
+export async function fetchOperatingHours(branchId: string): Promise<AppFleetOperatingHours> {
+  const id = requireBranchId(branchId);
   const nested = await getDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, branchId)
+    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, id)
   );
   return nested.exists() ? mapOperatingHours(nested.data()) : emptyOperatingHours;
 }
 
 export async function saveOperatingHours(
   hours: AppFleetOperatingHours,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
+  const id = requireBranchId(branchId);
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, branchId),
+    branchSettingsDocRef(db(), BranchSettingsDocs.operatingHours, id),
     stripUndefined({
       schedules: hours.schedules,
       timeZoneIdentifier: deleteField()
     }),
     { merge: true }
   );
-  void notifyLocationSetting(branchId, (name) => operatingHoursNotification(branchId, name));
+  void notifyLocationSetting(id, (name) => operatingHoursNotification(id, name));
 }
 
-export async function fetchOperatorLocale(
-  branchId: string = getActiveBranchId()
-): Promise<OperatorLocale> {
-  const snap = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale, branchId));
+export async function fetchOperatorLocale(branchId: string): Promise<OperatorLocale> {
+  const id = requireBranchId(branchId);
+  const snap = await getDoc(branchSettingsDocRef(db(), BranchSettingsDocs.locale, id));
   if (!snap.exists()) {
     throw new ConfigError("Locale is not configured. Set locale for this location first.");
   }
@@ -1600,11 +1647,12 @@ export async function fetchOperatorLocale(
 
 export async function saveOperatorLocale(
   locale: OperatorLocale,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Promise<void> {
+  const id = requireBranchId(branchId);
   validateOperatorLocale(locale);
   await setDoc(
-    branchSettingsDocRef(db(), BranchSettingsDocs.locale, branchId),
+    branchSettingsDocRef(db(), BranchSettingsDocs.locale, id),
     stripUndefined({
       ...locale,
       driverLicenceCountry: deleteField(),
@@ -1612,11 +1660,11 @@ export async function saveOperatorLocale(
     }),
     { merge: true }
   );
-  invalidateOperatorLocaleCache(branchId);
-  if (branchId === getActiveBranchId()) {
+  invalidateOperatorLocaleCache(id);
+  if (id === getActiveBranchId()) {
     setActiveFormatLocale({ locale: locale.locale, currency: locale.currency });
   }
-  void notifyLocationSetting(branchId, (name) => localeNotification(branchId, name));
+  void notifyLocationSetting(id, (name) => localeNotification(id, name));
 }
 
 export async function fetchCompanyProfile(): Promise<CompanyProfile> {
@@ -1682,30 +1730,33 @@ async function loadPlansCatalog(): Promise<AppPlansCatalog> {
 
 export function listenInvoices(
   onUpdate: (invoices: Invoice[]) => void,
-  branchId: string = getActiveBranchId()
+  branchId: string
 ): Unsub {
+  const id = requireBranchId(branchId);
   const nested = query(
-    branchCollectionRef(db(), "invoices", branchId),
+    branchCollectionRef(db(), "invoices", id),
     orderBy("issuedAt", "desc")
   );
   return listenQuery(
     nested,
-    (snap) => snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), branchId)),
+    (snap) => snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), id)),
     onUpdate,
     onSnapshotError("invoices", onUpdate)
   );
 }
 
-export async function fetchInvoice(id: string): Promise<Invoice | null> {
-  const branchId = getActiveBranchId();
-  const nested = await getDoc(branchDocRef(db(), "invoices", id, branchId));
-  return nested.exists() ? mapInvoice(nested.id, nested.data(), branchId) : null;
+export async function fetchInvoice(id: string, branchId: string): Promise<Invoice | null> {
+  const resolved = requireBranchId(branchId);
+  const nested = await getDoc(branchDocRef(db(), "invoices", id, resolved));
+  return nested.exists() ? mapInvoice(nested.id, nested.data(), resolved) : null;
 }
 
 export async function createInvoice(
-  invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">
+  invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">,
+  branchId: string
 ): Promise<string> {
-  const ref = await addDoc(branchCollectionRef(db(), "invoices"), {
+  const resolved = requireBranchId(branchId);
+  const ref = await addDoc(branchCollectionRef(db(), "invoices", resolved), {
     ...stripUndefined(invoice),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -1714,16 +1765,22 @@ export async function createInvoice(
   return ref.id;
 }
 
-export async function updateInvoice(id: string, patch: Partial<Invoice>): Promise<void> {
-  await updateDoc(branchDocRef(db(), "invoices", id), {
+export async function updateInvoice(
+  id: string,
+  branchId: string,
+  patch: Partial<Invoice>
+): Promise<void> {
+  const resolved = requireBranchId(branchId);
+  await updateDoc(branchDocRef(db(), "invoices", id, resolved), {
     ...stripUndefined(patch),
     updatedAt: serverTimestamp()
   });
   void createActivityNotification(invoiceNotification("updated", patch.invoiceNumber ?? id, id));
 }
 
-export async function deleteInvoice(id: string): Promise<void> {
-  const ref = branchDocRef(db(), "invoices", id);
+export async function deleteInvoice(id: string, branchId: string): Promise<void> {
+  const resolved = requireBranchId(branchId);
+  const ref = branchDocRef(db(), "invoices", id, resolved);
   const snap = await getDoc(ref);
   const number = snap.exists() ? String(snap.data().invoiceNumber ?? id) : id;
   await deleteDoc(ref);

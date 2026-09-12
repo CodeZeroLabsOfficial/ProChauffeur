@@ -105,24 +105,24 @@ export function DriverProfileOperationsTab({
   const handleAssign = useCallback(
     async (vehicleDocumentId: string) => {
       try {
-        await assignFleetVehicle(vehicles, vehicleDocumentId, user.id);
+        await assignFleetVehicle(vehicles, vehicleDocumentId, user.id, branchId);
         toast.success("Vehicle assigned.");
       } catch {
         toast.error("Could not assign the vehicle.");
       }
     },
-    [user.id, vehicles]
+    [branchId, user.id, vehicles]
   );
 
   const handleUnassign = useCallback(async () => {
     if (!vehicle) return;
     try {
-      await unassignFleetVehicle(vehicle.driverID);
+      await unassignFleetVehicle(vehicle.driverID, branchId);
       toast.success("Vehicle unassigned.");
     } catch {
       toast.error("Could not unassign the vehicle.");
     }
-  }, [vehicle]);
+  }, [branchId, vehicle]);
 
   function openAddSheet() {
     setEditingSchedule(null);
@@ -139,9 +139,9 @@ export function DriverProfileOperationsTab({
       await saveDriverProfile(user.id, {
         ...profile,
         availabilitySchedules: schedules
-      });
+      }, branchId);
     },
-    [profile, user.id]
+    [branchId, profile, user.id]
   );
 
   return (

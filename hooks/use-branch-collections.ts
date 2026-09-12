@@ -27,8 +27,8 @@ export function useBranchTrips(branchId: string): { trips: Trip[]; loading: bool
         setTrips(rows);
         setLoading(false);
       },
-      800,
-      id
+      id,
+      800
     );
   }, [branchId]);
 

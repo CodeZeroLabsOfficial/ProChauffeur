@@ -8,10 +8,11 @@ export function nullableTrim(value: string): string | null {
 
 export async function saveVehicleFields(
   vehicle: Vehicle,
-  patch: Partial<Vehicle>
+  patch: Partial<Vehicle>,
+  branchId: string
 ): Promise<{ ok: boolean; message?: string }> {
   try {
-    await upsertVehicle({ ...vehicle, ...patch });
+    await upsertVehicle({ ...vehicle, ...patch }, branchId);
     return { ok: true };
   } catch {
     return { ok: false, message: "Could not save." };

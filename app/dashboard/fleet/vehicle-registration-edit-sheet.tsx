@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import type { Vehicle } from "@/lib/models";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
 import { isStartAfterExpiry } from "@/components/expiry-badge";
 import { saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
@@ -38,6 +39,7 @@ export function VehicleRegistrationEditSheet({
   onSaved?: () => void;
   nested?: boolean;
 }) {
+  const { branchId } = useActiveBranch();
   const [registrationStart, setRegistrationStart] = useState<Date | undefined>(
     vehicle.registration?.registrationStart ?? undefined
   );
@@ -99,7 +101,7 @@ export function VehicleRegistrationEditSheet({
         registrationStart: registrationStart ?? null,
         registrationExpiry: registrationExpiry ?? null
       }
-    });
+    }, branchId);
     setSaving(false);
 
     if (!result.ok) {

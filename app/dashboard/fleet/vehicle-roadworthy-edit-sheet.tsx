@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import type { Vehicle } from "@/lib/models";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { complianceSheetTitle, hasComplianceDetails } from "@/components/compliance";
 import { isStartAfterExpiry } from "@/components/expiry-badge";
 import { saveVehicleFields } from "@/app/dashboard/fleet/lib/save-vehicle-fields";
@@ -38,6 +39,7 @@ export function VehicleRoadworthyEditSheet({
   onSaved?: () => void;
   nested?: boolean;
 }) {
+  const { branchId } = useActiveBranch();
   const [issueDate, setIssueDate] = useState<Date | undefined>(
     vehicle.roadworthy?.issueDate ?? undefined
   );
@@ -99,7 +101,7 @@ export function VehicleRoadworthyEditSheet({
         issueDate: issueDate ?? null,
         expiryDate: expiryDate ?? null
       }
-    });
+    }, branchId);
     setSaving(false);
 
     if (!result.ok) {

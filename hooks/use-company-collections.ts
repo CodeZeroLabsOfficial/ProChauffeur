@@ -95,7 +95,7 @@ function useMergedBranchCollections<T extends { id: string; branchId?: string | 
 }
 
 function listenBranchTrips(onUpdate: (rows: Trip[]) => void, branchId: string) {
-  return listenTrips(onUpdate, 800, branchId);
+  return listenTrips(onUpdate, branchId, 800);
 }
 
 function listenBranchInvoices(onUpdate: (rows: Invoice[]) => void, branchId: string) {

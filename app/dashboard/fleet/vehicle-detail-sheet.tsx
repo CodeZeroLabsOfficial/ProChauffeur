@@ -21,6 +21,7 @@ import {
   vehicleDisplayName,
   type Vehicle
 } from "@/lib/models";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useVehicleClasses } from "@/hooks/use-collections";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { assignmentBadgeIcon, vehicleStatusBadgeIcon } from "@/lib/vehicle-badge-icons";
@@ -56,6 +57,7 @@ function VehicleOverviewFields({
   vehicle: Vehicle;
   classOptions: { value: string; label: string }[];
 }) {
+  const { branchId } = useActiveBranch();
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   const details = vehicle.details ?? emptyVehicleDetails();
@@ -64,7 +66,7 @@ function VehicleOverviewFields({
   const makeValue = vehicleMakeSelectValue(details.make);
 
   async function saveVehicle(patch: Partial<Vehicle>) {
-    return saveVehicleFields(vehicle, patch);
+    return saveVehicleFields(vehicle, patch, branchId);
   }
 
   function patchDetails(partial: Partial<typeof details>) {

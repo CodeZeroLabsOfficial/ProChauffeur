@@ -1,4 +1,3 @@
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { getMapboxToken } from "@/lib/env";
 import { fetchRouteMetrics } from "@/lib/mapbox/directions";
 import { isFeatureEnabled, isLocationFeatureEnabled } from "@/lib/models";
@@ -8,6 +7,7 @@ import type { PricingConfig } from "@/lib/models/pricing";
 import type { VehicleClass } from "@/lib/models/vehicle-class";
 import type { QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import type { CoordinateField } from "@/lib/models/trip";
+import { requireBranchId } from "@/lib/branch/require-branch-id";
 import { buildTripQuote } from "@/lib/pricing/quote-engine";
 import { QuoteError } from "@/lib/pricing/errors";
 import {
@@ -42,13 +42,14 @@ export async function buildQuoteForRequest(
   pricing: PricingConfig,
   locale: OperatorLocale,
   locations: FleetLocation[],
-  vehicleClass: VehicleClass
+  vehicleClass: VehicleClass,
+  branchId: string
 ): Promise<QuoteResult> {
-  const branchId = getActiveBranchId();
+  const resolvedBranchId = requireBranchId(branchId);
   const [license, plans, branch] = await Promise.all([
     fetchLicense(),
     fetchPlansCatalog(),
-    branchId ? fetchBranch(branchId) : Promise.resolve(null)
+    fetchBranch(resolvedBranchId)
   ]);
 
   let gatedRequest = request;

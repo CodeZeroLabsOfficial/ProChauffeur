@@ -63,7 +63,6 @@ import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { customerAddressSnapshotFromProfile } from "@/lib/models/postal-address";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
-import { getActiveBranchId } from "@/lib/branch/active-branch-store";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useLoyaltyPromosEnabled } from "@/hooks/use-loyalty-promos";
 import { DateTimePicker } from "@/components/datetime-picker";
@@ -134,6 +133,7 @@ async function resolveBookingQuote(
   locale: OperatorLocale,
   locations: Parameters<typeof buildQuoteForRequest>[3],
   vehicleClass: NonNullable<Parameters<typeof buildQuoteForRequest>[4]>,
+  branchId: string,
   opts: {
     customerId: string | null;
     settlement: CorporateAllowedPayment | null;
@@ -141,7 +141,7 @@ async function resolveBookingQuote(
 ): Promise<QuoteResult> {
   if (request.corporateAccount && opts.customerId && opts.settlement) {
     return buildTripQuoteRemote({
-      branchId: getActiveBranchId(),
+      branchId,
       customerId: opts.customerId,
       settlement: opts.settlement,
       trip: {
@@ -164,7 +164,8 @@ async function resolveBookingQuote(
     pricing,
     locale,
     locations,
-    vehicleClass
+    vehicleClass,
+    branchId
   );
 }
 
@@ -584,14 +585,15 @@ export function NewBookingSheet({
         operatorLocale,
         locations,
         selectedVehicleClass,
+        branchId,
         {
           customerId: customer?.id ?? null,
           settlement: corporateSettlement
         }
       );
-      const customerUses = await countCustomerPromoRedemptions(customer.id, promo.id);
+      const customerUses = await countCustomerPromoRedemptions(customer.id, promo.id, branchId);
       const resolved = resolvePromoApplication(promo, {
-        branchId: getActiveBranchId(),
+        branchId,
         tripType: quoteTripType,
         vehicleClassId,
         at: scheduledPickupAt,
@@ -832,6 +834,7 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
+              branchId,
               {
                 customerId: customer?.id ?? null,
                 settlement: corporateSettlement
@@ -843,6 +846,7 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
+              branchId,
               {
                 customerId: customer?.id ?? null,
                 settlement: corporateSettlement
@@ -879,6 +883,7 @@ export function NewBookingSheet({
           operatorLocale,
           locations,
           selectedVehicleClass,
+          branchId,
           {
             customerId: customer?.id ?? null,
             settlement: corporateSettlement
@@ -914,6 +919,7 @@ export function NewBookingSheet({
     pricingConfig,
     operatorLocale,
     locations,
+    branchId,
     pickup,
     dropoff,
     scheduledPickupAt,
@@ -1059,6 +1065,7 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
+              branchId,
               {
                 customerId: customer?.id ?? null,
                 settlement: corporateSettlement
@@ -1070,6 +1077,7 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
+              branchId,
               {
                 customerId: customer?.id ?? null,
                 settlement: corporateSettlement
@@ -1099,6 +1107,7 @@ export function NewBookingSheet({
 
         const outbound: Trip = {
           id: outboundId,
+          branchId,
           status: "requested",
           ...customerFields,
           driverID: null,
@@ -1123,6 +1132,7 @@ export function NewBookingSheet({
 
         const returnLeg: Trip = {
           id: returnId,
+          branchId,
           status: "requested",
           ...customerFields,
           driverID: null,
@@ -1173,6 +1183,7 @@ export function NewBookingSheet({
               operatorLocale,
               locations,
               selectedVehicleClass,
+              branchId,
               {
                 customerId: customer?.id ?? null,
                 settlement: corporateSettlement
@@ -1189,7 +1200,7 @@ export function NewBookingSheet({
 
       if (isEditMode) {
         const customerFields = buildTripCustomerFields(customer);
-        await updateTrip(editTrip!.id, {
+        await updateTrip(editTrip!.id, editTrip!.branchId ?? branchId, {
           customerID: customerFields.customerID,
           customer: customerFields.customer,
           driverID: editTrip!.driverID ?? null,
@@ -1213,6 +1224,7 @@ export function NewBookingSheet({
       } else {
         const trip: Trip = {
           id: crypto.randomUUID(),
+          branchId,
           status: "requested",
           ...buildTripCustomerFields(customer),
           driverID: null,

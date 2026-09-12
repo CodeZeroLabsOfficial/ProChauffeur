@@ -53,16 +53,23 @@ export function useVehicleClasses() {
   return { vehicleClasses, loading: vehicleClassesLoading };
 }
 
-export function useTrip(id: string) {
+export function useTrip(id: string, branchId: string) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const unsub = listenTrip(id, (row) => {
+    const resolved = branchId.trim();
+    if (!id.trim() || !resolved) {
+      setTrip(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const unsub = listenTrip(id, resolved, (row) => {
       setTrip(row);
       setLoading(false);
     });
     return () => unsub();
-  }, [id]);
+  }, [id, branchId]);
   return { trip, loading, notFound: !loading && !trip };
 }
 

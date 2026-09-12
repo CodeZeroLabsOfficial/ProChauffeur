@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useRosterChauffeurs, useVehicleClasses, useVehicles } from "@/hooks/use-collections";
 import {
   effectiveChauffeurUserId,
@@ -70,6 +71,7 @@ export function VehicleEditSheet({
   nested?: boolean;
 }) {
   const isNew = !vehicle;
+  const { branchId } = useActiveBranch();
   const { vehicleClasses } = useVehicleClasses();
   const { chauffeurs } = useRosterChauffeurs();
   const { vehicles } = useVehicles();
@@ -160,15 +162,15 @@ export function VehicleEditSheet({
 
     setSaving(true);
     try {
-      await upsertVehicle(next);
+      await upsertVehicle(next, branchId);
       if (!isNew && assignedChauffeurId !== initialChauffeurId) {
         if (assignedChauffeurId === UNASSIGNED) {
-          await unassignFleetVehicle(driverID);
+          await unassignFleetVehicle(driverID, branchId);
         } else {
-          await assignFleetVehicle(vehicles, driverID, assignedChauffeurId);
+          await assignFleetVehicle(vehicles, driverID, assignedChauffeurId, branchId);
         }
       } else if (isNew && assignedChauffeurId === UNASSIGNED) {
-        await unassignFleetVehicle(driverID);
+        await unassignFleetVehicle(driverID, branchId);
       }
       toast.success(isNew ? "Vehicle added." : "Vehicle updated.");
       onOpenChange(false);
