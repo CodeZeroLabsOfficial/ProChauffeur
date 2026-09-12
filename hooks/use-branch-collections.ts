@@ -2,14 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  fetchBranchInvoicesPage,
-  fetchBranchTripsPage,
-  listenVehicleClasses
-} from "@/lib/services/firebase-service";
+import { listenVehicleClasses, queryInvoices, queryTrips } from "@/lib/services/firebase-service";
 import type { Invoice, Trip, VehicleClass } from "@/lib/models";
 
-/** One-shot paged trips for a Location URL (not a live 800 listener). */
+/** One-shot paged trips for a Location URL (not a live listener). */
 export function useBranchTrips(branchId: string): { trips: Trip[]; loading: boolean } {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,9 +19,9 @@ export function useBranchTrips(branchId: string): { trips: Trip[]; loading: bool
       return;
     }
     setLoading(true);
-    void fetchBranchTripsPage(id, 50)
-      .then((rows) => {
-        if (!cancelled) setTrips(rows);
+    void queryTrips(id, { pageSize: 50 })
+      .then((result) => {
+        if (!cancelled) setTrips(result.trips);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -52,9 +48,9 @@ export function useBranchInvoices(branchId: string): { invoices: Invoice[]; load
       return;
     }
     setLoading(true);
-    void fetchBranchInvoicesPage(id, 50)
-      .then((rows) => {
-        if (!cancelled) setInvoices(rows);
+    void queryInvoices(id, { pageSize: 50 })
+      .then((result) => {
+        if (!cancelled) setInvoices(result.invoices);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import {
-  usePagedInvoices,
+  useInvoicesByIds,
   usePagedTrips,
   useRosterChauffeurs,
   useUsersByIds,
@@ -59,7 +59,14 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
     driverId: assignedChauffeurId,
     enabled: Boolean(assignedChauffeurId)
   });
-  const { invoices } = usePagedInvoices(100);
+  const invoiceIds = useMemo(
+    () =>
+      trips
+        .map((t) => t.billing.invoiceId?.trim())
+        .filter((id): id is string => Boolean(id)),
+    [trips]
+  );
+  const { invoices } = useInvoicesByIds(invoiceIds);
 
   const metrics = useMemo(
     () => (vehicle ? vehicleOverviewMetrics(trips, invoices, vehicle) : null),

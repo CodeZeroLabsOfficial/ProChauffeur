@@ -530,25 +530,6 @@ export async function deleteBranch(branchId: string): Promise<void> {
 
 // ─────────────────────────────── Trips ───────────────────────────────
 
-/** Admin overview listener: recent trips for a Location, newest first. */
-export function listenTrips(
-  onUpdate: (trips: Trip[]) => void,
-  max = 800,
-  branchId: string = getActiveBranchId()
-): Unsub {
-  const nested = query(
-    branchCollectionRef(db(), "trips", branchId),
-    orderBy("createdAt", "desc"),
-    fsLimit(max)
-  );
-  return listenQuery(
-    nested,
-    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId)),
-    onUpdate,
-    onSnapshotError("trips", onUpdate)
-  );
-}
-
 const DISPATCH_STATUSES: TripStatus[] = [
   "requested",
   "accepted",
@@ -742,28 +723,14 @@ export async function queryInvoicesForCorporateAccount(
   const pageSize = options.pageSizePerBranch ?? 100;
   const batches = await Promise.all(
     branchIds.filter(Boolean).map(async (branchId) => {
-      const { invoices } = await queryInvoices(branchId, { pageSize });
-      return invoices.filter((inv) => inv.corporateAccountId === id);
+      const { invoices } = await queryInvoices(branchId, {
+        corporateAccountId: id,
+        pageSize
+      });
+      return invoices;
     })
   );
   return batches.flat().sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime());
-}
-
-/** One-shot paged trips for a Location URL (no live listener). */
-export async function fetchBranchTripsPage(
-  branchId: string,
-  pageSize = 50
-): Promise<Trip[]> {
-  const { trips } = await queryTrips(branchId, { pageSize });
-  return trips;
-}
-
-export async function fetchBranchInvoicesPage(
-  branchId: string,
-  pageSize = 50
-): Promise<Invoice[]> {
-  const { invoices } = await queryInvoices(branchId, { pageSize });
-  return invoices;
 }
 
 /** One-shot bounded window for dashboard KPIs (active Location). */
@@ -775,17 +742,6 @@ export async function fetchTripsInPickupRange(
 ): Promise<Trip[]> {
   const { trips } = await queryTrips(branchId, { from, to, pageSize: max });
   return trips;
-}
-
-export async function fetchTrips(max = 800): Promise<Trip[]> {
-  const branchId = getActiveBranchId();
-  const nested = query(
-    branchCollectionRef(db(), "trips", branchId),
-    orderBy("createdAt", "desc"),
-    fsLimit(max)
-  );
-  const snap = await getDocs(nested);
-  return snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId));
 }
 
 export async function fetchTrip(
@@ -1968,27 +1924,13 @@ async function loadPlansCatalog(): Promise<AppPlansCatalog> {
 
 // ─────────────────────────────── Invoices ───────────────────────────────
 
-export function listenInvoices(
-  onUpdate: (invoices: Invoice[]) => void,
-  branchId: string = getActiveBranchId()
-): Unsub {
-  const nested = query(
-    branchCollectionRef(db(), "invoices", branchId),
-    orderBy("issuedAt", "desc"),
-    fsLimit(200)
-  );
-  return listenQuery(
-    nested,
-    (snap) => snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), branchId)),
-    onUpdate,
-    onSnapshotError("invoices", onUpdate)
-  );
-}
-
 export type QueryInvoicesOptions = {
   pageSize?: number;
   startAfterDoc?: QueryDocumentSnapshot | null;
   customerId?: string | null;
+  corporateAccountId?: string | null;
+  from?: Date;
+  to?: Date;
 };
 
 export type QueryInvoicesResult = {
@@ -2004,24 +1946,27 @@ export async function queryInvoices(
   const id = requireBranchId(branchId);
   const pageSize = options.pageSize ?? 50;
   const col = branchCollectionRef(db(), "invoices", id);
-  const q = options.customerId?.trim()
-    ? options.startAfterDoc
-      ? query(
-          col,
-          where("customerID", "==", options.customerId.trim()),
-          orderBy("createdAt", "desc"),
-          startAfter(options.startAfterDoc),
-          fsLimit(pageSize)
-        )
-      : query(
-          col,
-          where("customerID", "==", options.customerId.trim()),
-          orderBy("createdAt", "desc"),
-          fsLimit(pageSize)
-        )
-    : options.startAfterDoc
-      ? query(col, orderBy("issuedAt", "desc"), startAfter(options.startAfterDoc), fsLimit(pageSize))
-      : query(col, orderBy("issuedAt", "desc"), fsLimit(pageSize));
+  const constraints: QueryConstraint[] = [];
+
+  if (options.customerId?.trim()) {
+    constraints.push(where("customerID", "==", options.customerId.trim()));
+    constraints.push(orderBy("createdAt", "desc"));
+  } else if (options.corporateAccountId?.trim()) {
+    constraints.push(where("corporateAccountId", "==", options.corporateAccountId.trim()));
+    if (options.from) constraints.push(where("issuedAt", ">=", options.from));
+    if (options.to) constraints.push(where("issuedAt", "<=", options.to));
+    constraints.push(orderBy("issuedAt", "desc"));
+  } else if (options.from || options.to) {
+    if (options.from) constraints.push(where("issuedAt", ">=", options.from));
+    if (options.to) constraints.push(where("issuedAt", "<=", options.to));
+    constraints.push(orderBy("issuedAt", "desc"));
+  } else {
+    constraints.push(orderBy("issuedAt", "desc"));
+  }
+
+  const q = options.startAfterDoc
+    ? query(col, ...constraints, startAfter(options.startAfterDoc), fsLimit(pageSize))
+    : query(col, ...constraints, fsLimit(pageSize));
   const snap = await getDocs(q);
   return {
     invoices: snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), id)),
@@ -2029,8 +1974,30 @@ export async function queryInvoices(
   };
 }
 
-export async function fetchInvoice(id: string): Promise<Invoice | null> {
+/** One-shot issued-at window for dashboard KPIs / reports. */
+export async function fetchInvoicesInIssuedRange(
+  branchId: string,
+  from: Date,
+  to: Date,
+  max = 500
+): Promise<Invoice[]> {
+  const { invoices } = await queryInvoices(branchId, { from, to, pageSize: max });
+  return invoices;
+}
+
+/** Batch-fetch invoices by id (active Location; skips missing). */
+export async function fetchInvoicesByIds(ids: string[]): Promise<Invoice[]> {
   const branchId = getActiveBranchId();
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0 || !branchId) return [];
+  const rows = await Promise.all(unique.map((id) => fetchInvoice(id, branchId)));
+  return rows.filter((inv): inv is Invoice => inv != null);
+}
+
+export async function fetchInvoice(
+  id: string,
+  branchId: string = getActiveBranchId()
+): Promise<Invoice | null> {
   const nested = await getDoc(branchDocRef(db(), "invoices", id, branchId));
   return nested.exists() ? mapInvoice(nested.id, nested.data(), branchId) : null;
 }

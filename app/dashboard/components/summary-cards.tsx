@@ -6,7 +6,7 @@ import { CalendarCheckIcon, CarFrontIcon, DollarSign, UsersIcon } from "lucide-r
 
 import {
   useDashboardTrips,
-  usePagedInvoices,
+  useDashboardInvoices,
   useRosterChauffeurs,
   useVehicles
 } from "@/hooks/use-collections";
@@ -53,7 +53,7 @@ export function SummaryCards() {
   const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
   const { chauffeurs } = useRosterChauffeurs();
   const { vehicles } = useVehicles();
-  const { invoices } = usePagedInvoices(100);
+  const { invoices } = useDashboardInvoices(dashRange.from, dashRange.to);
 
   const metrics = useMemo(() => {
     const now = new Date();

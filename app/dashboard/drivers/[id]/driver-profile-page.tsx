@@ -6,10 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import {
-  usePagedInvoices,
+  useInvoicesByIds,
   usePagedTrips,
   useRosterChauffeurs,
-  useUsersByRole,
   useVehicles
 } from "@/hooks/use-collections";
 import { fetchUser } from "@/lib/services/firebase-service";
@@ -46,8 +45,14 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
 
   const { trips } = usePagedTrips({ driverId });
-  const { invoices } = usePagedInvoices(100);
-  const { users: candidates } = useUsersByRole("customer");
+  const invoiceIds = useMemo(
+    () =>
+      trips
+        .map((t) => t.billing.invoiceId?.trim())
+        .filter((id): id is string => Boolean(id)),
+    [trips]
+  );
+  const { invoices } = useInvoicesByIds(invoiceIds);
   const { vehicles } = useVehicles();
   const { chauffeurs, loading: rosterLoading } = useRosterChauffeurs();
 
@@ -175,7 +180,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
       <DriverEditSheet
         user={displayUser}
         roster={roster}
-        candidates={candidates}
         open={editOpen}
         onOpenChange={(open) => {
           setEditOpen(open);

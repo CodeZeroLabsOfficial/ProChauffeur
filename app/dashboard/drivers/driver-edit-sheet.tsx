@@ -14,7 +14,6 @@ import {
   CHAUFFEUR_CATEGORIES,
   chauffeurCategoryTitle,
   defaultDriverProfile,
-  userRoleTitle,
   type BranchDriver,
   type ChauffeurCategory,
   type User,
@@ -31,6 +30,7 @@ import {
   ProfileAddressField,
   PROFILE_ADDRESS_VALIDATION_MESSAGE
 } from "@/components/profile-address-field";
+import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -73,7 +73,6 @@ function nameParts(profile: UserProfile): { firstName: string; lastName: string 
 export function DriverEditSheet({
   user,
   roster,
-  candidates,
   canAdd = true,
   open,
   onOpenChange,
@@ -81,15 +80,13 @@ export function DriverEditSheet({
 }: {
   user: User | null;
   roster: BranchDriver | null;
-  candidates: User[];
   canAdd?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nested?: boolean;
 }) {
   const isNew = !user;
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const selectedCandidate = candidates.find((u) => u.id === selectedUserId);
+  const [selectedCandidate, setSelectedCandidate] = useState<User | null>(null);
   const activeUser = user ?? selectedCandidate ?? null;
   const driverProfile = roster
     ? branchDriverToProfile(roster)
@@ -114,7 +111,7 @@ export function DriverEditSheet({
   const [addressInvalid, setAddressInvalid] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
-  const currentKey = user?.id ?? (selectedUserId || "__new__");
+  const currentKey = user?.id ?? (selectedCandidate?.id || "__new__");
   if (currentKey !== seededId) {
     setSeededId(currentKey);
     setCategory(driverProfile.chauffeurCategory);
@@ -127,7 +124,7 @@ export function DriverEditSheet({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const uid = user?.id ?? selectedUserId;
+    const uid = user?.id ?? selectedCandidate?.id;
     if (!uid) {
       toast.error("Select the user to add as a chauffeur.");
       return;
@@ -208,7 +205,7 @@ export function DriverEditSheet({
   }
 
   function handleOpenChange(next: boolean) {
-    if (!next) setSelectedUserId("");
+    if (!next) setSelectedCandidate(null);
     onOpenChange(next);
   }
 
@@ -222,24 +219,12 @@ export function DriverEditSheet({
           {isNew && (
             <div className="space-y-2">
               <Label>Account</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user to promote" />
-                </SelectTrigger>
-                <SelectContent>
-                  {candidates.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No eligible users
-                    </SelectItem>
-                  ) : (
-                    candidates.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.profile.displayName || u.email} ({userRoleTitle[u.role]})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <CustomerAutocomplete
+                value={selectedCandidate}
+                onChange={setSelectedCandidate}
+                placeholder="Search user to promote…"
+                required
+              />
             </div>
           )}
 
@@ -391,7 +376,7 @@ export function DriverEditSheet({
             <span />
             <Button
               type="submit"
-              disabled={saving || (isNew && (candidates.length === 0 || !canAdd))}>
+              disabled={saving || (isNew && (!selectedCandidate || !canAdd))}>
               {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
             </Button>
           </SheetFooter>

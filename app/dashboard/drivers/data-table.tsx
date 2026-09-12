@@ -17,7 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useRosterChauffeurs, useUsersByRole } from "@/hooks/use-collections";
+import { useRosterChauffeurs } from "@/hooks/use-collections";
 import {
   removeDriver,
   saveDriverProfile
@@ -89,7 +89,6 @@ export function DriversDataTable({
   onCreateOpenChange?: (open: boolean) => void;
   canAdd?: boolean;
 }) {
-  const { users: candidates } = useUsersByRole("customer");
   const { chauffeurs, loading } = useRosterChauffeurs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -528,7 +527,6 @@ export function DriversDataTable({
       <DriverEditSheet
         user={createOpen ? null : selectedChauffeur?.user ?? null}
         roster={createOpen ? null : selectedChauffeur?.roster ?? null}
-        candidates={candidates}
         canAdd={canAdd}
         open={createOpen || editOpen}
         onOpenChange={(next) => {
