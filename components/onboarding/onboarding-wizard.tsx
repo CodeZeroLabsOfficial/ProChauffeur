@@ -39,7 +39,8 @@ import {
   formatCityLabel,
   listedCityNames,
   resolveCityTimezone,
-  type LocationRegionSummary
+  type LocationCountrySummary,
+  type LocationGeoRegionSummary
 } from "@/lib/seed/location/schema";
 import { createLocationFromSeed } from "@/lib/services/firebase-service";
 
@@ -117,10 +118,11 @@ export function OnboardingWizard() {
   const [stripePublishableKey, setStripePublishableKey] = useState("");
 
   // Step 5
-  const [regions, setRegions] = useState<LocationRegionSummary[]>([]);
+  const [regions, setRegions] = useState<LocationGeoRegionSummary[]>([]);
   const [regionsLoading, setRegionsLoading] = useState(false);
   const [regionsError, setRegionsError] = useState<string | null>(null);
-  const [regionId, setRegionId] = useState("");
+  const [geoRegionId, setGeoRegionId] = useState("");
+  const [countryId, setCountryId] = useState("");
   const [locationCity, setLocationCity] = useState("");
   const [locationName, setLocationName] = useState("");
   const [locationPhone, setLocationPhone] = useState("");
@@ -128,12 +130,17 @@ export function OnboardingWizard() {
   const [office, setOffice] = useState<AddressSuggestion | null>(null);
 
   const selectedRegion = useMemo(
-    () => regions.find((row) => row.id === regionId) ?? null,
-    [regions, regionId]
+    () => regions.find((row) => row.id === geoRegionId) ?? null,
+    [regions, geoRegionId]
+  );
+  const countryOptions = selectedRegion?.countries ?? [];
+  const selectedCountry: LocationCountrySummary | null = useMemo(
+    () => countryOptions.find((row) => row.id === countryId) ?? null,
+    [countryOptions, countryId]
   );
   const cityOptions = useMemo(
-    () => (selectedRegion ? listedCityNames(selectedRegion.cities) : []),
-    [selectedRegion]
+    () => (selectedCountry ? listedCityNames(selectedCountry.cities) : []),
+    [selectedCountry]
   );
 
   useEffect(() => {
@@ -208,11 +215,14 @@ export function OnboardingWizard() {
     setRegionsError(null);
     void fetch("/api/location-seed")
       .then(async (res) => {
-        const body = (await res.json()) as { regions?: LocationRegionSummary[]; error?: string };
+        const body = (await res.json()) as {
+          regions?: LocationGeoRegionSummary[];
+          error?: string;
+        };
         if (!res.ok) throw new Error(body.error || "Could not load regions.");
         const rows = body.regions ?? [];
         setRegions(rows);
-        setRegionId((current) => current || rows[0]?.id || "");
+        setGeoRegionId((current) => current || rows[0]?.id || "");
       })
       .catch((err) => {
         setRegions([]);
@@ -376,18 +386,18 @@ export function OnboardingWizard() {
       toast.error("Mapbox is not configured. Contact your provider.");
       return;
     }
-    if (!selectedRegion || !locationCity.trim() || !locationName.trim() || !office) {
-      toast.error("Select region, city, name, and office address.");
+    if (!selectedCountry || !locationCity.trim() || !locationName.trim() || !office) {
+      toast.error("Select region, country, city, name, and office address.");
       return;
     }
-    if (!resolveCityTimezone(locationCity, selectedRegion.cities)) {
-      toast.error("Select a listed city for this region.");
+    if (!resolveCityTimezone(locationCity, selectedCountry.cities)) {
+      toast.error("Select a listed city for this country.");
       return;
     }
     setBusy(true);
     try {
       await createLocationFromSeed({
-        regionId: selectedRegion.id,
+        countryId: selectedCountry.id,
         city: locationCity.trim(),
         name: locationName.trim(),
         officeAddressLine: office.addressLine,
@@ -744,10 +754,11 @@ export function OnboardingWizard() {
             <div className="space-y-2">
               <Label>Region</Label>
               <Select
-                value={regionId || undefined}
+                value={geoRegionId || undefined}
                 disabled={busy || regionsLoading || !mapboxConfigured}
                 onValueChange={(id) => {
-                  setRegionId(id);
+                  setGeoRegionId(id);
+                  setCountryId("");
                   setLocationCity("");
                   setOffice(null);
                 }}>
@@ -765,10 +776,32 @@ export function OnboardingWizard() {
               {regionsError ? <p className="text-destructive text-xs">{regionsError}</p> : null}
             </div>
             <div className="space-y-2">
+              <Label>Country</Label>
+              <Select
+                value={countryId || undefined}
+                disabled={busy || !selectedRegion || !mapboxConfigured}
+                onValueChange={(id) => {
+                  setCountryId(id);
+                  setLocationCity("");
+                  setOffice(null);
+                }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {countryOptions.map((row) => (
+                    <SelectItem key={row.id} value={row.id}>
+                      {row.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>City</Label>
               <Select
                 value={locationCity || undefined}
-                disabled={busy || !selectedRegion || !mapboxConfigured}
+                disabled={busy || !selectedCountry || !mapboxConfigured}
                 onValueChange={(value) => {
                   setLocationCity(value);
                   if (!locationName.trim()) setLocationName(formatCityLabel(value));
@@ -822,7 +855,7 @@ export function OnboardingWizard() {
                 onChange={setOffice}
                 required
                 disabled={busy || !mapboxConfigured}
-                country={selectedRegion?.mapboxJurisdiction || null}
+                country={selectedCountry?.mapboxJurisdiction || null}
                 proximity={office?.coordinate ?? null}
                 placeholder="Search for the office address…"
               />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { listLocationRegionSummaries } from "@/lib/seed/location/load-location-seed";
+import { listLocationGeoRegionSummaries } from "@/lib/seed/location/load-location-seed";
 
 export async function GET() {
   const session = await getAdminSessionUser();
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const regions = await listLocationRegionSummaries();
+    const regions = await listLocationGeoRegionSummaries();
     return NextResponse.json({ regions });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not load location regions.";

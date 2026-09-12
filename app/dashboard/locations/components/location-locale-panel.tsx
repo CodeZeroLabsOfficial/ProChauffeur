@@ -34,7 +34,7 @@ import {
   type TaxDisplayMode
 } from "@/lib/models";
 import { ConfigError } from "@/lib/pricing/errors";
-import type { LocationRegionSummary } from "@/lib/seed/location/schema";
+import type { LocationCountrySummary, LocationGeoRegionSummary } from "@/lib/seed/location/schema";
 import { fetchOperatorLocale, saveOperatorLocale } from "@/lib/services/firebase-service";
 
 type LocaleDraft = {
@@ -151,7 +151,7 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [regions, setRegions] = useState<LocationRegionSummary[]>([]);
+  const [countries, setCountries] = useState<LocationCountrySummary[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -173,12 +173,15 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
   useEffect(() => {
     void fetch("/api/location-seed")
       .then(async (res) => {
-        const body = (await res.json()) as { regions?: LocationRegionSummary[]; error?: string };
+        const body = (await res.json()) as {
+          regions?: LocationGeoRegionSummary[];
+          error?: string;
+        };
         if (!res.ok) throw new Error(body.error || "Could not load regions.");
-        setRegions(body.regions ?? []);
+        setCountries((body.regions ?? []).flatMap((region) => region.countries));
       })
       .catch(() => {
-        setRegions([]);
+        setCountries([]);
         toast.error("Could not load country seeds for locale.");
       });
   }, []);
@@ -207,9 +210,9 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
   }
 
   function applyCountryFromSeed(countryId: string) {
-    const seed = regions.find((row) => row.locale.operatorJurisdiction === countryId);
+    const seed = countries.find((row) => row.locale.operatorJurisdiction === countryId);
     if (!seed) {
-      toast.error("No region seed for that country. Mapbox filter was not updated.");
+      toast.error("No country seed for that selection. Mapbox filter was not updated.");
       return;
     }
     setDraft((current) => ({

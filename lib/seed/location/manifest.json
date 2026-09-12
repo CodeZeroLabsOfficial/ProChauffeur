@@ -1,4 +1,49 @@
 {
-  "version": 1,
-  "regions": ["au", "nz", "us", "gb", "eu"]
+  "version": 2,
+  "regions": [
+    {
+      "id": "apac",
+      "label": "Asia Pacific",
+      "countries": ["au", "nz"]
+    },
+    {
+      "id": "europe",
+      "label": "Europe",
+      "countries": [
+        "gb",
+        "at",
+        "be",
+        "bg",
+        "hr",
+        "cy",
+        "cz",
+        "dk",
+        "ee",
+        "fi",
+        "fr",
+        "de",
+        "gr",
+        "hu",
+        "ie",
+        "it",
+        "lv",
+        "lt",
+        "lu",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "si",
+        "es",
+        "se"
+      ]
+    },
+    {
+      "id": "north-america",
+      "label": "North America",
+      "countries": ["us"]
+    }
+  ]
 }

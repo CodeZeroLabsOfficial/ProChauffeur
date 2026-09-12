@@ -117,12 +117,19 @@ const serviceAreaPolicySchema = z
   })
   .nullable();
 
-export const locationSeedManifestSchema = z.object({
-  version: z.number().int().positive(),
-  regions: z.array(z.string().min(1)).min(1)
+const geoRegionManifestEntrySchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  countries: z.array(z.string().min(1)).min(1)
 });
 
-export const locationRegionSeedSchema = z.object({
+export const locationSeedManifestSchema = z.object({
+  version: z.number().int().positive(),
+  regions: z.array(geoRegionManifestEntrySchema).min(1)
+});
+
+/** Single-country seed (standalone file or entry inside a multi-country pack). */
+export const locationCountrySeedSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   mapboxJurisdiction: z.string(),
@@ -134,12 +141,29 @@ export const locationRegionSeedSchema = z.object({
   serviceArea: serviceAreaPolicySchema
 });
 
+/** Multi-country pack (e.g. eu.json). */
+export const locationCountryPackSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  countries: z
+    .record(z.string().min(1), locationCountrySeedSchema)
+    .refine((map) => Object.keys(map).length > 0, {
+      message: "pack must list at least one country."
+    })
+});
+
+/** @deprecated Use locationCountrySeedSchema — kept as alias for call sites mid-migration. */
+export const locationRegionSeedSchema = locationCountrySeedSchema;
+
 export type LocationSeedManifest = z.infer<typeof locationSeedManifestSchema>;
-export type LocationRegionSeed = z.infer<typeof locationRegionSeedSchema>;
+export type LocationCountrySeed = z.infer<typeof locationCountrySeedSchema>;
+export type LocationCountryPack = z.infer<typeof locationCountryPackSchema>;
+/** @deprecated Use LocationCountrySeed */
+export type LocationRegionSeed = LocationCountrySeed;
 export type SeedOperatorLocale = z.infer<typeof localeSchema>;
 export type SeedCityConfig = z.infer<typeof citySeedSchema>;
 
-export type LocationRegionSummary = {
+export type LocationCountrySummary = {
   id: string;
   label: string;
   mapboxJurisdiction: string;
@@ -147,6 +171,15 @@ export type LocationRegionSummary = {
   cities: Record<string, SeedCityConfig>;
   serviceAreaRadiusMeters: number | null;
   vehicleClassNames: string[];
+};
+
+/** @deprecated Use LocationCountrySummary */
+export type LocationRegionSummary = LocationCountrySummary;
+
+export type LocationGeoRegionSummary = {
+  id: string;
+  label: string;
+  countries: LocationCountrySummary[];
 };
 
 export function normalizeCityKey(city: string): string {
@@ -195,7 +228,7 @@ export function unknownCityTimezoneError(
   return `No time zone for city "${city.trim()}". Use a listed city (${listed}).`;
 }
 
-export function localeFromSeed(seed: LocationRegionSeed, city: string): OperatorLocale {
+export function localeFromSeed(seed: LocationCountrySeed, city: string): OperatorLocale {
   const timezone = resolveCityTimezone(city, seed.cities);
   if (!timezone) {
     throw new Error(unknownCityTimezoneError(city, seed.cities));
@@ -203,7 +236,7 @@ export function localeFromSeed(seed: LocationRegionSeed, city: string): Operator
   return { ...seed.locale, timezone };
 }
 
-export function toRegionSummary(seed: LocationRegionSeed): LocationRegionSummary {
+export function toCountrySummary(seed: LocationCountrySeed): LocationCountrySummary {
   return {
     id: seed.id,
     label: seed.label,
@@ -216,16 +249,19 @@ export function toRegionSummary(seed: LocationRegionSeed): LocationRegionSummary
   };
 }
 
-export function seedPricingConfig(seed: LocationRegionSeed): PricingConfig {
+/** @deprecated Use toCountrySummary */
+export const toRegionSummary = toCountrySummary;
+
+export function seedPricingConfig(seed: LocationCountrySeed): PricingConfig {
   return seed.pricing as PricingConfig;
 }
 
-export function seedOperatingHours(seed: LocationRegionSeed): AppFleetOperatingHours {
+export function seedOperatingHours(seed: LocationCountrySeed): AppFleetOperatingHours {
   return seed.operatingHours as AppFleetOperatingHours;
 }
 
 export function seedServiceAreaFromOffice(
-  seed: LocationRegionSeed,
+  seed: LocationCountrySeed,
   office: { addressLine: string; latitude: number; longitude: number }
 ): Branch["serviceArea"] {
   const policy = seed.serviceArea;

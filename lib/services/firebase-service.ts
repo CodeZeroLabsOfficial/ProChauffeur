@@ -389,7 +389,7 @@ export async function syncOfficeFleetLocation(
 }
 
 export type CreateLocationFromSeedInput = {
-  regionId: string;
+  countryId: string;
   city: string;
   name: string;
   officeAddressLine: string;

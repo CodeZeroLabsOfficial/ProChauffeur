@@ -42,14 +42,15 @@ import {
   listedCityNames,
   resolveCityTimezone,
   unknownCityTimezoneError,
-  type LocationRegionSummary
+  type LocationCountrySummary,
+  type LocationGeoRegionSummary
 } from "@/lib/seed/location/schema";
 import { createLocationFromSeed } from "@/lib/services/firebase-service";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import { cn } from "@/lib/utils";
 
 const STEPS: FormWizardStep[] = [
-  { id: "region", label: "Region & city", icon: Globe },
+  { id: "region", label: "Region, country & city", icon: Globe },
   { id: "details", label: "Details", icon: Building2 },
   { id: "review", label: "Review", icon: ListChecks }
 ];
@@ -111,10 +112,11 @@ export function LocationCreateForm({
   const { setBranchId, allBranches } = useActiveBranch();
   const [pendingBranchId, setPendingBranchId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const [regions, setRegions] = useState<LocationRegionSummary[]>([]);
+  const [regions, setRegions] = useState<LocationGeoRegionSummary[]>([]);
   const [regionsError, setRegionsError] = useState<string | null>(null);
   const [regionsLoading, setRegionsLoading] = useState(false);
-  const [regionId, setRegionId] = useState("");
+  const [geoRegionId, setGeoRegionId] = useState("");
+  const [countryId, setCountryId] = useState("");
   const [city, setCity] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -124,23 +126,31 @@ export function LocationCreateForm({
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const selected = useMemo(
-    () => regions.find((row) => row.id === regionId) ?? null,
-    [regions, regionId]
+  const selectedRegion = useMemo(
+    () => regions.find((row) => row.id === geoRegionId) ?? null,
+    [regions, geoRegionId]
+  );
+  const countryOptions = selectedRegion?.countries ?? [];
+  const selectedCountry: LocationCountrySummary | null = useMemo(
+    () => countryOptions.find((row) => row.id === countryId) ?? null,
+    [countryOptions, countryId]
   );
   const cityOptions = useMemo(
-    () => (selected ? listedCityNames(selected.cities) : []),
-    [selected]
+    () => (selectedCountry ? listedCityNames(selectedCountry.cities) : []),
+    [selectedCountry]
   );
-  const cityTimezone = selected ? resolveCityTimezone(city, selected.cities) : null;
+  const cityTimezone = selectedCountry
+    ? resolveCityTimezone(city, selectedCountry.cities)
+    : null;
   const serviceAreaSummary =
-    selected?.serviceAreaRadiusMeters != null
-      ? `${Math.round(selected.serviceAreaRadiusMeters / 1000)} km around office`
+    selectedCountry?.serviceAreaRadiusMeters != null
+      ? `${Math.round(selectedCountry.serviceAreaRadiusMeters / 1000)} km around office`
       : "—";
 
   useEffect(() => {
     if (!open) return;
     setStep(0);
+    setCountryId("");
     setCity("");
     setName("");
     setPhone("");
@@ -152,11 +162,14 @@ export function LocationCreateForm({
     setRegionsLoading(true);
     void fetch("/api/location-seed")
       .then(async (res) => {
-        const body = (await res.json()) as { regions?: LocationRegionSummary[]; error?: string };
+        const body = (await res.json()) as {
+          regions?: LocationGeoRegionSummary[];
+          error?: string;
+        };
         if (!res.ok) throw new Error(body.error || "Could not load regions.");
         const rows = body.regions ?? [];
         setRegions(rows);
-        setRegionId((current) => current || rows[0]?.id || "");
+        setGeoRegionId((current) => current || rows[0]?.id || "");
       })
       .catch((err) => {
         setRegions([]);
@@ -172,8 +185,15 @@ export function LocationCreateForm({
     setPendingBranchId(null);
   }, [pendingBranchId, allBranches, setBranchId]);
 
-  function selectRegion(nextId: string) {
-    setRegionId(nextId);
+  function selectGeoRegion(nextId: string) {
+    setGeoRegionId(nextId);
+    setCountryId("");
+    setCity("");
+    setOffice(null);
+  }
+
+  function selectCountry(nextId: string) {
+    setCountryId(nextId);
     setCity("");
     setOffice(null);
   }
@@ -201,20 +221,20 @@ export function LocationCreateForm({
 
   function goNext() {
     if (step === 0) {
-      if (!regionId) {
+      if (!geoRegionId) {
         toast.error("Select a region.");
+        return;
+      }
+      if (!countryId || !selectedCountry) {
+        toast.error("Select a country.");
         return;
       }
       if (!city.trim()) {
         toast.error("Select a city.");
         return;
       }
-      if (!selected || !resolveCityTimezone(city, selected.cities)) {
-        toast.error(
-          selected
-            ? unknownCityTimezoneError(city, selected.cities)
-            : "Select a region."
-        );
+      if (!resolveCityTimezone(city, selectedCountry.cities)) {
+        toast.error(unknownCityTimezoneError(city, selectedCountry.cities));
         return;
       }
       if (!name.trim()) setName(formatCityLabel(city));
@@ -232,11 +252,11 @@ export function LocationCreateForm({
       toast.error("Location limit reached.");
       return;
     }
-    if (!selected || !office) return;
+    if (!selectedCountry || !office) return;
     setSubmitting(true);
     try {
       const created = await createLocationFromSeed({
-        regionId: selected.id,
+        countryId: selectedCountry.id,
         city: city.trim(),
         name: name.trim(),
         officeAddressLine: office.addressLine,
@@ -272,202 +292,224 @@ export function LocationCreateForm({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {step === 0 ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="location-region">Region</Label>
-              <Select
-                value={regionId || undefined}
-                onValueChange={selectRegion}
-                disabled={regionsLoading || submitting}>
-                <SelectTrigger id="location-region" className="w-full">
-                  <SelectValue
-                    placeholder={regionsLoading ? "Loading regions…" : "Select a region"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {regions.map((row) => (
-                    <SelectItem key={row.id} value={row.id}>
-                      {row.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {regionsError ? (
-                <p className="text-destructive text-xs">{regionsError}</p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location-city">City</Label>
-              <Select
-                value={city || undefined}
-                onValueChange={setCity}
-                disabled={!selected || submitting}>
-                <SelectTrigger id="location-city" className="w-full">
-                  <SelectValue placeholder="Select a city" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cityOptions.map((label) => (
-                    <SelectItem key={label} value={label}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 1 ? (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="location-name">Name</Label>
-                <Input
-                  id="location-name"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    clearFieldError("name");
-                  }}
-                  placeholder="Location name"
-                  disabled={submitting}
-                  aria-invalid={fieldErrors.name ? true : undefined}
-                  className="peer"
-                />
-                <FieldError message={fieldErrors.name} />
-              </div>
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="location-phone">Phone</Label>
-                <Input
-                  id="location-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    clearFieldError("phone");
-                  }}
-                  placeholder="Phone number"
-                  disabled={submitting}
-                  aria-invalid={fieldErrors.phone ? true : undefined}
-                  className="peer"
-                />
-                <FieldError message={fieldErrors.phone} />
-              </div>
-              <div className="*:not-first:mt-2">
-                <Label htmlFor="location-email">Email</Label>
-                <Input
-                  id="location-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    clearFieldError("email");
-                  }}
-                  placeholder="email@example.com"
-                  disabled={submitting}
-                  aria-invalid={fieldErrors.email ? true : undefined}
-                  className="peer"
-                />
-                <FieldError message={fieldErrors.email} />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="location-region">Region</Label>
+                <Select
+                  value={geoRegionId || undefined}
+                  onValueChange={selectGeoRegion}
+                  disabled={regionsLoading || submitting}>
+                  <SelectTrigger id="location-region" className="w-full">
+                    <SelectValue
+                      placeholder={regionsLoading ? "Loading regions…" : "Select a region"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regions.map((row) => (
+                      <SelectItem key={row.id} value={row.id}>
+                        {row.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {regionsError ? (
+                  <p className="text-destructive text-xs">{regionsError}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location-create-contact">Contact</Label>
-                <AdminUserAutocomplete
-                  id="location-create-contact"
-                  value={contact}
-                  onChange={setContact}
+                <Label htmlFor="location-country">Country</Label>
+                <Select
+                  value={countryId || undefined}
+                  onValueChange={selectCountry}
+                  disabled={!selectedRegion || submitting}>
+                  <SelectTrigger id="location-country" className="w-full">
+                    <SelectValue placeholder="Select a country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryOptions.map((row) => (
+                      <SelectItem key={row.id} value={row.id}>
+                        {row.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location-city">City</Label>
+                <Select
+                  value={city || undefined}
+                  onValueChange={setCity}
+                  disabled={!selectedCountry || submitting}>
+                  <SelectTrigger id="location-city" className="w-full">
+                    <SelectValue placeholder="Select a city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityOptions.map((label) => (
+                      <SelectItem key={label} value={label}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 1 ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="location-name">Name</Label>
+                  <Input
+                    id="location-name"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      clearFieldError("name");
+                    }}
+                    placeholder="Location name"
+                    disabled={submitting}
+                    aria-invalid={fieldErrors.name ? true : undefined}
+                    className="peer"
+                  />
+                  <FieldError message={fieldErrors.name} />
+                </div>
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="location-phone">Phone</Label>
+                  <Input
+                    id="location-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      clearFieldError("phone");
+                    }}
+                    placeholder="Phone number"
+                    disabled={submitting}
+                    aria-invalid={fieldErrors.phone ? true : undefined}
+                    className="peer"
+                  />
+                  <FieldError message={fieldErrors.phone} />
+                </div>
+                <div className="*:not-first:mt-2">
+                  <Label htmlFor="location-email">Email</Label>
+                  <Input
+                    id="location-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearFieldError("email");
+                    }}
+                    placeholder="email@example.com"
+                    disabled={submitting}
+                    aria-invalid={fieldErrors.email ? true : undefined}
+                    className="peer"
+                  />
+                  <FieldError message={fieldErrors.email} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location-create-contact">Contact</Label>
+                  <AdminUserAutocomplete
+                    id="location-create-contact"
+                    value={contact}
+                    onChange={setContact}
+                    disabled={submitting}
+                    placeholder="Search team admins…"
+                  />
+                </div>
+              </div>
+              <div className="*:not-first:mt-2">
+                <Label htmlFor="location-office">Office address</Label>
+                <AddressAutocomplete
+                  id="location-office"
+                  value={office}
+                  onChange={(next) => {
+                    setOffice(next);
+                    if (next) clearFieldError("office");
+                  }}
+                  required
                   disabled={submitting}
-                  placeholder="Search team admins…"
+                  invalid={Boolean(fieldErrors.office)}
+                  country={selectedCountry?.mapboxJurisdiction || null}
+                  proximity={office?.coordinate ?? null}
+                  placeholder="Search for the office address…"
+                />
+                <FieldError message={fieldErrors.office} />
+              </div>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <SectionHeading>Location details</SectionHeading>
+                <ReviewGrid
+                  items={[
+                    { label: "Name", value: displayOrDash(name) },
+                    { label: "Region", value: displayOrDash(selectedRegion?.label) },
+                    { label: "Country", value: displayOrDash(selectedCountry?.label) },
+                    { label: "City", value: displayOrDash(city) },
+                    { label: "Office", value: displayOrDash(office?.addressLine) },
+                    { label: "Phone", value: displayOrDash(phone) },
+                    { label: "Email", value: displayOrDash(email) },
+                    {
+                      label: "Contact",
+                      value: contact ? customerDisplayName(contact) : "—"
+                    }
+                  ]}
+                />
+              </div>
+              <Separator />
+              <div className="space-y-3">
+                <SectionHeading>Region defaults</SectionHeading>
+                <ReviewGrid
+                  items={[
+                    {
+                      label: "Language",
+                      value: selectedCountry
+                        ? labelForOption(COMMON_LANGUAGES, selectedCountry.locale.locale)
+                        : "—"
+                    },
+                    {
+                      label: "Time zone",
+                      value: cityTimezone
+                        ? labelForOption(COMMON_TIMEZONES, cityTimezone)
+                        : "—"
+                    },
+                    {
+                      label: "Service area",
+                      value: serviceAreaSummary
+                    },
+                    {
+                      label: "Distance",
+                      value: selectedCountry
+                        ? distanceUnitTitle[selectedCountry.locale.distanceUnit]
+                        : "—"
+                    },
+                    {
+                      label: "Currency",
+                      value: selectedCountry
+                        ? labelForOption(COMMON_CURRENCIES, selectedCountry.locale.currency)
+                        : "—"
+                    },
+                    {
+                      label: "Tax",
+                      value: selectedCountry
+                        ? selectedCountry.locale.defaultTaxRate > 0
+                          ? `${selectedCountry.locale.taxName} ${Math.round(selectedCountry.locale.defaultTaxRate * 1000) / 10}%`
+                          : selectedCountry.locale.taxName
+                        : "—"
+                    },
+                    {
+                      label: "Classes",
+                      value: displayOrDash(selectedCountry?.vehicleClassNames.join(", "))
+                    }
+                  ]}
                 />
               </div>
             </div>
-            <div className="*:not-first:mt-2">
-              <Label htmlFor="location-office">Office address</Label>
-              <AddressAutocomplete
-                id="location-office"
-                value={office}
-                onChange={(next) => {
-                  setOffice(next);
-                  if (next) clearFieldError("office");
-                }}
-                required
-                disabled={submitting}
-                invalid={Boolean(fieldErrors.office)}
-                country={selected?.mapboxJurisdiction || null}
-                proximity={office?.coordinate ?? null}
-                placeholder="Search for the office address…"
-              />
-              <FieldError message={fieldErrors.office} />
-            </div>
-          </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <SectionHeading>Location details</SectionHeading>
-              <ReviewGrid
-                items={[
-                  { label: "Name", value: displayOrDash(name) },
-                  { label: "City", value: displayOrDash(city) },
-                  { label: "Office", value: displayOrDash(office?.addressLine) },
-                  { label: "Phone", value: displayOrDash(phone) },
-                  { label: "Email", value: displayOrDash(email) },
-                  {
-                    label: "Contact",
-                    value: contact ? customerDisplayName(contact) : "—"
-                  }
-                ]}
-              />
-            </div>
-            <Separator />
-            <div className="space-y-3">
-              <SectionHeading>Region defaults</SectionHeading>
-              <ReviewGrid
-                items={[
-                  {
-                    label: "Language",
-                    value: selected
-                      ? labelForOption(COMMON_LANGUAGES, selected.locale.locale)
-                      : "—"
-                  },
-                  {
-                    label: "Time zone",
-                    value: cityTimezone
-                      ? labelForOption(COMMON_TIMEZONES, cityTimezone)
-                      : "—"
-                  },
-                  {
-                    label: "Service area",
-                    value: serviceAreaSummary
-                  },
-                  {
-                    label: "Distance",
-                    value: selected ? distanceUnitTitle[selected.locale.distanceUnit] : "—"
-                  },
-                  {
-                    label: "Currency",
-                    value: selected
-                      ? labelForOption(COMMON_CURRENCIES, selected.locale.currency)
-                      : "—"
-                  },
-                  {
-                    label: "Tax",
-                    value: selected
-                      ? selected.locale.defaultTaxRate > 0
-                        ? `${selected.locale.taxName} ${Math.round(selected.locale.defaultTaxRate * 1000) / 10}%`
-                        : selected.locale.taxName
-                      : "—"
-                  },
-                  {
-                    label: "Classes",
-                    value: displayOrDash(selected?.vehicleClassNames.join(", "))
-                  }
-                ]}
-              />
-            </div>
-          </div>
-        ) : null}
+          ) : null}
         </div>
 
         <DialogFooter className="shrink-0">
@@ -479,7 +521,10 @@ export function LocationCreateForm({
             Previous
           </Button>
           {step < 2 ? (
-            <Button type="button" disabled={submitting || regionsLoading || !regionId} onClick={goNext}>
+            <Button
+              type="button"
+              disabled={submitting || regionsLoading || !geoRegionId || !countryId}
+              onClick={goNext}>
               Next
             </Button>
           ) : (

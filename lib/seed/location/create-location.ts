@@ -22,7 +22,7 @@ import {
   validatePricingConfig,
   validateVehicleClass
 } from "@/lib/pricing/validate";
-import { loadLocationRegionSeed } from "@/lib/seed/location/load-location-seed";
+import { loadLocationCountrySeed } from "@/lib/seed/location/load-location-seed";
 import {
   localeFromSeed,
   seedOperatingHours,
@@ -31,7 +31,7 @@ import {
 } from "@/lib/seed/location/schema";
 
 export type CreateLocationFromSeedInput = {
-  regionId: string;
+  countryId: string;
   city: string;
   name: string;
   officeAddressLine: string;
@@ -80,7 +80,7 @@ export async function createLocationFromSeed(
     throw new Error("Select an office address from the suggestions.");
   }
 
-  const seed = await loadLocationRegionSeed(input.regionId);
+  const seed = await loadLocationCountrySeed(input.countryId);
   const locale = localeFromSeed(seed, city);
   validateOperatorLocale(locale);
   const pricing = preparePricingConfigForSave(seedPricingConfig(seed));

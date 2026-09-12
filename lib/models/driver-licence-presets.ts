@@ -17,6 +17,57 @@ export type DriverLicenceCountryPreset = {
   jurisdictions: DriverLicenceJurisdictionOption[];
 };
 
+/** Harmonized EU driving licence categories (shared across member-country presets). */
+const EU_LICENCE_CLASSES: DriverLicenceClassOption[] = [
+  { value: "AM", label: "AM — Moped" },
+  { value: "A1", label: "A1 — Light motorcycle" },
+  { value: "A2", label: "A2 — Medium motorcycle" },
+  { value: "A", label: "A — Motorcycle" },
+  { value: "B", label: "B — Car" },
+  { value: "BE", label: "BE — Car + trailer" },
+  { value: "C1", label: "C1 — Medium goods" },
+  { value: "C", label: "C — Large goods" },
+  { value: "C1E", label: "C1E — Medium goods + trailer" },
+  { value: "CE", label: "CE — Large goods + trailer" },
+  { value: "D1", label: "D1 — Minibus" },
+  { value: "D", label: "D — Bus" }
+];
+
+const EU_COUNTRY_LICENCE_PRESETS: DriverLicenceCountryPreset[] = [
+  { id: "at", label: "Austria" },
+  { id: "be", label: "Belgium" },
+  { id: "bg", label: "Bulgaria" },
+  { id: "hr", label: "Croatia" },
+  { id: "cy", label: "Cyprus" },
+  { id: "cz", label: "Czechia" },
+  { id: "dk", label: "Denmark" },
+  { id: "ee", label: "Estonia" },
+  { id: "fi", label: "Finland" },
+  { id: "fr", label: "France" },
+  { id: "de", label: "Germany" },
+  { id: "gr", label: "Greece" },
+  { id: "hu", label: "Hungary" },
+  { id: "ie", label: "Ireland" },
+  { id: "it", label: "Italy" },
+  { id: "lv", label: "Latvia" },
+  { id: "lt", label: "Lithuania" },
+  { id: "lu", label: "Luxembourg" },
+  { id: "mt", label: "Malta" },
+  { id: "nl", label: "Netherlands" },
+  { id: "pl", label: "Poland" },
+  { id: "pt", label: "Portugal" },
+  { id: "ro", label: "Romania" },
+  { id: "sk", label: "Slovakia" },
+  { id: "si", label: "Slovenia" },
+  { id: "es", label: "Spain" },
+  { id: "se", label: "Sweden" }
+].map((row) => ({
+  id: row.id,
+  label: row.label,
+  classes: EU_LICENCE_CLASSES,
+  jurisdictions: []
+}));
+
 export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
   {
     id: "au",
@@ -93,53 +144,7 @@ export const DRIVER_LICENCE_COUNTRY_PRESETS: DriverLicenceCountryPreset[] = [
       { value: "NIR", label: "Northern Ireland" }
     ]
   },
-  {
-    id: "eu",
-    label: "European Union",
-    classes: [
-      { value: "AM", label: "AM — Moped" },
-      { value: "A1", label: "A1 — Light motorcycle" },
-      { value: "A2", label: "A2 — Medium motorcycle" },
-      { value: "A", label: "A — Motorcycle" },
-      { value: "B", label: "B — Car" },
-      { value: "BE", label: "BE — Car + trailer" },
-      { value: "C1", label: "C1 — Medium goods" },
-      { value: "C", label: "C — Large goods" },
-      { value: "C1E", label: "C1E — Medium goods + trailer" },
-      { value: "CE", label: "CE — Large goods + trailer" },
-      { value: "D1", label: "D1 — Minibus" },
-      { value: "D", label: "D — Bus" }
-    ],
-    jurisdictions: [
-      { value: "AT", label: "AT — Austria" },
-      { value: "BE", label: "BE — Belgium" },
-      { value: "BG", label: "BG — Bulgaria" },
-      { value: "HR", label: "HR — Croatia" },
-      { value: "CY", label: "CY — Cyprus" },
-      { value: "CZ", label: "CZ — Czechia" },
-      { value: "DK", label: "DK — Denmark" },
-      { value: "EE", label: "EE — Estonia" },
-      { value: "FI", label: "FI — Finland" },
-      { value: "FR", label: "FR — France" },
-      { value: "DE", label: "DE — Germany" },
-      { value: "GR", label: "GR — Greece" },
-      { value: "HU", label: "HU — Hungary" },
-      { value: "IE", label: "IE — Ireland" },
-      { value: "IT", label: "IT — Italy" },
-      { value: "LV", label: "LV — Latvia" },
-      { value: "LT", label: "LT — Lithuania" },
-      { value: "LU", label: "LU — Luxembourg" },
-      { value: "MT", label: "MT — Malta" },
-      { value: "NL", label: "NL — Netherlands" },
-      { value: "PL", label: "PL — Poland" },
-      { value: "PT", label: "PT — Portugal" },
-      { value: "RO", label: "RO — Romania" },
-      { value: "SK", label: "SK — Slovakia" },
-      { value: "SI", label: "SI — Slovenia" },
-      { value: "ES", label: "ES — Spain" },
-      { value: "SE", label: "SE — Sweden" }
-    ]
-  },
+  ...EU_COUNTRY_LICENCE_PRESETS,
   {
     id: "us",
     label: "United States",

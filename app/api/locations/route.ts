@@ -6,7 +6,7 @@ import { getAdminSessionUser } from "@/lib/firebase/session";
 import { createLocationFromSeed } from "@/lib/seed/location/create-location";
 
 const createLocationBodySchema = z.object({
-  regionId: z.string().min(1),
+  countryId: z.string().min(1),
   city: z.string().min(1),
   name: z.string().min(1),
   officeAddressLine: z.string().min(1),

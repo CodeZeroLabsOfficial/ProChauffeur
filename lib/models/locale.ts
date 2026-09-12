@@ -10,7 +10,7 @@ export interface OperatorLocale {
   taxName: string;
   taxDisplayMode: TaxDisplayMode;
   showTaxOnQuotes: boolean;
-  /** Licence-class preset for this Location (`au` | `nz` | `uk` | `us` | `eu`). */
+  /** Licence-class preset for this Location (e.g. `au` | `nz` | `uk` | `us` | `fr` | `de`). */
   operatorJurisdiction: string;
   /** Mapbox `country=` filter (ISO codes, comma-separated for multi-country). */
   mapboxJurisdiction: string;
