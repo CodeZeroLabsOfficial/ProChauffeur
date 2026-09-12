@@ -137,9 +137,12 @@ export function LocationProfilePage({ locationId }: { locationId: string }) {
       </DetailPageShell>
 
       <LocationEditSheet
-        open={editOpen}
-        onOpenChange={setEditOpen}
         branch={branch}
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) void loadBranch();
+        }}
         onSaved={(updated) => setBranch(updated)}
       />
     </>

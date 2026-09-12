@@ -14,7 +14,7 @@ import {
   useReactTable
 } from "@tanstack/react-table";
 import { LocationCreateForm } from "@/app/dashboard/locations/location-create-form";
-import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
+import { LocationDetailSheet } from "@/app/dashboard/locations/location-detail-sheet";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -278,7 +278,7 @@ export function LocationsDataTable({
           onCreateOpenChange?.(false);
         }}
       />
-      <LocationEditSheet
+      <LocationDetailSheet
         open={editOpen}
         onOpenChange={handleEditOpenChange}
         branch={editing}
