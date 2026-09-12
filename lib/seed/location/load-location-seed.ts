@@ -4,6 +4,7 @@ import bundledManifest from "@/lib/seed/location/manifest.json";
 import auSeed from "@/lib/seed/location/regions/au.json";
 import euSeed from "@/lib/seed/location/regions/eu.json";
 import gbSeed from "@/lib/seed/location/regions/gb.json";
+import nzSeed from "@/lib/seed/location/regions/nz.json";
 import usSeed from "@/lib/seed/location/regions/us.json";
 import {
   locationRegionSeedSchema,
@@ -16,6 +17,7 @@ import {
 
 const bundledRegions: Record<string, unknown> = {
   au: auSeed,
+  nz: nzSeed,
   us: usSeed,
   gb: gbSeed,
   eu: euSeed

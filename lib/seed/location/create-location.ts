@@ -67,7 +67,7 @@ async function allocateUniqueBranchId(name: string): Promise<string> {
   throw new Error("Could not allocate a unique location id.");
 }
 
-export async function createLocationFromSeedAdmin(
+export async function createLocationFromSeed(
   input: CreateLocationFromSeedInput
 ): Promise<Branch> {
   const name = input.name.trim();

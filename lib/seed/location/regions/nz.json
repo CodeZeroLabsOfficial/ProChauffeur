@@ -1,0 +1,134 @@
+{
+  "id": "nz",
+  "label": "New Zealand",
+  "mapboxJurisdiction": "nz",
+  "locale": {
+    "locale": "en-NZ",
+    "currency": "NZD",
+    "distanceUnit": "km",
+    "defaultTaxRate": 0.15,
+    "taxName": "GST",
+    "taxDisplayMode": "exclusive",
+    "showTaxOnQuotes": true,
+    "operatorJurisdiction": "nz",
+    "mapboxJurisdiction": "nz"
+  },
+  "cities": {
+    "auckland": { "timezone": "Pacific/Auckland" },
+    "wellington": { "timezone": "Pacific/Auckland" },
+    "christchurch": { "timezone": "Pacific/Auckland" },
+    "hamilton": { "timezone": "Pacific/Auckland" },
+    "tauranga": { "timezone": "Pacific/Auckland" },
+    "dunedin": { "timezone": "Pacific/Auckland" },
+    "queenstown": { "timezone": "Pacific/Auckland" }
+  },
+  "pricing": {
+    "schemaVersion": 2,
+    "minimumFare": 79,
+    "weekendWeekdays": [6, 7],
+    "quoteRounding": "dollar",
+    "addons": [
+      {
+        "id": "child_seat",
+        "title": "Child seat",
+        "price": 18,
+        "isEnabled": true,
+        "tripTypes": ["transfer", "hourly"],
+        "vehicleClassIds": []
+      },
+      {
+        "id": "meet_greet",
+        "title": "Meet & greet (airport)",
+        "price": 40,
+        "isEnabled": true,
+        "tripTypes": ["transfer"],
+        "vehicleClassIds": []
+      }
+    ],
+    "zones": [],
+    "rules": []
+  },
+  "vehicleClasses": [
+    {
+      "id": "business-sedan",
+      "slug": "business-sedan",
+      "displayName": "Business Sedan",
+      "sortOrder": 0,
+      "serviceTier": "Business",
+      "bodyType": "Sedan",
+      "capacity": {
+        "passengerCount": 3,
+        "luggage": { "smallCount": 2, "largeCount": 2 }
+      },
+      "inclusions": [
+        { "id": "chauffeur", "label": "Chauffeur", "value": "Professional chauffeur" },
+        { "id": "water", "label": "Refreshments", "value": "Bottled water" }
+      ],
+      "description": "Executive sedan for airport and city transfers.",
+      "imageUrl": null,
+      "isEnabled": true,
+      "isVisible": true,
+      "supportedTripTypes": ["transfer", "hourly"],
+      "transfer": {
+        "minimumBaseRate": 79,
+        "baseFare": 45,
+        "deadheadRatePerUnit": 2.6,
+        "tripRatePerUnit": 3.2,
+        "returnToBaseFee": 50,
+        "waitingFeeFlat": 0
+      },
+      "hourly": {
+        "weekdayHourlyRate": 95,
+        "weekendHourlyRate": 115,
+        "weekdayMinimumHours": 2,
+        "weekendMinimumHours": 3,
+        "freeDeadheadMinutes": 60,
+        "deadheadRatePerMinute": 1.4,
+        "displayHourlyFrom": 95
+      }
+    },
+    {
+      "id": "business-suv",
+      "slug": "business-suv",
+      "displayName": "Business SUV",
+      "sortOrder": 1,
+      "serviceTier": "Business",
+      "bodyType": "SUV",
+      "capacity": {
+        "passengerCount": 6,
+        "luggage": { "smallCount": 4, "largeCount": 4 }
+      },
+      "inclusions": [
+        { "id": "chauffeur", "label": "Chauffeur", "value": "Professional chauffeur" },
+        { "id": "water", "label": "Refreshments", "value": "Bottled water" }
+      ],
+      "description": "Spacious SUV for families and extra luggage.",
+      "imageUrl": null,
+      "isEnabled": true,
+      "isVisible": true,
+      "supportedTripTypes": ["transfer", "hourly"],
+      "transfer": {
+        "minimumBaseRate": 99,
+        "baseFare": 55,
+        "deadheadRatePerUnit": 3.0,
+        "tripRatePerUnit": 3.7,
+        "returnToBaseFee": 60,
+        "waitingFeeFlat": 0
+      },
+      "hourly": {
+        "weekdayHourlyRate": 110,
+        "weekendHourlyRate": 135,
+        "weekdayMinimumHours": 2,
+        "weekendMinimumHours": 3,
+        "freeDeadheadMinutes": 60,
+        "deadheadRatePerMinute": 1.7,
+        "displayHourlyFrom": 110
+      }
+    }
+  ],
+  "operatingHours": { "schedules": [] },
+  "serviceArea": {
+    "type": "radius",
+    "radiusMeters": 100000
+  }
+}

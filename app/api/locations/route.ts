@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requireCanManageLocations } from "@/lib/auth/require-staff";
 import { getAdminSessionUser } from "@/lib/firebase/session";
-import { createLocationFromSeedAdmin } from "@/lib/seed/location/create-location";
+import { createLocationFromSeed } from "@/lib/seed/location/create-location";
 
 const createLocationBodySchema = z.object({
   regionId: z.string().min(1),
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const branch = await createLocationFromSeedAdmin(parsed.data);
+    const branch = await createLocationFromSeed(parsed.data);
     return NextResponse.json({
       branch: {
         ...branch,

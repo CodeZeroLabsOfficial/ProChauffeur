@@ -34,6 +34,7 @@ import {
   type TaxDisplayMode
 } from "@/lib/models";
 import { ConfigError } from "@/lib/pricing/errors";
+import type { LocationRegionSummary } from "@/lib/seed/location/schema";
 import { fetchOperatorLocale, saveOperatorLocale } from "@/lib/services/firebase-service";
 
 type LocaleDraft = {
@@ -150,6 +151,7 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [regions, setRegions] = useState<LocationRegionSummary[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -167,6 +169,19 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
       })
       .finally(() => setLoading(false));
   }, [branchId]);
+
+  useEffect(() => {
+    void fetch("/api/location-seed")
+      .then(async (res) => {
+        const body = (await res.json()) as { regions?: LocationRegionSummary[]; error?: string };
+        if (!res.ok) throw new Error(body.error || "Could not load regions.");
+        setRegions(body.regions ?? []);
+      })
+      .catch(() => {
+        setRegions([]);
+        toast.error("Could not load country seeds for locale.");
+      });
+  }, []);
 
   const languageOptions = useMemo(
     () => optionsWithCurrent(COMMON_LANGUAGES, draft.language),
@@ -189,6 +204,19 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
 
   function update<K extends keyof LocaleDraft>(key: K, value: LocaleDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyCountryFromSeed(countryId: string) {
+    const seed = regions.find((row) => row.locale.operatorJurisdiction === countryId);
+    if (!seed) {
+      toast.error("No region seed for that country. Mapbox filter was not updated.");
+      return;
+    }
+    setDraft((current) => ({
+      ...current,
+      operatorJurisdiction: seed.locale.operatorJurisdiction,
+      mapboxJurisdiction: seed.locale.mapboxJurisdiction
+    }));
   }
 
   async function save() {
@@ -258,7 +286,7 @@ export function LocationLocalePanel({ branchId }: { branchId: string }) {
             value={draft.operatorJurisdiction}
             placeholder="Select country"
             disabled={saving}
-            onValueChange={(value) => update("operatorJurisdiction", value)}>
+            onValueChange={applyCountryFromSeed}>
             {DRIVER_LICENCE_COUNTRY_PRESETS.map((preset) => (
               <SelectItem key={preset.id} value={preset.id}>
                 {preset.label}
