@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { locationRecentTrips } from "@/app/dashboard/locations/lib/location-profile-metrics";
+import { TripRouteStops } from "@/components/trip-route-stops";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models";
 
@@ -16,7 +17,6 @@ export function LocationRecentTripsCard({ trips }: { trips: Trip[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Upcoming and recent trips</CardTitle>
-        <CardDescription>Next scheduled and latest activity for this location.</CardDescription>
       </CardHeader>
       <CardContent>
         {recent.length === 0 ? (
@@ -24,19 +24,17 @@ export function LocationRecentTripsCard({ trips }: { trips: Trip[] }) {
         ) : (
           <ul className="divide-y">
             {recent.map((trip) => (
-              <li key={trip.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                <div className="min-w-0 space-y-0.5">
+              <li key={trip.id} className="space-y-2 py-3">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium tabular-nums">
                     {formatDateTime(tripPickupReferenceDate(trip))}
                   </p>
-                  <p className="text-muted-foreground truncate text-sm">
-                    {trip.journey.pickupAddressLine?.trim() || "Pickup not set"}
-                    {trip.journey.dropoffAddressLine?.trim()
-                      ? ` → ${trip.journey.dropoffAddressLine.trim()}`
-                      : ""}
-                  </p>
+                  <TripStatusBadge status={trip.status} />
                 </div>
-                <TripStatusBadge status={trip.status} />
+                <TripRouteStops
+                  pickup={trip.journey.pickupAddressLine || "Pickup location not set"}
+                  dropoff={trip.journey.dropoffAddressLine || "Destination not set"}
+                />
               </li>
             ))}
           </ul>

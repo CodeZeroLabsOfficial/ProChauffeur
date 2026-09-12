@@ -123,7 +123,7 @@ export function LocationsDataTable({
         accessorFn: (row) => row.officeAddressLine ?? "",
         header: "Office",
         cell: ({ row }) => (
-          <span className="text-muted-foreground max-w-[18rem] truncate block">
+          <span className="text-muted-foreground">
             {row.original.officeAddressLine?.trim() || "—"}
           </span>
         )
