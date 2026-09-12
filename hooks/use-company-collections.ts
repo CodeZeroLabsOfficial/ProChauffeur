@@ -31,10 +31,6 @@ export function useCustomerTrips(customerId: string, pageSize = 50) {
       .then((result) => {
         if (!cancelled) setTrips(result.trips);
       })
-      .catch((error) => {
-        console.error("Customer trips query failed:", error);
-        if (!cancelled) setTrips([]);
-      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -62,10 +58,6 @@ export function useCustomerInvoices(customerId: string, pageSize = 50) {
     void queryInvoicesForCustomer(id, { pageSize })
       .then((rows) => {
         if (!cancelled) setInvoices(rows);
-      })
-      .catch((error) => {
-        console.error("Customer invoices query failed:", error);
-        if (!cancelled) setInvoices([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
