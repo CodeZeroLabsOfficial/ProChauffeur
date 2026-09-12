@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { useSessionUser } from "@/components/providers/session-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNotifications, useRequestedTrips, useUsersByIds } from "@/hooks/use-collections";
+import { useNotifications, useTrips, useUsers } from "@/hooks/use-collections";
 import { canViewActivityEvent } from "@/lib/auth/staff-access";
 import { formatTime } from "@/lib/format";
 import type { ActivityNotification, Trip } from "@/lib/models";
@@ -85,42 +85,40 @@ function ActivityNotificationRow({
 export function HeaderNotifications() {
   const isMobile = useIsMobile();
   const session = useSessionUser();
-  const { trips: requestedTrips } = useRequestedTrips();
+  const { trips } = useTrips();
   const { notifications: allNotifications } = useNotifications();
+  const { users } = useUsers();
   const notifications = useMemo(
     () => allNotifications.filter((n) => canViewActivityEvent(session, n)),
     [allNotifications, session]
   );
   const [actingOnId, setActingOnId] = useState<string | null>(null);
 
-  const requestedBookings = useMemo(
-    () => [...requestedTrips].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
-    [requestedTrips]
-  );
-
-  const customerIds = useMemo(
-    () => [...new Set(requestedBookings.map((t) => t.customerID).filter(Boolean))],
-    [requestedBookings]
-  );
-  const { byId: usersById } = useUsersByIds(customerIds);
-
   const displayNameByCustomerId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const [id, u] of usersById) {
+    for (const u of users) {
       const name = u.profile.displayName?.trim() || u.email;
-      if (name) map.set(id, name);
+      if (name) map.set(u.id, name);
     }
     return map;
-  }, [usersById]);
+  }, [users]);
 
   const photoURLByCustomerId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const [id, u] of usersById) {
+    for (const u of users) {
       const url = u.profile.photoURL?.trim();
-      if (url) map.set(id, url);
+      if (url) map.set(u.id, url);
     }
     return map;
-  }, [usersById]);
+  }, [users]);
+
+  const requestedBookings = useMemo(
+    () =>
+      trips
+        .filter((t) => t.status === "requested")
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    [trips]
+  );
 
   const unreadActivities = useMemo(
     () => notifications.filter((n) => !n.readAt),

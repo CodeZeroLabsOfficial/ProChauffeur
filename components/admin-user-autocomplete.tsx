@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Loader2Icon, UserIcon, XIcon } from "lucide-react";
 
-import { useUserRoleSearch } from "@/hooks/use-collections";
-import { customerDisplayName } from "@/lib/users/customer-display";
+import { useUsers } from "@/hooks/use-collections";
+import { customerDisplayName, customerMatchesQuery } from "@/lib/users/customer-display";
 import type { User } from "@/lib/models/user";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+
+const MAX_SUGGESTIONS = 50;
 
 export function AdminUserAutocomplete({
   id,
@@ -38,10 +40,19 @@ export function AdminUserAutocomplete({
   allowClear?: boolean;
 }) {
   const listboxId = useId();
+  const { users, loading: usersLoading } = useUsers();
   const [query, setQuery] = useState(value ? customerDisplayName(value) : "");
   const [focused, setFocused] = useState(false);
-  const searchNeedle = value && query === customerDisplayName(value) ? "" : query;
-  const { users: admins, loading: usersLoading } = useUserRoleSearch("admin", searchNeedle);
+
+  const admins = useMemo(
+    () =>
+      users
+        .filter((u) => u.role === "admin")
+        .filter((u) => customerMatchesQuery(u, query))
+        .sort((a, b) => customerDisplayName(a).localeCompare(customerDisplayName(b)))
+        .slice(0, MAX_SUGGESTIONS),
+    [users, query]
+  );
 
   const selectionComplete = Boolean(value && query === customerDisplayName(value));
 
@@ -79,7 +90,7 @@ export function AdminUserAutocomplete({
               value={query}
               placeholder={placeholder}
               aria-invalid={invalid || undefined}
-              disabled={disabled}
+              disabled={disabled || usersLoading}
               onChange={(e) => handleInputChange(e.target.value)}
               onFocus={() => setFocused(true)}
               onBlur={() => setTimeout(() => setFocused(false), 150)}
@@ -99,7 +110,9 @@ export function AdminUserAutocomplete({
                 </CommandEmpty>
               ) : admins.length === 0 ? (
                 <CommandEmpty className="py-6">
-                  {query.trim() ? "No matching admins." : "No admins in the directory."}
+                  {users.some((u) => u.role === "admin")
+                    ? "No matching admins."
+                    : "No admins in the directory."}
                 </CommandEmpty>
               ) : (
                 <CommandGroup>

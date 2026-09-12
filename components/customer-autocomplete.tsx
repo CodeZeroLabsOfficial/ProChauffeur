@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Loader2Icon, UserIcon } from "lucide-react";
 
-import { useUserRoleSearch } from "@/hooks/use-collections";
-import { customerDisplayName } from "@/lib/users/customer-display";
+import { useUsers } from "@/hooks/use-collections";
+import { customerDisplayName, customerMatchesQuery } from "@/lib/users/customer-display";
 import type { User } from "@/lib/models/user";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+
+const MAX_SUGGESTIONS = 50;
 
 export function CustomerAutocomplete({
   id,
@@ -37,12 +39,18 @@ export function CustomerAutocomplete({
   className?: string;
 }) {
   const listboxId = useId();
+  const { users, loading: usersLoading } = useUsers();
   const [query, setQuery] = useState(value ? customerDisplayName(value) : "");
   const [focused, setFocused] = useState(false);
-  const searchNeedle = value && query === customerDisplayName(value) ? "" : query;
-  const { users: customers, loading: usersLoading } = useUserRoleSearch(
-    "customer",
-    searchNeedle
+
+  const customers = useMemo(
+    () =>
+      users
+        .filter((u) => u.role === "customer")
+        .filter((u) => customerMatchesQuery(u, query))
+        .sort((a, b) => customerDisplayName(a).localeCompare(customerDisplayName(b)))
+        .slice(0, MAX_SUGGESTIONS),
+    [users, query]
   );
 
   const selectionComplete = Boolean(value && query === customerDisplayName(value));
@@ -81,7 +89,7 @@ export function CustomerAutocomplete({
             placeholder={placeholder}
             required={required}
             aria-invalid={invalid || undefined}
-            disabled={disabled}
+            disabled={disabled || usersLoading}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
@@ -101,7 +109,9 @@ export function CustomerAutocomplete({
               </CommandEmpty>
             ) : customers.length === 0 ? (
               <CommandEmpty className="py-6">
-                {query.trim() ? "No matching customers." : "No customers in the directory."}
+                {users.some((u) => u.role === "customer")
+                  ? "No matching customers."
+                  : "No customers in the directory."}
               </CommandEmpty>
             ) : (
               <CommandGroup>

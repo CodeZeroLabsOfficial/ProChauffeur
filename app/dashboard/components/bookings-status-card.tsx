@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { subDays } from "date-fns";
 import { PieChart, Pie, Label } from "recharts";
 
-import { useDashboardTrips, usePagedInvoices } from "@/hooks/use-collections";
+import { useInvoices, useTrips } from "@/hooks/use-collections";
 import { formatCurrency } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,10 +14,8 @@ import {
 } from "@/components/ui/chart";
 import {
   bookingStatusCounts,
-  endOfDay,
   getWeekRange,
-  invoiceRevenueInRange,
-  startOfDay
+  invoiceRevenueInRange
 } from "@/app/dashboard/lib/dashboard-metrics";
 
 const chartConfig = {
@@ -37,12 +34,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function BookingsStatusCard() {
-  const dashRange = useMemo(() => {
-    const now = new Date();
-    return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
-  }, []);
-  const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
-  const { invoices } = usePagedInvoices(100);
+  const { trips } = useTrips();
+  const { invoices } = useInvoices();
 
   const { chartData, total, weekRevenue } = useMemo(() => {
     const counts = bookingStatusCounts(trips);

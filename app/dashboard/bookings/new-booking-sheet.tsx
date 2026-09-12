@@ -8,6 +8,7 @@ import { CustomerAutocomplete } from "@/components/customer-autocomplete";
 import { MultiSelectField } from "@/components/multi-select-field";
 import {
   useFleetLocations,
+  useUsers,
   useVehicleClasses
 } from "@/hooks/use-collections";
 import {
@@ -21,7 +22,6 @@ import {
   createTrip,
   fetchCorporateAccount,
   fetchPromotionByCode,
-  fetchUser,
   updateTrip
 } from "@/lib/services/firebase-service";
 import {
@@ -339,6 +339,7 @@ export function NewBookingSheet({
   editTrip?: Trip | null;
 }) {
   const { branchId } = useActiveBranch();
+  const { users } = useUsers();
   const { locations } = useFleetLocations();
   const { vehicleClasses } = useVehicleClasses();
   const { enabled: loyaltyPromosEnabled } = useLoyaltyPromosEnabled();
@@ -684,10 +685,14 @@ export function NewBookingSheet({
 
     if (editTrip || sourceTrip) {
       const trip = editTrip ?? sourceTrip!;
-      let cancelled = false;
+      const matchedCustomer =
+        users.find((u) => u.id === trip.customerID && u.role === "customer") ?? null;
+      if (!matchedCustomer) {
+        toast.warning("Customer no longer found — select a customer.");
+      }
 
       setFieldErrors({});
-      setCustomer(null);
+      setCustomer(matchedCustomer);
       setPickup(addressFromTrip(trip.journey.pickupAddressLine, trip.journey.pickup));
       setDropoff(addressFromTrip(trip.journey.dropoffAddressLine, trip.journey.dropoff));
       setSelectedAddonIds(trip.journey.bookingAddons?.map((addon) => addon.id) ?? []);
@@ -726,19 +731,7 @@ export function NewBookingSheet({
         setPromoCodeInput("");
         setPromoExpanded(false);
       }
-
-      void fetchUser(trip.customerID).then((loaded) => {
-        if (cancelled) return;
-        const matchedCustomer = loaded?.role === "customer" ? loaded : null;
-        if (!matchedCustomer) {
-          toast.warning("Customer no longer found — select a customer.");
-        }
-        setCustomer(matchedCustomer);
-      });
-
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     if (justOpened) {
@@ -766,7 +759,7 @@ export function NewBookingSheet({
         setCorporateSettlement
       });
     }
-  }, [open, editTrip, sourceTrip]);
+  }, [open, editTrip, sourceTrip, users]);
 
   useEffect(() => {
     const hourlyBookedHours = isEdit

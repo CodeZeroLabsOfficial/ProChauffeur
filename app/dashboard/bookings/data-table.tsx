@@ -19,7 +19,7 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useFirebaseAuth } from "@/components/providers/firebase-auth-provider";
-import { useRosterChauffeurs, usePagedTrips, useUsersByIds, useVehicles } from "@/hooks/use-collections";
+import { useRosterChauffeurs, useTrips, useUsers, useVehicles } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { canEditBooking } from "@/app/dashboard/bookings/lib/booking-actions";
 import { vehiclesByChauffeurId } from "@/app/dashboard/bookings/lib/chauffeur-assignment";
@@ -117,28 +117,16 @@ export function BookingsDataTable({
   onOpenLive: (trip: Trip) => void;
 }) {
   const { user: authUser } = useFirebaseAuth();
+  const { trips, loading } = useTrips();
+  const { users } = useUsers();
+  const { chauffeurs } = useRosterChauffeurs();
+  const { vehicles } = useVehicles();
   const [savedDefaultPreset, setSavedDefaultPreset] = useState<DateRangePreset | null>(null);
   const [activeDefaultPreset, setActiveDefaultPreset] = useState<DateRangePreset>(
     DEFAULT_BOOKINGS_DATE_PRESET
   );
   const [dateRange, setDateRange] = useState<DateRange>(() => thisWeekRange());
   const [datePickerKey, setDatePickerKey] = useState(0);
-  const pagedFrom = dateRange.from ? startOfDay(dateRange.from) : undefined;
-  const pagedTo = dateRange.from ? endOfDay(dateRange.to ?? dateRange.from) : undefined;
-  const { trips, loading, hasMore, loadMore } = usePagedTrips({ from: pagedFrom, to: pagedTo });
-  const [loadingMore, setLoadingMore] = useState(false);
-  const { chauffeurs } = useRosterChauffeurs();
-  const { vehicles } = useVehicles();
-  const missingDriverIds = useMemo(() => {
-    const known = new Set(chauffeurs.map((c) => c.user.id));
-    const ids: string[] = [];
-    for (const t of trips) {
-      if (!t.driverID || known.has(t.driverID) || t.driver?.displayName?.trim()) continue;
-      ids.push(t.driverID);
-    }
-    return ids;
-  }, [trips, chauffeurs]);
-  const { byId: usersById } = useUsersByIds(missingDriverIds);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -216,18 +204,9 @@ export function BookingsDataTable({
 
   const driverNameById = useMemo(() => {
     const map = new globalThis.Map<string, string>();
-    for (const c of chauffeurs) {
-      map.set(c.user.id, c.user.profile.displayName || c.user.email);
-    }
-    for (const t of trips) {
-      const snap = t.driver?.displayName?.trim();
-      if (t.driverID && snap && !map.has(t.driverID)) map.set(t.driverID, snap);
-    }
-    for (const [id, u] of usersById) {
-      if (!map.has(id)) map.set(id, u.profile.displayName || u.email);
-    }
+    for (const u of users) map.set(u.id, u.profile.displayName || u.email);
     return map;
-  }, [chauffeurs, trips, usersById]);
+  }, [users]);
 
   const chauffeurOptions = useMemo(
     () => [
@@ -585,20 +564,6 @@ export function BookingsDataTable({
         </Table>
       </div>
       <ListTablePagination table={table} />
-      {hasMore ? (
-        <div className="flex justify-center pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loadingMore}
-            onClick={() => {
-              setLoadingMore(true);
-              void loadMore().finally(() => setLoadingMore(false));
-            }}>
-            {loadingMore ? "Loading…" : "Load more"}
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

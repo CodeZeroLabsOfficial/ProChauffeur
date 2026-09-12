@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { MultiSelectField } from "@/components/multi-select-field";
-import { useUsersByRole } from "@/hooks/use-collections";
+import { useUsers } from "@/hooks/use-collections";
 import {
   parseStaffRole,
   type StaffGrantInput
@@ -91,7 +91,7 @@ function grantsFromUser(user: User): Pick<StaffGrantInput, "canAccessAllBranches
 }
 
 export default function TeamPage() {
-  const { users: admins, loading, reload } = useUsersByRole("admin");
+  const { users, loading } = useUsers();
   const me = useSessionUser();
   const { branches } = useActiveBranch();
   const [busy, setBusy] = useState(false);
@@ -107,6 +107,7 @@ export default function TeamPage() {
   const [editAllLocations, setEditAllLocations] = useState(true);
   const [editBranchIds, setEditBranchIds] = useState<string[]>([]);
 
+  const admins = useMemo(() => users.filter((u) => u.role === "admin"), [users]);
   const locationOptions = useMemo(
     () => branches.map((branch) => ({ value: branch.id, label: branch.name })),
     [branches]
@@ -151,7 +152,6 @@ export default function TeamPage() {
       }
       setPendingDelete(null);
       toast.success("Member deleted.");
-      void reload();
     } catch {
       toast.error("Could not delete member.");
     } finally {
@@ -190,7 +190,6 @@ export default function TeamPage() {
       });
       setRoleOpenFor(null);
       toast.success("Role updated.");
-      void reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update role.");
     } finally {
@@ -214,7 +213,6 @@ export default function TeamPage() {
       });
       setEditing(null);
       toast.success("Access updated.");
-      void reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update member.");
     } finally {
@@ -255,7 +253,6 @@ export default function TeamPage() {
       resetInvite();
       setAddOpen(false);
       toast.success("Member created.");
-      void reload();
     } catch {
       toast.error("Could not create member.");
     } finally {

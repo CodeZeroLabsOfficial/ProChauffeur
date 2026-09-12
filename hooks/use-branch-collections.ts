@@ -3,65 +3,55 @@
 import { useEffect, useState } from "react";
 
 import {
-  fetchBranchInvoicesPage,
-  fetchBranchTripsPage,
+  listenInvoices,
+  listenTrips,
   listenVehicleClasses
 } from "@/lib/services/firebase-service";
 import type { Invoice, Trip, VehicleClass } from "@/lib/models";
 
-/** One-shot paged trips for a Location URL (not a live 800 listener). */
+/** Trips for one Location id (URL), not the switcher. */
 export function useBranchTrips(branchId: string): { trips: Trip[]; loading: boolean } {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const id = branchId.trim();
-    let cancelled = false;
     if (!id) {
       setTrips([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    void fetchBranchTripsPage(id, 50)
-      .then((rows) => {
-        if (!cancelled) setTrips(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    return listenTrips(
+      (rows) => {
+        setTrips(rows);
+        setLoading(false);
+      },
+      800,
+      id
+    );
   }, [branchId]);
 
   return { trips, loading };
 }
 
-/** One-shot paged invoices for a Location URL. */
+/** Invoices for one Location id (URL), not the switcher. */
 export function useBranchInvoices(branchId: string): { invoices: Invoice[]; loading: boolean } {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const id = branchId.trim();
-    let cancelled = false;
     if (!id) {
       setInvoices([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    void fetchBranchInvoicesPage(id, 50)
-      .then((rows) => {
-        if (!cancelled) setInvoices(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    return listenInvoices((rows) => {
+      setInvoices(rows);
+      setLoading(false);
+    }, id);
   }, [branchId]);
 
   return { invoices, loading };

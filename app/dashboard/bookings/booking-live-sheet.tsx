@@ -17,7 +17,7 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { useLiveLocations } from "@/hooks/use-live-locations";
-import { useFleetLocations, useUsersByIds, useVehicles } from "@/hooks/use-collections";
+import { useFleetLocations, useUsers, useVehicles } from "@/hooks/use-collections";
 import { getMapboxToken } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
 import { companyDefaultMapView, tripPickupReferenceDate, type Trip } from "@/lib/models";
@@ -36,14 +36,9 @@ export function BookingLiveSheet({
 }) {
   const { resolvedTheme } = useTheme();
   const { locations, ready } = useLiveLocations();
+  const { users } = useUsers();
   const { vehicles } = useVehicles();
   const { locations: fleetLocations } = useFleetLocations();
-  const driverIds = useMemo(() => {
-    if (!trip?.driverID) return [];
-    if (trip.driver?.displayName?.trim()) return [];
-    return [trip.driverID];
-  }, [trip]);
-  const { byId: usersById } = useUsersByIds(driverIds);
 
   let token = "";
   let tokenError = false;
@@ -52,6 +47,12 @@ export function BookingLiveSheet({
   } catch {
     tokenError = true;
   }
+
+  const driverNameById = useMemo(() => {
+    const map = new globalThis.Map<string, string>();
+    for (const u of users) map.set(u.id, u.profile.displayName || u.email);
+    return map;
+  }, [users]);
 
   const vehicleMakeByDriverId = useMemo(() => {
     const map = new globalThis.Map<string, string>();
@@ -76,10 +77,7 @@ export function BookingLiveSheet({
       : "mapbox://styles/mapbox/light-v11";
 
   const chauffeurName = trip?.driverID
-    ? trip.driver?.displayName?.trim() ||
-      usersById.get(trip.driverID)?.profile.displayName ||
-      usersById.get(trip.driverID)?.email ||
-      "Assigned"
+    ? (driverNameById.get(trip.driverID) ?? "Assigned")
     : "Unassigned";
 
   const vehicleMake = trip

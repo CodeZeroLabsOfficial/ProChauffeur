@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Calendar, TrendingDown, TrendingUp } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
-import { usePagedInvoices } from "@/hooks/use-collections";
+import { useInvoices } from "@/hooks/use-collections";
 import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
 import { formatChartMonth, formatCurrency } from "@/lib/format";
 import type { Invoice } from "@/lib/models/invoice";
@@ -99,7 +99,7 @@ function buildYearlyData(invoices: Invoice[], now: Date, locale: string) {
 }
 
 export function RevenueStat({ invoices: scopedInvoices }: { invoices?: Invoice[] } = {}) {
-  const { invoices: collectionInvoices } = usePagedInvoices(100);
+  const { invoices: collectionInvoices } = useInvoices();
   const invoices = scopedInvoices ?? collectionInvoices;
   const locale = useActiveFormatLocale();
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("weekly");

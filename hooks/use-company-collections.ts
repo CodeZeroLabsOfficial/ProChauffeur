@@ -3,114 +3,133 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
+import { useActiveLocationData } from "@/components/providers/active-location-data-provider";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { grantedBranchIds } from "@/lib/auth/staff-access";
-import {
-  queryInvoicesForCorporateAccount,
-  queryTripsForCorporateAccount,
-  queryInvoicesForCustomer,
-  queryTripsForCustomer
-} from "@/lib/services/firebase-service";
+import { listenInvoices, listenTrips } from "@/lib/services/firebase-service";
 import type { Invoice, Trip } from "@/lib/models";
 
-/** Cross-Location trips for one customer (collection-group, paged). */
-export function useCustomerTrips(customerId: string, pageSize = 50) {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const id = customerId.trim();
-    if (!id) {
-      setTrips([]);
-      setLoading(false);
-      return;
+function mergeBranchRows<T extends { id: string; branchId?: string | null }>(
+  byBranch: Record<string, T[]>,
+  sortValue: (row: T) => number
+): T[] {
+  const merged: T[] = [];
+  const seen = new Set<string>();
+  for (const [branchId, rows] of Object.entries(byBranch)) {
+    for (const row of rows) {
+      const key = `${row.branchId ?? branchId}:${row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(row);
     }
-    setLoading(true);
-    void queryTripsForCustomer(id, { pageSize })
-      .then((result) => {
-        if (!cancelled) setTrips(result.trips);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [customerId, pageSize]);
-
-  return { trips, loading };
+  }
+  merged.sort((a, b) => sortValue(b) - sortValue(a));
+  return merged;
 }
 
-export function useCustomerInvoices(customerId: string, pageSize = 50) {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const id = customerId.trim();
-    if (!id) {
-      setInvoices([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void queryInvoicesForCustomer(id, { pageSize })
-      .then((rows) => {
-        if (!cancelled) setInvoices(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [customerId, pageSize]);
-
-  return { invoices, loading };
-}
-
-/** Corporate account trips/invoices across granted Locations (one-shot paged). */
-export function useCorporateAccountActivity(accountId: string) {
+function useMergedBranchCollections<T extends { id: string; branchId?: string | null }>(
+  listen: (onUpdate: (rows: T[]) => void, branchId: string) => () => void,
+  sortValue: (row: T) => number,
+  activeRows: T[],
+  activeLoading: boolean
+): { rows: T[]; loading: boolean } {
   const session = useSessionUser();
-  const { allBranches, branchesLoading } = useActiveBranch();
-  const branchIds = useMemo(
+  const { branchId, allBranches, branchesLoading } = useActiveBranch();
+  const ids = useMemo(
     () => grantedBranchIds(session, allBranches.map((branch) => branch.id)),
     [session, allBranches]
   );
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const otherIds = useMemo(
+    () => ids.filter((id) => id !== branchId),
+    [ids, branchId]
+  );
+  const otherIdsKey = otherIds.join(",");
+  const [byBranch, setByBranch] = useState<Record<string, T[]>>({});
+  const [readyBranches, setReadyBranches] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (branchesLoading) return;
+    const branchIds = otherIdsKey ? otherIdsKey.split(",") : [];
     let cancelled = false;
-    const id = accountId.trim();
-    if (!id || branchesLoading) {
-      return;
-    }
+    setByBranch({});
+    setReadyBranches(new Set());
+
     if (branchIds.length === 0) {
-      setTrips([]);
-      setInvoices([]);
-      setLoading(false);
       return;
     }
-    setLoading(true);
-    void Promise.all([
-      queryTripsForCorporateAccount(id, branchIds),
-      queryInvoicesForCorporateAccount(id, branchIds)
-    ])
-      .then(([nextTrips, nextInvoices]) => {
+
+    const unsubs = branchIds.map((id) =>
+      listen((rows) => {
         if (cancelled) return;
-        setTrips(nextTrips);
-        setInvoices(nextInvoices);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+        setByBranch((prev) => ({ ...prev, [id]: rows }));
+        setReadyBranches((prev) => {
+          if (prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.add(id);
+          return next;
+        });
+      }, id)
+    );
+
     return () => {
       cancelled = true;
+      for (const unsub of unsubs) unsub();
     };
-  }, [accountId, branchIds, branchesLoading]);
+  }, [branchesLoading, otherIdsKey, listen]);
 
-  return { trips, invoices, loading };
+  const mergedByBranch = useMemo(() => {
+    const next = { ...byBranch };
+    if (ids.includes(branchId)) {
+      next[branchId] = activeRows;
+    }
+    return next;
+  }, [byBranch, branchId, activeRows, ids]);
+
+  const rows = useMemo(() => mergeBranchRows(mergedByBranch, sortValue), [mergedByBranch, sortValue]);
+  const loading =
+    branchesLoading ||
+    (ids.length > 0 &&
+      ((ids.includes(branchId) && activeLoading) ||
+        otherIds.some((id) => !readyBranches.has(id))));
+  return { rows, loading };
+}
+
+function listenBranchTrips(onUpdate: (rows: Trip[]) => void, branchId: string) {
+  return listenTrips(onUpdate, 800, branchId);
+}
+
+function listenBranchInvoices(onUpdate: (rows: Invoice[]) => void, branchId: string) {
+  return listenInvoices(onUpdate, branchId);
+}
+
+function tripCreatedAtMs(trip: Trip): number {
+  return trip.createdAt.getTime();
+}
+
+function invoiceIssuedAtMs(invoice: Invoice): number {
+  return invoice.issuedAt.getTime();
+}
+
+/** Trips from granted Locations (including inactive). Not tied to the switcher. */
+export function useCompanyTrips(): { trips: Trip[]; loading: boolean } {
+  const { trips, tripsLoading } = useActiveLocationData();
+  const { rows, loading } = useMergedBranchCollections(
+    listenBranchTrips,
+    tripCreatedAtMs,
+    trips,
+    tripsLoading
+  );
+  return { trips: rows, loading };
+}
+
+/** Invoices from granted Locations (including inactive). Not tied to the switcher. */
+export function useCompanyInvoices(): { invoices: Invoice[]; loading: boolean } {
+  const { invoices, invoicesLoading } = useActiveLocationData();
+  const { rows, loading } = useMergedBranchCollections(
+    listenBranchInvoices,
+    invoiceIssuedAtMs,
+    invoices,
+    invoicesLoading
+  );
+  return { invoices: rows, loading };
 }

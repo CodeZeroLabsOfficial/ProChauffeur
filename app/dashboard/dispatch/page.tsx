@@ -15,7 +15,7 @@ import { LiveTripPanel } from "@/components/live-trip-panel";
 import { getMapboxToken } from "@/lib/env";
 import { useActiveTripsProgress } from "@/hooks/use-active-trips-progress";
 import { useLiveLocations } from "@/hooks/use-live-locations";
-import { useDispatchTrips, useUsersByIds, useVehicles, useFleetLocations } from "@/hooks/use-collections";
+import { useTrips, useUsers, useVehicles, useFleetLocations } from "@/hooks/use-collections";
 import { dispatchMapMode, resolveDriverLocation } from "@/lib/mapbox/dispatch-map-mode";
 import {
   companyDefaultMapView,
@@ -76,29 +76,14 @@ function activeTripsPeriodLabel(period: ActiveTripsPeriodFilter) {
 export default function DispatchPage() {
   const { resolvedTheme } = useTheme();
   const { locations, ready } = useLiveLocations();
-  const { trips } = useDispatchTrips();
+  const { trips } = useTrips();
+  const { users } = useUsers();
   const { vehicles } = useVehicles();
   const { locations: fleetLocations } = useFleetLocations();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [periodFilter, setPeriodFilter] = useState<ActiveTripsPeriodFilter>("all");
   const [viewMode, setViewMode] = useState<DispatchViewMode>("map");
-
-  const userIdsForNames = useMemo(() => {
-    const ids = new Set<string>();
-    for (const t of trips) {
-      if (!t.driverID) continue;
-      if (!t.driver?.displayName?.trim() || t.driver.photoURL == null) {
-        ids.add(t.driverID);
-      }
-    }
-    for (const v of vehicles) {
-      const chauffeurId = effectiveChauffeurUserId(v);
-      if (chauffeurId) ids.add(chauffeurId);
-    }
-    return [...ids];
-  }, [trips, vehicles]);
-  const { byId: usersById } = useUsersByIds(userIdsForNames);
 
   let token = "";
   let tokenError = false;
@@ -110,28 +95,15 @@ export default function DispatchPage() {
 
   const driverNameById = useMemo(() => {
     const map = new globalThis.Map<string, string>();
-    for (const t of trips) {
-      const snap = t.driver?.displayName?.trim();
-      if (t.driverID && snap) map.set(t.driverID, snap);
-    }
-    for (const [id, u] of usersById) {
-      if (!map.has(id)) map.set(id, u.profile.displayName || u.email);
-    }
+    for (const u of users) map.set(u.id, u.profile.displayName || u.email);
     return map;
-  }, [trips, usersById]);
+  }, [users]);
 
   const driverPhotoById = useMemo(() => {
     const map = new globalThis.Map<string, string | null>();
-    for (const t of trips) {
-      if (t.driverID && t.driver?.photoURL != null) {
-        map.set(t.driverID, t.driver.photoURL);
-      }
-    }
-    for (const [id, u] of usersById) {
-      if (!map.has(id)) map.set(id, u.profile.photoURL ?? null);
-    }
+    for (const u of users) map.set(u.id, u.profile.photoURL ?? null);
     return map;
-  }, [trips, usersById]);
+  }, [users]);
 
   const vehicleMakeByDriverId = useMemo(() => {
     const map = new globalThis.Map<string, string>();

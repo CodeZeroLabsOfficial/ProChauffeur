@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { useUsersByRole } from "@/hooks/use-collections";
+import { useUsers } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
 import {
   corporateAccountStatusTitle,
@@ -68,7 +68,7 @@ export function AccountsDataTable({
   onCreateOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const { users } = useUsersByRole("customer", 200);
+  const { users } = useUsers();
   const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -89,7 +89,7 @@ export function AccountsDataTable({
   const memberCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const user of users) {
-      if (!user.corporateAccountId) continue;
+      if (user.role !== "customer" || !user.corporateAccountId) continue;
       counts.set(user.corporateAccountId, (counts.get(user.corporateAccountId) ?? 0) + 1);
     }
     return counts;

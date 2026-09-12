@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { subDays } from "date-fns";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -22,15 +21,13 @@ import {
   Search
 } from "lucide-react";
 
-import { useDashboardTrips } from "@/hooks/use-collections";
+import { useTrips } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { tripPickupReferenceDate, type Trip } from "@/lib/models/trip";
 import { vehicleDisplayName } from "@/lib/models/vehicle";
 import { formatDateTime } from "@/lib/format";
-import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 import { Badge } from "@/components/ui/badge";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -209,11 +206,7 @@ const columns: ColumnDef<BookingRow>[] = [
 ];
 
 export function BookingList() {
-  const dashRange = useMemo(() => {
-    const now = new Date();
-    return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
-  }, []);
-  const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
+  const { trips } = useTrips();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");

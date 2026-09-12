@@ -19,16 +19,13 @@ import {
 import { DetailPageShell } from "@/components/layout/detail-page-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { useCorporateAccountActivity } from "@/hooks/use-company-collections";
+import { useCompanyInvoices, useCompanyTrips } from "@/hooks/use-company-collections";
+import { useUsers } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { corporateMonthlySpend } from "@/lib/bookings/corporate-policy";
 import type { CorporateAccount, User } from "@/lib/models";
 import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
-import {
-  fetchCorporateAccount,
-  fetchCorporateAccountMembers,
-  fetchUser
-} from "@/lib/services/firebase-service";
+import { fetchCorporateAccount, fetchUser } from "@/lib/services/firebase-service";
 
 const PROFILE_TABS = ["overview", "billing", "members", "policy", "rates"] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
@@ -50,12 +47,13 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       : "overview";
   const billingDefaultSection = legacyInvoicesTab ? "invoices" : "unbilled";
   const { ready, enabled } = useFeatureEnabled("corporateAccounts");
-  const { trips, invoices, loading: invoicesLoading } = useCorporateAccountActivity(accountId);
+  const { trips } = useCompanyTrips();
+  const { invoices, loading: invoicesLoading } = useCompanyInvoices();
+  const { users } = useUsers();
 
   const [account, setAccount] = useState<CorporateAccount | null>(null);
   const [primaryContact, setPrimaryContact] = useState<User | null>(null);
   const [billingContact, setBillingContact] = useState<User | null>(null);
-  const [memberCustomerIds, setMemberCustomerIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
@@ -73,21 +71,6 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       .catch(() => setAccount(null))
       .finally(() => setLoading(false));
   }, [loadAccount]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchCorporateAccountMembers(accountId)
-      .then((members) => {
-        if (cancelled) return;
-        setMemberCustomerIds(new Set(members.map((m) => m.id)));
-      })
-      .catch(() => {
-        if (!cancelled) setMemberCustomerIds(new Set());
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accountId]);
 
   useEffect(() => {
     const id = account?.primaryContactUserId?.trim();
@@ -126,6 +109,16 @@ export function AccountProfilePage({ accountId }: { accountId: string }) {
       cancelled = true;
     };
   }, [account?.billingContactUserId]);
+
+  const memberCustomerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const user of users) {
+      if (user.role === "customer" && user.corporateAccountId === accountId) {
+        ids.add(user.id);
+      }
+    }
+    return ids;
+  }, [users, accountId]);
 
   const accountTrips = useMemo(
     () => tripsForCorporateAccount(trips, accountId, memberCustomerIds),

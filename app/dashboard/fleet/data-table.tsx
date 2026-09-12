@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import {
   useRosterChauffeurs,
+  useUsers,
   useVehicleClasses,
   useVehicles
 } from "@/hooks/use-collections";
@@ -87,6 +88,7 @@ export function FleetDataTable({
   onCreateOpenChange?: (open: boolean) => void;
 }) {
   const { vehicles, loading } = useVehicles();
+  const { users } = useUsers();
   const { chauffeurs: drivers } = useRosterChauffeurs();
   const { vehicleClasses } = useVehicleClasses();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,9 +110,9 @@ export function FleetDataTable({
 
   const driverNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of drivers) map.set(c.user.id, c.user.profile.displayName || c.user.email);
+    for (const u of users) map.set(u.id, u.profile.displayName || u.email);
     return map;
-  }, [drivers]);
+  }, [users]);
 
   const classesById = useMemo(
     () => new Map(vehicleClasses.map((vehicleClass) => [vehicleClass.id, vehicleClass])),

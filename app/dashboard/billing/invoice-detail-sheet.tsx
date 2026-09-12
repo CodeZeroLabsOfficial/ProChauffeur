@@ -25,13 +25,10 @@ import {
 import { invoiceStatusStyle } from "@/app/dashboard/billing/lib/invoice-actions";
 import { LabeledDetailValue, SectionHeading } from "@/components/detail-sheet-fields";
 import { formatCurrency, formatDate } from "@/lib/format";
-import {
-  fetchDefaultSavedPaymentMethod,
-  fetchTrip
-} from "@/lib/services/firebase-service";
+import { fetchDefaultSavedPaymentMethod } from "@/lib/services/firebase-service";
 import { markInvoicePaid } from "@/lib/services/payment-service";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
-import { useUsersByIds } from "@/hooks/use-collections";
+import { useTrips, useUsers } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -235,37 +232,23 @@ export function InvoiceDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const displayInvoice = useSheetDisplayItem(invoice, open);
-  const customerIds = useMemo(
-    () => (displayInvoice?.customerID ? [displayInvoice.customerID] : []),
-    [displayInvoice?.customerID]
-  );
-  const { byId: usersById } = useUsersByIds(customerIds);
-  const [linkedTrip, setLinkedTrip] = useState<Trip | null>(null);
+  const { trips } = useTrips();
+  const { users } = useUsers();
   const [paymentMethod, setPaymentMethod] = useState<SavedPaymentMethod | null | undefined>(
     undefined
   );
   const [markingPaid, setMarkingPaid] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const tripId = displayInvoice?.tripIDs?.[0]?.trim();
-    if (!open || !tripId) {
-      setLinkedTrip(null);
-      return;
-    }
-    void fetchTrip(tripId).then((row) => {
-      if (!cancelled) setLinkedTrip(row);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, displayInvoice?.tripIDs]);
+  const trip = useMemo(() => {
+    if (!displayInvoice?.tripIDs?.length) return undefined;
+    const id = displayInvoice.tripIDs[0];
+    return trips.find((t) => t.id === id);
+  }, [displayInvoice?.tripIDs, trips]);
 
-  const trip = linkedTrip ?? undefined;
-
-  const customer = displayInvoice?.customerID
-    ? usersById.get(displayInvoice.customerID)
-    : undefined;
+  const customer = useMemo(() => {
+    if (!displayInvoice?.customerID) return undefined;
+    return users.find((u) => u.id === displayInvoice.customerID);
+  }, [displayInvoice?.customerID, users]);
 
   useEffect(() => {
     if (!open || !displayInvoice?.customerID) {

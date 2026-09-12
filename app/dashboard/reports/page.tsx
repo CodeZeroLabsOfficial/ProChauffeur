@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -14,7 +14,7 @@ import {
   YAxis
 } from "recharts";
 
-import { usePagedInvoices, usePagedTrips, useUsersByIds } from "@/hooks/use-collections";
+import { useInvoices, useTrips, useUsers } from "@/hooks/use-collections";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
@@ -55,9 +55,10 @@ const RANGES = [
   { value: "365", label: "Last 12 months" }
 ];
 
-const MAX_PAGES = 20;
-
 export default function ReportsPage() {
+  const { trips } = useTrips();
+  const { users } = useUsers();
+  const { invoices } = useInvoices();
   const [range, setRange] = useState("30");
 
   const since = useMemo(() => {
@@ -66,49 +67,10 @@ export default function ReportsPage() {
     return d;
   }, [range]);
 
-  const until = useMemo(() => new Date(), [range]);
-
-  const {
-    trips,
-    loading: tripsLoading,
-    hasMore: tripsHasMore,
-    loadMore: loadMoreTrips
-  } = usePagedTrips({ from: since, to: until });
-  const {
-    invoices,
-    loading: invoicesLoading,
-    hasMore: invoicesHasMore,
-    loadMore: loadMoreInvoices
-  } = usePagedInvoices(100);
-
-  useEffect(() => {
-    if (tripsLoading || !tripsHasMore) return;
-    const pagesLoaded = Math.max(1, Math.ceil(trips.length / 50));
-    if (pagesLoaded >= MAX_PAGES) return;
-    void loadMoreTrips();
-  }, [tripsLoading, tripsHasMore, trips.length, loadMoreTrips]);
-
-  useEffect(() => {
-    if (invoicesLoading || !invoicesHasMore) return;
-    const pagesLoaded = Math.max(1, Math.ceil(invoices.length / 100));
-    if (pagesLoaded >= MAX_PAGES) return;
-    void loadMoreInvoices();
-  }, [invoicesLoading, invoicesHasMore, invoices.length, loadMoreInvoices]);
-
   const scoped = useMemo(
     () => trips.filter((t) => tripPickupReferenceDate(t) >= since),
     [trips, since]
   );
-
-  const missingDriverIds = useMemo(() => {
-    const ids: string[] = [];
-    for (const t of scoped) {
-      if (!t.driverID || t.driver?.displayName?.trim()) continue;
-      ids.push(t.driverID);
-    }
-    return ids;
-  }, [scoped]);
-  const { byId: usersById } = useUsersByIds(missingDriverIds);
 
   const byStatus = useMemo(
     () =>
@@ -134,24 +96,20 @@ export default function ReportsPage() {
   );
 
   const driverPerf = useMemo(() => {
-    const counts = new Map<string, { id: string; name: string; completed: number; total: number }>();
+    const nameById = new Map(users.map((u) => [u.id, u.profile.displayName || u.email]));
+    const counts = new Map<string, { completed: number; total: number }>();
     for (const t of scoped) {
       if (!t.driverID) continue;
-      const name =
-        t.driver?.displayName?.trim() ||
-        usersById.get(t.driverID)?.profile.displayName ||
-        usersById.get(t.driverID)?.email ||
-        "Unknown";
-      const c = counts.get(t.driverID) ?? { id: t.driverID, name, completed: 0, total: 0 };
+      const c = counts.get(t.driverID) ?? { completed: 0, total: 0 };
       c.total += 1;
       if (t.status === "completed") c.completed += 1;
-      if (!c.name || c.name === "Unknown") c.name = name;
       counts.set(t.driverID, c);
     }
-    return [...counts.values()]
+    return [...counts.entries()]
+      .map(([id, c]) => ({ name: nameById.get(id) ?? "Unknown", ...c }))
       .sort((a, b) => b.completed - a.completed)
       .slice(0, 8);
-  }, [scoped, usersById]);
+  }, [scoped, users]);
 
   return (
     <div className="space-y-4">
@@ -265,7 +223,7 @@ export default function ReportsPage() {
                 </TableRow>
               ) : (
                 driverPerf.map((d) => (
-                  <TableRow key={d.id}>
+                  <TableRow key={d.name}>
                     <TableCell className="font-medium">{d.name}</TableCell>
                     <TableCell>{d.total}</TableCell>
                     <TableCell>{d.completed}</TableCell>
