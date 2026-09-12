@@ -14,7 +14,7 @@ import {
   YAxis
 } from "recharts";
 
-import { useDashboardInvoices, usePagedTrips, useUsersByIds } from "@/hooks/use-collections";
+import { usePagedInvoices, usePagedTrips, useUsersByIds } from "@/hooks/use-collections";
 import {
   TRIP_STATUSES,
   tripPickupReferenceDate,
@@ -74,7 +74,12 @@ export default function ReportsPage() {
     hasMore: tripsHasMore,
     loadMore: loadMoreTrips
   } = usePagedTrips({ from: since, to: until });
-  const { invoices } = useDashboardInvoices(since, until);
+  const {
+    invoices,
+    loading: invoicesLoading,
+    hasMore: invoicesHasMore,
+    loadMore: loadMoreInvoices
+  } = usePagedInvoices(100);
 
   useEffect(() => {
     if (tripsLoading || !tripsHasMore) return;
@@ -82,6 +87,13 @@ export default function ReportsPage() {
     if (pagesLoaded >= MAX_PAGES) return;
     void loadMoreTrips();
   }, [tripsLoading, tripsHasMore, trips.length, loadMoreTrips]);
+
+  useEffect(() => {
+    if (invoicesLoading || !invoicesHasMore) return;
+    const pagesLoaded = Math.max(1, Math.ceil(invoices.length / 100));
+    if (pagesLoaded >= MAX_PAGES) return;
+    void loadMoreInvoices();
+  }, [invoicesLoading, invoicesHasMore, invoices.length, loadMoreInvoices]);
 
   const scoped = useMemo(
     () => trips.filter((t) => tripPickupReferenceDate(t) >= since),

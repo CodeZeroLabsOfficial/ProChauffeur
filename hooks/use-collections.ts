@@ -5,10 +5,8 @@ import type { QueryDocumentSnapshot } from "firebase/firestore";
 
 import { useActiveLocationData } from "@/components/providers/active-location-data-provider";
 import {
-  fetchInvoicesInIssuedRange,
   fetchTripsInPickupRange,
   fetchUsersByIds,
-  fetchInvoicesByIds,
   listenDispatchTrips,
   listenNotifications,
   listenRequestedTrips,
@@ -181,67 +179,6 @@ export function useDashboardTrips(from: Date, to: Date) {
   }, [branchId, fromKey, toKey]);
 
   return { trips, loading };
-}
-
-/** One-shot issued-at window for dashboard KPIs / reports. */
-export function useDashboardInvoices(from: Date, to: Date) {
-  const { branchId } = useActiveBranch();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const fromKey = from.toISOString();
-  const toKey = to.toISOString();
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!branchId) {
-      setInvoices([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void fetchInvoicesInIssuedRange(branchId, new Date(fromKey), new Date(toKey))
-      .then((rows) => {
-        if (!cancelled) setInvoices(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [branchId, fromKey, toKey]);
-
-  return { invoices, loading };
-}
-
-/** Batch-fetch invoices by document id (active Location). */
-export function useInvoicesByIds(ids: string[]) {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const key = useMemo(() => [...new Set(ids.map((id) => id.trim()).filter(Boolean))].sort().join(","), [ids]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const list = key ? key.split(",") : [];
-    if (list.length === 0) {
-      setInvoices([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void fetchInvoicesByIds(list)
-      .then((rows) => {
-        if (!cancelled) setInvoices(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [key]);
-
-  return { invoices, loading };
 }
 
 /** Paged invoices for Billing (active Location). */

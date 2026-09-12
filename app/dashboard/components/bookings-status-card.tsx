@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { subDays } from "date-fns";
 import { PieChart, Pie, Label } from "recharts";
 
-import { useDashboardTrips, useDashboardInvoices } from "@/hooks/use-collections";
+import { useDashboardTrips, usePagedInvoices } from "@/hooks/use-collections";
 import { formatCurrency } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -42,8 +42,7 @@ export function BookingsStatusCard() {
     return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
   }, []);
   const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
-  const weekRange = useMemo(() => getWeekRange(new Date(), 0), []);
-  const { invoices } = useDashboardInvoices(weekRange.start, weekRange.end);
+  const { invoices } = usePagedInvoices(100);
 
   const { chartData, total, weekRevenue } = useMemo(() => {
     const counts = bookingStatusCounts(trips);

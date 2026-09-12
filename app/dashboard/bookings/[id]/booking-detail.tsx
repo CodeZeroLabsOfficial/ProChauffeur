@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
@@ -11,7 +11,7 @@ import {
   PackageIcon
 } from "lucide-react";
 
-import { useRosterChauffeurs, useTrip, useUsersByIds } from "@/hooks/use-collections";
+import { usePagedInvoices, useRosterChauffeurs, useTrip, useUsersByIds } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import {
@@ -24,13 +24,11 @@ import {
   tripTypeTitle,
   paymentSourceTitle,
   vehicleDisplayName,
-  type Invoice,
   type Trip,
   type User,
   type Vehicle
 } from "@/lib/models";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { fetchInvoice } from "@/lib/services/firebase-service";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
 import { VehicleMakeAvatar } from "@/components/vehicle-make-avatar";
@@ -198,7 +196,7 @@ function SectionCard({
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
   const { chauffeurs } = useRosterChauffeurs();
-  const [linkedInvoice, setLinkedInvoice] = useState<Invoice | null>(null);
+  const { invoices } = usePagedInvoices(100);
 
   const userIds = useMemo(() => {
     const ids: string[] = [];
@@ -253,21 +251,13 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const vehicleClassLabel = trip?.quote.vehicleClassDisplayName?.trim() || null;
 
   const paymentStatus = trip ? effectivePaymentStatus(trip) : "unpaid";
-
-  useEffect(() => {
-    let cancelled = false;
-    const invoiceId = trip?.billing.invoiceId?.trim();
-    if (!invoiceId) {
-      setLinkedInvoice(null);
-      return;
-    }
-    void fetchInvoice(invoiceId).then((row) => {
-      if (!cancelled) setLinkedInvoice(row);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [trip?.billing.invoiceId]);
+  const linkedInvoice = useMemo(
+    () =>
+      trip?.billing.invoiceId
+        ? invoices.find((inv) => inv.id === trip.billing.invoiceId)
+        : undefined,
+    [trip?.billing.invoiceId, invoices]
+  );
 
   if (loading) {
     return (
