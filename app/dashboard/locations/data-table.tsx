@@ -13,26 +13,12 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
-
 import { LocationCreateForm } from "@/app/dashboard/locations/location-create-form";
 import { LocationEditSheet } from "@/app/dashboard/locations/location-edit-sheet";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
 import { LocationStatusBadge } from "@/components/location-status-badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -45,7 +31,6 @@ import {
 import type { Branch } from "@/lib/models";
 import { formatServiceAreaSummary } from "@/lib/branch/service-area";
 import { cn } from "@/lib/utils";
-import { deleteBranch } from "@/lib/services/firebase-service";
 
 type LocationRow = Branch & {
   searchLabel: string;
@@ -78,8 +63,6 @@ export function LocationsDataTable({
 }) {
   const [editing, setEditing] = useState<Branch | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<Branch | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -163,28 +146,6 @@ export function LocationsDataTable({
           <LocationStatusBadge isActive={row.original.isActive !== false} />
         ),
         filterFn: multiSelectFilter
-      },
-      {
-        id: "actions",
-        header: () => null,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="hover:bg-destructive/10 hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPendingDelete(row.original);
-              }}>
-              <Trash2Icon className="size-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false
       }
     ],
     []
@@ -228,25 +189,6 @@ export function LocationsDataTable({
     setEditOpen(true);
   }
 
-  async function confirmDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await deleteBranch(pendingDelete.id);
-      toast.success("Location deleted.");
-      if (editing?.id === pendingDelete.id) {
-        setEditOpen(false);
-        setEditing(null);
-      }
-      setPendingDelete(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete location.");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   return (
     <>
       <div className="w-full">
@@ -276,9 +218,7 @@ export function LocationsDataTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className={header.id === "actions" ? "w-12" : undefined}>
+                    <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -308,7 +248,7 @@ export function LocationsDataTable({
                       <TableCell
                         key={cell.id}
                         onClick={
-                          cell.column.id === "actions" || cell.column.id === "select"
+                          cell.column.id === "select"
                             ? (e) => e.stopPropagation()
                             : undefined
                         }>
@@ -329,32 +269,6 @@ export function LocationsDataTable({
         </div>
         <ListTablePagination table={table} />
       </div>
-
-      <AlertDialog
-        open={pendingDelete !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !deleting) setPendingDelete(null);
-        }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete location?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {pendingDelete?.name || "this location"} and all of its
-              bookings, vehicles, pricing, operating hours, and settings. This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleting}
-              onClick={(e) => void confirmDelete(e)}>
-              {deleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <LocationCreateForm
         open={Boolean(createOpen)}

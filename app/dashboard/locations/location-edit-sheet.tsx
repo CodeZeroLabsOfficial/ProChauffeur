@@ -2,26 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power, UserIcon } from "lucide-react";
+import { Building2, ExternalLink, ImagePlusIcon, Mail, MapPin, Phone, Power } from "lucide-react";
 import { toast } from "sonner";
 
-import { AdminUserAutocomplete } from "@/components/admin-user-autocomplete";
 import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { InlineEditableField } from "@/components/inline-editable-field";
 import { InlineOfficeAddressField } from "@/components/inline-office-address-field";
 import { Button } from "@/components/ui/button";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { officeSuggestionFromBranch } from "@/lib/branch/office-address";
 import type { AddressSuggestion } from "@/lib/mapbox/geocoding";
 import type { Branch } from "@/lib/models";
-import type { User } from "@/lib/models/user";
 import {
-  fetchUser,
   syncOfficeFleetLocation,
   uploadBranchImage,
   upsertBranch
@@ -89,58 +84,6 @@ function LocationImageUpload({
   );
 }
 
-function LocationContactPicker({
-  contactUserId,
-  disabled,
-  onSave
-}: {
-  contactUserId: string | null | undefined;
-  disabled?: boolean;
-  onSave: (userId: string | null) => Promise<{ ok: boolean; message?: string }>;
-}) {
-  const [contact, setContact] = useState<User | null>(null);
-  const [loading, setLoading] = useState(Boolean(contactUserId?.trim()));
-
-  useEffect(() => {
-    const id = contactUserId?.trim();
-    if (!id) {
-      setContact(null);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    fetchUser(id)
-      .then((user) => {
-        if (!cancelled) setContact(user?.role === "admin" ? user : null);
-      })
-      .catch(() => {
-        if (!cancelled) setContact(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [contactUserId]);
-
-  return (
-    <AdminUserAutocomplete
-      id="location-contact"
-      value={contact}
-      onChange={(user) => {
-        setContact(user);
-        void onSave(user?.id ?? null).then((res) => {
-          if (!res.ok) toast.error(res.message ?? "Could not save.");
-        });
-      }}
-      disabled={disabled || loading}
-      placeholder="Search team admins…"
-    />
-  );
-}
-
 function LocationOverviewFields({
   branch,
   onSaved
@@ -188,7 +131,7 @@ function LocationOverviewFields({
       <div className="space-y-4">
         <SectionHeading>Details</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="col-span-2 space-y-1">
             <DetailLabel icon={Building2}>Name</DetailLabel>
             <dd>
               <InlineEditableField
@@ -223,7 +166,7 @@ function LocationOverviewFields({
               />
             </dd>
           </div>
-          <div className="col-span-2 space-y-1">
+          <div className="space-y-1">
             <DetailLabel icon={Mail}>Email</DetailLabel>
             <dd>
               <InlineEditableField
@@ -239,23 +182,14 @@ function LocationOverviewFields({
             </dd>
           </div>
           <div className="col-span-2 space-y-1">
-            <DetailLabel icon={UserIcon}>Contact</DetailLabel>
-            <dd>
-              <LocationContactPicker
-                contactUserId={branch.contactUserId}
-                onSave={async (userId) => saveBranch({ contactUserId: userId })}
-              />
-            </dd>
-          </div>
-          <div className="col-span-2 space-y-1">
-            <DetailLabel icon={MapPin}>Office address</DetailLabel>
+            <DetailLabel icon={MapPin}>Address</DetailLabel>
             <dd>
               <InlineOfficeAddressField
                 fieldId="office"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
                 value={office}
-                editLabel="office address"
+                editLabel="address"
                 onSave={async (suggestion) =>
                   saveBranch(
                     {
@@ -270,23 +204,6 @@ function LocationOverviewFields({
             </dd>
           </div>
         </dl>
-        <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="location-overview-active">Active</Label>
-            <p className="text-muted-foreground text-xs">
-              Inactive locations are hidden from the switcher and resolve.
-            </p>
-          </div>
-          <Switch
-            id="location-overview-active"
-            checked={branch.isActive !== false}
-            onCheckedChange={(checked) => {
-              void saveBranch({ isActive: checked }).then((res) => {
-                if (!res.ok) toast.error(res.message ?? "Could not save.");
-              });
-            }}
-          />
-        </div>
       </div>
     </div>
   );
