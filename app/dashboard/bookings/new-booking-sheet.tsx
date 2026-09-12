@@ -42,7 +42,6 @@ import {
   type TripCapacity,
   type TripCustomer,
   type TripJourney,
-  type TripQuote,
   type TripType,
   type User,
   BOOKING_TRIP_MODES,
@@ -57,6 +56,7 @@ import {
 import type { QuotePromoApplication, QuoteRequest, QuoteResult } from "@/lib/models/quote";
 import { resolvePromoApplication } from "@/lib/pricing/apply-promo";
 import { buildQuoteForRequest } from "@/lib/pricing/build-quote";
+import { quoteFieldsFromResult } from "@/lib/pricing/quote-fields-from-result";
 import { buildTripQuoteRemote } from "@/lib/services/quote-service";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -124,6 +124,10 @@ function quoteInputFingerprint(request: QuoteRequest): string {
   });
 }
 
+/**
+ * Resolve fare via shared engine (local retail or CF corporate).
+ * Persist money only through {@link quoteFieldsFromResult} (Phase 4 freeze).
+ */
 async function resolveBookingQuote(
   request: QuoteRequest,
   pricing: PricingConfig,
@@ -196,36 +200,6 @@ function buildQuoteRequestInput(
     addonIds: selectedAddonIds,
     appliedPromo,
     corporateAccount
-  };
-}
-
-function quoteFieldsFromResult(
-  quote: QuoteResult,
-  tripType: TripType,
-  vehicleClassId: string,
-  vehicleClassDisplayName: string,
-  bookedHours: number | null
-): {
-  journeyFields: Pick<TripJourney, "tripType" | "bookedHours">;
-  quoteFields: TripQuote;
-} {
-  return {
-    journeyFields: { tripType, bookedHours },
-    quoteFields: {
-      vehicleClassId,
-      vehicleClassDisplayName,
-      quotedSubtotal: quote.subtotal,
-      quotedTaxAmount: quote.taxAmount,
-      quotedTotal: quote.total,
-      quotedCurrencyCode: quote.currencyCode,
-      quotedTaxRate: quote.quotedTaxRate,
-      quotedPricesIncludeTax: quote.quotedPricesIncludeTax,
-      quoteBreakdown: quote.breakdown,
-      quoteComputedAt: new Date(),
-      quoteSnapshot: quote.snapshot,
-      appliedPromoId: quote.snapshot.appliedPromoId,
-      promoCode: quote.snapshot.promoCode
-    }
   };
 }
 

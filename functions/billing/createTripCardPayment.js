@@ -126,6 +126,11 @@ async function applyServerQuotes(db, uid, trips, branchId) {
       );
     }
 
+    const snap =
+      quoteResult.snapshot && typeof quoteResult.snapshot === "object"
+        ? quoteResult.snapshot
+        : {};
+    // Same money fields as web `quoteFieldsFromResult` / `tripQuoteMoneyFromEngineResult`.
     quoted.push({
       ...trip,
       quote: {
@@ -139,6 +144,8 @@ async function applyServerQuotes(db, uid, trips, branchId) {
         quoteBreakdown: quoteResult.breakdown,
         quoteSnapshot: quoteResult.snapshot,
         quoteComputedAt: new Date().toISOString(),
+        appliedPromoId: snap.appliedPromoId ?? null,
+        promoCode: snap.promoCode ?? null,
       },
     });
   }

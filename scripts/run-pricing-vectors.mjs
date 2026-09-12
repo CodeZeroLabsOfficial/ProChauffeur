@@ -96,6 +96,15 @@ for (const file of files) {
       ok = false;
     }
   }
+  if (expect.corporateAccountId !== undefined) {
+    const got = result.snapshot?.corporateAccountId ?? null;
+    if (got !== expect.corporateAccountId) {
+      console.error(
+        `FAIL ${file}: corporateAccountId expected ${JSON.stringify(expect.corporateAccountId)}, got ${JSON.stringify(got)}`
+      );
+      ok = false;
+    }
+  }
   if (ok) {
     console.log(`OK  ${file}`);
   } else {
