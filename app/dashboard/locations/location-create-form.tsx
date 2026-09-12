@@ -50,7 +50,7 @@ import { customerDisplayName } from "@/lib/users/customer-display";
 import { cn } from "@/lib/utils";
 
 const STEPS: FormWizardStep[] = [
-  { id: "region", label: "Region, country & city", icon: Globe },
+  { id: "region", label: "Location", icon: Globe },
   { id: "details", label: "Details", icon: Building2 },
   { id: "review", label: "Review", icon: ListChecks }
 ];

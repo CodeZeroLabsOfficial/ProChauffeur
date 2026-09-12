@@ -4,13 +4,15 @@
     {
       "id": "apac",
       "label": "Asia Pacific",
-      "countries": ["au", "nz"]
+      "countries": [
+        "au",
+        "nz"
+      ]
     },
     {
       "id": "europe",
       "label": "Europe",
       "countries": [
-        "gb",
         "at",
         "be",
         "bg",
@@ -37,13 +39,16 @@
         "sk",
         "si",
         "es",
-        "se"
+        "se",
+        "gb"
       ]
     },
     {
       "id": "north-america",
       "label": "North America",
-      "countries": ["us"]
+      "countries": [
+        "us"
+      ]
     }
   ]
 }
