@@ -6,10 +6,10 @@ import { useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import {
-  useInvoices,
+  usePagedInvoices,
+  usePagedTrips,
   useRosterChauffeurs,
-  useTrips,
-  useUsers,
+  useUsersByIds,
   useVehicleClasses,
   useVehicles
 } from "@/hooks/use-collections";
@@ -41,12 +41,9 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
   const tabParam = searchParams.get("tab");
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
 
-  const { trips } = useTrips();
-  const { invoices } = useInvoices();
-  const { users } = useUsers();
-  const { chauffeurs } = useRosterChauffeurs();
   const { vehicles, loading: vehiclesLoading } = useVehicles();
   const { vehicleClasses } = useVehicleClasses();
+  const { chauffeurs } = useRosterChauffeurs();
 
   const [editOpen, setEditOpen] = useState(false);
   const [overviewPeriod, setOverviewPeriod] = useState<ProfileOverviewPeriod>("30d");
@@ -56,6 +53,13 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
     [vehicles, vehicleDocumentId]
   );
   const loading = vehiclesLoading && !vehicle;
+
+  const assignedChauffeurId = vehicle ? effectiveChauffeurUserId(vehicle) : null;
+  const { trips } = usePagedTrips({
+    driverId: assignedChauffeurId,
+    enabled: Boolean(assignedChauffeurId)
+  });
+  const { invoices } = usePagedInvoices(100);
 
   const metrics = useMemo(
     () => (vehicle ? vehicleOverviewMetrics(trips, invoices, vehicle) : null),
@@ -70,22 +74,29 @@ export function VehicleProfilePage({ vehicleDocumentId }: { vehicleDocumentId: s
     );
   }, [vehicle, vehicleClasses]);
 
+  const rosterChauffeur = useMemo(
+    () =>
+      assignedChauffeurId
+        ? chauffeurs.find((c) => c.user.id === assignedChauffeurId) ?? null
+        : null,
+    [assignedChauffeurId, chauffeurs]
+  );
+  const fallbackChauffeurIds = useMemo(
+    () => (assignedChauffeurId && !rosterChauffeur ? [assignedChauffeurId] : []),
+    [assignedChauffeurId, rosterChauffeur]
+  );
+  const { byId: usersById } = useUsersByIds(fallbackChauffeurIds);
+
   const assignedChauffeur = useMemo(() => {
-    if (!vehicle) return undefined;
-    const chauffeurId = effectiveChauffeurUserId(vehicle);
-    if (!chauffeurId) return undefined;
-    const fromRoster = chauffeurs.find((c) => c.user.id === chauffeurId);
-    if (fromRoster) return fromRoster.user;
-    return users.find((u) => u.id === chauffeurId);
-  }, [vehicle, chauffeurs, users]);
+    if (!assignedChauffeurId) return undefined;
+    if (rosterChauffeur) return rosterChauffeur.user;
+    return usersById.get(assignedChauffeurId);
+  }, [assignedChauffeurId, rosterChauffeur, usersById]);
 
   const assignedChauffeurCategoryLabel = useMemo(() => {
-    if (!vehicle) return null;
-    const chauffeurId = effectiveChauffeurUserId(vehicle);
-    if (!chauffeurId) return null;
-    const fromRoster = chauffeurs.find((c) => c.user.id === chauffeurId);
-    return fromRoster ? chauffeurCategoryTitle[fromRoster.roster.chauffeurCategory] : null;
-  }, [vehicle, chauffeurs]);
+    if (!rosterChauffeur) return null;
+    return chauffeurCategoryTitle[rosterChauffeur.roster.chauffeurCategory];
+  }, [rosterChauffeur]);
 
   const setTab = (tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());

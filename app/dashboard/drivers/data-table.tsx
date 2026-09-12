@@ -17,7 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useUsers, useRosterChauffeurs } from "@/hooks/use-collections";
+import { useRosterChauffeurs, useUsersByRole } from "@/hooks/use-collections";
 import {
   removeDriver,
   saveDriverProfile
@@ -89,7 +89,7 @@ export function DriversDataTable({
   onCreateOpenChange?: (open: boolean) => void;
   canAdd?: boolean;
 }) {
-  const { users } = useUsers();
+  const { users: candidates } = useUsersByRole("customer");
   const { chauffeurs, loading } = useRosterChauffeurs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -101,11 +101,6 @@ export function DriversDataTable({
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dispatchFilter, setDispatchFilter] = useState<string[]>([]);
   const [visibilityFilter, setVisibilityFilter] = useState<string[]>([]);
-
-  const candidates = useMemo(
-    () => users.filter((u) => u.role !== "driver"),
-    [users]
-  );
 
   const data = useMemo<DriverRow[]>(
     () =>

@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { subDays } from "date-fns";
 import { Info } from "lucide-react";
 
-import { useTrips } from "@/hooks/use-collections";
+import { useDashboardTrips } from "@/hooks/use-collections";
 import type { Trip } from "@/lib/models";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -47,7 +48,11 @@ function countByStatus(trips: Trip[], start: Date, end: Date) {
 }
 
 export function BookingsCard({ trips: scopedTrips }: { trips?: Trip[] } = {}) {
-  const { trips: collectionTrips } = useTrips();
+  const dashRange = useMemo(() => {
+    const now = new Date();
+    return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
+  }, []);
+  const { trips: collectionTrips } = useDashboardTrips(dashRange.from, dashRange.to);
   const trips = scopedTrips ?? collectionTrips;
   const [period, setPeriod] = useState<Period>("monthly");
 

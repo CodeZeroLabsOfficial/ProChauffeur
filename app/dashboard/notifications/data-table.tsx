@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 
 import { useSessionUser } from "@/components/providers/session-provider";
-import { useNotifications, useTrips, useUsers } from "@/hooks/use-collections";
+import { useNotifications, useRequestedTrips, useUsersByIds } from "@/hooks/use-collections";
 import { canViewActivityEvent } from "@/lib/auth/staff-access";
 import { timeAgo } from "@/app/dashboard/lib/dashboard-metrics";
 import type { ActivityNotification, NotificationCategory, Trip } from "@/lib/models";
@@ -203,9 +203,8 @@ const columns = createColumns();
 
 export function NotificationsDataTable() {
   const session = useSessionUser();
-  const { trips } = useTrips();
+  const { trips: requestedTrips } = useRequestedTrips();
   const { notifications: allNotifications } = useNotifications(200);
-  const { users } = useUsers();
   const notifications = useMemo(
     () => allNotifications.filter((n) => canViewActivityEvent(session, n)),
     [allNotifications, session]
@@ -218,23 +217,29 @@ export function NotificationsDataTable() {
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null);
   const [typeFilter, setTypeFilter] = React.useState<string | null>(null);
 
+  const requestedCustomerIds = useMemo(
+    () => [...new Set(requestedTrips.map((t) => t.customerID).filter(Boolean))],
+    [requestedTrips]
+  );
+  const { byId: usersById } = useUsersByIds(requestedCustomerIds);
+
   const displayNameByCustomerId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const u of users) {
+    for (const [id, u] of usersById) {
       const name = u.profile.displayName?.trim() || u.email;
-      if (name) map.set(u.id, name);
+      if (name) map.set(id, name);
     }
     return map;
-  }, [users]);
+  }, [usersById]);
 
   const photoURLByCustomerId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const u of users) {
+    for (const [id, u] of usersById) {
       const url = u.profile.photoURL?.trim();
-      if (url) map.set(u.id, url);
+      if (url) map.set(id, url);
     }
     return map;
-  }, [users]);
+  }, [usersById]);
 
   const handleStatusChange = useCallback(async (trip: Trip, status: "accepted" | "cancelled") => {
     const branchId = trip.branchId?.trim();
@@ -277,40 +282,38 @@ export function NotificationsDataTable() {
   );
 
   const data = useMemo(() => {
-    const bookingRows: NotificationRow[] = trips
-      .filter((t) => t.status === "requested")
-      .map((trip) => {
-        const title = customerNameForTrip(trip, displayNameByCustomerId);
-        const avatarUrl = photoURLByCustomerId.get(trip.customerID);
-        const busy = actingOnId === trip.id;
+    const bookingRows: NotificationRow[] = requestedTrips.map((trip) => {
+      const title = customerNameForTrip(trip, displayNameByCustomerId);
+      const avatarUrl = photoURLByCustomerId.get(trip.customerID);
+      const busy = actingOnId === trip.id;
 
-        return {
-          id: `booking-${trip.id}`,
-          title,
-          description: `Requested a new booking · ${bookingRequestDescription(trip)}`,
-          type: "Booking",
-          typeValue: "booking",
-          time: timeAgo(trip.createdAt),
-          status: "unread" as const,
-          href: `/dashboard/bookings/${trip.id}`,
-          user: {
-            name: title,
-            avatar: avatarUrl
+      return {
+        id: `booking-${trip.id}`,
+        title,
+        description: `Requested a new booking · ${bookingRequestDescription(trip)}`,
+        type: "Booking",
+        typeValue: "booking",
+        time: timeAgo(trip.createdAt),
+        status: "unread" as const,
+        href: `/dashboard/bookings/${trip.id}`,
+        user: {
+          name: title,
+          avatar: avatarUrl
+        },
+        actions: [
+          {
+            label: "Accept",
+            variant: "outline" as const,
+            onClick: busy ? undefined : () => void handleStatusChange(trip, "accepted")
           },
-          actions: [
-            {
-              label: "Accept",
-              variant: "outline" as const,
-              onClick: busy ? undefined : () => void handleStatusChange(trip, "accepted")
-            },
-            {
-              label: "Decline",
-              variant: "destructive" as const,
-              onClick: busy ? undefined : () => void handleStatusChange(trip, "cancelled")
-            }
-          ]
-        };
-      });
+          {
+            label: "Decline",
+            variant: "destructive" as const,
+            onClick: busy ? undefined : () => void handleStatusChange(trip, "cancelled")
+          }
+        ]
+      };
+    });
 
     const activityRows = notifications.map(activityRow);
     return [...bookingRows, ...activityRows].sort((a, b) => {
@@ -319,7 +322,7 @@ export function NotificationsDataTable() {
       return bUnread - aUnread;
     });
   }, [
-    trips,
+    requestedTrips,
     notifications,
     displayNameByCustomerId,
     photoURLByCustomerId,

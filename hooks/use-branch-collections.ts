@@ -3,55 +3,65 @@
 import { useEffect, useState } from "react";
 
 import {
-  listenInvoices,
-  listenTrips,
+  fetchBranchInvoicesPage,
+  fetchBranchTripsPage,
   listenVehicleClasses
 } from "@/lib/services/firebase-service";
 import type { Invoice, Trip, VehicleClass } from "@/lib/models";
 
-/** Trips for one Location id (URL), not the switcher. */
+/** One-shot paged trips for a Location URL (not a live 800 listener). */
 export function useBranchTrips(branchId: string): { trips: Trip[]; loading: boolean } {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const id = branchId.trim();
+    let cancelled = false;
     if (!id) {
       setTrips([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    return listenTrips(
-      (rows) => {
-        setTrips(rows);
-        setLoading(false);
-      },
-      800,
-      id
-    );
+    void fetchBranchTripsPage(id, 50)
+      .then((rows) => {
+        if (!cancelled) setTrips(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [branchId]);
 
   return { trips, loading };
 }
 
-/** Invoices for one Location id (URL), not the switcher. */
+/** One-shot paged invoices for a Location URL. */
 export function useBranchInvoices(branchId: string): { invoices: Invoice[]; loading: boolean } {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const id = branchId.trim();
+    let cancelled = false;
     if (!id) {
       setInvoices([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    return listenInvoices((rows) => {
-      setInvoices(rows);
-      setLoading(false);
-    }, id);
+    void fetchBranchInvoicesPage(id, 50)
+      .then((rows) => {
+        if (!cancelled) setInvoices(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [branchId]);
 
   return { invoices, loading };

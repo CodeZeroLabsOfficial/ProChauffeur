@@ -1,10 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
+import { subDays } from "date-fns";
 import { CalendarCheckIcon, CarFrontIcon, DollarSign, UsersIcon } from "lucide-react";
 
-import { useInvoices, useRosterChauffeurs, useTrips, useVehicles } from "@/hooks/use-collections";
-import { tripPickupReferenceDate } from "@/lib/models";
+import {
+  useDashboardTrips,
+  usePagedInvoices,
+  useRosterChauffeurs,
+  useVehicles
+} from "@/hooks/use-collections";
+import { tripPickupReferenceDate, type Trip } from "@/lib/models";
 import { formatCurrency } from "@/lib/format";
 import {
   Card,
@@ -15,11 +21,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import {
+  endOfDay,
   formatPercentChange,
   getMonthRange,
   invoiceRevenueInRange,
   isSameDay,
-  percentChange
+  percentChange,
+  startOfDay
 } from "@/app/dashboard/lib/dashboard-metrics";
 
 function DeltaText({ value, label }: { value: number | null; label: string }) {
@@ -38,10 +46,14 @@ function DeltaText({ value, label }: { value: number | null; label: string }) {
 }
 
 export function SummaryCards() {
-  const { trips } = useTrips();
+  const dashRange = useMemo(() => {
+    const now = new Date();
+    return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
+  }, []);
+  const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
   const { chauffeurs } = useRosterChauffeurs();
   const { vehicles } = useVehicles();
-  const { invoices } = useInvoices();
+  const { invoices } = usePagedInvoices(100);
 
   const metrics = useMemo(() => {
     const now = new Date();
@@ -154,7 +166,7 @@ export function SummaryCards() {
   );
 }
 
-function tripsInMonth(trips: ReturnType<typeof useTrips>["trips"], start: Date, end: Date) {
+function tripsInMonth(trips: Trip[], start: Date, end: Date) {
   return trips.filter((trip) => {
     const ref = tripPickupReferenceDate(trip);
     return ref >= start && ref <= end;

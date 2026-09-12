@@ -6,14 +6,13 @@ import { PlusCircledIcon } from "@radix-ui/react-icons";
 import { DriversDataTable } from "@/app/dashboard/drivers/data-table";
 import { ListPageHeader } from "@/components/list-page-header";
 import { Button } from "@/components/ui/button";
-import { useUsers } from "@/hooks/use-collections";
 import { canAddDriver, type AppLicense } from "@/lib/models";
-import { fetchLicense } from "@/lib/services/firebase-service";
+import { countUsersByRole, fetchLicense } from "@/lib/services/firebase-service";
 
 export default function DriversPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [license, setLicense] = useState<AppLicense | null>(null);
-  const { users } = useUsers();
+  const [driverCount, setDriverCount] = useState(0);
 
   useEffect(() => {
     fetchLicense()
@@ -21,7 +20,20 @@ export default function DriversPage() {
       .catch(() => setLicense(null));
   }, []);
 
-  const driverCount = users.filter((u) => u.role === "driver").length;
+  useEffect(() => {
+    let cancelled = false;
+    countUsersByRole("driver")
+      .then((count) => {
+        if (!cancelled) setDriverCount(count);
+      })
+      .catch(() => {
+        if (!cancelled) setDriverCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const canAdd = license ? canAddDriver(driverCount, license.maxDrivers) : false;
 
   return (

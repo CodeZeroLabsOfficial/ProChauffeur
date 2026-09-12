@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
-import { useUsers } from "@/hooks/use-collections";
-import { fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service";
+import { countUsersByRole, fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service";
 import {
   FEATURE_IDS,
   FEATURE_LABELS,
@@ -67,12 +66,14 @@ function LimitUsageBar({ label, used, max }: LimitRow) {
 }
 
 export default function LicensePage() {
-  const { users, loading: usersLoading } = useUsers();
   const { allBranches, branchesLoading } = useActiveBranch();
   const [license, setLicense] = useState<AppLicense | null>(null);
   const [catalog, setCatalog] = useState<AppPlansCatalog | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [licenseLoading, setLicenseLoading] = useState(true);
+  const [adminCount, setAdminCount] = useState(0);
+  const [driverCount, setDriverCount] = useState(0);
+  const [countsLoading, setCountsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +100,29 @@ export default function LicensePage() {
     };
   }, []);
 
-  const loading = usersLoading || branchesLoading || licenseLoading;
+  useEffect(() => {
+    let cancelled = false;
+    setCountsLoading(true);
+    Promise.all([countUsersByRole("admin"), countUsersByRole("driver")])
+      .then(([admins, drivers]) => {
+        if (cancelled) return;
+        setAdminCount(admins);
+        setDriverCount(drivers);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAdminCount(0);
+        setDriverCount(0);
+      })
+      .finally(() => {
+        if (!cancelled) setCountsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loading = countsLoading || branchesLoading || licenseLoading;
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -117,9 +140,6 @@ export default function LicensePage() {
       </Card>
     );
   }
-
-  const adminCount = users.filter((u) => u.role === "admin").length;
-  const driverCount = users.filter((u) => u.role === "driver").length;
 
   const rows: LimitRow[] = [
     { label: "Admin accounts", used: adminCount, max: license.maxAdmins },

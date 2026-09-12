@@ -3,9 +3,11 @@
 import {
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   deleteField,
+  getCountFromServer,
   getDoc,
   getDocs,
   increment,
@@ -15,11 +17,14 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   writeBatch,
   type DocumentData,
   type FirestoreError,
+  type QueryConstraint,
+  type QueryDocumentSnapshot,
   type QuerySnapshot
 } from "firebase/firestore";
 import { remove, ref as rtdbRef } from "firebase/database";
@@ -72,6 +77,7 @@ import {
   type Trip,
   type TripStatus,
   type User,
+  type UserRole,
   type UserPreferences,
   type UserProfile,
   type Vehicle,
@@ -117,6 +123,7 @@ import {
   branchesCollectionRef
 } from "@/lib/branch/firestore-paths";
 import { listenQuery } from "@/lib/branch/listen-query";
+import { customerMatchesQuery } from "@/lib/users/customer-display";
 import {
   BRANCH_SUBCOLLECTIONS,
   BranchSettingsDocs,
@@ -540,6 +547,234 @@ export function listenTrips(
     onUpdate,
     onSnapshotError("trips", onUpdate)
   );
+}
+
+const DISPATCH_STATUSES: TripStatus[] = [
+  "requested",
+  "accepted",
+  "en_route_pickup",
+  "in_progress"
+];
+
+/** Live Dispatch board: open / in-progress trips only (active Location). */
+export function listenDispatchTrips(
+  branchId: string,
+  onUpdate: (trips: Trip[]) => void
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(
+    branchCollectionRef(db(), "trips", id),
+    where("status", "in", DISPATCH_STATUSES)
+  );
+  return listenQuery(
+    nested,
+    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), id)),
+    onUpdate,
+    onSnapshotError("dispatchTrips", onUpdate)
+  );
+}
+
+/** Live pending job requests for notification chrome. */
+export function listenRequestedTrips(
+  branchId: string,
+  onUpdate: (trips: Trip[]) => void
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(
+    branchCollectionRef(db(), "trips", id),
+    where("status", "==", "requested")
+  );
+  return listenQuery(
+    nested,
+    (snap) => snap.docs.map((dc) => mapTrip(dc.id, dc.data(), id)),
+    onUpdate,
+    onSnapshotError("requestedTrips", onUpdate)
+  );
+}
+
+export type QueryTripsOptions = {
+  from?: Date;
+  to?: Date;
+  statuses?: TripStatus[];
+  driverId?: string | null;
+  customerId?: string | null;
+  pageSize?: number;
+  startAfterDoc?: QueryDocumentSnapshot | null;
+};
+
+export type QueryTripsResult = {
+  trips: Trip[];
+  lastDoc: QueryDocumentSnapshot | null;
+};
+
+/** Paged trips for a Location by pickup window (and optional filters). */
+export async function queryTrips(
+  branchId: string,
+  options: QueryTripsOptions = {}
+): Promise<QueryTripsResult> {
+  const id = requireBranchId(branchId);
+  const pageSize = options.pageSize ?? 50;
+  const col = branchCollectionRef(db(), "trips", id);
+  const constraints: QueryConstraint[] = [];
+
+  if (options.customerId?.trim()) {
+    constraints.push(where("customerID", "==", options.customerId.trim()));
+    constraints.push(orderBy("createdAt", "desc"));
+  } else if (options.driverId?.trim()) {
+    constraints.push(where("driverID", "==", options.driverId.trim()));
+    if (options.from) constraints.push(where("journey.scheduledPickupAt", ">=", options.from));
+    if (options.to) constraints.push(where("journey.scheduledPickupAt", "<=", options.to));
+    constraints.push(orderBy("journey.scheduledPickupAt", "desc"));
+  } else if (options.statuses && options.statuses.length === 1) {
+    constraints.push(where("status", "==", options.statuses[0]));
+    if (options.from) constraints.push(where("journey.scheduledPickupAt", ">=", options.from));
+    if (options.to) constraints.push(where("journey.scheduledPickupAt", "<=", options.to));
+    constraints.push(orderBy("journey.scheduledPickupAt", "desc"));
+  } else if (options.statuses && options.statuses.length > 1) {
+    constraints.push(where("status", "in", options.statuses.slice(0, 10)));
+    if (options.from) constraints.push(where("journey.scheduledPickupAt", ">=", options.from));
+    if (options.to) constraints.push(where("journey.scheduledPickupAt", "<=", options.to));
+    constraints.push(orderBy("journey.scheduledPickupAt", "desc"));
+  } else if (options.from || options.to) {
+    if (options.from) constraints.push(where("journey.scheduledPickupAt", ">=", options.from));
+    if (options.to) constraints.push(where("journey.scheduledPickupAt", "<=", options.to));
+    constraints.push(orderBy("journey.scheduledPickupAt", "desc"));
+  } else {
+    constraints.push(orderBy("createdAt", "desc"));
+  }
+
+  const q = options.startAfterDoc
+    ? query(col, ...constraints, startAfter(options.startAfterDoc), fsLimit(pageSize))
+    : query(col, ...constraints, fsLimit(pageSize));
+  const snap = await getDocs(q);
+  return {
+    trips: snap.docs.map((dc) => mapTrip(dc.id, dc.data(), id)),
+    lastDoc: snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null
+  };
+}
+
+/** Cross-Location customer trip history (collection group). */
+export async function queryTripsForCustomer(
+  customerId: string,
+  options: { pageSize?: number; startAfterDoc?: QueryDocumentSnapshot | null } = {}
+): Promise<QueryTripsResult> {
+  const uid = customerId.trim();
+  if (!uid) return { trips: [], lastDoc: null };
+  const pageSize = options.pageSize ?? 50;
+  const base = [
+    where("customerID", "==", uid),
+    orderBy("createdAt", "desc"),
+    fsLimit(pageSize)
+  ] as QueryConstraint[];
+  const q = options.startAfterDoc
+    ? query(
+        collectionGroup(db(), "trips"),
+        where("customerID", "==", uid),
+        orderBy("createdAt", "desc"),
+        startAfter(options.startAfterDoc),
+        fsLimit(pageSize)
+      )
+    : query(collectionGroup(db(), "trips"), ...base);
+  const snap = await getDocs(q);
+  return {
+    trips: snap.docs.map((dc) => {
+      const branchId = dc.ref.parent.parent?.id ?? "";
+      return mapTrip(dc.id, dc.data(), branchId);
+    }),
+    lastDoc: snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null
+  };
+}
+
+/** Cross-Location invoices for one customer. */
+export async function queryInvoicesForCustomer(
+  customerId: string,
+  options: { pageSize?: number } = {}
+): Promise<Invoice[]> {
+  const uid = customerId.trim();
+  if (!uid) return [];
+  const pageSize = options.pageSize ?? 50;
+  const snap = await getDocs(
+    query(
+      collectionGroup(db(), "invoices"),
+      where("customerID", "==", uid),
+      orderBy("createdAt", "desc"),
+      fsLimit(pageSize)
+    )
+  );
+  return snap.docs.map((dc) => {
+    const branchId = dc.ref.parent.parent?.id ?? "";
+    return mapInvoice(dc.id, dc.data(), branchId);
+  });
+}
+
+/** Trips for a corporate account across granted Locations (paged per branch, merged). */
+export async function queryTripsForCorporateAccount(
+  accountId: string,
+  branchIds: string[],
+  options: { pageSizePerBranch?: number } = {}
+): Promise<Trip[]> {
+  const id = accountId.trim();
+  if (!id) return [];
+  const pageSize = options.pageSizePerBranch ?? 50;
+  const batches = await Promise.all(
+    branchIds.filter(Boolean).map(async (branchId) => {
+      const snap = await getDocs(
+        query(
+          branchCollectionRef(db(), "trips", branchId),
+          where("billing.corporateAccountId", "==", id),
+          orderBy("createdAt", "desc"),
+          fsLimit(pageSize)
+        )
+      );
+      return snap.docs.map((dc) => mapTrip(dc.id, dc.data(), branchId));
+    })
+  );
+  return batches.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+export async function queryInvoicesForCorporateAccount(
+  accountId: string,
+  branchIds: string[],
+  options: { pageSizePerBranch?: number } = {}
+): Promise<Invoice[]> {
+  const id = accountId.trim();
+  if (!id) return [];
+  const pageSize = options.pageSizePerBranch ?? 100;
+  const batches = await Promise.all(
+    branchIds.filter(Boolean).map(async (branchId) => {
+      const { invoices } = await queryInvoices(branchId, { pageSize });
+      return invoices.filter((inv) => inv.corporateAccountId === id);
+    })
+  );
+  return batches.flat().sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime());
+}
+
+/** One-shot paged trips for a Location URL (no live listener). */
+export async function fetchBranchTripsPage(
+  branchId: string,
+  pageSize = 50
+): Promise<Trip[]> {
+  const { trips } = await queryTrips(branchId, { pageSize });
+  return trips;
+}
+
+export async function fetchBranchInvoicesPage(
+  branchId: string,
+  pageSize = 50
+): Promise<Invoice[]> {
+  const { invoices } = await queryInvoices(branchId, { pageSize });
+  return invoices;
+}
+
+/** One-shot bounded window for dashboard KPIs (active Location). */
+export async function fetchTripsInPickupRange(
+  branchId: string,
+  from: Date,
+  to: Date,
+  max = 500
+): Promise<Trip[]> {
+  const { trips } = await queryTrips(branchId, { from, to, pageSize: max });
+  return trips;
 }
 
 export async function fetchTrips(max = 800): Promise<Trip[]> {
@@ -987,16 +1222,69 @@ async function incrementPromoRedemption(promoId: string): Promise<void> {
 
 // ─────────────────────────────── Users ───────────────────────────────
 
-export function listenUsers(onUpdate: (users: User[]) => void): Unsub {
-  return onSnapshot(
-    collection(db(), Collections.users),
-    (snap) => onUpdate(snapToList(snap, mapUser)),
-    onSnapshotError("users", onUpdate)
-  );
+export type QueryUsersByRoleResult = {
+  users: User[];
+  lastDoc: QueryDocumentSnapshot | null;
+};
+
+/** Paged users for one Auth role (`customer` | `driver` | `admin`). */
+export async function queryUsersByRole(
+  role: UserRole,
+  options: { limit?: number; startAfterDoc?: QueryDocumentSnapshot | null } = {}
+): Promise<QueryUsersByRoleResult> {
+  const pageSize = options.limit ?? 50;
+  const constraints = [
+    where("role", "==", role),
+    orderBy("createdAt", "desc"),
+    fsLimit(pageSize)
+  ];
+  const q = options.startAfterDoc
+    ? query(
+        collection(db(), Collections.users),
+        where("role", "==", role),
+        orderBy("createdAt", "desc"),
+        startAfter(options.startAfterDoc),
+        fsLimit(pageSize)
+      )
+    : query(collection(db(), Collections.users), ...constraints);
+  const snap = await getDocs(q);
+  const users = snap.docs.map((dc) => mapUser(dc.id, dc.data()));
+  const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+  return { users, lastDoc };
 }
 
-export async function fetchUsers(): Promise<User[]> {
-  return snapToList(await getDocs(collection(db(), Collections.users)), mapUser);
+/**
+ * Role-scoped directory search for pickers.
+ * Loads a role page then filters name/email locally (no full-collection listen).
+ */
+export async function searchUsersByRole(
+  role: UserRole,
+  needle: string,
+  options: { limit?: number } = {}
+): Promise<User[]> {
+  const pageSize = options.limit ?? 50;
+  const { users } = await queryUsersByRole(role, { limit: Math.max(pageSize, 200) });
+  return users
+    .filter((u) => customerMatchesQuery(u, needle))
+    .sort((a, b) =>
+      (a.profile.displayName || a.email).localeCompare(b.profile.displayName || b.email)
+    )
+    .slice(0, pageSize);
+}
+
+export async function countUsersByRole(role: UserRole): Promise<number> {
+  const snap = await getCountFromServer(
+    query(collection(db(), Collections.users), where("role", "==", role))
+  );
+  return snap.data().count;
+}
+
+/** Batch-fetch identity docs by uid (skips missing). */
+export async function fetchUsersByIds(ids: string[]): Promise<User[]> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) return [];
+  const rows = await Promise.all(unique.map((id) => fetchUser(id)));
+  return rows.filter((u): u is User => u != null);
 }
 
 export async function fetchUser(uid: string): Promise<User | null> {
@@ -1686,7 +1974,8 @@ export function listenInvoices(
 ): Unsub {
   const nested = query(
     branchCollectionRef(db(), "invoices", branchId),
-    orderBy("issuedAt", "desc")
+    orderBy("issuedAt", "desc"),
+    fsLimit(200)
   );
   return listenQuery(
     nested,
@@ -1694,6 +1983,50 @@ export function listenInvoices(
     onUpdate,
     onSnapshotError("invoices", onUpdate)
   );
+}
+
+export type QueryInvoicesOptions = {
+  pageSize?: number;
+  startAfterDoc?: QueryDocumentSnapshot | null;
+  customerId?: string | null;
+};
+
+export type QueryInvoicesResult = {
+  invoices: Invoice[];
+  lastDoc: QueryDocumentSnapshot | null;
+};
+
+/** Paged invoices for a Location (newest issued first). */
+export async function queryInvoices(
+  branchId: string,
+  options: QueryInvoicesOptions = {}
+): Promise<QueryInvoicesResult> {
+  const id = requireBranchId(branchId);
+  const pageSize = options.pageSize ?? 50;
+  const col = branchCollectionRef(db(), "invoices", id);
+  const q = options.customerId?.trim()
+    ? options.startAfterDoc
+      ? query(
+          col,
+          where("customerID", "==", options.customerId.trim()),
+          orderBy("createdAt", "desc"),
+          startAfter(options.startAfterDoc),
+          fsLimit(pageSize)
+        )
+      : query(
+          col,
+          where("customerID", "==", options.customerId.trim()),
+          orderBy("createdAt", "desc"),
+          fsLimit(pageSize)
+        )
+    : options.startAfterDoc
+      ? query(col, orderBy("issuedAt", "desc"), startAfter(options.startAfterDoc), fsLimit(pageSize))
+      : query(col, orderBy("issuedAt", "desc"), fsLimit(pageSize));
+  const snap = await getDocs(q);
+  return {
+    invoices: snap.docs.map((dc) => mapInvoice(dc.id, dc.data(), id)),
+    lastDoc: snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null
+  };
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice | null> {

@@ -6,10 +6,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import {
-  useInvoices,
+  usePagedInvoices,
+  usePagedTrips,
   useRosterChauffeurs,
-  useTrips,
-  useUsers,
+  useUsersByRole,
   useVehicles
 } from "@/hooks/use-collections";
 import { fetchUser } from "@/lib/services/firebase-service";
@@ -45,9 +45,9 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const tabParam = searchParams.get("tab");
   const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
 
-  const { trips } = useTrips();
-  const { invoices } = useInvoices();
-  const { users } = useUsers();
+  const { trips } = usePagedTrips({ driverId });
+  const { invoices } = usePagedInvoices(100);
+  const { users: candidates } = useUsersByRole("customer");
   const { vehicles } = useVehicles();
   const { chauffeurs, loading: rosterLoading } = useRosterChauffeurs();
 
@@ -67,8 +67,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     setLoading(true);
     loadUser().finally(() => setLoading(false));
   }, [loadUser]);
-
-  const candidates = useMemo(() => users.filter((u) => u.role !== "driver"), [users]);
 
   const metrics = useMemo(
     () => driverOverviewMetrics(trips, invoices, driverId),

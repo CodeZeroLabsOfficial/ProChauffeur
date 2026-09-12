@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { CalendarIcon, Download } from "lucide-react";
+import { subDays } from "date-fns";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { useActiveFormatLocale } from "@/hooks/use-active-format-locale";
-import { useTrips } from "@/hooks/use-collections";
+import { useDashboardTrips } from "@/hooks/use-collections";
 import { formatChartDay, formatChartMonth } from "@/lib/format";
-import { tripPickupReferenceDate } from "@/lib/models";
+import { tripPickupReferenceDate, type Trip } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -40,12 +41,7 @@ const chartConfig = {
   }
 };
 
-function buildDailySeries(
-  trips: ReturnType<typeof useTrips>["trips"],
-  days: number,
-  end: Date,
-  locale: string
-) {
+function buildDailySeries(trips: Trip[], days: number, end: Date, locale: string) {
   const bucketByDay = new Map<number, { date: string; scheduled: number; completed: number }>();
   const buckets: { date: string; scheduled: number; completed: number }[] = [];
 
@@ -73,12 +69,7 @@ function buildDailySeries(
   return buckets;
 }
 
-function getRangeData(
-  trips: ReturnType<typeof useTrips>["trips"],
-  range: RangeKey,
-  now: Date,
-  locale: string
-) {
+function getRangeData(trips: Trip[], range: RangeKey, now: Date, locale: string) {
   switch (range) {
     case "this-week": {
       const { start, end } = getWeekRange(now, 0);
@@ -179,7 +170,11 @@ function getRangeData(
 }
 
 export function BookingsTrendChart() {
-  const { trips } = useTrips();
+  const dashRange = useMemo(() => {
+    const now = new Date();
+    return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
+  }, []);
+  const { trips } = useDashboardTrips(dashRange.from, dashRange.to);
   const locale = useActiveFormatLocale();
   const [dateRange, setDateRange] = useState<RangeKey>("this-week");
 

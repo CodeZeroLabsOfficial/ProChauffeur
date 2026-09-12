@@ -16,17 +16,12 @@ import {
 } from "@tanstack/react-table";
 import { MoreHorizontalIcon } from "lucide-react";
 
-import { useCompanyTrips } from "@/hooks/use-company-collections";
-import { useUsers } from "@/hooks/use-collections";
+import { useUsersByRole } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import type { CorporateAccount, User } from "@/lib/models";
 import { formatPostalAddress } from "@/lib/models/postal-address";
 import { formatDate } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
-import {
-  lastBookingAtForCustomer,
-  tripCountByCustomerId
-} from "@/app/dashboard/customers/lib/customer-profile-metrics";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
@@ -83,10 +78,10 @@ export function CustomersDataTable({
   createOpen?: boolean;
   onCreateOpenChange?: (open: boolean) => void;
 }) {
-  const { users, loading: usersLoading } = useUsers();
-  const { trips, loading: tripsLoading } = useCompanyTrips();
+  const { users, loading: usersLoading, hasMore, loadMore } = useUsersByRole("customer");
   const { enabled: corporateAccountsEnabled } = useFeatureEnabled("corporateAccounts");
-  const loading = usersLoading || tripsLoading;
+  const loading = usersLoading;
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -116,14 +111,11 @@ export function CustomersDataTable({
     return map;
   }, [accounts]);
 
-  const tripCounts = useMemo(() => tripCountByCustomerId(trips), [trips]);
-
   const data = useMemo<CustomerRow[]>(
     () =>
       users
-        .filter((u) => u.role === "customer")
         .map((u) => {
-          const tripCount = tripCounts.get(u.id) ?? 0;
+          const tripCount = 0;
           const accountId = u.corporateAccountId?.trim() || null;
           const corporateAccountName = accountId
             ? accountNameById.get(accountId) ?? null
@@ -142,10 +134,8 @@ export function CustomersDataTable({
               .filter(Boolean)
               .join(" "),
             tripCount,
-            lastBookingAt: lastBookingAtForCustomer(trips, u.id),
-            activityStatus: (tripCount > 0 ? "has_bookings" : "no_bookings") as
-              | "has_bookings"
-              | "no_bookings",
+            lastBookingAt: null,
+            activityStatus: "no_bookings" as const,
             customerType,
             corporateAccountName
           };
@@ -153,7 +143,7 @@ export function CustomersDataTable({
         .sort((a, b) =>
           customerDisplayName(a).localeCompare(customerDisplayName(b))
         ),
-    [users, trips, tripCounts, accountNameById]
+    [users, accountNameById]
   );
 
   const openCustomer = useCallback(
@@ -482,6 +472,20 @@ export function CustomersDataTable({
           </Table>
         </div>
         <ListTablePagination table={table} />
+        {hasMore ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loadingMore}
+              onClick={() => {
+                setLoadingMore(true);
+                void loadMore().finally(() => setLoadingMore(false));
+              }}>
+              {loadingMore ? "Loading…" : "Load more"}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <CustomerDetailSheet

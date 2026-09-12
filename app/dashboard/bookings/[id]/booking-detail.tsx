@@ -11,7 +11,7 @@ import {
   PackageIcon
 } from "lucide-react";
 
-import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use-collections";
+import { usePagedInvoices, useRosterChauffeurs, useTrip, useUsersByIds } from "@/hooks/use-collections";
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import {
@@ -195,9 +195,16 @@ function SectionCard({
 
 export function BookingDetail({ tripId }: { tripId: string }) {
   const { trip, loading, notFound } = useTrip(tripId);
-  const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
-  const { invoices } = useInvoices();
+  const { invoices } = usePagedInvoices(100);
+
+  const userIds = useMemo(() => {
+    const ids: string[] = [];
+    if (trip?.customerID) ids.push(trip.customerID);
+    if (trip?.driverID) ids.push(trip.driverID);
+    return ids;
+  }, [trip?.customerID, trip?.driverID]);
+  const { byId: usersById } = useUsersByIds(userIds);
 
   const currentStepIndex = trip
     ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number])
@@ -213,24 +220,22 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const journeyTime = useMemo(() => (trip ? tripJourneyTimeLabel(trip) : "—"), [trip]);
   const distanceLabel = useMemo(() => (trip ? tripOnboardDistanceLabel(trip) : "—"), [trip]);
 
-  const customer = useMemo(
-    () => (trip ? users.find((u) => u.id === trip.customerID) : undefined),
-    [trip, users]
-  );
+  const customer = trip?.customerID ? usersById.get(trip.customerID) : undefined;
 
   const rosterChauffeur = useMemo(
     () => (trip?.driverID ? chauffeurs.find((c) => c.user.id === trip.driverID) : undefined),
     [trip?.driverID, chauffeurs]
   );
 
-  const chauffeur = useMemo(
-    () =>
-      rosterChauffeur?.user ??
-      (trip?.driverID ? users.find((u) => u.id === trip.driverID) : undefined),
-    [rosterChauffeur, trip?.driverID, users]
-  );
+  const chauffeur =
+    rosterChauffeur?.user ??
+    (trip?.driverID ? usersById.get(trip.driverID) : undefined);
 
-  const chauffeurName = chauffeur?.profile.displayName || chauffeur?.email || "Unassigned";
+  const chauffeurName =
+    trip?.driver?.displayName?.trim() ||
+    chauffeur?.profile.displayName ||
+    chauffeur?.email ||
+    "Unassigned";
   const chauffeurDescription = rosterChauffeur
     ? chauffeurCategoryTitle[rosterChauffeur.roster.chauffeurCategory]
     : chauffeur

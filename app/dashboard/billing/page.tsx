@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
-import { useInvoices } from "@/hooks/use-collections";
+import { usePagedInvoices } from "@/hooks/use-collections";
 import { INVOICE_STATUSES, invoiceStatusTitle, type Invoice, type InvoiceStatus } from "@/lib/models";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/table";
 
 export default function BillingPage() {
-  const { invoices, loading } = useInvoices();
+  const { invoices, loading, hasMore, loadMore } = usePagedInvoices();
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">("all");
   const [selected, setSelected] = useState<Invoice | null>(null);
@@ -171,6 +172,20 @@ export default function BillingPage() {
               )}
             </TableBody>
           </Table>
+          {hasMore ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loadingMore}
+                onClick={() => {
+                  setLoadingMore(true);
+                  void loadMore().finally(() => setLoadingMore(false));
+                }}>
+                {loadingMore ? "Loading…" : "Load more"}
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
