@@ -62,7 +62,7 @@ function CustomerOverviewFields({
       <div className="space-y-4">
         <SectionHeading>Contact Details</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="col-span-2 space-y-1">
             <DetailLabel icon={UserIcon}>Name</DetailLabel>
             <dd>
               <InlineEditableField
@@ -79,6 +79,21 @@ function CustomerOverviewFields({
                   }
                   return saveProfile({ displayName: trimmed });
                 }}
+              />
+            </dd>
+          </div>
+          <div className="space-y-1">
+            <DetailLabel icon={Phone}>Phone</DetailLabel>
+            <dd>
+              <InlineEditableField
+                fieldId="phone"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={user.profile.phoneNumber?.trim() ?? ""}
+                inputType="tel"
+                editLabel="phone"
+                placeholder="Phone number"
+                onSave={async (next) => saveProfile({ phoneNumber: next.trim() || null })}
               />
             </dd>
           </div>
@@ -108,21 +123,6 @@ function CustomerOverviewFields({
                     return { ok: false, message: "Could not save." };
                   }
                 }}
-              />
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <DetailLabel icon={Phone}>Phone</DetailLabel>
-            <dd>
-              <InlineEditableField
-                fieldId="phone"
-                activeFieldId={activeFieldId}
-                onActiveFieldIdChange={setActiveFieldId}
-                value={user.profile.phoneNumber?.trim() ?? ""}
-                inputType="tel"
-                editLabel="phone"
-                placeholder="Phone number"
-                onSave={async (next) => saveProfile({ phoneNumber: next.trim() || null })}
               />
             </dd>
           </div>

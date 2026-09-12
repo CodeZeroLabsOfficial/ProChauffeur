@@ -68,7 +68,7 @@ export interface DriverProfile {
 
 /** Dashboard UI preferences on `users/{uid}`. */
 export interface UserPreferences {
-  /** Bookings list date filter preset (`today`, `thisWeek`, `last7Days`, …). */
+  /** Bookings list date filter preset (`allTime`, `today`, `thisWeek`, `last7Days`, …). */
   bookingsDefaultDateRange?: string | null;
 }
 

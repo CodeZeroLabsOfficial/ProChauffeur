@@ -34,6 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const dateFilterPresets = [
+  { name: "All time", value: "allTime" },
   { name: "Today", value: "today" },
   { name: "Yesterday", value: "yesterday" },
   { name: "This Week", value: "thisWeek" },
@@ -64,8 +65,10 @@ export function thisWeekRange(reference = new Date()): DateRange {
   };
 }
 
-export function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRange {
+export function rangeForPreset(type: DateRangePreset, reference = new Date()): DateRange | undefined {
   switch (type) {
+    case "allTime":
+      return undefined;
     case "today":
       return { from: startOfDay(reference), to: endOfDay(reference) };
     case "yesterday": {
@@ -90,7 +93,7 @@ export function rangeForPreset(type: DateRangePreset, reference = new Date()): D
 }
 
 function formatRangeLabel(range: DateRange | undefined) {
-  if (!range?.from) return "Select date range";
+  if (!range?.from) return "All time";
   if (range.to) {
     return `${format(range.from, "dd MMM yyyy")} - ${format(range.to, "dd MMM yyyy")}`;
   }
@@ -127,7 +130,7 @@ export function DateRangePicker({
     const next = rangeForPreset(type);
     setActivePreset(type);
     onChange(next);
-    if (next.from) setCurrentMonth(next.from);
+    if (next?.from) setCurrentMonth(next.from);
   };
 
   const handleDefaultCheckedChange = async (checked: boolean | "indeterminate") => {
@@ -144,7 +147,7 @@ export function DateRangePicker({
     <Button
       id="date"
       variant="outline"
-      className={cn("justify-start text-left font-normal", !value && "text-muted-foreground", className)}>
+      className={cn("justify-start text-left font-normal", className)}>
       <CalendarIcon />
       {isMobile ? null : <span>{formatRangeLabel(value)}</span>}
     </Button>
@@ -196,7 +199,7 @@ export function DateRangePicker({
                     className="mb-4 flex w-full lg:hidden"
                     size="sm"
                     aria-label="Select a value">
-                    <SelectValue placeholder="Last 7 Days" />
+                    <SelectValue placeholder="All time" />
                   </SelectTrigger>
                   <SelectContent>
                     {dateFilterPresets.map((item) => (

@@ -21,7 +21,7 @@ import { formatDateTime } from "@/lib/format";
 import { endOfDay, startOfDay } from "@/app/dashboard/lib/dashboard-metrics";
 import { sortTripsByPickupDesc } from "@/app/dashboard/drivers/lib/driver-profile-metrics";
 import { TripStatusBadge } from "@/components/trip-status-badge";
-import { DateRangePicker, last7DaysRange } from "@/components/custom-date-range-picker";
+import { DateRangePicker } from "@/components/custom-date-range-picker";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
@@ -57,7 +57,7 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "pickup", desc: true }]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ searchLabel: false });
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange>(() => last7DaysRange());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const data = useMemo(
     () =>
@@ -164,9 +164,8 @@ export function DriverProfileTripsTab({ trips }: { trips: Trip[] }) {
           endActions={
             <DateRangePicker
               value={dateRange}
-              onChange={(range) => {
-                if (range?.from) setDateRange(range);
-              }}
+              onChange={setDateRange}
+              defaultPreset="allTime"
               className="shrink-0"
             />
           }

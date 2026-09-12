@@ -125,7 +125,7 @@ export function BookingsDataTable({
   const [activeDefaultPreset, setActiveDefaultPreset] = useState<DateRangePreset>(
     DEFAULT_BOOKINGS_DATE_PRESET
   );
-  const [dateRange, setDateRange] = useState<DateRange>(() => thisWeekRange());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => thisWeekRange());
   const [datePickerKey, setDatePickerKey] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -499,9 +499,7 @@ export function BookingsDataTable({
           <DateRangePicker
             key={datePickerKey}
             value={dateRange}
-            onChange={(range) => {
-              if (range?.from) setDateRange(range);
-            }}
+            onChange={setDateRange}
             defaultPreset={activeDefaultPreset}
             savedDefaultPreset={savedDefaultPreset}
             onDefaultChange={changeDefaultPreset}
