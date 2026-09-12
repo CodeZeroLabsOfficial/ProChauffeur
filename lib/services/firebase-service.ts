@@ -1189,11 +1189,16 @@ export async function queryUsersByRole(
   options: { limit?: number; startAfterDoc?: QueryDocumentSnapshot | null } = {}
 ): Promise<QueryUsersByRoleResult> {
   const pageSize = options.limit ?? 50;
-  const constraints = [where("role", "==", role), fsLimit(pageSize)];
+  const constraints = [
+    where("role", "==", role),
+    orderBy("createdAt", "desc"),
+    fsLimit(pageSize)
+  ];
   const q = options.startAfterDoc
     ? query(
         collection(db(), Collections.users),
         where("role", "==", role),
+        orderBy("createdAt", "desc"),
         startAfter(options.startAfterDoc),
         fsLimit(pageSize)
       )
