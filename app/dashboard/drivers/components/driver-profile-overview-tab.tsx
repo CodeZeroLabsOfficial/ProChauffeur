@@ -23,7 +23,6 @@ export function DriverProfileOverviewTab({
   trips,
   invoices,
   driverId,
-  statTrips,
   statCompleted,
   statRevenueLabel,
   showRatingStat = false,
@@ -36,7 +35,6 @@ export function DriverProfileOverviewTab({
   trips: Trip[];
   invoices: Invoice[];
   driverId: string;
-  statTrips: number;
   statCompleted: number;
   statRevenueLabel: string;
   showRatingStat?: boolean;
@@ -50,10 +48,9 @@ export function DriverProfileOverviewTab({
   const joinDate = formatDate(user.createdAt);
 
   const miniStats = [
-    { label: "Trips", value: statTrips },
-    { label: "Completed", value: statCompleted },
-    ...(showRatingStat ? [{ label: "Rating", value: statRatingLabel ?? "—" }] : []),
-    { label: "Revenue", value: statRevenueLabel }
+    { label: "Trips", value: statCompleted },
+    { label: "Revenue", value: statRevenueLabel },
+    ...(showRatingStat ? [{ label: "Rating", value: statRatingLabel ?? "—" }] : [])
   ];
 
   return (

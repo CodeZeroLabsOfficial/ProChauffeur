@@ -146,7 +146,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const ratingCount = roster.ratingCount ?? 0;
   const ratingStatLabel =
     typeof ratingAverage === "number" && ratingCount > 0
-      ? `${ratingAverage.toFixed(1)} (${ratingCount})`
+      ? ratingAverage.toFixed(1)
       : "—";
 
   return (
@@ -167,7 +167,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
               trips={metrics.driverTrips}
               invoices={metrics.driverInvoices}
               driverId={driverId}
-              statTrips={metrics.totalTrips}
               statCompleted={metrics.completed}
               statRevenueLabel={revenueLabel}
               showRatingStat={ratingsEnabled}

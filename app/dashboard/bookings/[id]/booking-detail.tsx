@@ -17,7 +17,6 @@ import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import {
-  RATING_TAG_LABELS,
   TRIP_STATUSES,
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
@@ -27,7 +26,6 @@ import {
   tripTypeTitle,
   paymentSourceTitle,
   vehicleDisplayName,
-  type RatingTag,
   type Trip,
   type TripRating,
   type User,
@@ -431,15 +429,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                 value={
                   <div className="flex flex-col items-end gap-1.5">
                     <BookingRatingStars score={trip.ratingScore} />
-                    {(rating?.tags?.length ?? 0) > 0 ? (
-                      <div className="flex flex-wrap justify-end gap-1">
-                        {rating!.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="font-normal">
-                            {RATING_TAG_LABELS[tag as RatingTag] ?? tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
                     {rating?.comment?.trim() ? (
                       <p className="text-muted-foreground max-w-[14rem] text-right text-xs">
                         {rating.comment.trim()}
