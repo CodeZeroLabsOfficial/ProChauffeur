@@ -181,7 +181,13 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           </TabsContent>
           {ratingsEnabled ? (
             <TabsContent value="ratings" className="mt-0 space-y-4">
-              <DriverProfileRatingsTab ratings={ratings} loading={ratingsLoading} />
+              <DriverProfileRatingsTab
+                ratings={ratings}
+                loading={ratingsLoading}
+                rosterAverage={roster.ratingAverage}
+                rosterCount={roster.ratingCount}
+                users={users}
+              />
             </TabsContent>
           ) : null}
           <TabsContent value="financials" className="mt-0 space-y-4">
