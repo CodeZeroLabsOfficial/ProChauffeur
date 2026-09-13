@@ -3,9 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useActiveLocationData } from "@/components/providers/active-location-data-provider";
-import { listenNotifications, listenTrip } from "@/lib/services/firebase-service";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
+import {
+  listenNotifications,
+  listenRatingsForDriver,
+  listenTrip
+} from "@/lib/services/firebase-service";
 import { joinRosterChauffeurs } from "@/app/dashboard/drivers/lib/roster-chauffeurs";
-import type { ActivityNotification, Trip } from "@/lib/models";
+import type { ActivityNotification, Trip, TripRating } from "@/lib/models";
 
 export function useTrips() {
   const { trips, tripsLoading } = useActiveLocationData();
@@ -46,6 +51,33 @@ export function useFleetLocations() {
 export function useInvoices() {
   const { invoices, invoicesLoading } = useActiveLocationData();
   return { invoices, loading: invoicesLoading };
+}
+
+export function useDriverRatings(driverId: string) {
+  const { branchId } = useActiveBranch();
+  const [ratings, setRatings] = useState<TripRating[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const id = driverId.trim();
+    const resolved = branchId.trim();
+    if (!id || !resolved) {
+      setRatings([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    return listenRatingsForDriver(
+      id,
+      (rows) => {
+        setRatings(rows);
+        setLoading(false);
+      },
+      resolved
+    );
+  }, [driverId, branchId]);
+
+  return { ratings, loading };
 }
 
 export function useVehicleClasses() {

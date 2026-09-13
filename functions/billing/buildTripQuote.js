@@ -456,6 +456,7 @@ async function runBuildTripQuote(db, {
       autoDispatchEnabled: branchData.autoDispatchEnabled === true,
       dynamicPricingEnabled: branchData.dynamicPricingEnabled === true,
       bookingValidationEnabled: branchData.bookingValidationEnabled === true,
+      driverRatingsEnabled: branchData.driverRatingsEnabled === true,
     },
     "dynamicPricing"
   );

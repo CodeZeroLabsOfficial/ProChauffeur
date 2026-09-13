@@ -26,6 +26,8 @@ export function DriverProfileOverviewTab({
   statTrips,
   statCompleted,
   statRevenueLabel,
+  showRatingStat = false,
+  statRatingLabel,
   period,
   onPeriodChange
 }: {
@@ -37,6 +39,8 @@ export function DriverProfileOverviewTab({
   statTrips: number;
   statCompleted: number;
   statRevenueLabel: string;
+  showRatingStat?: boolean;
+  statRatingLabel?: string;
   period: ProfileOverviewPeriod;
   onPeriodChange: (period: ProfileOverviewPeriod) => void;
 }) {
@@ -44,6 +48,13 @@ export function DriverProfileOverviewTab({
   const progressValue = driverProfileCompleteness(user, profile);
   const address = formatPostalAddress(user.profile.address);
   const joinDate = formatDate(user.createdAt);
+
+  const miniStats = [
+    { label: "Trips", value: statTrips },
+    { label: "Completed", value: statCompleted },
+    ...(showRatingStat ? [{ label: "Rating", value: statRatingLabel ?? "—" }] : []),
+    { label: "Revenue", value: statRevenueLabel }
+  ];
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -76,13 +87,7 @@ export function DriverProfileOverviewTab({
           </CardContent>
         </Card>
 
-        <ProfileMiniStats
-          items={[
-            { label: "Trips", value: statTrips },
-            { label: "Completed", value: statCompleted },
-            { label: "Revenue", value: statRevenueLabel }
-          ]}
-        />
+        <ProfileMiniStats items={miniStats} />
 
         <ProfileCompletenessCard value={progressValue} />
       </div>

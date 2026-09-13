@@ -71,6 +71,7 @@ import {
   type SavedPaymentMethod,
   type Trip,
   type TripStatus,
+  type TripRating,
   type User,
   type UserPreferences,
   type UserProfile,
@@ -94,6 +95,7 @@ import {
   mapPlansCatalog,
   mapPricingConfig,
   mapPromotion,
+  mapRating,
   mapSavedPaymentMethod,
   mapTrip,
   mapUser,
@@ -332,6 +334,7 @@ export async function upsertBranch(
       autoDispatchEnabled: branch.autoDispatchEnabled === true,
       dynamicPricingEnabled: branch.dynamicPricingEnabled === true,
       bookingValidationEnabled: branch.bookingValidationEnabled === true,
+      driverRatingsEnabled: branch.driverRatingsEnabled === true,
       createdAt: existing.exists() ? branch.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp()
     }),
@@ -1699,15 +1702,6 @@ async function loadLicense(): Promise<AppLicense> {
   return mapLicense(snap.data());
 }
 
-export async function saveLicense(license: AppLicense): Promise<void> {
-  await setDoc(
-    doc(db(), Collections.appSettings, AppSettingsDocs.license),
-    stripUndefined({ ...license }),
-    { merge: true }
-  );
-  licensePromise = null;
-}
-
 export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
   if (!plansCatalogPromise) {
     plansCatalogPromise = loadPlansCatalog().catch((err) => {
@@ -1749,6 +1743,50 @@ export async function fetchInvoice(id: string, branchId: string): Promise<Invoic
   const resolved = requireBranchId(branchId);
   const nested = await getDoc(branchDocRef(db(), "invoices", id, resolved));
   return nested.exists() ? mapInvoice(nested.id, nested.data(), resolved) : null;
+}
+
+// ─────────────────────────────── Ratings ───────────────────────────────
+
+export function listenRatings(
+  onUpdate: (ratings: TripRating[]) => void,
+  branchId: string
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(
+    branchCollectionRef(db(), "ratings", id),
+    orderBy("ratedAt", "desc")
+  );
+  return listenQuery(
+    nested,
+    (snap) => snap.docs.map((dc) => mapRating(dc.id, dc.data(), id)),
+    onUpdate,
+    onSnapshotError("ratings", onUpdate)
+  );
+}
+
+export function listenRatingsForDriver(
+  driverId: string,
+  onUpdate: (ratings: TripRating[]) => void,
+  branchId: string
+): Unsub {
+  const id = requireBranchId(branchId);
+  const nested = query(
+    branchCollectionRef(db(), "ratings", id),
+    where("driverID", "==", driverId),
+    orderBy("ratedAt", "desc")
+  );
+  return listenQuery(
+    nested,
+    (snap) => snap.docs.map((dc) => mapRating(dc.id, dc.data(), id)),
+    onUpdate,
+    onSnapshotError("ratings", onUpdate)
+  );
+}
+
+export async function fetchRating(id: string, branchId: string): Promise<TripRating | null> {
+  const resolved = requireBranchId(branchId);
+  const nested = await getDoc(branchDocRef(db(), "ratings", id, resolved));
+  return nested.exists() ? mapRating(nested.id, nested.data(), resolved) : null;
 }
 
 export async function createInvoice(

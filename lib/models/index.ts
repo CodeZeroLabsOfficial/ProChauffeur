@@ -20,6 +20,7 @@ export * from "@/lib/models/workspace";
 export * from "@/lib/models/branch";
 export * from "@/lib/models/promotion";
 export * from "@/lib/models/corporate-account";
+export * from "@/lib/models/rating";
 
 /** Firestore collection names. */
 export const Collections = {

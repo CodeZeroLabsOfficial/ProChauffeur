@@ -123,6 +123,10 @@ export interface Trip {
   quote: TripQuote;
   billing: TripBilling;
   vehicle: TripVehicle;
+  /** Id of `branches/{branchId}/ratings/{ratingId}` when rated. */
+  ratingId?: string | null;
+  /** Star score 1–5 snapshot for booking detail / already-rated checks. */
+  ratingScore?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

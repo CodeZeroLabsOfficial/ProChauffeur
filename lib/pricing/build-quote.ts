@@ -63,7 +63,8 @@ export async function buildQuoteForRequest(
     {
       autoDispatchEnabled: branch?.autoDispatchEnabled === true,
       dynamicPricingEnabled: branch?.dynamicPricingEnabled === true,
-      bookingValidationEnabled: branch?.bookingValidationEnabled === true
+      bookingValidationEnabled: branch?.bookingValidationEnabled === true,
+      driverRatingsEnabled: branch?.driverRatingsEnabled === true
     },
     "dynamicPricing"
   );

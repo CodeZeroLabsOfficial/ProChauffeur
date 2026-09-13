@@ -121,6 +121,7 @@ export async function createLocationFromSeed(
     autoDispatchEnabled: false,
     dynamicPricingEnabled: false,
     bookingValidationEnabled: false,
+    driverRatingsEnabled: false,
     createdAt: now,
     updatedAt: now
   };
@@ -147,6 +148,7 @@ export async function createLocationFromSeed(
     autoDispatchEnabled: false,
     dynamicPricingEnabled: false,
     bookingValidationEnabled: false,
+    driverRatingsEnabled: false,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });

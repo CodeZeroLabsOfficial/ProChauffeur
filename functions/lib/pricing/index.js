@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/pricing/src/index.ts
+// src/index.ts
 var index_exports = {};
 __export(index_exports, {
   ConfigError: () => ConfigError,
@@ -51,7 +51,7 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
-// packages/pricing/src/license.ts
+// src/license.ts
 var FEATURE_IDS = [
   "autoDispatch",
   "bookingValidation",
@@ -63,7 +63,8 @@ var FEATURE_IDS = [
 var LOCATION_OPS_FEATURE_IDS = [
   "autoDispatch",
   "dynamicPricing",
-  "bookingValidation"
+  "bookingValidation",
+  "driverRatings"
 ];
 var LOCATION_OPS_FEATURE_COPY = {
   autoDispatch: {
@@ -77,6 +78,10 @@ var LOCATION_OPS_FEATURE_COPY = {
   bookingValidation: {
     title: "Booking validation",
     description: "Block bookings outside hours or service rules."
+  },
+  driverRatings: {
+    title: "Driver ratings",
+    description: "Collect star ratings and feedback after completed trips."
   }
 };
 var FEATURE_LABELS = {
@@ -116,6 +121,8 @@ function locationOpsFeatureField(feature) {
       return "dynamicPricingEnabled";
     case "bookingValidation":
       return "bookingValidationEnabled";
+    case "driverRatings":
+      return "driverRatingsEnabled";
   }
 }
 function isLocationFeatureEnabled(license, catalog, flags, feature) {
@@ -156,7 +163,7 @@ function usagePercent(used, max) {
   return Math.min(100, Math.round(used / max * 100));
 }
 
-// packages/pricing/src/errors.ts
+// src/errors.ts
 var ConfigError = class extends Error {
   constructor(message) {
     super(message);
@@ -170,7 +177,7 @@ var QuoteError = class extends Error {
   }
 };
 
-// packages/pricing/src/distance.ts
+// src/distance.ts
 var METERS_PER_KM = 1e3;
 var METERS_PER_MILE = 1609.344;
 function metersToDistanceUnit(meters, unit) {
@@ -181,7 +188,7 @@ function distanceUnitLabel(unit) {
   return unit === "mile" ? "mile" : "km";
 }
 
-// packages/pricing/src/apply-corporate-rate.ts
+// src/apply-corporate-rate.ts
 function findCorporateFixedOverride(account, vehicleClassId, tripType) {
   if (account.rateMode !== "fixedRates") return null;
   return account.fixedRates.find(
@@ -222,14 +229,14 @@ function applyCorporatePercentOffLayer(amount, lines, account, lineId2) {
   };
 }
 
-// lib/models/promotion.ts
+// ../../lib/models/promotion.ts
 function computePromoDiscountAmount(promo, amount) {
   if (amount <= 0 || promo.value <= 0) return 0;
   const raw = promo.type === "percent" ? amount * promo.value : Math.min(promo.value, amount);
   return Math.min(amount, Math.max(0, Math.round(raw * 100) / 100));
 }
 
-// packages/pricing/src/apply-promo.ts
+// src/apply-promo.ts
 function applyPromoDiscountLayer(amount, lines, applied, lineId2) {
   if (!applied) return { amount, lines };
   const discount = computePromoDiscountAmount(applied, amount);
@@ -249,10 +256,10 @@ function applyPromoDiscountLayer(amount, lines, applied, lineId2) {
   };
 }
 
-// lib/models/enums.ts
+// ../../lib/models/enums.ts
 var PRICING_WEEKEND_WEEKDAYS = [6, 7];
 
-// packages/pricing/src/quote-engine.ts
+// src/quote-engine.ts
 function lineId() {
   return crypto.randomUUID();
 }

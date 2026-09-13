@@ -6,12 +6,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 
 import {
+  useDriverRatings,
   useInvoices,
   useRosterChauffeurs,
   useTrips,
   useUsers,
   useVehicles
 } from "@/hooks/use-collections";
+import { useLocationFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { fetchUser } from "@/lib/services/firebase-service";
 import { formatCurrency } from "@/lib/format";
 import type { User } from "@/lib/models";
@@ -20,6 +22,7 @@ import type { ProfileOverviewPeriod } from "@/lib/profile/overview-period";
 import { DriverDetailCard } from "@/app/dashboard/drivers/components/driver-detail-card";
 import { DriverProfileOverviewTab } from "@/app/dashboard/drivers/components/driver-profile-overview-tab";
 import { DriverProfileTripsTab } from "@/app/dashboard/drivers/components/driver-profile-trips-tab";
+import { DriverProfileRatingsTab } from "@/app/dashboard/drivers/components/driver-profile-ratings-tab";
 import { DriverProfileFinancialsTab } from "@/app/dashboard/drivers/components/driver-profile-financials-tab";
 import { DriverProfileComplianceTab } from "@/app/dashboard/drivers/components/driver-profile-compliance-tab";
 import { DriverProfileOperationsTab } from "@/app/dashboard/drivers/components/driver-profile-operations-tab";
@@ -30,7 +33,14 @@ import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-const PROFILE_TABS = ["overview", "trips", "financials", "compliance", "operations"] as const;
+const PROFILE_TABS = [
+  "overview",
+  "trips",
+  "ratings",
+  "financials",
+  "compliance",
+  "operations"
+] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
@@ -43,13 +53,18 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
+  const { enabled: ratingsEnabled } = useLocationFeatureEnabled("driverRatings");
+
+  const requestedTab: ProfileTab = isProfileTab(tabParam) ? tabParam : "overview";
+  const activeTab: ProfileTab =
+    requestedTab === "ratings" && !ratingsEnabled ? "overview" : requestedTab;
 
   const { trips } = useTrips();
   const { invoices } = useInvoices();
   const { users } = useUsers();
   const { vehicles } = useVehicles();
   const { chauffeurs, loading: rosterLoading } = useRosterChauffeurs();
+  const { ratings, loading: ratingsLoading } = useDriverRatings(driverId);
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +99,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
   const roster = rosterChauffeur?.roster ?? null;
 
   const setTab = (tab: ProfileTab) => {
+    if (tab === "ratings" && !ratingsEnabled) return;
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") params.delete("tab");
     else params.set("tab", tab);
@@ -126,6 +142,13 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
       ? formatCurrency(metrics.totalRevenue).replace(/\.\d{2}$/, "")
       : formatCurrency(metrics.totalRevenue);
 
+  const ratingAverage = roster.ratingAverage;
+  const ratingCount = roster.ratingCount ?? 0;
+  const ratingStatLabel =
+    typeof ratingAverage === "number" && ratingCount > 0
+      ? `${ratingAverage.toFixed(1)} (${ratingCount})`
+      : "—";
+
   return (
     <>
       <DetailPageShell>
@@ -134,6 +157,7 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
             user={displayUser}
             roster={roster}
             onEditClick={() => setEditOpen(true)}
+            showRatingsTab={ratingsEnabled}
           />
 
           <TabsContent value="overview" className="mt-0 space-y-4">
@@ -146,6 +170,8 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
               statTrips={metrics.totalTrips}
               statCompleted={metrics.completed}
               statRevenueLabel={revenueLabel}
+              showRatingStat={ratingsEnabled}
+              statRatingLabel={ratingStatLabel}
               period={overviewPeriod}
               onPeriodChange={setOverviewPeriod}
             />
@@ -153,6 +179,11 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
           <TabsContent value="trips" className="mt-0 space-y-4">
             <DriverProfileTripsTab trips={metrics.driverTrips} />
           </TabsContent>
+          {ratingsEnabled ? (
+            <TabsContent value="ratings" className="mt-0 space-y-4">
+              <DriverProfileRatingsTab ratings={ratings} loading={ratingsLoading} />
+            </TabsContent>
+          ) : null}
           <TabsContent value="financials" className="mt-0 space-y-4">
             <DriverProfileFinancialsTab invoices={metrics.driverInvoices} />
           </TabsContent>

@@ -16,11 +16,13 @@ import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 export function DriverDetailCard({
   user,
   roster,
-  onEditClick
+  onEditClick,
+  showRatingsTab = false
 }: {
   user: User;
   roster: BranchDriver;
   onEditClick: () => void;
+  showRatingsTab?: boolean;
 }) {
   const profile = branchDriverToProfile(roster);
   const displayName = user.profile.displayName.trim() || user.email || "Driver";
@@ -52,6 +54,9 @@ export function DriverDetailCard({
         <>
           <ProfileV2TabTrigger value="overview">Overview</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="trips">Trips</ProfileV2TabTrigger>
+          {showRatingsTab ? (
+            <ProfileV2TabTrigger value="ratings">Ratings</ProfileV2TabTrigger>
+          ) : null}
           <ProfileV2TabTrigger value="financials">Financials</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="compliance">Compliance</ProfileV2TabTrigger>
           <ProfileV2TabTrigger value="operations">Operations</ProfileV2TabTrigger>

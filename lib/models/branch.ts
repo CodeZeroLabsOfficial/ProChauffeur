@@ -8,7 +8,8 @@ export const BRANCH_SUBCOLLECTIONS = [
   "locations",
   "vehicle_classes",
   "invoices",
-  "drivers"
+  "drivers",
+  "ratings"
 ] as const;
 
 export type BranchSubcollection = (typeof BRANCH_SUBCOLLECTIONS)[number];
@@ -54,6 +55,8 @@ export interface Branch {
   dynamicPricingEnabled: boolean;
   /** Location switch; company license must also allow booking validation. Default off. */
   bookingValidationEnabled: boolean;
+  /** Location switch; company license must also allow Driver ratings. Default off. */
+  driverRatingsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +68,10 @@ export const BRANCH_OFFICE_FLEET_LOCATION_ID = "office";
 export interface BranchDriver extends DriverProfile {
   id: string;
   userId: string;
+  /** Running mean of customer trip ratings (1–5). Updated by submitTripRating. */
+  ratingAverage?: number | null;
+  /** Number of customer ratings included in `ratingAverage`. */
+  ratingCount?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -102,6 +109,7 @@ export function buildBranch(
     autoDispatchEnabled: false,
     dynamicPricingEnabled: false,
     bookingValidationEnabled: false,
+    driverRatingsEnabled: false,
     createdAt: now,
     updatedAt: now,
     ...overrides

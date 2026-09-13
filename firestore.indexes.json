@@ -56,6 +56,14 @@
         { "fieldPath": "customerID", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "driverID", "order": "ASCENDING" },
+        { "fieldPath": "ratedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

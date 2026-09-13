@@ -27,6 +27,8 @@ import type {
   Trip,
   TripApprovalStatus,
   TripQuoteSnapshot,
+  TripRating,
+  RatingTag,
   User,
   UserPreferences,
   UserProfile,
@@ -47,6 +49,7 @@ import {
   normalizeAllowedVehicleClassIds
 } from "@/lib/models/corporate-account";
 import { TRIP_APPROVAL_STATUSES, emptyTripCapacity } from "@/lib/models/trip";
+import { RATING_TAGS } from "@/lib/models/rating";
 import {
   UNLIMITED,
   PLANS_NOT_CONFIGURED_MESSAGE,
@@ -284,6 +287,7 @@ export function mapBranch(id: string, d: DocumentData): Branch {
     autoDispatchEnabled: d.autoDispatchEnabled === true,
     dynamicPricingEnabled: d.dynamicPricingEnabled === true,
     bookingValidationEnabled: d.bookingValidationEnabled === true,
+    driverRatingsEnabled: d.driverRatingsEnabled === true,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };
@@ -295,8 +299,31 @@ export function mapBranchDriver(id: string, d: DocumentData): BranchDriver {
     id,
     userId: d.userId ?? id,
     ...profile,
+    ratingAverage: typeof d.ratingAverage === "number" ? d.ratingAverage : null,
+    ratingCount: typeof d.ratingCount === "number" ? d.ratingCount : null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
+  };
+}
+
+export function mapRating(id: string, d: DocumentData, pathBranchId?: string): TripRating {
+  const rawTags = Array.isArray(d.tags) ? d.tags : [];
+  const tags = rawTags.filter(
+    (t): t is RatingTag => typeof t === "string" && (RATING_TAGS as readonly string[]).includes(t)
+  );
+  return {
+    id,
+    branchId: typeof d.branchId === "string" ? d.branchId : pathBranchId ?? "",
+    tripId: typeof d.tripId === "string" ? d.tripId : "",
+    driverID: typeof d.driverID === "string" ? d.driverID : "",
+    customerID: typeof d.customerID === "string" ? d.customerID : "",
+    score: typeof d.score === "number" ? d.score : 0,
+    tags,
+    comment: typeof d.comment === "string" ? d.comment : null,
+    ratedAt: toDate(d.ratedAt) ?? new Date(),
+    customerDisplayName:
+      typeof d.customerDisplayName === "string" ? d.customerDisplayName : null,
+    tripCompletedAt: toDate(d.tripCompletedAt)
   };
 }
 
@@ -487,6 +514,8 @@ export function mapTrip(id: string, d: DocumentData, pathBranchId?: string): Tri
         ? mapVehicle(vehicleRaw.vehicleSnapshot as DocumentData)
         : null
     },
+    ratingId: typeof d.ratingId === "string" ? d.ratingId : null,
+    ratingScore: typeof d.ratingScore === "number" ? d.ratingScore : null,
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

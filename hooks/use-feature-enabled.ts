@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   isFeatureEnabled,
+  isLocationFeatureEnabled,
   type AppLicense,
   type AppPlansCatalog,
-  type FeatureId
+  type FeatureId,
+  type LocationOpsFeatureId
 } from "@/lib/models";
 import { fetchLicense, fetchPlansCatalog } from "@/lib/services/firebase-service";
 
@@ -59,4 +62,33 @@ export function useFeatureEnabled(feature: FeatureId): {
 } {
   const { ready, isEnabled } = useLicenseEntitlements();
   return { ready, enabled: isEnabled(feature) };
+}
+
+/**
+ * Company license allows the feature AND the active Location switch is on.
+ * Missing Location flags are off.
+ */
+export function useLocationFeatureEnabled(feature: LocationOpsFeatureId): {
+  ready: boolean;
+  enabled: boolean;
+} {
+  const { ready, license, plans } = useLicenseEntitlements();
+  const { activeBranch, branchesLoading } = useActiveBranch();
+
+  const enabled = useMemo(() => {
+    if (!ready || !license || !plans || !activeBranch) return false;
+    return isLocationFeatureEnabled(
+      license,
+      plans,
+      {
+        autoDispatchEnabled: activeBranch.autoDispatchEnabled === true,
+        dynamicPricingEnabled: activeBranch.dynamicPricingEnabled === true,
+        bookingValidationEnabled: activeBranch.bookingValidationEnabled === true,
+        driverRatingsEnabled: activeBranch.driverRatingsEnabled === true
+      },
+      feature
+    );
+  }, [ready, license, plans, activeBranch, feature]);
+
+  return { ready: ready && !branchesLoading, enabled };
 }

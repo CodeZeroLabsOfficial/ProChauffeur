@@ -130,7 +130,7 @@ service cloud.firestore {
     match /app_settings/{docId} {
       allow read: if docId in ['license', 'plans', 'workspace', 'company']
         || (signedIn() && isAdmin() && docId == 'integrations');
-      allow write: if isAdmin() && docId in ['license', 'plans', 'workspace', 'integrations', 'company'];
+      allow write: if isAdmin() && docId in ['workspace', 'integrations', 'company'];
     }
 
     function validNotificationCategories() {
@@ -225,6 +225,13 @@ service cloud.firestore {
         allow read: if canAccessBranch(branchId)
           || (signedIn() && resource.data.customerID == request.auth.uid);
         allow write: if canAccessBranch(branchId);
+      }
+
+      match /ratings/{ratingId} {
+        allow read: if canAccessBranch(branchId)
+          || (signedIn() && resource.data.customerID == request.auth.uid)
+          || (signedIn() && resource.data.driverID == request.auth.uid);
+        allow write: if false;
       }
 
       match /drivers/{driverUid} {

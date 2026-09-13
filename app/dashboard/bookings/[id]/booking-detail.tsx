@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CarFrontIcon,
   CheckCircle2Icon,
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
-  PackageIcon
+  PackageIcon,
+  StarIcon
 } from "lucide-react";
 
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
@@ -16,6 +17,7 @@ import { useInvoices, useRosterChauffeurs, useTrip, useUsers } from "@/hooks/use
 import { shortBookingId } from "@/lib/bookings/booking-display";
 import { effectivePaymentStatus } from "@/lib/bookings/trip-payment";
 import {
+  RATING_TAG_LABELS,
   TRIP_STATUSES,
   chauffeurCategoryTitle,
   tripPickupReferenceDate,
@@ -25,10 +27,13 @@ import {
   tripTypeTitle,
   paymentSourceTitle,
   vehicleDisplayName,
+  type RatingTag,
   type Trip,
+  type TripRating,
   type User,
   type Vehicle
 } from "@/lib/models";
+import { fetchRating } from "@/lib/services/firebase-service";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn, generateAvatarFallback } from "@/lib/utils";
 import { vehicleTierBadgeIcon } from "@/lib/vehicle-badge-icons";
@@ -64,6 +69,24 @@ function quoteTaxLabel(trip: Trip): string {
 function formatQuoteMoney(amount: number | null | undefined, currency: string | null | undefined) {
   if (amount == null || !currency?.trim()) return "—";
   return formatCurrency(amount, currency);
+}
+
+function BookingRatingStars({ score }: { score: number }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${score} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <StarIcon
+          key={i}
+          className={cn(
+            "size-4",
+            i < score
+              ? "fill-amber-400 text-amber-400"
+              : "fill-transparent text-muted-foreground/40"
+          )}
+        />
+      ))}
+    </div>
+  );
 }
 
 function BookingCustomerCard({
@@ -200,6 +223,22 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const { users } = useUsers();
   const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();
+  const [rating, setRating] = useState<TripRating | null>(null);
+
+  useEffect(() => {
+    const ratingId = trip?.ratingId?.trim();
+    if (!ratingId || !branchId.trim()) {
+      setRating(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchRating(ratingId, branchId).then((row) => {
+      if (!cancelled) setRating(row);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trip?.ratingId, branchId]);
 
   const currentStepIndex = trip
     ? ACTIVE_STATUSES.indexOf(trip.status as (typeof ACTIVE_STATUSES)[number])
@@ -386,6 +425,30 @@ export function BookingDetail({ tripId }: { tripId: string }) {
             <DetailRow label="Completed:" value={completedAt ? formatDateTime(completedAt) : "—"} />
             <DetailRow label="Duration:" value={journeyTime} />
             <DetailRow label="Distance:" value={distanceLabel} />
+            {trip.ratingScore != null ? (
+              <DetailRow
+                label="Rating:"
+                value={
+                  <div className="flex flex-col items-end gap-1.5">
+                    <BookingRatingStars score={trip.ratingScore} />
+                    {(rating?.tags?.length ?? 0) > 0 ? (
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {rating!.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="font-normal">
+                            {RATING_TAG_LABELS[tag as RatingTag] ?? tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                    {rating?.comment?.trim() ? (
+                      <p className="text-muted-foreground max-w-[14rem] text-right text-xs">
+                        {rating.comment.trim()}
+                      </p>
+                    ) : null}
+                  </div>
+                }
+              />
+            ) : null}
           </SectionCard>
 
           <BookingCustomerCard

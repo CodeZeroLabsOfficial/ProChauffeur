@@ -15,7 +15,8 @@ export type FeatureId = (typeof FEATURE_IDS)[number];
 export const LOCATION_OPS_FEATURE_IDS = [
   "autoDispatch",
   "dynamicPricing",
-  "bookingValidation"
+  "bookingValidation",
+  "driverRatings"
 ] as const;
 
 export type LocationOpsFeatureId = (typeof LOCATION_OPS_FEATURE_IDS)[number];
@@ -36,6 +37,10 @@ export const LOCATION_OPS_FEATURE_COPY: Record<
   bookingValidation: {
     title: "Booking validation",
     description: "Block bookings outside hours or service rules."
+  },
+  driverRatings: {
+    title: "Driver ratings",
+    description: "Collect star ratings and feedback after completed trips."
   }
 };
 
@@ -113,7 +118,11 @@ export function isFeatureEnabled(
 /** Location field for an ops feature. Missing / not `true` is off. */
 export function locationOpsFeatureField(
   feature: LocationOpsFeatureId
-): "autoDispatchEnabled" | "dynamicPricingEnabled" | "bookingValidationEnabled" {
+):
+  | "autoDispatchEnabled"
+  | "dynamicPricingEnabled"
+  | "bookingValidationEnabled"
+  | "driverRatingsEnabled" {
   switch (feature) {
     case "autoDispatch":
       return "autoDispatchEnabled";
@@ -121,6 +130,8 @@ export function locationOpsFeatureField(
       return "dynamicPricingEnabled";
     case "bookingValidation":
       return "bookingValidationEnabled";
+    case "driverRatings":
+      return "driverRatingsEnabled";
   }
 }
 
@@ -128,6 +139,7 @@ export type LocationOpsFlags = {
   autoDispatchEnabled: boolean;
   dynamicPricingEnabled: boolean;
   bookingValidationEnabled: boolean;
+  driverRatingsEnabled: boolean;
 };
 
 /**

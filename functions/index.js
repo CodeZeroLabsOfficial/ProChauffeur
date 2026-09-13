@@ -25,6 +25,7 @@ const {
   syncCorporateStripeCustomerHandler,
 } = require("./billing/syncCorporateStripeCustomer");
 const { markInvoicePaidHandler } = require("./billing/markInvoicePaid");
+const { submitTripRatingHandler } = require("./ratings/submitTripRating");
 
 setGlobalOptions({ region: functionsRegion });
 
@@ -50,6 +51,7 @@ exports.syncCorporateStripeCustomer = onCall(
   syncCorporateStripeCustomerHandler
 );
 exports.markInvoicePaid = onCall(callableOptions, markInvoicePaidHandler);
+exports.submitTripRating = onCall(submitTripRatingHandler);
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
 exports.buildTripQuote = onCall(buildTripQuoteOptions, buildTripQuoteHandler);
