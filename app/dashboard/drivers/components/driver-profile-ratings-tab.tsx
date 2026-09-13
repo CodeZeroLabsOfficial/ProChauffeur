@@ -4,9 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import {
-  HeartIcon,
-  MessageSquareIcon,
-  SendIcon,
   Star,
   StarIcon,
   TrendingUpIcon
@@ -24,7 +21,6 @@ import { endOfDay, percentChange, startOfDay } from "@/app/dashboard/lib/dashboa
 import { DateRangePicker } from "@/components/custom-date-range-picker";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
@@ -151,7 +147,6 @@ function ReviewRow({
   customer: User | undefined;
   showSeparator: boolean;
 }) {
-  const [liked, setLiked] = useState(false);
   const name =
     rating.customerDisplayName?.trim() ||
     customer?.profile.displayName?.trim() ||
@@ -170,22 +165,17 @@ function ReviewRow({
           </Avatar>
           <div className="space-y-0.5">
             <p className="text-sm leading-tight font-bold">{name}</p>
-            <p className="text-muted-foreground text-xs">
-              Booking{" "}
-              <Link
-                href={`/dashboard/bookings/${rating.tripId}`}
-                className="text-foreground font-bold hover:underline">
-                {bookingLabel}
-              </Link>
-            </p>
+            <p className="text-muted-foreground text-xs">{formatDateTime(rating.ratedAt)}</p>
+            <Link
+              href={`/dashboard/bookings/${rating.tripId}`}
+              className="text-foreground text-xs font-bold hover:underline">
+              {bookingLabel}
+            </Link>
           </div>
         </div>
 
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            <Stars value={rating.score} />
-            <span className="text-muted-foreground text-xs">{formatDateTime(rating.ratedAt)}</span>
-          </div>
+          <Stars value={rating.score} />
           <p
             className={cn(
               "text-sm leading-relaxed",
@@ -202,40 +192,6 @@ function ReviewRow({
               ))}
             </div>
           ) : null}
-          <div className="flex items-center gap-2 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-full text-xs"
-              disabled>
-              <MessageSquareIcon className="size-3.5" />
-              Public Comment
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-full text-xs"
-              disabled>
-              <SendIcon className="size-3.5" />
-              Direct Message
-            </Button>
-            <button
-              type="button"
-              onClick={() => setLiked((v) => !v)}
-              className="ml-auto transition-colors"
-              aria-label={liked ? "Unlike" : "Like"}>
-              <HeartIcon
-                className={cn(
-                  "size-4 transition-colors",
-                  liked
-                    ? "fill-blue-500 text-blue-500"
-                    : "text-muted-foreground hover:text-blue-400"
-                )}
-              />
-            </button>
-          </div>
         </div>
       </div>
       {showSeparator ? <Separator /> : null}
