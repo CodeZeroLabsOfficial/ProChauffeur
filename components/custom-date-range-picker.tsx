@@ -38,8 +38,7 @@ export const dateFilterPresets = [
   { name: "Today", value: "today" },
   { name: "Yesterday", value: "yesterday" },
   { name: "This Week", value: "thisWeek" },
-  { name: "Last 7 Days", value: "last7Days" },
-  { name: "Last 28 Days", value: "last28Days" },
+  { name: "Last week", value: "last7Days" },
   { name: "This Month", value: "thisMonth" },
   { name: "Last Month", value: "lastMonth" },
   { name: "This Year", value: "thisYear" }
@@ -79,8 +78,6 @@ export function rangeForPreset(type: DateRangePreset, reference = new Date()): D
       return thisWeekRange(reference);
     case "last7Days":
       return last7DaysRange(reference);
-    case "last28Days":
-      return { from: startOfDay(subDays(reference, 27)), to: endOfDay(reference) };
     case "thisMonth":
       return { from: startOfMonth(reference), to: endOfMonth(reference) };
     case "lastMonth": {
