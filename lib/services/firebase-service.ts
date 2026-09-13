@@ -1702,6 +1702,15 @@ async function loadLicense(): Promise<AppLicense> {
   return mapLicense(snap.data());
 }
 
+export async function saveLicense(license: AppLicense): Promise<void> {
+  await setDoc(
+    doc(db(), Collections.appSettings, AppSettingsDocs.license),
+    stripUndefined({ ...license }),
+    { merge: true }
+  );
+  licensePromise = null;
+}
+
 export async function fetchPlansCatalog(): Promise<AppPlansCatalog> {
   if (!plansCatalogPromise) {
     plansCatalogPromise = loadPlansCatalog().catch((err) => {
