@@ -21,6 +21,7 @@ export * from "@/lib/models/branch";
 export * from "@/lib/models/promotion";
 export * from "@/lib/models/corporate-account";
 export * from "@/lib/models/rating";
+export * from "@/lib/models/trip-chat";
 
 /** Firestore collection names. */
 export const Collections = {

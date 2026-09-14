@@ -8,6 +8,39 @@
           ".validate": "!newData.exists() || newData.hasChildren(['lat', 'lng', 'updatedAt', 'driverId', 'customerId', 'status'])"
         }
       }
+    },
+    "tripChats": {
+      "$branchId": {
+        "$tripId": {
+          ".read": "auth != null && data.exists() && (data.child('customerId').val() === auth.uid || data.child('driverId').val() === auth.uid)",
+
+          "customerId": {
+            ".write": "auth != null && newData.exists() && newData.isString() && newData.val().length > 0 && (!data.exists() || data.val() === newData.val()) && (newData.parent().child('customerId').val() === auth.uid || newData.parent().child('driverId').val() === auth.uid)",
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "driverId": {
+            ".write": "auth != null && newData.exists() && newData.isString() && newData.val().length > 0 && (!data.exists() || data.val() === newData.val()) && (newData.parent().child('customerId').val() === auth.uid || newData.parent().child('driverId').val() === auth.uid)",
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "status": {
+            ".write": "auth != null && newData.exists() && newData.isString() && (newData.parent().child('customerId').val() === auth.uid || newData.parent().child('driverId').val() === auth.uid)",
+            ".validate": "newData.val() === 'requested' || newData.val() === 'accepted' || newData.val() === 'en_route_pickup' || newData.val() === 'in_progress' || newData.val() === 'completed' || newData.val() === 'cancelled'"
+          },
+          "messages": {
+            "$messageId": {
+              ".write": "auth != null && !data.exists() && newData.exists() && newData.child('senderId').val() === auth.uid && (newData.parent().parent().child('customerId').val() === auth.uid || newData.parent().parent().child('driverId').val() === auth.uid) && ((newData.parent().parent().child('customerId').val() === auth.uid && (newData.parent().parent().child('status').val() === 'en_route_pickup' || newData.parent().parent().child('status').val() === 'in_progress')) || (newData.parent().parent().child('driverId').val() === auth.uid && (newData.parent().parent().child('status').val() === 'accepted' || newData.parent().parent().child('status').val() === 'en_route_pickup' || newData.parent().parent().child('status').val() === 'in_progress')))",
+              ".validate": "newData.hasChildren(['senderId', 'senderRole', 'text', 'createdAt']) && newData.child('senderId').isString() && newData.child('senderId').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.hasChild('createdAt') && ((newData.child('senderRole').val() === 'customer' && newData.parent().parent().child('customerId').val() === auth.uid) || (newData.child('senderRole').val() === 'driver' && newData.parent().parent().child('driverId').val() === auth.uid))",
+              "senderId": { ".validate": "newData.isString() && newData.val().length > 0" },
+              "senderRole": { ".validate": "newData.val() === 'customer' || newData.val() === 'driver'" },
+              "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500" },
+              "createdAt": { ".validate": "newData.isNumber() || newData.child('.sv').val() === 'timestamp'" },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -134,7 +134,8 @@ import {
   normalizeAllowedVehicleClassIds,
   normalizeCorporateJoinCode,
   normalizePromoCode,
-  rtdbBranchLiveTripsPath
+  rtdbBranchLiveTripsPath,
+  rtdbBranchTripChatsPath
 } from "@/lib/models";
 
 type Unsub = () => void;
@@ -467,9 +468,12 @@ export async function deleteBranch(branchId: string): Promise<void> {
   await deleteDoc(branchMetaDocRef(db(), id));
 
   try {
-    await remove(rtdbRef(realtimeDb(), rtdbBranchLiveTripsPath(id)));
+    await Promise.all([
+      remove(rtdbRef(realtimeDb(), rtdbBranchLiveTripsPath(id))),
+      remove(rtdbRef(realtimeDb(), rtdbBranchTripChatsPath(id)))
+    ]);
   } catch (err) {
-    console.error("Failed to clear live trip locations for deleted branch:", err);
+    console.error("Failed to clear live trip locations or trip chats for deleted branch:", err);
   }
 
   const remaining = siblings.filter((b) => b.id !== id);

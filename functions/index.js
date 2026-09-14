@@ -1,4 +1,5 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -26,6 +27,7 @@ const {
 } = require("./billing/syncCorporateStripeCustomer");
 const { markInvoicePaidHandler } = require("./billing/markInvoicePaid");
 const { submitTripRatingHandler } = require("./ratings/submitTripRating");
+const { clearTripEphemeralHandler } = require("./trips/clear-trip-ephemeral");
 
 setGlobalOptions({ region: functionsRegion });
 
@@ -52,6 +54,11 @@ exports.syncCorporateStripeCustomer = onCall(
 );
 exports.markInvoicePaid = onCall(callableOptions, markInvoicePaidHandler);
 exports.submitTripRating = onCall(submitTripRatingHandler);
+
+exports.clearTripEphemeralData = onDocumentUpdated(
+  { document: "branches/{branchId}/trips/{tripId}" },
+  clearTripEphemeralHandler
+);
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
 exports.buildTripQuote = onCall(buildTripQuoteOptions, buildTripQuoteHandler);

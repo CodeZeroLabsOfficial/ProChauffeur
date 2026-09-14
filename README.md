@@ -72,8 +72,15 @@ The Cloud Function callable is **`buildTripQuote`** only (no `computeQuote` alia
 The Dispatch map reads `liveTrips/{branchId}/{tripId}` from Realtime Database.
 Payload shape: `{ lat, lng, heading?, status?, tripId?, updatedAt }`.
 
-When a trip is **completed** or **cancelled**, `tripId` is cleared on that node
-while keeping the last GPS fix.
+When a trip is **completed** or **cancelled**, the Cloud Function
+`clearTripEphemeralData` removes that node and the matching `tripChats` thread.
+
+### Trip chat
+
+Customer and chauffeur text lives at `tripChats/{branchId}/{tripId}` in Realtime
+Database. Thread meta: `{ customerId, driverId, status }`. Messages:
+`{ senderId, senderRole, text, createdAt }`. The node is deleted when the trip
+is completed or cancelled.
 
 ## Stamp checklist (new Firebase + Vercel)
 
@@ -149,7 +156,7 @@ firebase deploy --only functions
 
 - `firestore.rules` — admin-gated Firestore access
 - `storage.rules` — profile photo uploads under `users/{uid}/`
-- `database.rules.json` — RTDB `liveTrips` rules
+- `database.rules.json` — RTDB `liveTrips` and `tripChats` rules
 - `firestore.indexes.json` — composite indexes
 
 Deploy with the Firebase CLI:

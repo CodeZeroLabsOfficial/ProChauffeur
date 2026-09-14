@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireLocationAccess } from "@/lib/auth/require-staff";
 import { removeLiveTripLocation } from "@/lib/firebase/admin-live-location";
+import { removeTripChat } from "@/lib/firebase/admin-trip-chat";
 import { adminFirestore } from "@/lib/firebase/admin";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { parseBranchId } from "@/lib/branch/require-branch-id";
@@ -62,10 +63,10 @@ export async function PATCH(
 
   if (status === "completed" || status === "cancelled") {
     try {
-      await removeLiveTripLocation(id, branchId);
+      await Promise.all([removeLiveTripLocation(id, branchId), removeTripChat(id, branchId)]);
     } catch {
       return NextResponse.json(
-        { error: "Trip updated but live location could not be cleared." },
+        { error: "Trip updated but live location or trip chat could not be cleared." },
         { status: 500 }
       );
     }
