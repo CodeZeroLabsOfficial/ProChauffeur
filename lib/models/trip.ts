@@ -31,11 +31,29 @@ export interface TripCustomer {
   company?: string | null;
 }
 
-/** Assigned chauffeur contact snapshot, written at claim time. */
+/** Assigned chauffeur contact snapshot, written at assign/claim time. */
 export interface TripDriver {
   displayName?: string | null;
   phoneNumber?: string | null;
   photoURL?: string | null;
+}
+
+/** Contact fields copied onto `trip.driver` from `users/{driverID}`. */
+export function tripDriverSnapshotFromUser(user: {
+  email: string;
+  profile: { displayName: string; phoneNumber?: string | null; photoURL?: string | null };
+}): TripDriver {
+  const trimmedName = user.profile.displayName.trim();
+  const trimmedPhone = user.profile.phoneNumber?.trim() ?? "";
+  const trimmedPhoto = user.profile.photoURL?.trim() ?? "";
+  const local = user.email.trim().split("@")[0] ?? "";
+  const fromEmail = local ? local.charAt(0).toUpperCase() + local.slice(1) : "";
+  const displayName = trimmedName || fromEmail;
+  return {
+    displayName: displayName || undefined,
+    phoneNumber: trimmedPhone || undefined,
+    photoURL: trimmedPhoto || undefined
+  };
 }
 
 /** Booking party size — same shape as `VehicleClassCapacity`. */

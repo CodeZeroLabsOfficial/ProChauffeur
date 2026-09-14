@@ -70,6 +70,7 @@ import {
   type Promotion,
   type SavedPaymentMethod,
   type Trip,
+  tripDriverSnapshotFromUser,
   type TripStatus,
   type TripRating,
   type User,
@@ -619,13 +620,31 @@ export async function assignTripDriver(
   vehicleSnapshot?: Vehicle | null
 ): Promise<void> {
   const resolved = requireBranchId(branchId);
+  const assignedId = driverID?.trim() || null;
+  let driverFields: Record<string, unknown> = {
+    "driver.displayName": deleteField(),
+    "driver.phoneNumber": deleteField(),
+    "driver.photoURL": deleteField()
+  };
+  if (assignedId) {
+    const chauffeur = await fetchUser(assignedId);
+    if (chauffeur) {
+      const snapshot = tripDriverSnapshotFromUser(chauffeur);
+      driverFields = {
+        "driver.displayName": snapshot.displayName ?? deleteField(),
+        "driver.phoneNumber": snapshot.phoneNumber ?? deleteField(),
+        "driver.photoURL": snapshot.photoURL ?? deleteField()
+      };
+    }
+  }
   await updateDoc(
     branchDocRef(db(), "trips", id, resolved),
     stripUndefined({
-      driverID,
-      "vehicle.vehicleDocumentId": driverID ? vehicleDocumentId : null,
-      "vehicle.vehicleSnapshot": driverID ? vehicleSnapshot : null,
+      driverID: assignedId,
+      "vehicle.vehicleDocumentId": assignedId ? vehicleDocumentId : null,
+      "vehicle.vehicleSnapshot": assignedId ? vehicleSnapshot : null,
       fleetVehicleDocumentId: deleteField(),
+      ...driverFields,
       updatedAt: serverTimestamp()
     })
   );
