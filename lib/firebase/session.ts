@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import { parseStaffRole } from "@/lib/auth/staff-access";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { syncStaffAuthClaims } from "@/lib/firebase/admin-staff-claims";
 import { SESSION_COOKIE } from "@/lib/firebase/session-cookie";
 import type { StaffRole, UserRole } from "@/lib/models/enums";
 
@@ -78,6 +79,11 @@ export async function getAdminSessionUser(): Promise<SessionUser | null> {
     await adminFirestore().collection("users").doc(user.uid).update({
       staffRole: "admin",
       canAccessAllBranches: true
+    });
+    await syncStaffAuthClaims(user.uid, {
+      staffRole: "admin",
+      canAccessAllBranches: true,
+      branchIds: null
     });
   } catch {
     return { ...user, staffRole: "admin", canAccessAllBranches: true };

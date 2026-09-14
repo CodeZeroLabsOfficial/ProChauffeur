@@ -9,6 +9,7 @@
     "lint": "next lint",
     "stamp:seed": "node --env-file=.env.local scripts/stamp.mjs seed",
     "stamp:invite": "node --env-file=.env.local scripts/stamp.mjs invite",
+    "staff:sync-claims": "node --env-file=.env.local scripts/sync-staff-claims.mjs",
     "build:pricing": "node scripts/build-pricing-for-functions.mjs",
     "test:vectors": "npm run build:pricing && node scripts/run-pricing-vectors.mjs",
     "test:parity": "npm run build:pricing && node scripts/run-quote-path-parity.mjs",

@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { parseStaffGrantInput, staffGrantFields } from "@/lib/auth/staff-access";
 import { requireStaffAdmin } from "@/lib/auth/require-staff";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { syncStaffAuthClaims } from "@/lib/firebase/admin-staff-claims";
 import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { adminNotification } from "@/lib/notifications/messages";
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
         createdAt: FieldValue.serverTimestamp(),
         ...staffGrantFields(grants.value)
       });
+
+    await syncStaffAuthClaims(authUser.uid, grants.value);
 
     await createActivityNotificationAdmin(
       adminNotification("created", trimmedEmail, authUser.uid),

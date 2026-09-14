@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { parseStaffGrantInput, parseStaffRole, staffGrantFields } from "@/lib/auth/staff-access";
 import { requireStaffAdmin } from "@/lib/auth/require-staff";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { syncStaffAuthClaims } from "@/lib/firebase/admin-staff-claims";
 import { createActivityNotificationAdmin } from "@/lib/firebase/admin-notifications";
 import { getAdminSessionUser } from "@/lib/firebase/session";
 import { adminNotification } from "@/lib/notifications/messages";
@@ -66,6 +67,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     await userRef.update(staffGrantFields(grants.value));
+    await syncStaffAuthClaims(uid, grants.value);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Could not update member." }, { status: 500 });

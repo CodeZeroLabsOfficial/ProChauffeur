@@ -41,7 +41,10 @@ export function TripChatPage({ tripId }: { tripId: string }) {
     );
   }
 
-  const senderRole = tripChatSenderRoleForUser(session.uid, trip.customerID, trip.driverID);
+  const senderRole = tripChatSenderRoleForUser(session.uid, trip.customerID, trip.driverID, {
+    role: session.role,
+    staffRole: session.staffRole
+  });
   const chauffeur =
     chauffeurs.find((c) => c.user.id === trip.driverID)?.user ??
     users.find((u) => u.id === trip.driverID);
@@ -61,6 +64,8 @@ export function TripChatPage({ tripId }: { tripId: string }) {
       <TripChatScreen
         trip={trip}
         uid={session.uid}
+        role={session.role}
+        staffRole={session.staffRole}
         counterpartName={counterpartName}
         counterpartPhotoURL={counterpartPhotoURL}
         backHref={backHref}

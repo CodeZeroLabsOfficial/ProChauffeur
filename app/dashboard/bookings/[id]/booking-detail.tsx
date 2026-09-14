@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   ChevronLeftIcon,
   CircleDotIcon,
+  MessageSquareIcon,
   PackageIcon,
   StarIcon
 } from "lucide-react";
@@ -45,10 +46,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Progress } from "@/components/ui/progress";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { BookingJourneyMap } from "@/app/dashboard/bookings/[id]/booking-journey-map";
-import { BookingLiveSheet } from "@/app/dashboard/bookings/booking-live-sheet";
-import { BookingLiveActions } from "@/components/trip-chat/booking-live-actions";
 
 const ACTIVE_STATUSES = TRIP_STATUSES.filter((s) => s !== "cancelled");
 
@@ -224,7 +223,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const { chauffeurs } = useRosterChauffeurs();
   const { invoices } = useInvoices();
   const [rating, setRating] = useState<TripRating | null>(null);
-  const [liveOpen, setLiveOpen] = useState(false);
 
   useEffect(() => {
     const ratingId = trip?.ratingId?.trim();
@@ -282,7 +280,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
   const customerName = trip?.customer.displayName || customer?.profile.displayName || null;
   const customerEmail = trip?.customer.email ?? customer?.email ?? null;
   const customerPhone = trip?.customer.phoneNumber ?? customer?.profile.phoneNumber ?? null;
-  const chauffeurPhone = trip?.driver.phoneNumber ?? chauffeur?.profile.phoneNumber ?? null;
   const isCorporateCustomer = Boolean(
     trip?.billing.corporateAccountId?.trim() || customer?.corporateAccountId?.trim()
   );
@@ -390,6 +387,15 @@ export function BookingDetail({ tripId }: { tripId: string }) {
                 <ItemTitle>{chauffeurName}</ItemTitle>
                 <ItemDescription>{chauffeurDescription}</ItemDescription>
               </ItemContent>
+              {trip.driverID?.trim() ? (
+                <ItemActions>
+                  <Button type="button" variant="outline" size="icon" className="size-9" asChild>
+                    <Link href={`/dashboard/bookings/${trip.id}/chat`} aria-label="Message">
+                      <MessageSquareIcon />
+                    </Link>
+                  </Button>
+                </ItemActions>
+              ) : null}
             </Item>
             <DetailRow label="Booking ID" value={shortBookingId(trip.id)} />
             <DetailRow label="Pickup date and time" value={formatDateTime(pickupAt)} />
@@ -500,14 +506,6 @@ export function BookingDetail({ tripId }: { tripId: string }) {
           </SectionCard>
         </div>
       </div>
-
-      <BookingLiveActions
-        trip={trip}
-        phone={chauffeurPhone}
-        chatHref={`/dashboard/bookings/${trip.id}/chat`}
-        onViewLiveMap={() => setLiveOpen(true)}
-      />
-      <BookingLiveSheet trip={trip} open={liveOpen} onOpenChange={setLiveOpen} />
     </DetailPageShell>
   );
 }

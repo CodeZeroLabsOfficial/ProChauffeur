@@ -12,8 +12,10 @@ import {
   rtdbTripChatPath,
   tripChatSenderRoleForUser,
   tripChatThreadFromTrip,
+  type StaffRole,
   type Trip,
-  type TripChatMessage
+  type TripChatMessage,
+  type UserRole
 } from "@/lib/models";
 
 function parseMessages(value: unknown): TripChatMessage[] {
@@ -36,13 +38,19 @@ function parseMessages(value: unknown): TripChatMessage[] {
   return rows.sort((a, b) => a.createdAt - b.createdAt);
 }
 
-export function useTripChat(trip: Trip | null, uid: string) {
+export function useTripChat(
+  trip: Trip | null,
+  uid: string,
+  options?: { role?: UserRole | null; staffRole?: StaffRole | null }
+) {
   const [messages, setMessages] = useState<TripChatMessage[]>([]);
   const [ready, setReady] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const branchId = trip?.branchId?.trim() ?? "";
   const tripId = trip?.id ?? "";
+  const role = options?.role ?? null;
+  const staffRole = options?.staffRole ?? null;
 
   useEffect(() => {
     if (!branchId || !tripId) {
@@ -70,6 +78,8 @@ export function useTripChat(trip: Trip | null, uid: string) {
     trip &&
       canSendTripChat({
         uid,
+        role,
+        staffRole,
         status: trip.status,
         customerId: trip.customerID,
         driverId: trip.driverID
@@ -82,11 +92,16 @@ export function useTripChat(trip: Trip | null, uid: string) {
       if (!trip || !branchId || !tripId) return false;
       const text = normalizeTripChatText(raw);
       const thread = tripChatThreadFromTrip(trip);
-      const senderRole = tripChatSenderRoleForUser(uid, trip.customerID, trip.driverID);
+      const senderRole = tripChatSenderRoleForUser(uid, trip.customerID, trip.driverID, {
+        role,
+        staffRole
+      });
       if (!text || !thread || !senderRole) return false;
       if (
         !canSendTripChat({
           uid,
+          role,
+          staffRole,
           status: trip.status,
           customerId: trip.customerID,
           driverId: trip.driverID
@@ -118,7 +133,7 @@ export function useTripChat(trip: Trip | null, uid: string) {
         return false;
       }
     },
-    [branchId, trip, tripId, uid]
+    [branchId, role, staffRole, trip, tripId, uid]
   );
 
   return { messages, ready, canSend, send, sendError };

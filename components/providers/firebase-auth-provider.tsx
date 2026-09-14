@@ -34,6 +34,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const restoringRef = useRef(false);
+  const claimsRefreshRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +44,14 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
       if (firebaseUser) {
         restoringRef.current = false;
+        if (!claimsRefreshRef.current) {
+          claimsRefreshRef.current = true;
+          try {
+            await firebaseUser.getIdToken(true);
+          } catch {
+            claimsRefreshRef.current = false;
+          }
+        }
         setUser(firebaseUser);
         return;
       }

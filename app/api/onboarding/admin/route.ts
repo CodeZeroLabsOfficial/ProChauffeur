@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 import { validatePasswordPair } from "@/lib/auth/password-strength";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { syncStaffAuthClaims } from "@/lib/firebase/admin-staff-claims";
 import { Collections, UNLIMITED } from "@/lib/models";
 import {
   bindInviteToUid,
@@ -113,6 +114,12 @@ export async function POST(request: Request) {
         },
         createdAt: FieldValue.serverTimestamp()
       });
+
+    await syncStaffAuthClaims(authUser.uid, {
+      staffRole: "admin",
+      canAccessAllBranches: true,
+      branchIds: null
+    });
 
     await bindInviteToUid(authUser.uid);
 

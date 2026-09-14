@@ -77,10 +77,11 @@ When a trip is **completed** or **cancelled**, the Cloud Function
 
 ### Trip chat
 
-Customer and chauffeur text lives at `tripChats/{branchId}/{tripId}` in Realtime
-Database. Thread meta: `{ customerId, driverId, status }`. Messages:
-`{ senderId, senderRole, text, createdAt }`. The node is deleted when the trip
-is completed or cancelled.
+Customer, chauffeur, and Location staff (Dispatch) text lives at
+`tripChats/{branchId}/{tripId}` in Realtime Database. Thread meta:
+`{ customerId, driverId, status }`. Messages:
+`{ senderId, senderRole, text, createdAt }` (`senderRole` is `customer`,
+`driver`, or `staff`). The node is deleted when the trip is completed or cancelled.
 
 ## Stamp checklist (new Firebase + Vercel)
 
@@ -117,6 +118,7 @@ npm run stamp:invite -- --host https://your-vercel-host
    workspace → integrations optional → first Location), then uses `/login` afterwards.
 8. **iOS:** ship that project’s `GoogleService-Info.plist`, bundle id, signing, and
    `FUNCTIONS_REGION` in Info.plist. Checklist only — not configured from this repo.
+9. Existing staff: `npm run staff:sync-claims` so trip chat rules see Location grants.
 
 ## Deployment (Vercel)
 
