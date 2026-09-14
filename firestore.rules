@@ -28,6 +28,10 @@ service cloud.firestore {
       return signedIn() && callerRole() == 'driver';
     }
 
+    function callerHomeBranch() {
+      return callerUser().homeBranchId is string ? callerUser().homeBranchId : '';
+    }
+
     function isStaffAdminUser() {
       return isAdmin() && callerUser().staffRole == 'admin';
     }
@@ -193,14 +197,14 @@ service cloud.firestore {
           canAccessBranch(branchId)
           || isCustomerOfTrip()
           || isDriverOfTrip()
-          || (isDriver() && isOpenRequest())
+          || (isDriver() && isOpenRequest() && callerHomeBranch() == branchId)
         );
         allow create: if signedIn() && (!isAdmin() || canAccessBranch(branchId));
         allow update: if signedIn() && (
           canAccessBranch(branchId)
           || isCustomerOfTrip()
           || isDriverOfTrip()
-          || (isDriver() && isOpenRequest())
+          || (isDriver() && isOpenRequest() && callerHomeBranch() == branchId)
         );
         allow delete: if canAccessBranch(branchId);
       }

@@ -54,6 +54,20 @@ export function rtdbTripChatMessagesPath(branchId: string, tripId: string): stri
   return `${rtdbTripChatPath(branchId, tripId)}/messages`;
 }
 
+/** Multi-path RTDB update that creates/refreshes thread meta without touching messages. */
+export function tripChatThreadUpdatePayload(
+  branchId: string,
+  tripId: string,
+  thread: TripChatThread
+): Record<string, string> {
+  const root = rtdbTripChatPath(branchId, tripId);
+  return {
+    [`${root}/customerId`]: thread.customerId,
+    [`${root}/driverId`]: thread.driverId,
+    [`${root}/status`]: thread.status
+  };
+}
+
 export function isTripChatSenderRole(value: unknown): value is TripChatSenderRole {
   return value === "customer" || value === "driver" || value === "staff";
 }
