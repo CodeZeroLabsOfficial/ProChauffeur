@@ -1,15 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BadgePercent, Hash, MapPin, Power, Ticket, Type, Users } from "lucide-react";
+import { BadgePercent, MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { ComplianceStat } from "@/components/compliance";
-import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
-import { Badge } from "@/components/ui/badge";
+import { SectionHeading } from "@/components/detail-sheet-fields";
 import { Card, CardContent } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle
+} from "@/components/ui/item";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { formatDate } from "@/lib/format";
@@ -36,14 +43,6 @@ function formatTripTypes(tripTypes: TripType[] | null | undefined): string {
   const ids = tripTypes?.filter(Boolean) ?? [];
   if (ids.length === 0) return "All trip types";
   return ids.map((id) => tripTypeTitle[id] ?? id).join(", ");
-}
-
-function DetailValue({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return (
-    <dd className={muted ? "text-muted-foreground text-sm" : "text-foreground text-sm"}>
-      {children}
-    </dd>
-  );
 }
 
 function PromoUsageStat({
@@ -132,6 +131,35 @@ function PromoPlainStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function OfferItem({
+  icon: Icon,
+  title,
+  description,
+  value
+}: {
+  icon: typeof BadgePercent;
+  title: string;
+  description?: string;
+  value?: string;
+}) {
+  return (
+    <Item size="sm">
+      <ItemMedia variant="icon">
+        <Icon />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{title}</ItemTitle>
+        {description ? <ItemDescription>{description}</ItemDescription> : null}
+      </ItemContent>
+      {value ? (
+        <ItemContent className="flex-none text-right">
+          <ItemTitle className="tabular-nums">{value}</ItemTitle>
+        </ItemContent>
+      ) : null}
+    </Item>
+  );
+}
+
 export function PromotionDetailSheet({
   promotion,
   branches,
@@ -172,6 +200,7 @@ export function PromotionDetailSheet({
   const heroTitle = display.title.trim() || display.code || "Coupon";
   const endsAt = display.conditions.endsAt;
   const startsAt = display.conditions.startsAt;
+  const discountType = display.type === "percent" ? "Percent" : "Fixed amount";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -180,103 +209,66 @@ export function PromotionDetailSheet({
           <SheetTitle>Coupon details</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-4 px-4 pb-4">
-          <div className="inline-flex items-center gap-4 align-top">
-            <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
-              <Ticket className="text-muted-foreground size-8" aria-hidden />
-            </div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold">{heroTitle}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="rounded-md px-2 py-1 font-mono">
-                  {display.code}
-                </Badge>
-                <DetailSheetIconBadge icon={Power}>
-                  {display.isEnabled ? "Active" : "Inactive"}
-                </DetailSheetIconBadge>
-              </div>
-            </div>
+        <div className="space-y-6 px-4 pb-4">
+          <div className="space-y-2">
+            <p className="text-lg font-semibold">{heroTitle}</p>
+            {description ? (
+              <p className="text-muted-foreground text-sm">{description}</p>
+            ) : null}
+            <DetailSheetIconBadge icon={Power}>
+              {display.isEnabled ? "Active" : "Inactive"}
+            </DetailSheetIconBadge>
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <SectionHeading>Details</SectionHeading>
-              <dl className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <DetailLabel icon={Hash}>Coupon code</DetailLabel>
-                  <DetailValue>
-                    <span className="font-mono">{display.code || "—"}</span>
-                  </DetailValue>
-                </div>
-                <div className="space-y-1">
-                  <DetailLabel icon={Type}>Title</DetailLabel>
-                  <DetailValue muted={!display.title.trim()}>
-                    {display.title.trim() || "—"}
-                  </DetailValue>
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <DetailLabel icon={Ticket}>Description</DetailLabel>
-                  <DetailValue muted={!description}>{description || "—"}</DetailValue>
-                </div>
-                <div className="space-y-1">
-                  <DetailLabel icon={BadgePercent}>Discount type</DetailLabel>
-                  <DetailValue>
-                    {display.type === "percent" ? "Percent" : "Fixed amount"}
-                  </DetailValue>
-                </div>
-                <div className="space-y-1">
-                  <DetailLabel icon={BadgePercent}>Discount value</DetailLabel>
-                  <DetailValue>{formatDiscount(display)}</DetailValue>
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <DetailLabel icon={MapPin}>Locations</DetailLabel>
-                  <DetailValue>{locationNames}</DetailValue>
-                </div>
-                <div className="space-y-1">
-                  <DetailLabel icon={Ticket}>Trip types</DetailLabel>
-                  <DetailValue>{formatTripTypes(display.conditions.tripTypes)}</DetailValue>
-                </div>
-                <div className="space-y-1">
-                  <DetailLabel icon={Users}>Vehicle classes</DetailLabel>
-                  <DetailValue>{classNames}</DetailValue>
-                </div>
-              </dl>
-            </div>
+          <div className="space-y-4">
+            <SectionHeading>Offer</SectionHeading>
+            <ItemGroup className="gap-1">
+              <OfferItem
+                icon={BadgePercent}
+                title="Discount"
+                description={discountType}
+                value={formatDiscount(display)}
+              />
+              <OfferItem icon={MapPin} title="Locations" description={locationNames} />
+              <OfferItem
+                icon={Ticket}
+                title="Trip types"
+                description={formatTripTypes(display.conditions.tripTypes)}
+              />
+              <OfferItem icon={Users} title="Vehicle classes" description={classNames} />
+            </ItemGroup>
+          </div>
 
-            <div className="space-y-4">
-              <SectionHeading>Metrics</SectionHeading>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <PromoMetricCard>
-                  <PromoUsageStat
-                    used={display.redemptionCount}
-                    max={display.conditions.maxRedemptions}
-                  />
-                </PromoMetricCard>
-                <PromoMetricCard>
-                  <ComplianceStat
-                    label="Validity"
-                    secondary={
-                      startsAt && endsAt
-                        ? `${formatDate(startsAt)} – ${formatDate(endsAt)}`
-                        : startsAt
-                          ? `From ${formatDate(startsAt)}`
-                          : endsAt
-                            ? `Until ${formatDate(endsAt)}`
-                            : "Always valid"
-                    }
-                    start={startsAt}
-                    expiry={endsAt}
-                  />
-                </PromoMetricCard>
-                <PromoPlainStat
-                  label="Minimum fare"
-                  value={minFare == null ? "None" : String(minFare)}
+          <div className="space-y-4">
+            <SectionHeading>Metrics</SectionHeading>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PromoMetricCard>
+                <PromoUsageStat
+                  used={display.redemptionCount}
+                  max={display.conditions.maxRedemptions}
                 />
-                <PromoPlainStat
-                  label="Per customer"
-                  value={formatUsageLimit(perCustomer)}
+              </PromoMetricCard>
+              <PromoMetricCard>
+                <ComplianceStat
+                  label="Validity"
+                  secondary={
+                    startsAt && endsAt
+                      ? `${formatDate(startsAt)} – ${formatDate(endsAt)}`
+                      : startsAt
+                        ? `From ${formatDate(startsAt)}`
+                        : endsAt
+                          ? `Until ${formatDate(endsAt)}`
+                          : "Always valid"
+                  }
+                  start={startsAt}
+                  expiry={endsAt}
                 />
-              </div>
+              </PromoMetricCard>
+              <PromoPlainStat
+                label="Minimum fare"
+                value={minFare == null ? "None" : String(minFare)}
+              />
+              <PromoPlainStat label="Per customer" value={formatUsageLimit(perCustomer)} />
             </div>
           </div>
         </div>
