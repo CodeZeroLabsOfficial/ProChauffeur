@@ -88,7 +88,7 @@ export function CompanyEditSheet({
           <SheetDescription>{`Update the details of “${companyLabel}”.`}</SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={formKey}>
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-6">
             <div className="space-y-4">
               <SectionHeading>Company details</SectionHeading>
               <div className="space-y-2">

@@ -217,7 +217,7 @@ export function ScheduleEditSheet({
             </SheetDescription>
           </SheetHeader>
           <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={formKey}>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
             <div className="space-y-2">
               <Label htmlFor="name">Schedule name</Label>
               <Input

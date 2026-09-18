@@ -130,7 +130,7 @@ export function ChangePasswordSheet({
         {passwordLoginAvailable ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
                 <FormField
                   control={form.control}
                   name="currentPassword"
@@ -182,7 +182,7 @@ export function ChangePasswordSheet({
           </Form>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
               <p className="text-muted-foreground text-sm">
                 Use a password reset email to set or update your password, then sign in again.
               </p>

@@ -399,7 +399,7 @@ export function AccountEditSheet({
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
           <div className="inline-flex items-center gap-4 align-top">
             {!isNew ? (
               <AccountLogoUpload account={draft} onSaved={handleLogoSaved} />

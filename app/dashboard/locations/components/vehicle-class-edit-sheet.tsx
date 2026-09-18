@@ -516,7 +516,7 @@ export function VehicleClassEditSheet({
           </SheetDescription>
         </SheetHeader>
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-6">
           <TooltipProvider>
             <Tabs key={sheetKey} defaultValue="overview" className="gap-4">
               <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>

@@ -183,7 +183,7 @@ export function ProfileEditSheet({
         </SheetHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-6">
             <div className="flex flex-col gap-2">
               <div className="inline-flex items-center gap-2 align-top">
                 <Avatar className="h-20 w-20">

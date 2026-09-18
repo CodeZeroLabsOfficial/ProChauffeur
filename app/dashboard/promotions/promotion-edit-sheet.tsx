@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarIcon } from "@radix-ui/react-icons";
-import { UploadIcon } from "lucide-react";
+import { InfoIcon, UploadIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SectionHeading } from "@/components/detail-sheet-fields";
 import {
   buildNewPromotion,
@@ -63,6 +64,43 @@ type FieldErrors = {
 };
 
 const ALL_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
+
+function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-accent rounded-full p-1"
+          aria-label={`About ${label}`}>
+          <InfoIcon className="text-muted-foreground size-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{children}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function FieldLabel({
+  htmlFor,
+  children,
+  tip,
+  tipLabel
+}: {
+  htmlFor?: string;
+  children: string;
+  tip: string;
+  tipLabel?: string;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Label htmlFor={htmlFor}>{children}</Label>
+      <FieldInfoTooltip label={tipLabel ?? children.toLowerCase()}>{tip}</FieldInfoTooltip>
+    </div>
+  );
+}
 
 /** Empty/null means unrestricted in storage; for editing expand to every option. New promos stay empty. */
 function resolveConditionIds(
@@ -137,11 +175,13 @@ function endOfDay(date: Date): Date {
 
 function DatePickerField({
   label,
+  tip,
   value,
   onChange,
   endOfDaySelect = false
 }: {
   label: string;
+  tip: string;
   value: Date | null | undefined;
   onChange: (date: Date | null) => void;
   endOfDaySelect?: boolean;
@@ -150,7 +190,7 @@ function DatePickerField({
 
   return (
     <div className="flex flex-col space-y-2">
-      <Label>{label}</Label>
+      <FieldLabel tip={tip}>{label}</FieldLabel>
       <Popover modal>
         <PopoverTrigger asChild>
           <Button
@@ -364,13 +404,16 @@ export function PromotionEditSheet({
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
+          <TooltipProvider>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-6">
             <div className="space-y-4">
               <SectionHeading>Coupon details</SectionHeading>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="promo-code">Coupon code</Label>
+                  <FieldLabel htmlFor="promo-code" tip="Unique code customers enter at checkout.">
+                    Coupon code
+                  </FieldLabel>
                   <Input
                     id="promo-code"
                     value={draft.code}
@@ -392,7 +435,11 @@ export function PromotionEditSheet({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="promo-title">Title</Label>
+                  <FieldLabel
+                    htmlFor="promo-title"
+                    tip="Internal name shown in the promotions list.">
+                    Title
+                  </FieldLabel>
                   <Input
                     id="promo-title"
                     value={draft.title}
@@ -416,7 +463,11 @@ export function PromotionEditSheet({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="promo-description">Description</Label>
+                <FieldLabel
+                  htmlFor="promo-description"
+                  tip="Optional — shown to admins only.">
+                  Description
+                </FieldLabel>
                 <Textarea
                   id="promo-description"
                   value={draft.description ?? ""}
@@ -424,20 +475,18 @@ export function PromotionEditSheet({
                   placeholder="Seasonal discount for returning guests."
                   rows={3}
                 />
-                <p className="text-muted-foreground text-xs">Optional — shown to admins only.</p>
               </div>
 
               <div className="space-y-2">
-                <Label>Banner image</Label>
+                <FieldLabel tip="Used for the iPhone app. Falls back to a stock photo when left empty.">
+                  Banner image
+                </FieldLabel>
                 <div
                   className="border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center"
                   aria-hidden>
                   <UploadIcon className="size-5 opacity-70" />
                   <span className="text-sm">Click or drag to upload</span>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Used for the iPhone app. Falls back to a stock photo when left empty.
-                </p>
               </div>
             </div>
 
@@ -448,7 +497,11 @@ export function PromotionEditSheet({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="promo-type">Discount type</Label>
+                  <FieldLabel
+                    htmlFor="promo-type"
+                    tip="Percent off the fare, or a fixed amount.">
+                    Discount type
+                  </FieldLabel>
                   <Select
                     value={draft.type}
                     onValueChange={(value) => {
@@ -470,6 +523,11 @@ export function PromotionEditSheet({
                     <NumberStepper
                       id="promo-value"
                       label="Discount value"
+                      labelExtra={
+                        <FieldInfoTooltip label="discount value">
+                          Amount or percent depending on discount type.
+                        </FieldInfoTooltip>
+                      }
                       value={percentPoints}
                       onChange={(value) => {
                         setPercentPoints(value);
@@ -482,6 +540,11 @@ export function PromotionEditSheet({
                     <NumberStepper
                       id="promo-value"
                       label={currency ? `Discount value (${currency})` : "Discount value"}
+                      labelExtra={
+                        <FieldInfoTooltip label="discount value">
+                          Amount or percent depending on discount type.
+                        </FieldInfoTooltip>
+                      }
                       value={fixedAmount}
                       onChange={(value) => {
                         setFixedAmount(value);
@@ -510,7 +573,9 @@ export function PromotionEditSheet({
               <SectionHeading>Applies to</SectionHeading>
 
               <div className="space-y-2">
-                <Label>Locations</Label>
+                <FieldLabel tip="Restrict to selected Locations. Select all for every Location.">
+                  Locations
+                </FieldLabel>
                 <MultiSelectField
                   id="promo-branches"
                   options={branchOptions}
@@ -535,7 +600,7 @@ export function PromotionEditSheet({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Trip types</Label>
+                  <FieldLabel tip="Restrict to transfer and/or hourly trips.">Trip types</FieldLabel>
                   <MultiSelectField
                     id="promo-trip-types"
                     options={TRIP_TYPE_OPTIONS}
@@ -558,7 +623,7 @@ export function PromotionEditSheet({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label>Vehicle classes</Label>
+                  <FieldLabel tip="Restrict to selected service classes.">Vehicle classes</FieldLabel>
                   <MultiSelectField
                     id="promo-classes"
                     options={vehicleClassOptions}
@@ -591,11 +656,13 @@ export function PromotionEditSheet({
               <div className="grid grid-cols-2 gap-3">
                 <DatePickerField
                   label="Valid from"
+                  tip="Optional start date. Leave empty for no start."
                   value={draft.conditions.startsAt}
                   onChange={(date) => patchConditions({ startsAt: date })}
                 />
                 <DatePickerField
                   label="Valid to"
+                  tip="Optional end date. Leave empty for no end."
                   value={draft.conditions.endsAt}
                   onChange={(date) => patchConditions({ endsAt: date })}
                   endOfDaySelect
@@ -606,6 +673,11 @@ export function PromotionEditSheet({
                 <NumberStepper
                   id="promo-max"
                   label="Max redemptions"
+                  labelExtra={
+                    <FieldInfoTooltip label="max redemptions">
+                      Global cap on redemptions. Unlimited when set to Unlimited.
+                    </FieldInfoTooltip>
+                  }
                   value={limitStepperValue(draft.conditions.maxRedemptions)}
                   onChange={(value) => patchConditions({ maxRedemptions: limitFromStepper(value) })}
                   min={0}
@@ -615,6 +687,11 @@ export function PromotionEditSheet({
                 <NumberStepper
                   id="promo-min-fare"
                   label="Minimum fare"
+                  labelExtra={
+                    <FieldInfoTooltip label="minimum fare">
+                      Require a minimum subtotal before the discount applies.
+                    </FieldInfoTooltip>
+                  }
                   value={minFareStepperValue(draft.conditions.minimumSubtotal)}
                   onChange={(value) =>
                     patchConditions({ minimumSubtotal: minFareFromStepper(value) })
@@ -630,6 +707,11 @@ export function PromotionEditSheet({
                 <NumberStepper
                   id="promo-per-customer"
                   label="Per customer"
+                  labelExtra={
+                    <FieldInfoTooltip label="per customer">
+                      Cap uses per customer. Unlimited when set to Unlimited.
+                    </FieldInfoTooltip>
+                  }
                   value={limitStepperValue(draft.conditions.perCustomerLimit)}
                   onChange={(value) =>
                     patchConditions({ perCustomerLimit: limitFromStepper(value) })
@@ -647,12 +729,11 @@ export function PromotionEditSheet({
               <SectionHeading>Status</SectionHeading>
 
               <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="promo-active">Active</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Inactive coupons cannot be applied to bookings.
-                  </p>
-                </div>
+                <FieldLabel
+                  htmlFor="promo-active"
+                  tip="Inactive coupons cannot be applied to bookings.">
+                  Active
+                </FieldLabel>
                 <Switch
                   id="promo-active"
                   checked={draft.isEnabled}
@@ -662,6 +743,7 @@ export function PromotionEditSheet({
               </div>
             </div>
           </div>
+          </TooltipProvider>
 
           <div className="shrink-0 border-t px-4 pt-4 pb-4">
             <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">

@@ -133,7 +133,7 @@ export function InvoiceEditSheet({
           </SheetDescription>
         </SheetHeader>
         <form key={formKey} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="invoiceNumber">Invoice no.</Label>
