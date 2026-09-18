@@ -14,24 +14,15 @@ import {
   useReactTable
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { PencilIcon } from "lucide-react";
 
+import { PromotionDetailSheet } from "@/app/dashboard/promotions/promotion-detail-sheet";
 import { PromotionEditSheet } from "@/app/dashboard/promotions/promotion-edit-sheet";
 import { ListFilterPopover } from "@/components/list-filter-popover";
 import { ListTablePagination } from "@/components/list-table-pagination";
 import { ListTableToolbar } from "@/components/list-table-toolbar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
 import { LocationStatusBadge } from "@/components/location-status-badge";
+import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,11 +34,11 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useCompanyVehicleClasses } from "@/hooks/use-company-vehicle-classes";
-import { cn } from "@/lib/utils";
+import { SHEET_EXIT_ANIMATION_MS } from "@/hooks/use-sheet-display-item";
 import type { Promotion } from "@/lib/models";
-import { deletePromotion, listenPromotions } from "@/lib/services/firebase-service";
+import { listenPromotions } from "@/lib/services/firebase-service";
+import { cn } from "@/lib/utils";
 
 type PromotionRow = Promotion & {
   searchLabel: string;
@@ -69,7 +60,7 @@ function formatUsageLimit(max: number | null | undefined): string {
 function formatValidity(startsAt: Date | null | undefined, endsAt: Date | null | undefined): string {
   if (!startsAt && !endsAt) return "Always";
   if (startsAt && endsAt) {
-    return `${format(startsAt, "MMM d, yyyy")} ÔøΩ ${format(endsAt, "MMM d, yyyy")}`;
+    return `${format(startsAt, "MMM d, yyyy")} ù ${format(endsAt, "MMM d, yyyy")}`;
   }
   if (startsAt) return `From ${format(startsAt, "MMM d, yyyy")}`;
   return `Until ${format(endsAt!, "MMM d, yyyy")}`;
@@ -96,10 +87,9 @@ export function PromotionsDataTable({
   const { allBranches } = useActiveBranch();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState<Promotion | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -116,13 +106,47 @@ export function PromotionsDataTable({
     return () => unsubPromo();
   }, []);
 
+  useEffect(() => {
+    if (createOpen) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+  }, [createOpen]);
+
+  function openDetail(promo: Promotion) {
+    onCreateOpenChange?.(false);
+    setSelectedId(promo.id);
+    setEditOpen(false);
+    setDetailOpen(true);
+  }
+
+  function openEdit(promo: Promotion) {
+    onCreateOpenChange?.(false);
+    setSelectedId(promo.id);
+    setDetailOpen(false);
+    setEditOpen(true);
+  }
+
+  const selectedPromotion = useMemo(
+    () => promotions.find((promo) => promo.id === selectedId) ?? null,
+    [promotions, selectedId]
+  );
+
+  const vehicleClasses = useMemo(
+    () =>
+      companyClassOptions.map((option) => ({
+        id: option.id,
+        displayName: option.label
+      })),
+    [companyClassOptions]
+  );
+
   const rows = useMemo<PromotionRow[]>(
     () =>
       promotions.map((promo) => ({
         ...promo,
-        searchLabel: [promo.title, promo.code, promo.description]
-          .filter(Boolean)
-          .join(" "),
+        searchLabel: [promo.title, promo.code, promo.description].filter(Boolean).join(" "),
         status: promo.isEnabled ? "active" : "inactive"
       })),
     [promotions]
@@ -233,13 +257,12 @@ export function PromotionsDataTable({
               type="button"
               size="icon"
               variant="ghost"
-              className="hover:bg-destructive/10 hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
-                setPendingDelete(row.original);
+                openEdit(row.original);
               }}>
-              <Trash2Icon className="size-4" />
-              <span className="sr-only">Delete</span>
+              <PencilIcon className="size-4" />
+              <span className="sr-only">Edit</span>
             </Button>
           </div>
         ),
@@ -247,7 +270,7 @@ export function PromotionsDataTable({
         enableHiding: false
       }
     ],
-    []
+    [onCreateOpenChange]
   );
 
   const table = useReactTable({
@@ -269,53 +292,41 @@ export function PromotionsDataTable({
     }
   });
 
-  function handleCreateOpenChange(next: boolean) {
-    if (next) {
+  function handleDetailOpenChange(next: boolean) {
+    setDetailOpen(next);
+    if (!next) {
       setEditOpen(false);
-      setEditing(null);
+      window.setTimeout(() => setSelectedId(null), SHEET_EXIT_ANIMATION_MS);
     }
-    onCreateOpenChange?.(next);
   }
 
   function handleEditOpenChange(next: boolean) {
     setEditOpen(next);
-    if (!next) setEditing(null);
-  }
-
-  function openEdit(promo: Promotion) {
-    onCreateOpenChange?.(false);
-    setEditing(promo);
-    setEditOpen(true);
-  }
-
-  async function confirmDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await deletePromotion(pendingDelete.id);
-      toast.success("Promotion deleted.");
-      if (editing?.id === pendingDelete.id) {
-        setEditOpen(false);
-        setEditing(null);
-      }
-      setPendingDelete(null);
-    } catch {
-      toast.error("Could not delete promotion.");
-    } finally {
-      setDeleting(false);
+    if (!next) {
+      window.setTimeout(() => {
+        if (!detailOpen) setSelectedId(null);
+      }, SHEET_EXIT_ANIMATION_MS);
     }
   }
 
-  const sheetOpen = Boolean(createOpen) || editOpen;
-  const sheetPromotion = createOpen ? null : editing;
+  function handleCreateOpenChange(next: boolean) {
+    if (next) {
+      setDetailOpen(false);
+      setEditOpen(false);
+      setSelectedId(null);
+    }
+    onCreateOpenChange?.(next);
+  }
+
+  const editSheetOpen = Boolean(createOpen) || editOpen;
+  const editSheetPromotion = createOpen ? null : selectedPromotion;
 
   return (
     <>
       <div className="w-full">
         <ListTableToolbar
           table={table}
-          searchPlaceholder="Search promotions‚Ä¶"
+          searchPlaceholder="Search promotionsù"
           searchColumnId="title"
           nowrap
           filters={
@@ -339,7 +350,9 @@ export function PromotionsDataTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className={header.id === "actions" ? "w-12" : undefined}>
+                    <TableHead
+                      key={header.id}
+                      className={header.id === "actions" ? "w-12" : undefined}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -352,7 +365,7 @@ export function PromotionsDataTable({
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    Loading promotions‚Ä¶
+                    Loading promotionsù
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
@@ -364,7 +377,7 @@ export function PromotionsDataTable({
                       "cursor-pointer",
                       !row.original.isEnabled && "text-muted-foreground"
                     )}
-                    onClick={() => openEdit(row.original)}>
+                    onClick={() => openDetail(row.original)}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
@@ -391,40 +404,19 @@ export function PromotionsDataTable({
         <ListTablePagination table={table} />
       </div>
 
-      <AlertDialog
-        open={pendingDelete !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !deleting) setPendingDelete(null);
-        }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete promotion?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete{" "}
-              {pendingDelete?.title || pendingDelete?.code || "this promotion"}. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleting}
-              onClick={(e) => void confirmDelete(e)}>
-              {deleting ? "Deleting‚Ä¶" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <PromotionDetailSheet
+        promotion={selectedPromotion}
+        branches={allBranches}
+        vehicleClasses={vehicleClasses}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+      />
 
       <PromotionEditSheet
-        promotion={sheetPromotion}
+        promotion={editSheetPromotion}
         branches={allBranches}
-        vehicleClasses={companyClassOptions.map((option) => ({
-          id: option.id,
-          displayName: option.label
-        }))}
-        open={sheetOpen}
+        vehicleClasses={vehicleClasses}
+        open={editSheetOpen}
         onOpenChange={(next) => {
           if (createOpen) handleCreateOpenChange(next);
           else handleEditOpenChange(next);

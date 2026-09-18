@@ -764,28 +764,11 @@ export function PromotionEditSheet({
                   Delete
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
+                <span />
               )}
-              <div className="flex items-center gap-2">
-                {!isNew ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={saving}
-                    onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                ) : null}
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving…" : isNew ? "Create coupon" : "Save"}
-                </Button>
-              </div>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : isNew ? "Create coupon" : "Save"}
+              </Button>
             </SheetFooter>
           </div>
         </form>
