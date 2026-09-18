@@ -255,6 +255,28 @@ export function DriverEditSheet({
               </div>
             </div>
 
+            {isNew ? (
+              <PasswordStrengthField
+                password={password}
+                onPasswordChange={setPassword}
+                confirm={confirmPassword}
+                onConfirmChange={setConfirmPassword}
+                disabled={saving}
+              />
+            ) : null}
+
+            <ProfileAddressField
+              value={address}
+              onChange={(next) => {
+                setAddress(next);
+                if (addressInvalid && isValidPostalAddress(next)) {
+                  setAddressInvalid(false);
+                }
+              }}
+              invalid={addressInvalid}
+              disabled={saving}
+            />
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Phone</Label>
@@ -280,16 +302,6 @@ export function DriverEditSheet({
                 />
               </div>
             </div>
-
-            {isNew ? (
-              <PasswordStrengthField
-                password={password}
-                onPasswordChange={setPassword}
-                confirm={confirmPassword}
-                onConfirmChange={setConfirmPassword}
-                disabled={saving}
-              />
-            ) : null}
 
             <div className="space-y-2">
               <Label>Date of birth</Label>
@@ -326,18 +338,6 @@ export function DriverEditSheet({
                 </PopoverContent>
               </Popover>
             </div>
-
-            <ProfileAddressField
-              value={address}
-              onChange={(next) => {
-                setAddress(next);
-                if (addressInvalid && isValidPostalAddress(next)) {
-                  setAddressInvalid(false);
-                }
-              }}
-              invalid={addressInvalid}
-              disabled={saving}
-            />
 
             <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-0.5">
