@@ -6,18 +6,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import {
+  createDriver,
   saveDriverProfile,
   updateUserEmail,
   updateUserProfile
 } from "@/lib/services/firebase-service";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
-  CHAUFFEUR_CATEGORIES,
-  chauffeurCategoryTitle,
   defaultDriverProfile,
-  userRoleTitle,
   type BranchDriver,
-  type ChauffeurCategory,
   type User,
   type UserProfile
 } from "@/lib/models";
@@ -28,23 +25,18 @@ import {
   toProfilePostalFields,
   type PostalAddress
 } from "@/lib/models/postal-address";
+import { PasswordStrengthField } from "@/components/password-strength-field";
 import {
   ProfileAddressField,
   PROFILE_ADDRESS_VALIDATION_MESSAGE
 } from "@/components/profile-address-field";
+import { isPasswordStrong, validatePasswordPair } from "@/lib/auth/password-strength";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -75,7 +67,6 @@ function nameParts(profile: UserProfile): { firstName: string; lastName: string 
 export function DriverEditSheet({
   user,
   roster,
-  candidates,
   canAdd = true,
   open,
   onOpenChange,
@@ -83,7 +74,6 @@ export function DriverEditSheet({
 }: {
   user: User | null;
   roster: BranchDriver | null;
-  candidates: User[];
   canAdd?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -91,16 +81,11 @@ export function DriverEditSheet({
 }) {
   const isNew = !user;
   const { branchId } = useActiveBranch();
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const selectedCandidate = candidates.find((u) => u.id === selectedUserId);
-  const activeUser = user ?? selectedCandidate ?? null;
-  const driverProfile = roster
-    ? branchDriverToProfile(roster)
-    : defaultDriverProfile();
+  const activeUser = user;
+  const driverProfile = roster ? branchDriverToProfile(roster) : defaultDriverProfile();
   const userProfile = activeUser?.profile;
   const names = userProfile ? nameParts(userProfile) : { firstName: "", lastName: "" };
 
-  const [category, setCategory] = useState<ChauffeurCategory>(driverProfile.chauffeurCategory);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     userProfile?.dateOfBirth ?? undefined
   );
@@ -113,28 +98,26 @@ export function DriverEditSheet({
   const [acceptsDispatchAssignments, setAcceptsDispatchAssignments] = useState(
     driverProfile.visibility.acceptsDispatchAssignments
   );
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [addressInvalid, setAddressInvalid] = useState(false);
 
   const [seededId, setSeededId] = useState<string | null>("__init__");
-  const currentKey = user?.id ?? (selectedUserId || "__new__");
+  const currentKey = user?.id ?? "__new__";
   if (currentKey !== seededId) {
     setSeededId(currentKey);
-    setCategory(driverProfile.chauffeurCategory);
     setDateOfBirth(userProfile?.dateOfBirth ?? undefined);
     setAddress(userProfile ? postalAddressFromProfile(userProfile) : {});
     setVisibleOnCustomerApp(driverProfile.visibility.visibleOnCustomerApp);
     setAcceptsDispatchAssignments(driverProfile.visibility.acceptsDispatchAssignments);
+    setPassword("");
+    setConfirmPassword("");
     setAddressInvalid(false);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const uid = user?.id ?? selectedUserId;
-    if (!uid) {
-      toast.error("Select the user to add as a chauffeur.");
-      return;
-    }
     if (isNew && !canAdd) {
       toast.error("Driver limit reached on the current license.");
       return;
@@ -159,21 +142,17 @@ export function DriverEditSheet({
       return;
     }
 
-    const nextDriverProfile = {
-      ...defaultDriverProfile(),
-      ...driverProfile,
-      chauffeurCategory: category,
-      visibility: {
-        visibleOnCustomerApp,
-        acceptsDispatchAssignments
-      }
-    };
-
     const displayName =
       `${firstName} ${lastName}`.trim() ||
       activeUser?.profile.displayName?.trim() ||
       email ||
       "Chauffeur";
+
+    const addressFields = toProfilePostalFields(address);
+    const visibility = {
+      visibleOnCustomerApp,
+      acceptsDispatchAssignments
+    };
 
     const nextUserProfile: UserProfile = {
       ...(activeUser?.profile ?? { displayName }),
@@ -182,20 +161,47 @@ export function DriverEditSheet({
       lastName: lastName || null,
       phoneNumber: phoneNumber || null,
       dateOfBirth: dateOfBirth ?? null,
-      ...toProfilePostalFields(address)
+      ...addressFields
     };
+
+    if (isNew) {
+      const passwordCheck = validatePasswordPair(password, confirmPassword);
+      if (!passwordCheck.ok) {
+        toast.error(passwordCheck.error);
+        return;
+      }
+    }
 
     setSaving(true);
     try {
-      await saveDriverProfile(uid, nextDriverProfile, branchId, {
-        driverTitle: displayName,
-        isNew
-      });
-      await updateUserProfile(uid, nextUserProfile);
-      if (email !== (activeUser?.email ?? "").trim()) {
-        await updateUserEmail(uid, email);
+      if (isNew) {
+        const { uid } = await createDriver({
+          email,
+          password,
+          confirmPassword,
+          displayName,
+          phoneNumber: phoneNumber || undefined,
+          branchId,
+          ...addressFields,
+          visibility
+        });
+        await updateUserProfile(uid, nextUserProfile);
+        toast.success("Driver added.");
+      } else {
+        const nextDriverProfile = {
+          ...defaultDriverProfile(),
+          ...driverProfile,
+          visibility
+        };
+        await saveDriverProfile(user.id, nextDriverProfile, branchId, {
+          driverTitle: displayName
+        });
+        await updateUserProfile(user.id, nextUserProfile);
+        if (email !== (activeUser?.email ?? "").trim()) {
+          await updateUserEmail(user.id, email);
+        }
+        toast.success("Driver profile saved.");
       }
-      toast.success(isNew ? "Driver added." : "Driver profile saved.");
       onOpenChange(false);
     } catch (err) {
       toast.error(
@@ -210,16 +216,11 @@ export function DriverEditSheet({
     }
   }
 
-  function handleOpenChange(next: boolean) {
-    if (!next) setSelectedUserId("");
-    onOpenChange(next);
-  }
-
   const editDriverLabel =
     activeUser?.profile.displayName?.trim() || activeUser?.email || "this driver";
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add driver" : "Edit driver"}</SheetTitle>
@@ -231,173 +232,142 @@ export function DriverEditSheet({
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={currentKey}>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
-          {isNew && (
-            <div className="space-y-2">
-              <Label>Account</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user to promote" />
-                </SelectTrigger>
-                <SelectContent>
-                  {candidates.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No eligible users
-                    </SelectItem>
-                  ) : (
-                    candidates.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.profile.displayName || u.email} ({userRoleTitle[u.role]})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Roster category</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as ChauffeurCategory)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHAUFFEUR_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {chauffeurCategoryTitle[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First name</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                autoComplete="given-name"
-                placeholder="Jane"
-                defaultValue={names.firstName}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last name</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                autoComplete="family-name"
-                placeholder="Smith"
-                defaultValue={names.lastName}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone</Label>
-              <Input
-                id="phoneNumber"
-                name="phoneNumber"
-                type="tel"
-                autoComplete="tel"
-                placeholder="+61 400 000 000"
-                defaultValue={userProfile?.phoneNumber ?? ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="jane@example.com"
-                defaultValue={activeUser?.email ?? ""}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Date of birth</Label>
-            <Popover modal>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-full pl-3 text-left font-normal",
-                    !dateOfBirth && "text-muted-foreground"
-                  )}>
-                  {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
-                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className={cn(
-                  "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                  nested && "z-[110]"
-                )}
-                align="start">
-                <Calendar
-                  mode="single"
-                  captionLayout="dropdown"
-                  fromYear={1900}
-                  toYear={new Date().getFullYear()}
-                  selected={dateOfBirth}
-                  onSelect={setDateOfBirth}
-                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                  defaultMonth={dateOfBirth}
-                  initialFocus
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First name</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  autoComplete="given-name"
+                  placeholder="Jane"
+                  defaultValue={names.firstName}
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <ProfileAddressField
-            value={address}
-            onChange={(next) => {
-              setAddress(next);
-              if (addressInvalid && isValidPostalAddress(next)) {
-                setAddressInvalid(false);
-              }
-            }}
-            invalid={addressInvalid}
-            disabled={saving}
-          />
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="visibleOnCustomerApp">Active</Label>
-              <p className="text-muted-foreground text-xs">
-                Show this chauffeur on the customer app when active.
-              </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last name</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  autoComplete="family-name"
+                  placeholder="Smith"
+                  defaultValue={names.lastName}
+                />
+              </div>
             </div>
-            <Switch
-              id="visibleOnCustomerApp"
-              checked={visibleOnCustomerApp}
-              onCheckedChange={setVisibleOnCustomerApp}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="+61 400 000 000"
+                  defaultValue={userProfile?.phoneNumber ?? ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="jane@example.com"
+                  defaultValue={activeUser?.email ?? ""}
+                  required
+                />
+              </div>
+            </div>
+
+            {isNew ? (
+              <PasswordStrengthField
+                password={password}
+                onPasswordChange={setPassword}
+                confirm={confirmPassword}
+                onConfirmChange={setConfirmPassword}
+                disabled={saving}
+              />
+            ) : null}
+
+            <div className="space-y-2">
+              <Label>Date of birth</Label>
+              <Popover modal>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !dateOfBirth && "text-muted-foreground"
+                    )}>
+                    {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className={cn(
+                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                    nested && "z-[110]"
+                  )}
+                  align="start">
+                  <Calendar
+                    mode="single"
+                    captionLayout="dropdown"
+                    fromYear={1900}
+                    toYear={new Date().getFullYear()}
+                    selected={dateOfBirth}
+                    onSelect={setDateOfBirth}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    defaultMonth={dateOfBirth}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <ProfileAddressField
+              value={address}
+              onChange={(next) => {
+                setAddress(next);
+                if (addressInvalid && isValidPostalAddress(next)) {
+                  setAddressInvalid(false);
+                }
+              }}
+              invalid={addressInvalid}
               disabled={saving}
             />
-          </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="acceptsDispatchAssignments">Accepting dispatch</Label>
-              <p className="text-muted-foreground text-xs">
-                Allow this chauffeur to receive dispatch assignments.
-              </p>
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="visibleOnCustomerApp">Active</Label>
+                <p className="text-muted-foreground text-xs">
+                  Show this chauffeur on the customer app when active.
+                </p>
+              </div>
+              <Switch
+                id="visibleOnCustomerApp"
+                checked={visibleOnCustomerApp}
+                onCheckedChange={setVisibleOnCustomerApp}
+                disabled={saving}
+              />
             </div>
-            <Switch
-              id="acceptsDispatchAssignments"
-              checked={acceptsDispatchAssignments}
-              onCheckedChange={setAcceptsDispatchAssignments}
-              disabled={saving}
-            />
-          </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="acceptsDispatchAssignments">Accepting dispatch</Label>
+                <p className="text-muted-foreground text-xs">
+                  Allow this chauffeur to receive dispatch assignments.
+                </p>
+              </div>
+              <Switch
+                id="acceptsDispatchAssignments"
+                checked={acceptsDispatchAssignments}
+                onCheckedChange={setAcceptsDispatchAssignments}
+                disabled={saving}
+              />
+            </div>
           </div>
 
           <div className="shrink-0 border-t px-4 pt-4 pb-4">
@@ -405,7 +375,13 @@ export function DriverEditSheet({
               <span />
               <Button
                 type="submit"
-                disabled={saving || (isNew && (candidates.length === 0 || !canAdd))}>
+                disabled={
+                  saving ||
+                  (isNew &&
+                    (!canAdd ||
+                      !isPasswordStrong(password) ||
+                      password !== confirmPassword))
+                }>
                 {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
               </Button>
             </SheetFooter>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { CorporateAccountSelect } from "@/components/corporate-account-select";
+import { PasswordStrengthField } from "@/components/password-strength-field";
 import {
   ProfileAddressField,
   PROFILE_ADDRESS_VALIDATION_MESSAGE
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
+import { isPasswordStrong, validatePasswordPair } from "@/lib/auth/password-strength";
 import type { CorporateAccount, User, UserProfile } from "@/lib/models";
 import {
   isValidPostalAddress,
@@ -83,6 +85,8 @@ export function CustomerEditSheet({
     user ? postalAddressFromProfile(user.profile) : {}
   );
   const [addressInvalid, setAddressInvalid] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
   const names = user ? nameParts(user.profile) : { firstName: "", lastName: "" };
@@ -96,6 +100,8 @@ export function CustomerEditSheet({
     setAccountInvalid(false);
     setAddress(user ? postalAddressFromProfile(user.profile) : {});
     setAddressInvalid(false);
+    setPassword("");
+    setConfirmPassword("");
   }
 
   useEffect(() => {
@@ -147,15 +153,15 @@ export function CustomerEditSheet({
 
     const addressFields = toProfilePostalFields(address);
     const previousAccountId = user?.corporateAccountId?.trim() || null;
-    const password = isNew ? get("password") : "";
 
     if (isNew) {
       if (!email) {
         toast.error("Email is required.");
         return;
       }
-      if (!password || password.length < 6) {
-        toast.error("Password must be at least 6 characters.");
+      const passwordCheck = validatePasswordPair(password, confirmPassword);
+      if (!passwordCheck.ok) {
+        toast.error(passwordCheck.error);
         return;
       }
     }
@@ -166,6 +172,7 @@ export function CustomerEditSheet({
         const { uid } = await createCustomer({
           email,
           password,
+          confirmPassword,
           displayName,
           phoneNumber,
           ...addressFields
@@ -311,17 +318,13 @@ export function CustomerEditSheet({
           </div>
 
           {isNew ? (
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                placeholder="At least 6 characters"
-              />
-            </div>
+            <PasswordStrengthField
+              password={password}
+              onPasswordChange={setPassword}
+              confirm={confirmPassword}
+              onConfirmChange={setConfirmPassword}
+              disabled={saving}
+            />
           ) : null}
 
           <ProfileAddressField
@@ -340,7 +343,12 @@ export function CustomerEditSheet({
           <div className="shrink-0 border-t px-4 pt-4 pb-4">
             <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
               <span />
-              <Button type="submit" disabled={saving}>
+              <Button
+                type="submit"
+                disabled={
+                  saving ||
+                  (isNew && (!isPasswordStrong(password) || password !== confirmPassword))
+                }>
                 {saving ? "Saving…" : isNew ? "Add customer" : "Save"}
               </Button>
             </SheetFooter>

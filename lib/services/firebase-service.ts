@@ -128,7 +128,6 @@ import {
   type BranchDriver
 } from "@/lib/models/branch";
 import {
-  canAddDriver,
   canCreateLocation,
   clampPreferredPayment,
   normalizeAllowedPaymentMethods,
@@ -1066,6 +1065,7 @@ export async function fetchUserLastSignIn(uid: string): Promise<Date | null> {
 export type CreateCustomerInput = {
   email: string;
   password: string;
+  confirmPassword: string;
   displayName: string;
   phoneNumber?: string;
   address?: {
@@ -1089,6 +1089,42 @@ export async function createCustomer(input: CreateCustomerInput): Promise<{ uid:
   }
   if (!body.uid) {
     throw new Error("Could not create customer.");
+  }
+  return { uid: body.uid };
+}
+
+export type CreateDriverInput = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  displayName: string;
+  branchId: string;
+  phoneNumber?: string;
+  address?: {
+    street?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    country?: string | null;
+  } | null;
+  visibility?: {
+    visibleOnCustomerApp?: boolean;
+    acceptsDispatchAssignments?: boolean;
+  } | null;
+};
+
+export async function createDriver(input: CreateDriverInput): Promise<{ uid: string }> {
+  const res = await fetch("/api/drivers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  const body = (await res.json().catch(() => ({}))) as { uid?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not create driver.");
+  }
+  if (!body.uid) {
+    throw new Error("Could not create driver.");
   }
   return { uid: body.uid };
 }
@@ -1217,7 +1253,7 @@ export async function saveDriverProfile(
   uid: string,
   driverProfile: DriverProfile,
   branchId: string,
-  options?: { driverTitle?: string; isNew?: boolean }
+  options?: { driverTitle?: string }
 ): Promise<void> {
   const resolved = requireBranchId(branchId);
   const userRef = doc(db(), Collections.users, uid);
@@ -1227,28 +1263,12 @@ export async function saveDriverProfile(
   if (homeBranchId && homeBranchId !== resolved) {
     throw new Error("This chauffeur is assigned to another Location.");
   }
-  const patch: Record<string, unknown> = {};
-  if (options?.isNew) {
-    const [license, driverSnap] = await Promise.all([
-      fetchLicense(),
-      getDocs(query(collection(db(), Collections.users), where("role", "==", "driver")))
-    ]);
-    const used = driverSnap.docs.filter((d) => d.id !== uid).length;
-    if (!canAddDriver(used, license.maxDrivers)) {
-      throw new Error("Driver limit reached on the current license.");
-    }
-    patch.role = "driver";
-    patch.homeBranchId = resolved;
-  } else if (!homeBranchId) {
-    patch.homeBranchId = resolved;
-  }
-  if (Object.keys(patch).length > 0) {
-    await updateDoc(userRef, patch);
+  if (!homeBranchId) {
+    await updateDoc(userRef, { homeBranchId: resolved });
   }
   await upsertBranchDriver(uid, driverProfile, resolved);
   if (options?.driverTitle) {
-    const action = options.isNew ? "created" : "updated";
-    void createActivityNotification(driverNotification(action, options.driverTitle, uid));
+    void createActivityNotification(driverNotification("updated", options.driverTitle, uid));
   }
 }
 

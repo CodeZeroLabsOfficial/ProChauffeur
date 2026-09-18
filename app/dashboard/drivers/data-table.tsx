@@ -17,7 +17,7 @@ import {
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { useUsers, useRosterChauffeurs } from "@/hooks/use-collections";
+import { useRosterChauffeurs } from "@/hooks/use-collections";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import {
   removeDriver,
@@ -91,7 +91,6 @@ export function DriversDataTable({
   canAdd?: boolean;
 }) {
   const { branchId } = useActiveBranch();
-  const { users } = useUsers();
   const { chauffeurs, loading } = useRosterChauffeurs();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -103,11 +102,6 @@ export function DriversDataTable({
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [dispatchFilter, setDispatchFilter] = useState<string[]>([]);
   const [visibilityFilter, setVisibilityFilter] = useState<string[]>([]);
-
-  const candidates = useMemo(
-    () => users.filter((u) => u.role !== "driver"),
-    [users]
-  );
 
   const data = useMemo<DriverRow[]>(
     () =>
@@ -537,7 +531,6 @@ export function DriversDataTable({
       <DriverEditSheet
         user={createOpen ? null : selectedChauffeur?.user ?? null}
         roster={createOpen ? null : selectedChauffeur?.roster ?? null}
-        candidates={candidates}
         canAdd={canAdd}
         open={createOpen || editOpen}
         onOpenChange={(next) => {

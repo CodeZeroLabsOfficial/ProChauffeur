@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { CheckIcon, ChevronDownIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { PasswordStrengthField } from "@/components/password-strength-field";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { MultiSelectField } from "@/components/multi-select-field";
 import { useUsers } from "@/hooks/use-collections";
+import { isPasswordStrong, validatePasswordPair } from "@/lib/auth/password-strength";
 import {
   parseStaffRole,
   type StaffGrantInput
@@ -103,6 +105,8 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<StaffRole>(DEFAULT_INVITE_ROLE);
   const [inviteAllLocations, setInviteAllLocations] = useState(true);
   const [inviteBranchIds, setInviteBranchIds] = useState<string[]>([]);
+  const [invitePassword, setInvitePassword] = useState("");
+  const [inviteConfirmPassword, setInviteConfirmPassword] = useState("");
   const [editRole, setEditRole] = useState<StaffRole>("admin");
   const [editAllLocations, setEditAllLocations] = useState(true);
   const [editBranchIds, setEditBranchIds] = useState<string[]>([]);
@@ -122,6 +126,8 @@ export default function TeamPage() {
     setInviteRole(DEFAULT_INVITE_ROLE);
     setInviteAllLocations(callerCanGrantAll);
     setInviteBranchIds([]);
+    setInvitePassword("");
+    setInviteConfirmPassword("");
   }
 
   function openEdit(user: User) {
@@ -225,9 +231,13 @@ export default function TeamPage() {
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
     const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "");
     if (!inviteAllLocations && inviteBranchIds.length === 0) {
       toast.error("Allocate at least one Location, or choose All Locations.");
+      return;
+    }
+    const passwordCheck = validatePasswordPair(invitePassword, inviteConfirmPassword);
+    if (!passwordCheck.ok) {
+      toast.error(passwordCheck.error);
       return;
     }
 
@@ -238,7 +248,8 @@ export default function TeamPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          password,
+          password: invitePassword,
+          confirmPassword: inviteConfirmPassword,
           staffRole: inviteRole,
           canAccessAllBranches: inviteAllLocations,
           branchIds: inviteAllLocations ? null : inviteBranchIds
@@ -417,17 +428,13 @@ export default function TeamPage() {
                 <Label htmlFor="admin-email">Email</Label>
                 <Input id="admin-email" name="email" type="email" autoComplete="email" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="admin-password">Password</Label>
-                <Input
-                  id="admin-password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={6}
-                  required
-                />
-              </div>
+              <PasswordStrengthField
+                password={invitePassword}
+                onPasswordChange={setInvitePassword}
+                confirm={inviteConfirmPassword}
+                onConfirmChange={setInviteConfirmPassword}
+                disabled={saving}
+              />
               <StaffRoleField id="invite-role" value={inviteRole} onChange={setInviteRole} />
               <LocationGrantFields
                 allLocations={inviteAllLocations}
@@ -440,7 +447,13 @@ export default function TeamPage() {
             </div>
             <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-4 sm:justify-between">
               <span />
-              <Button type="submit" disabled={saving}>
+              <Button
+                type="submit"
+                disabled={
+                  saving ||
+                  !isPasswordStrong(invitePassword) ||
+                  invitePassword !== inviteConfirmPassword
+                }>
                 {saving ? "Creating…" : "Create member"}
               </Button>
             </SheetFooter>

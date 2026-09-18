@@ -83,8 +83,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
     loadUser().finally(() => setLoading(false));
   }, [loadUser]);
 
-  const candidates = useMemo(() => users.filter((u) => u.role !== "driver"), [users]);
-
   const metrics = useMemo(
     () => driverOverviewMetrics(trips, invoices, driverId),
     [trips, invoices, driverId]
@@ -213,7 +211,6 @@ export function DriverProfilePage({ driverId }: { driverId: string }) {
       <DriverEditSheet
         user={displayUser}
         roster={roster}
-        candidates={candidates}
         open={editOpen}
         onOpenChange={(open) => {
           setEditOpen(open);

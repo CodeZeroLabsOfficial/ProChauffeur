@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 
+import { validatePasswordPair } from "@/lib/auth/password-strength";
 import { parseStaffGrantInput, staffGrantFields } from "@/lib/auth/staff-access";
 import { requireStaffAdmin } from "@/lib/auth/require-staff";
 import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
@@ -31,11 +32,14 @@ export async function POST(request: Request) {
   const trimmedEmail =
     typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
   const password = typeof data.password === "string" ? data.password : "";
+  const confirmPassword =
+    typeof data.confirmPassword === "string" ? data.confirmPassword : "";
   if (!trimmedEmail) {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
   }
-  if (!password || password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+  const passwordCheck = validatePasswordPair(password, confirmPassword);
+  if (!passwordCheck.ok) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
   }
 
   const grants = parseStaffGrantInput(data, session);
