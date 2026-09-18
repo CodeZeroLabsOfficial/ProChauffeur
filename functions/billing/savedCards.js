@@ -1,51 +1,52 @@
 const admin = require("firebase-admin");
 const { HttpsError } = require("firebase-functions/v2/https");
 const { requireAuth, requireCustomer } = require("../lib/auth");
+const { syncUserStripeCustomer } = require("../stripe/customer");
+const { createSavedCardSetupIntent } = require("../stripe/payments");
 const {
   detachSavedCard,
   syncSavedCardsFromStripe,
   setDefaultSavedCard,
 } = require("../stripe/saved-cards");
 
-async function removeSavedCardHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-  await requireCustomer(db, uid);
-
-  const paymentMethodId = request.data?.paymentMethodId;
+function requirePaymentMethodId(data) {
+  const paymentMethodId = data?.paymentMethodId;
   if (typeof paymentMethodId !== "string" || !paymentMethodId) {
     throw new HttpsError("invalid-argument", "paymentMethodId is required.");
   }
-
-  await detachSavedCard(db, uid, paymentMethodId);
-  return { ok: true };
+  return paymentMethodId;
 }
 
-async function syncSavedCardsHandler(request) {
+/**
+ * Customer saved-card vault: prepare SetupIntent, sync, remove, or set default.
+ * request.data: { action: "prepare"|"sync"|"remove"|"setDefault", paymentMethodId? }
+ */
+async function manageSavedCardsHandler(request) {
   const uid = await requireAuth(request);
   const db = admin.firestore();
   await requireCustomer(db, uid);
 
-  const { synced } = await syncSavedCardsFromStripe(db, uid);
-  return { ok: true, synced };
-}
-
-async function setDefaultSavedCardHandler(request) {
-  const uid = await requireAuth(request);
-  const db = admin.firestore();
-  await requireCustomer(db, uid);
-
-  const paymentMethodId = request.data?.paymentMethodId;
-  if (typeof paymentMethodId !== "string" || !paymentMethodId) {
-    throw new HttpsError("invalid-argument", "paymentMethodId is required.");
+  const action = request.data?.action;
+  switch (action) {
+    case "prepare": {
+      const stripeCustomerId = await syncUserStripeCustomer(db, uid);
+      return createSavedCardSetupIntent(stripeCustomerId, uid);
+    }
+    case "sync": {
+      const { synced } = await syncSavedCardsFromStripe(db, uid);
+      return { ok: true, synced };
+    }
+    case "remove": {
+      await detachSavedCard(db, uid, requirePaymentMethodId(request.data));
+      return { ok: true };
+    }
+    case "setDefault": {
+      await setDefaultSavedCard(db, uid, requirePaymentMethodId(request.data));
+      return { ok: true };
+    }
+    default:
+      throw new HttpsError("invalid-argument", "action is required.");
   }
-
-  await setDefaultSavedCard(db, uid, paymentMethodId);
-  return { ok: true };
 }
 
-module.exports = {
-  removeSavedCardHandler,
-  setDefaultSavedCardHandler,
-  syncSavedCardsHandler,
-};
+module.exports = { manageSavedCardsHandler };

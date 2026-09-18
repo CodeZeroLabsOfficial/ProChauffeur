@@ -1,5 +1,6 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onValueCreated } = require("firebase-functions/v2/database");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -10,12 +11,7 @@ const { mapboxAccessToken } = require("./quoting/mapbox-token");
 const { stripeWebhookHandler } = require("./stripe/webhook");
 const { createTripCardPaymentHandler } = require("./billing/createTripCardPayment");
 const { sendCustomerTripInvoiceHandler } = require("./billing/sendCustomerTripInvoice");
-const { prepareSavedCardHandler } = require("./billing/prepareSavedCard");
-const {
-  removeSavedCardHandler,
-  setDefaultSavedCardHandler,
-  syncSavedCardsHandler,
-} = require("./billing/savedCards");
+const { manageSavedCardsHandler } = require("./billing/savedCards");
 const { claimCorporateJoinCodeHandler } = require("./billing/claimCorporateJoinCode");
 const { buildTripQuoteHandler } = require("./billing/buildTripQuote");
 const {
@@ -28,6 +24,10 @@ const {
 const { markInvoicePaidHandler } = require("./billing/markInvoicePaid");
 const { submitTripRatingHandler } = require("./ratings/submitTripRating");
 const { clearTripEphemeralHandler } = require("./trips/clear-trip-ephemeral");
+const { notifyOnTripWriteHandler } = require("./notifications/notify-on-trip-write");
+const {
+  notifyOnTripChatMessageHandler,
+} = require("./notifications/notify-on-trip-chat-message");
 
 setGlobalOptions({ region: functionsRegion });
 
@@ -43,10 +43,7 @@ const consolidateScheduleOptions = {
 };
 
 exports.createTripCardPayment = onCall(tripCardPaymentOptions, createTripCardPaymentHandler);
-exports.prepareSavedCard = onCall(callableOptions, prepareSavedCardHandler);
-exports.removeSavedCard = onCall(callableOptions, removeSavedCardHandler);
-exports.setDefaultSavedCard = onCall(callableOptions, setDefaultSavedCardHandler);
-exports.syncSavedCards = onCall(callableOptions, syncSavedCardsHandler);
+exports.manageSavedCards = onCall(callableOptions, manageSavedCardsHandler);
 exports.sendCustomerTripInvoice = onCall(callableOptions, sendCustomerTripInvoiceHandler);
 exports.syncCorporateStripeCustomer = onCall(
   callableOptions,
@@ -58,6 +55,20 @@ exports.submitTripRating = onCall(submitTripRatingHandler);
 exports.clearTripEphemeralData = onDocumentUpdated(
   { document: "branches/{branchId}/trips/{tripId}" },
   clearTripEphemeralHandler
+);
+
+exports.notifyOnTripWrite = onDocumentWritten(
+  { document: "branches/{branchId}/trips/{tripId}" },
+  notifyOnTripWriteHandler
+);
+
+exports.notifyOnTripChatMessage = onValueCreated(
+  {
+    ref: "tripChats/{branchId}/{tripId}/messages/{messageId}",
+    // Must match RTDB location (asia-southeast1), not FUNCTIONS_REGION.
+    region: "asia-southeast1",
+  },
+  notifyOnTripChatMessageHandler
 );
 
 exports.claimCorporateJoinCode = onCall(claimCorporateJoinCodeHandler);
