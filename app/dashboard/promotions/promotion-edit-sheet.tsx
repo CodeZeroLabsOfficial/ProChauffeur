@@ -71,6 +71,7 @@ function FieldInfoTooltip({ label, children }: { label: string; children: string
       <TooltipTrigger asChild>
         <button
           type="button"
+          tabIndex={-1}
           className="hover:bg-accent rounded-full p-1"
           aria-label={`About ${label}`}>
           <InfoIcon className="text-muted-foreground size-3.5" />
@@ -393,7 +394,12 @@ export function PromotionEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
+      <SheetContent
+        className="flex w-full flex-col overflow-hidden sm:max-w-lg"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          document.getElementById("promo-code")?.focus();
+        }}>
         <SheetHeader>
           <SheetTitle>{isNew ? "Add coupon" : "Edit coupon"}</SheetTitle>
           <SheetDescription>
@@ -728,12 +734,13 @@ export function PromotionEditSheet({
             <div className="space-y-4">
               <SectionHeading>Status</SectionHeading>
 
-              <div className="flex items-center justify-between gap-4">
-                <FieldLabel
-                  htmlFor="promo-active"
-                  tip="Inactive coupons cannot be applied to bookings.">
-                  Active
-                </FieldLabel>
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="promo-active">Active</Label>
+                  <p className="text-muted-foreground text-xs">
+                    Inactive coupons cannot be applied to bookings.
+                  </p>
+                </div>
                 <Switch
                   id="promo-active"
                   checked={draft.isEnabled}
