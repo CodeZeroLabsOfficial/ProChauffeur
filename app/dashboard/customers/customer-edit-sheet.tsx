@@ -221,7 +221,7 @@ export function CustomerEditSheet({
           <SheetTitle>{isNew ? "Add customer" : "Edit customer"}</SheetTitle>
           <SheetDescription>
             {isNew
-              ? "Create a new customer account with email and password."
+              ? "Create a new customer profile."
               : `Update the details of “${user.profile.displayName?.trim() || user.email || "this customer"}”.`}
           </SheetDescription>
         </SheetHeader>
