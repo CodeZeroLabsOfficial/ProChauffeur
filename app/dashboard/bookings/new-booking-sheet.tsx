@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/address-autocomplete";
@@ -1304,7 +1305,7 @@ export function NewBookingSheet({
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-12">
             {!isEdit ? (
               <div className="space-y-2">
                 <Label>Trip type</Label>
@@ -1566,21 +1567,20 @@ export function NewBookingSheet({
                 <Label htmlFor="bookingPromoCode">Coupon code</Label>
                 {appliedPromo ? (
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="font-mono">
+                    <Badge variant="detail" className="gap-1.5 font-mono">
                       {appliedPromo.code}
+                      <button
+                        type="button"
+                        aria-label="Remove coupon"
+                        className="rounded-full outline-none hover:opacity-70 focus-visible:ring-2 focus-visible:ring-ring"
+                        disabled={saving}
+                        onClick={clearPromo}>
+                        <XIcon className="size-3" />
+                      </button>
                     </Badge>
                     <span className="text-muted-foreground text-sm truncate">
                       {appliedPromo.title}
                     </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto"
-                      disabled={saving}
-                      onClick={clearPromo}>
-                      Remove
-                    </Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
@@ -1597,10 +1597,12 @@ export function NewBookingSheet({
                     />
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Apply coupon"
                       disabled={saving || applyingPromo}
                       onClick={() => void applyPromoCode()}>
-                      {applyingPromo ? "…" : "Apply"}
+                      {applyingPromo ? "…" : <PlusIcon />}
                     </Button>
                   </div>
                 )}
@@ -1681,7 +1683,7 @@ export function NewBookingSheet({
                   </div>
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     className="shrink-0"
                     disabled={saving || applyingPromo}

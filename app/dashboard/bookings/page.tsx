@@ -56,7 +56,7 @@ export default function BookingsPage() {
         title="Bookings"
         actions={
           <Button onClick={openNewBooking}>
-            <PlusCircledIcon /> Add New Booking
+            <PlusCircledIcon /> New Booking
           </Button>
         }
       />
