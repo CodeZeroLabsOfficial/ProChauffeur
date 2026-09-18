@@ -293,6 +293,28 @@ export function CustomerEditSheet({
             </div>
           </div>
 
+          {isNew ? (
+            <PasswordStrengthField
+              password={password}
+              onPasswordChange={setPassword}
+              confirm={confirmPassword}
+              onConfirmChange={setConfirmPassword}
+              disabled={saving}
+            />
+          ) : null}
+
+          <ProfileAddressField
+            value={address}
+            onChange={(next) => {
+              setAddress(next);
+              if (addressInvalid && isValidPostalAddress(next)) {
+                setAddressInvalid(false);
+              }
+            }}
+            invalid={addressInvalid}
+            disabled={saving}
+          />
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">Phone</Label>
@@ -316,28 +338,6 @@ export function CustomerEditSheet({
               />
             </div>
           </div>
-
-          {isNew ? (
-            <PasswordStrengthField
-              password={password}
-              onPasswordChange={setPassword}
-              confirm={confirmPassword}
-              onConfirmChange={setConfirmPassword}
-              disabled={saving}
-            />
-          ) : null}
-
-          <ProfileAddressField
-            value={address}
-            onChange={(next) => {
-              setAddress(next);
-              if (addressInvalid && isValidPostalAddress(next)) {
-                setAddressInvalid(false);
-              }
-            }}
-            invalid={addressInvalid}
-            disabled={saving}
-          />
           </div>
 
           <div className="shrink-0 border-t px-4 pt-4 pb-4">
