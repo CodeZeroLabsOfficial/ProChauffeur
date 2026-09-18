@@ -2,11 +2,11 @@
 
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BadgePercent, MapPin, Power, Ticket, Users } from "lucide-react";
+import { MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { ComplianceStat } from "@/components/compliance";
-import { SectionHeading } from "@/components/detail-sheet-fields";
+import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { Card, CardContent } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
@@ -20,18 +20,6 @@ const usageChartConfig = {
   used: { label: "Used" }
 } satisfies ChartConfig;
 
-function formatDiscount(promo: Promotion): string {
-  if (promo.type === "percent") {
-    return `${Math.round(promo.value * 10000) / 100}%`;
-  }
-  return promo.value.toFixed(2);
-}
-
-function formatUsageLimit(max: number | null | undefined): string {
-  if (max == null) return "Unlimited";
-  return String(max);
-}
-
 function formatScopeCount(selected: number, total: number, allLabel: string, noun: string): string {
   if (selected === 0 || (total > 0 && selected >= total)) {
     return allLabel;
@@ -40,7 +28,7 @@ function formatScopeCount(selected: number, total: number, allLabel: string, nou
 }
 
 function SummaryField({
-  icon: Icon,
+  icon,
   label,
   value
 }: {
@@ -49,12 +37,9 @@ function SummaryField({
   value: string;
 }) {
   return (
-    <div className="space-y-2">
-      <h4 className="flex items-center gap-1.5 text-sm font-medium">
-        <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-        {label}
-      </h4>
-      <p className="text-muted-foreground text-sm tabular-nums">{value}</p>
+    <div className="space-y-1">
+      <DetailLabel icon={icon}>{label}</DetailLabel>
+      <p className="text-foreground text-sm tabular-nums">{value}</p>
     </div>
   );
 }
@@ -136,15 +121,6 @@ function PromoMetricCard({ children }: { children: ReactNode }) {
   );
 }
 
-function PromoPlainStat({ label, value }: { label: string; value: string }) {
-  return (
-    <PromoMetricCard>
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
-      <p className="mt-1 text-sm font-medium tabular-nums">{value}</p>
-    </PromoMetricCard>
-  );
-}
-
 export function PromotionDetailSheet({
   promotion,
   branches,
@@ -177,13 +153,6 @@ export function PromotionDetailSheet({
     "Vehicle Classes"
   );
 
-  const description = display.description?.trim() || null;
-  const minFare = display.conditions.minimumSubtotal;
-  const perCustomer = display.conditions.perCustomerLimit;
-  const heroTitle = display.title.trim() || display.code.trim() || "Coupon";
-  const endsAt = display.conditions.endsAt;
-  const startsAt = display.conditions.startsAt;
-
   const tripTypeIds = display.conditions.tripTypes?.filter(Boolean) ?? [];
   const tripTypeSummary = formatScopeCount(
     tripTypeIds.length,
@@ -191,6 +160,11 @@ export function PromotionDetailSheet({
     "All trip types",
     "Trip Types"
   );
+
+  const description = display.description?.trim() || null;
+  const heroTitle = display.title.trim() || display.code.trim() || "Coupon";
+  const endsAt = display.conditions.endsAt;
+  const startsAt = display.conditions.startsAt;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -205,11 +179,11 @@ export function PromotionDetailSheet({
               <Ticket className="text-muted-foreground size-8" aria-hidden />
             </div>
             <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-              <div className="min-w-0 space-y-2">
+              <div className="min-w-0 space-y-1">
                 <p className="text-lg font-semibold">{heroTitle}</p>
-                <DetailSheetIconBadge icon={BadgePercent}>
-                  {formatDiscount(display)}
-                </DetailSheetIconBadge>
+                {description ? (
+                  <p className="text-muted-foreground text-sm">{description}</p>
+                ) : null}
               </div>
               <DetailSheetIconBadge icon={Power} className="shrink-0">
                 {display.isEnabled ? "Active" : "Inactive"}
@@ -222,13 +196,6 @@ export function PromotionDetailSheet({
             <SummaryField icon={Ticket} label="Trip Types" value={tripTypeSummary} />
             <SummaryField icon={Users} label="Vehicle Classes" value={classSummary} />
           </div>
-
-          {description ? (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Description</h4>
-              <p className="text-muted-foreground text-sm">{description}</p>
-            </div>
-          ) : null}
 
           <div className="space-y-4">
             <SectionHeading>Metrics</SectionHeading>
@@ -255,11 +222,6 @@ export function PromotionDetailSheet({
                   expiry={endsAt}
                 />
               </PromoMetricCard>
-              <PromoPlainStat
-                label="Minimum fare"
-                value={minFare == null ? "None" : String(minFare)}
-              />
-              <PromoPlainStat label="Per customer" value={formatUsageLimit(perCustomer)} />
             </div>
           </div>
         </div>
