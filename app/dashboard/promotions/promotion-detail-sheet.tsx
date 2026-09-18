@@ -179,33 +179,37 @@ export function PromotionDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Coupon details</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-6 px-4 pb-4">
-          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl">
-            <Image
-              src={DEFAULT_COUPON_BANNER}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 512px) 100vw, 512px"
-              priority
-            />
-            <div className="absolute end-3 top-3">
-              <DetailSheetIconBadge icon={Power}>
-                {display.isEnabled ? "Active" : "Inactive"}
-              </DetailSheetIconBadge>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-lg font-semibold">{heroTitle}</p>
-            <p className="text-2xl font-semibold tracking-tight tabular-nums">
+        <div className="relative aspect-[16/9] w-full overflow-hidden">
+          <Image
+            src={DEFAULT_COUPON_BANNER}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="(max-width: 512px) 100vw, 512px"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/55 via-black/20 to-transparent" />
+          <div className="absolute start-4 top-4 flex items-center gap-2">
+            <Ticket className="size-10 shrink-0 text-white/30" aria-hidden />
+            <p className="text-3xl font-semibold tracking-tight text-white tabular-nums drop-shadow-sm">
               {formatDiscountOffer(display)}
             </p>
+          </div>
+          <div className="absolute end-3 top-3">
+            <DetailSheetIconBadge icon={Power}>
+              {display.isEnabled ? "Active" : "Inactive"}
+            </DetailSheetIconBadge>
+          </div>
+        </div>
+
+        <div className="space-y-6 px-4 pt-6 pb-4">
+          <div className="space-y-2">
+            <p className="text-lg font-semibold">{heroTitle}</p>
             {description ? (
               <p className="text-muted-foreground text-sm">{description}</p>
             ) : null}
