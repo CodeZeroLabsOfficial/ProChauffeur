@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,6 +61,20 @@ function formatDiscount(promo: Promotion): string {
   return promo.value.toFixed(2);
 }
 
+function formatUsageLimit(max: number | null | undefined): string {
+  if (max == null) return "Unlimited";
+  return String(max);
+}
+
+function formatValidity(startsAt: Date | null | undefined, endsAt: Date | null | undefined): string {
+  if (!startsAt && !endsAt) return "Always";
+  if (startsAt && endsAt) {
+    return `${format(startsAt, "MMM d, yyyy")} � ${format(endsAt, "MMM d, yyyy")}`;
+  }
+  if (startsAt) return `From ${format(startsAt, "MMM d, yyyy")}`;
+  return `Until ${format(endsAt!, "MMM d, yyyy")}`;
+}
+
 function multiSelectFilter(
   row: { getValue: (id: string) => unknown },
   columnId: string,
@@ -105,7 +120,9 @@ export function PromotionsDataTable({
     () =>
       promotions.map((promo) => ({
         ...promo,
-        searchLabel: [promo.title, promo.code].filter(Boolean).join(" "),
+        searchLabel: [promo.title, promo.code, promo.description]
+          .filter(Boolean)
+          .join(" "),
         status: promo.isEnabled ? "active" : "inactive"
       })),
     [promotions]
@@ -137,19 +154,6 @@ export function PromotionsDataTable({
         enableHiding: false
       },
       {
-        id: "title",
-        accessorKey: "title",
-        header: "Title",
-        cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
-        filterFn: (row, _columnId, filterValue) => {
-          const q = String(filterValue ?? "")
-            .trim()
-            .toLowerCase();
-          if (!q) return true;
-          return row.original.searchLabel.toLowerCase().includes(q);
-        }
-      },
-      {
         id: "code",
         accessorKey: "code",
         header: "Code",
@@ -160,6 +164,29 @@ export function PromotionsDataTable({
         )
       },
       {
+        id: "title",
+        accessorKey: "title",
+        header: "Title",
+        cell: ({ row }) => {
+          const description = row.original.description?.trim();
+          return (
+            <div className="min-w-0">
+              <div className="font-medium">{row.original.title}</div>
+              {description ? (
+                <div className="text-muted-foreground truncate text-xs">{description}</div>
+              ) : null}
+            </div>
+          );
+        },
+        filterFn: (row, _columnId, filterValue) => {
+          const q = String(filterValue ?? "")
+            .trim()
+            .toLowerCase();
+          if (!q) return true;
+          return row.original.searchLabel.toLowerCase().includes(q);
+        }
+      },
+      {
         id: "discount",
         accessorFn: (row) => row.value,
         header: "Discount",
@@ -167,18 +194,27 @@ export function PromotionsDataTable({
         enableColumnFilter: false
       },
       {
-        id: "uses",
+        id: "usageLimit",
+        accessorFn: (row) => row.conditions.maxRedemptions ?? Number.POSITIVE_INFINITY,
+        header: "Usage Limit",
+        cell: ({ row }) => formatUsageLimit(row.original.conditions.maxRedemptions),
+        enableColumnFilter: false
+      },
+      {
+        id: "usedCount",
         accessorKey: "redemptionCount",
-        header: "Uses",
-        cell: ({ row }) => {
-          const max = row.original.conditions.maxRedemptions;
-          return (
-            <>
-              {row.original.redemptionCount}
-              {max != null ? ` / ${max}` : ""}
-            </>
-          );
-        },
+        header: "Used Count",
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.redemptionCount}</span>
+        ),
+        enableColumnFilter: false
+      },
+      {
+        id: "validity",
+        accessorFn: (row) => row.conditions.startsAt?.getTime() ?? 0,
+        header: "Validity",
+        cell: ({ row }) =>
+          formatValidity(row.original.conditions.startsAt, row.original.conditions.endsAt),
         enableColumnFilter: false
       },
       {

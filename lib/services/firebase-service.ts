@@ -797,6 +797,7 @@ export async function savePromotion(promo: Promotion): Promise<void> {
     stripUndefined({
       id: promo.id,
       title: promo.title.trim(),
+      description: promo.description?.trim() ? promo.description.trim() : null,
       code,
       isEnabled: promo.isEnabled,
       type: promo.type,

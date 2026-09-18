@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarIcon } from "@radix-ui/react-icons";
+import { UploadIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -23,11 +24,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   buildNewPromotion,
   normalizePromoCode,
@@ -59,6 +62,10 @@ type FieldErrors = {
 };
 
 const ALL_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
+
+function SectionHeading({ children }: { children: string }) {
+  return <h4 className="text-sm font-medium">{children}</h4>;
+}
 
 /** Empty/null means unrestricted in storage; for editing expand to every option. New promos stay empty. */
 function resolveConditionIds(
@@ -279,6 +286,7 @@ export function PromotionEditSheet({
     e.preventDefault();
     const title = draft.title.trim();
     const code = normalizePromoCode(draft.code);
+    const description = draft.description?.trim() || null;
     const discountValue = draft.type === "percent" ? percentPoints : fixedAmount;
     const branchIds = draft.conditions.branchIds?.filter(Boolean) ?? [];
     const tripTypes = draft.conditions.tripTypes?.filter(Boolean) ?? [];
@@ -310,6 +318,7 @@ export function PromotionEditSheet({
       await savePromotion({
         ...draft,
         title,
+        description,
         code,
         value,
         conditions: {
@@ -320,10 +329,10 @@ export function PromotionEditSheet({
         },
         updatedAt: new Date()
       });
-      toast.success(isNew ? "Promotion created." : "Promotion saved.");
+      toast.success(isNew ? "Coupon created." : "Coupon saved.");
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save promotion.");
+      toast.error(err instanceof Error ? err.message : "Could not save coupon.");
     } finally {
       setSaving(false);
     }
@@ -334,68 +343,106 @@ export function PromotionEditSheet({
     setSaving(true);
     try {
       await deletePromotion(promotion.id);
-      toast.success("Promotion deleted.");
+      toast.success("Coupon deleted.");
       onOpenChange(false);
     } catch {
-      toast.error("Could not delete promotion.");
+      toast.error("Could not delete coupon.");
     } finally {
       setSaving(false);
     }
   }
 
+  const editCodeLabel = draft.code.trim() || promotion?.code || "this coupon";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isNew ? "New promotion" : "Promotion details"}</SheetTitle>
+          <SheetTitle>{isNew ? "Add coupon" : "Edit coupon"}</SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new discount coupon."
+              : `Update the details of “${editCodeLabel}”.`}
+          </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
-          <div className="*:not-first:mt-2">
-            <Label htmlFor="promo-title">Title</Label>
-            <Input
-              id="promo-title"
-              value={draft.title}
-              onChange={(e) => {
-                setDraft((c) => ({ ...c, title: e.target.value }));
-                clearFieldError("title");
-              }}
-              placeholder="First booking 25% off"
-              aria-invalid={fieldErrors.title || undefined}
-              className="peer"
-            />
-            {fieldErrors.title ? (
-              <p
-                aria-live="polite"
-                className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                role="alert">
-                Title is required
-              </p>
-            ) : null}
+          <SectionHeading>Coupon Details</SectionHeading>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="*:not-first:mt-2">
+              <Label htmlFor="promo-code">Coupon Code</Label>
+              <Input
+                id="promo-code"
+                value={draft.code}
+                onChange={(e) => {
+                  setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }));
+                  clearFieldError("code");
+                }}
+                placeholder="WELCOME25"
+                className="peer font-mono uppercase"
+                aria-invalid={fieldErrors.code || undefined}
+              />
+              {fieldErrors.code ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Code is required
+                </p>
+              ) : null}
+            </div>
+            <div className="*:not-first:mt-2">
+              <Label htmlFor="promo-title">Title</Label>
+              <Input
+                id="promo-title"
+                value={draft.title}
+                onChange={(e) => {
+                  setDraft((c) => ({ ...c, title: e.target.value }));
+                  clearFieldError("title");
+                }}
+                placeholder="First booking 25% off"
+                aria-invalid={fieldErrors.title || undefined}
+                className="peer"
+              />
+              {fieldErrors.title ? (
+                <p
+                  aria-live="polite"
+                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                  role="alert">
+                  Title is required
+                </p>
+              ) : null}
+            </div>
           </div>
 
           <div className="*:not-first:mt-2">
-            <Label htmlFor="promo-code">Code</Label>
-            <Input
-              id="promo-code"
-              value={draft.code}
-              onChange={(e) => {
-                setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }));
-                clearFieldError("code");
-              }}
-              placeholder="WELCOME25"
-              className="peer font-mono uppercase"
-              aria-invalid={fieldErrors.code || undefined}
+            <Label htmlFor="promo-description">Description</Label>
+            <Textarea
+              id="promo-description"
+              value={draft.description ?? ""}
+              onChange={(e) => setDraft((c) => ({ ...c, description: e.target.value }))}
+              placeholder="Seasonal discount for returning guests."
+              rows={3}
             />
-            {fieldErrors.code ? (
-              <p
-                aria-live="polite"
-                className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                role="alert">
-                Code is required
-              </p>
-            ) : null}
+            <p className="text-muted-foreground text-xs">Optional — shown to admins only.</p>
           </div>
+
+          <div className="space-y-2">
+            <Label>Banner Image</Label>
+            <div
+              className="border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center"
+              aria-hidden>
+              <UploadIcon className="size-5 opacity-70" />
+              <span className="text-sm">Click or drag to upload</span>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Used for the iPhone app. Falls back to a stock photo when left empty.
+            </p>
+          </div>
+
+          <Separator />
+          <SectionHeading>Discount</SectionHeading>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -420,7 +467,7 @@ export function PromotionEditSheet({
               {draft.type === "percent" ? (
                 <NumberStepper
                   id="promo-value"
-                  label="Percent"
+                  label="Discount value"
                   value={percentPoints}
                   onChange={(value) => {
                     setPercentPoints(value);
@@ -432,7 +479,7 @@ export function PromotionEditSheet({
               ) : (
                 <NumberStepper
                   id="promo-value"
-                  label={currency ? `Amount (${currency})` : "Amount"}
+                  label={currency ? `Discount value (${currency})` : "Discount value"}
                   value={fixedAmount}
                   onChange={(value) => {
                     setFixedAmount(value);
@@ -455,7 +502,7 @@ export function PromotionEditSheet({
           </div>
 
           <Separator />
-          <p className="text-sm font-medium">Conditions</p>
+          <SectionHeading>Applies to</SectionHeading>
 
           <div className="*:not-first:mt-2">
             <Label>Locations</Label>
@@ -479,20 +526,6 @@ export function PromotionEditSheet({
                 Locations are required
               </p>
             ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <DatePickerField
-              label="Starts"
-              value={draft.conditions.startsAt}
-              onChange={(date) => patchConditions({ startsAt: date })}
-            />
-            <DatePickerField
-              label="Ends"
-              value={draft.conditions.endsAt}
-              onChange={(date) => patchConditions({ endsAt: date })}
-              endOfDaySelect
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -544,6 +577,23 @@ export function PromotionEditSheet({
             </div>
           </div>
 
+          <Separator />
+          <SectionHeading>Validity</SectionHeading>
+
+          <div className="grid grid-cols-2 gap-3">
+            <DatePickerField
+              label="Valid from"
+              value={draft.conditions.startsAt}
+              onChange={(date) => patchConditions({ startsAt: date })}
+            />
+            <DatePickerField
+              label="Valid to"
+              value={draft.conditions.endsAt}
+              onChange={(date) => patchConditions({ endsAt: date })}
+              endOfDaySelect
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <NumberStepper
               id="promo-max"
@@ -554,18 +604,6 @@ export function PromotionEditSheet({
               max={LIMIT_STEPPER_MAX}
               formatValue={formatLimitStepper}
             />
-            <NumberStepper
-              id="promo-per-customer"
-              label="Per customer"
-              value={limitStepperValue(draft.conditions.perCustomerLimit)}
-              onChange={(value) => patchConditions({ perCustomerLimit: limitFromStepper(value) })}
-              min={0}
-              max={LIMIT_STEPPER_MAX}
-              formatValue={formatLimitStepper}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <NumberStepper
               id="promo-min-fare"
               label="Minimum fare"
@@ -578,11 +616,26 @@ export function PromotionEditSheet({
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+          <div className="grid grid-cols-2 gap-3">
+            <NumberStepper
+              id="promo-per-customer"
+              label="Per customer"
+              value={limitStepperValue(draft.conditions.perCustomerLimit)}
+              onChange={(value) => patchConditions({ perCustomerLimit: limitFromStepper(value) })}
+              min={0}
+              max={LIMIT_STEPPER_MAX}
+              formatValue={formatLimitStepper}
+            />
+          </div>
+
+          <Separator />
+          <SectionHeading>Status</SectionHeading>
+
+          <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <Label htmlFor="promo-active">Active</Label>
               <p className="text-muted-foreground text-xs">
-                Inactive promos cannot be applied to bookings.
+                Inactive coupons cannot be applied to bookings.
               </p>
             </div>
             <Switch
@@ -604,11 +657,24 @@ export function PromotionEditSheet({
                 Delete
               </Button>
             ) : (
-              <span />
+              <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
             )}
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Create promotion" : "Save"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isNew ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+              ) : null}
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : isNew ? "Create coupon" : "Save"}
+              </Button>
+            </div>
           </SheetFooter>
         </form>
       </SheetContent>

@@ -708,6 +708,7 @@ export function mapPromotion(id: string, d: DocumentData): Promotion {
   return {
     id,
     title: typeof d.title === "string" ? d.title : "",
+    description: typeof d.description === "string" ? d.description : null,
     code: typeof d.code === "string" ? d.code : "",
     isEnabled: d.isEnabled !== false,
     type: d.type === "fixed" ? "fixed" : "percent",

@@ -25,6 +25,8 @@ export interface PromotionConditions {
 export interface Promotion {
   id: string;
   title: string;
+  /** Optional admin-only notes. */
+  description?: string | null;
   /** Unique normalized code customers enter. */
   code: string;
   isEnabled: boolean;
@@ -59,6 +61,7 @@ export function buildNewPromotion(): Promotion {
   return {
     id: crypto.randomUUID(),
     title: "",
+    description: null,
     code: "",
     isEnabled: true,
     type: "percent",

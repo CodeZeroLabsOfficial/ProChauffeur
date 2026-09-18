@@ -46,7 +46,7 @@ export default function PromotionsPage() {
         title="Promotions"
         actions={
           <Button onClick={() => setCreateOpen(true)}>
-            <PlusCircledIcon /> Add promotion
+            <PlusCircledIcon /> Add coupon
           </Button>
         }
       />
