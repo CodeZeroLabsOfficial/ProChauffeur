@@ -134,13 +134,11 @@ function PromoPlainStat({ label, value }: { label: string; value: string }) {
 function OfferItem({
   icon: Icon,
   title,
-  description,
-  value
+  description
 }: {
   icon: typeof BadgePercent;
   title: string;
   description?: string;
-  value?: string;
 }) {
   return (
     <Item size="sm">
@@ -151,11 +149,6 @@ function OfferItem({
         <ItemTitle>{title}</ItemTitle>
         {description ? <ItemDescription>{description}</ItemDescription> : null}
       </ItemContent>
-      {value ? (
-        <ItemContent className="flex-none text-right">
-          <ItemTitle className="tabular-nums">{value}</ItemTitle>
-        </ItemContent>
-      ) : null}
     </Item>
   );
 }
@@ -200,7 +193,6 @@ export function PromotionDetailSheet({
   const heroTitle = display.title.trim() || display.code || "Coupon";
   const endsAt = display.conditions.endsAt;
   const startsAt = display.conditions.startsAt;
-  const discountType = display.type === "percent" ? "Percent" : "Fixed amount";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -210,24 +202,28 @@ export function PromotionDetailSheet({
         </SheetHeader>
 
         <div className="space-y-6 px-4 pb-4">
-          <div className="space-y-2">
-            <p className="text-lg font-semibold">{heroTitle}</p>
-            {description ? (
-              <p className="text-muted-foreground text-sm">{description}</p>
-            ) : null}
-            <DetailSheetIconBadge icon={Power}>
-              {display.isEnabled ? "Active" : "Inactive"}
-            </DetailSheetIconBadge>
+          <div className="inline-flex items-start gap-4">
+            <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
+              <Ticket className="text-muted-foreground size-8" aria-hidden />
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold">{heroTitle}</p>
+              {description ? (
+                <p className="text-muted-foreground text-sm">{description}</p>
+              ) : null}
+              <DetailSheetIconBadge icon={Power}>
+                {display.isEnabled ? "Active" : "Inactive"}
+              </DetailSheetIconBadge>
+            </div>
           </div>
 
           <div className="space-y-4">
             <SectionHeading>Offer</SectionHeading>
-            <ItemGroup className="gap-1">
+            <ItemGroup className="grid gap-1 sm:grid-cols-2">
               <OfferItem
                 icon={BadgePercent}
                 title="Discount"
-                description={discountType}
-                value={formatDiscount(display)}
+                description={formatDiscount(display)}
               />
               <OfferItem icon={MapPin} title="Locations" description={locationNames} />
               <OfferItem
