@@ -22,6 +22,7 @@ import {
   createTrip,
   fetchCorporateAccount,
   fetchPromotionByCode,
+  listenPromotions,
   updateTrip
 } from "@/lib/services/firebase-service";
 import {
@@ -42,6 +43,7 @@ import {
   type TripCapacity,
   type TripCustomer,
   type TripJourney,
+  type Promotion,
   type TripType,
   type User,
   BOOKING_TRIP_MODES,
@@ -70,6 +72,13 @@ import { NumberStepper } from "@/components/number-stepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -80,6 +89,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Sheet,
   SheetClose,
@@ -300,7 +310,6 @@ function resetFormFields(setters: {
   setAppliedPromo: (promo: QuotePromoApplication | null) => void;
   setPromoCodeInput: (code: string) => void;
   setPromoError: (error: string | null) => void;
-  setPromoExpanded: (expanded: boolean) => void;
   setCorporateAccount: (account: CorporateAccount | null) => void;
   setCorporateSettlement: (value: CorporateAllowedPayment | null) => void;
 }) {
@@ -322,9 +331,15 @@ function resetFormFields(setters: {
   setters.setAppliedPromo(null);
   setters.setPromoCodeInput("");
   setters.setPromoError(null);
-  setters.setPromoExpanded(false);
   setters.setCorporateAccount(null);
   setters.setCorporateSettlement(null);
+}
+
+function formatPromoDiscountLabel(promo: Promotion, currency?: string | null): string {
+  if (promo.type === "percent") {
+    return `${Math.round(promo.value * 100)}% OFF`;
+  }
+  return `${formatCurrency(promo.value, currency ?? undefined)} OFF`;
 }
 
 export function NewBookingSheet({
@@ -375,8 +390,9 @@ export function NewBookingSheet({
   const [appliedPromo, setAppliedPromo] = useState<QuotePromoApplication | null>(null);
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [promoError, setPromoError] = useState<string | null>(null);
-  const [promoExpanded, setPromoExpanded] = useState(false);
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [couponsOpen, setCouponsOpen] = useState(false);
+  const [availablePromotions, setAvailablePromotions] = useState<Promotion[]>([]);
   const lastQuoteRef = useRef<
     | { fingerprint: string; quote: QuoteResult }
     | { fingerprint: string; outbound: QuoteResult; returnLeg: QuoteResult }
@@ -532,13 +548,13 @@ export function NewBookingSheet({
     if (appliedPromo) clearPromo();
   }, [billToCorporate]);
 
-  async function applyPromoCode() {
+  async function applyPromoCode(codeOverride?: string) {
     if (!loyaltyPromosEnabled) return;
     if (applyCorporateRates) {
       setPromoError("Promos are not available when corporate rates apply.");
       return;
     }
-    const code = promoCodeInput.trim();
+    const code = (codeOverride ?? promoCodeInput).trim();
     if (!code) {
       setPromoError("Enter a promo code.");
       return;
@@ -609,6 +625,7 @@ export function NewBookingSheet({
       }
       setAppliedPromo(resolved.promo);
       setPromoCodeInput(resolved.promo.code);
+      setCouponsOpen(false);
       toast.success(`Promo ${resolved.promo.code} applied.`);
     } catch (err) {
       setPromoError(err instanceof Error ? err.message : "Could not apply promo.");
@@ -628,6 +645,7 @@ export function NewBookingSheet({
     if (!open) {
       wasOpenRef.current = false;
       lastQuoteRef.current = null;
+      setCouponsOpen(false);
       resetFormFields({
         setFieldErrors,
         setCustomer,
@@ -647,12 +665,21 @@ export function NewBookingSheet({
         setAppliedPromo,
         setPromoCodeInput,
         setPromoError,
-        setPromoExpanded,
         setCorporateAccount,
         setCorporateSettlement
       });
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !loyaltyPromosEnabled) {
+      setAvailablePromotions([]);
+      return;
+    }
+    return listenPromotions((rows) => {
+      setAvailablePromotions(rows.filter((promo) => promo.isEnabled));
+    });
+  }, [open, loyaltyPromosEnabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -715,7 +742,6 @@ export function NewBookingSheet({
       const existingCode = trip.quote.promoCode?.trim() ?? "";
       if (existingCode) {
         setPromoCodeInput(existingCode);
-        setPromoExpanded(true);
         void fetchPromotionByCode(existingCode).then((promo) => {
           if (!promo) {
             setAppliedPromo(null);
@@ -732,7 +758,6 @@ export function NewBookingSheet({
       } else {
         setAppliedPromo(null);
         setPromoCodeInput("");
-        setPromoExpanded(false);
       }
       return;
     }
@@ -757,7 +782,6 @@ export function NewBookingSheet({
         setAppliedPromo,
         setPromoCodeInput,
         setPromoError,
-        setPromoExpanded,
         setCorporateAccount,
         setCorporateSettlement
       });
@@ -1283,61 +1307,42 @@ export function NewBookingSheet({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
             {!isEdit ? (
               <div className="space-y-2">
-                <Label htmlFor="bookingMode">Trip type</Label>
-                <Select
+                <Label>Trip type</Label>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
                   value={bookingMode}
                   onValueChange={(value) => {
+                    if (!BOOKING_TRIP_MODES.includes(value as BookingTripMode)) return;
                     setBookingMode(value as BookingTripMode);
                     setFieldErrors((prev) => ({
                       ...prev,
                       scheduledReturnAt: false
                     }));
                   }}
-                  disabled={saving}>
-                  <SelectTrigger id="bookingMode">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BOOKING_TRIP_MODES.map((mode) => (
-                      <SelectItem key={mode} value={mode}>
-                        {bookingTripModeTitle[mode]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  disabled={saving}
+                  className="w-full">
+                  {BOOKING_TRIP_MODES.map((mode) => (
+                    <ToggleGroupItem key={mode} value={mode} className="flex-1 px-2 text-xs sm:text-sm">
+                      {bookingTripModeTitle[mode]}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="customer">Customer</Label>
-                <CustomerAutocomplete
-                  id="customer"
-                  value={customer}
-                  onChange={(value) => {
-                    setCustomer(value);
-                    clearFieldError("customer");
-                  }}
-                  placeholder="Search customers…"
-                  invalid={fieldErrors.customer}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="scheduledPickupAt">
-                  {bookingMode === "round_trip" && !isEdit ? "Outbound pickup time" : "Pickup time"}
-                </Label>
-                <DateTimePicker
-                  id="scheduledPickupAt"
-                  value={scheduledPickupAt}
-                  onChange={(value) => {
-                    setScheduledPickupAt(value);
-                    clearFieldError("scheduledPickupAt");
-                  }}
-                  placeholder="Pick pickup time"
-                  disabled={saving}
-                  invalid={fieldErrors.scheduledPickupAt}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer</Label>
+              <CustomerAutocomplete
+                id="customer"
+                value={customer}
+                onChange={(value) => {
+                  setCustomer(value);
+                  clearFieldError("customer");
+                }}
+                placeholder="Search customers…"
+                invalid={fieldErrors.customer}
+              />
             </div>
 
             {activeCorporateAccount && !isEdit ? (
@@ -1384,22 +1389,44 @@ export function NewBookingSheet({
               </div>
             ) : null}
 
-            {!isEdit && bookingMode === "round_trip" ? (
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-3",
+                !isEdit && bookingMode === "round_trip" && "sm:grid-cols-2"
+              )}>
               <div className="space-y-2">
-                <Label htmlFor="scheduledReturnAt">Return pickup time</Label>
+                <Label htmlFor="scheduledPickupAt">
+                  {bookingMode === "round_trip" && !isEdit ? "Outbound pickup time" : "Pickup time"}
+                </Label>
                 <DateTimePicker
-                  id="scheduledReturnAt"
-                  value={scheduledReturnAt}
+                  id="scheduledPickupAt"
+                  value={scheduledPickupAt}
                   onChange={(value) => {
-                    setScheduledReturnAt(value);
-                    clearFieldError("scheduledReturnAt");
+                    setScheduledPickupAt(value);
+                    clearFieldError("scheduledPickupAt");
                   }}
-                  placeholder="Pick return pickup time"
+                  placeholder="Pick pickup time"
                   disabled={saving}
-                  invalid={fieldErrors.scheduledReturnAt}
+                  invalid={fieldErrors.scheduledPickupAt}
                 />
               </div>
-            ) : null}
+              {!isEdit && bookingMode === "round_trip" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledReturnAt">Return pickup time</Label>
+                  <DateTimePicker
+                    id="scheduledReturnAt"
+                    value={scheduledReturnAt}
+                    onChange={(value) => {
+                      setScheduledReturnAt(value);
+                      clearFieldError("scheduledReturnAt");
+                    }}
+                    placeholder="Pick return pickup time"
+                    disabled={saving}
+                    invalid={fieldErrors.scheduledReturnAt}
+                  />
+                </div>
+              ) : null}
+            </div>
 
             {!isEdit && bookingMode === "hourly" ? (
               <NumberStepper
@@ -1493,9 +1520,50 @@ export function NewBookingSheet({
               </div>
             </div>
 
+            <div className="grid grid-cols-3 gap-3">
+              <NumberStepper
+                id="bookingPassengerCount"
+                label="Passengers"
+                value={passengerCount}
+                onChange={setPassengerCount}
+                min={1}
+                max={20}
+                disabled={saving}
+              />
+              <NumberStepper
+                id="bookingSmallLuggageCount"
+                label="Small luggage"
+                value={smallLuggageCount}
+                onChange={setSmallLuggageCount}
+                min={0}
+                max={20}
+                disabled={saving}
+              />
+              <NumberStepper
+                id="bookingLargeLuggageCount"
+                label="Large luggage"
+                value={largeLuggageCount}
+                onChange={setLargeLuggageCount}
+                min={0}
+                max={20}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+
             {loyaltyPromosEnabled && !applyCorporateRates ? (
               <div className="space-y-2">
-                <Label>Promo code</Label>
+                <Label htmlFor="bookingPromoCode">Coupon code</Label>
                 {appliedPromo ? (
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="font-mono">
@@ -1514,7 +1582,7 @@ export function NewBookingSheet({
                       Remove
                     </Button>
                   </div>
-                ) : promoExpanded ? (
+                ) : (
                   <div className="flex gap-2">
                     <Input
                       id="bookingPromoCode"
@@ -1535,60 +1603,18 @@ export function NewBookingSheet({
                       {applyingPromo ? "…" : "Apply"}
                     </Button>
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto px-0"
-                    disabled={saving}
-                    onClick={() => setPromoExpanded(true)}>
-                    Add promo code
-                  </Button>
                 )}
                 {promoError ? <p className="text-destructive text-sm">{promoError}</p> : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saving || applyingPromo}
+                  onClick={() => setCouponsOpen(true)}>
+                  Coupons
+                </Button>
               </div>
             ) : null}
-
-            <div className="grid grid-cols-3 gap-3">
-              <NumberStepper
-                id="bookingPassengerCount"
-                label="Passengers"
-                value={passengerCount}
-                onChange={setPassengerCount}
-                min={1}
-                max={20}
-                disabled={saving}
-              />
-              <NumberStepper
-                id="bookingSmallLuggageCount"
-                label="Small"
-                value={smallLuggageCount}
-                onChange={setSmallLuggageCount}
-                min={0}
-                max={20}
-                disabled={saving}
-              />
-              <NumberStepper
-                id="bookingLargeLuggageCount"
-                label="Large"
-                value={largeLuggageCount}
-                onChange={setLargeLuggageCount}
-                min={0}
-                max={20}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="shrink-0 space-y-3 border-t px-4 pt-4 pb-4">
@@ -1624,6 +1650,54 @@ export function NewBookingSheet({
           </div>
         </form>
       </SheetContent>
+
+      <Dialog open={couponsOpen} onOpenChange={setCouponsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Available Coupons</DialogTitle>
+            <DialogDescription>
+              Pick a coupon to apply its discount to this booking
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+            {availablePromotions.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No coupons available.</p>
+            ) : (
+              availablePromotions.map((promo) => (
+                <div
+                  key={promo.id}
+                  className="border-border flex items-center gap-3 rounded-lg border border-dashed p-3">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="text-primary flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold tracking-wide uppercase">
+                      <span className="font-mono">{promo.code}</span>
+                      <span>{formatPromoDiscountLabel(promo, currency)}</span>
+                    </div>
+                    <p className="truncate text-sm font-medium">{promo.title}</p>
+                    {promo.description?.trim() ? (
+                      <p className="text-muted-foreground line-clamp-2 text-xs">
+                        {promo.description.trim()}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={saving || applyingPromo}
+                    onClick={() => {
+                      setPromoCodeInput(promo.code);
+                      setPromoError(null);
+                      void applyPromoCode(promo.code);
+                    }}>
+                    Apply
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
