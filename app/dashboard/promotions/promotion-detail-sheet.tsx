@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { BadgePercent, MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
@@ -9,18 +10,10 @@ import { SectionHeading } from "@/components/detail-sheet-fields";
 import { Card, CardContent } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle
-} from "@/components/ui/item";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { formatDate } from "@/lib/format";
-import { tripTypeTitle, type Branch, type Promotion, type TripType } from "@/lib/models";
+import { TRIP_TYPES, type Branch, type Promotion } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 const usageChartConfig = {
@@ -39,10 +32,31 @@ function formatUsageLimit(max: number | null | undefined): string {
   return String(max);
 }
 
-function formatTripTypes(tripTypes: TripType[] | null | undefined): string {
-  const ids = tripTypes?.filter(Boolean) ?? [];
-  if (ids.length === 0) return "All trip types";
-  return ids.map((id) => tripTypeTitle[id] ?? id).join(", ");
+function formatScopeCount(selected: number, total: number, allLabel: string, noun: string): string {
+  if (selected === 0 || (total > 0 && selected >= total)) {
+    return allLabel;
+  }
+  return `${selected}/${total} ${noun}`;
+}
+
+function SummaryField({
+  icon: Icon,
+  label,
+  value
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <h4 className="flex items-center gap-1.5 text-sm font-medium">
+        <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+        {label}
+      </h4>
+      <p className="text-muted-foreground text-sm tabular-nums">{value}</p>
+    </div>
+  );
 }
 
 function PromoUsageStat({
@@ -131,28 +145,6 @@ function PromoPlainStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function OfferItem({
-  icon: Icon,
-  title,
-  description
-}: {
-  icon: typeof BadgePercent;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <Item size="sm">
-      <ItemMedia variant="icon">
-        <Icon />
-      </ItemMedia>
-      <ItemContent>
-        <ItemTitle>{title}</ItemTitle>
-        {description ? <ItemDescription>{description}</ItemDescription> : null}
-      </ItemContent>
-    </Item>
-  );
-}
-
 export function PromotionDetailSheet({
   promotion,
   branches,
@@ -170,29 +162,35 @@ export function PromotionDetailSheet({
   if (!display) return null;
 
   const branchIds = display.conditions.branchIds?.filter(Boolean) ?? [];
-  const locationNames =
-    branchIds.length === 0
-      ? "All Locations"
-      : branchIds
-          .map((id) => branches.find((branch) => branch.id === id)?.name ?? id)
-          .join(", ");
+  const locationSummary = formatScopeCount(
+    branchIds.length,
+    branches.length,
+    "All Locations",
+    "Locations"
+  );
 
   const classIds = display.conditions.vehicleClassIds?.filter(Boolean) ?? [];
-  const classNames =
-    classIds.length === 0
-      ? "All vehicle classes"
-      : classIds
-          .map(
-            (id) => vehicleClasses.find((vehicleClass) => vehicleClass.id === id)?.displayName ?? id
-          )
-          .join(", ");
+  const classSummary = formatScopeCount(
+    classIds.length,
+    vehicleClasses.length,
+    "All vehicle classes",
+    "Vehicle Classes"
+  );
 
   const description = display.description?.trim() || null;
   const minFare = display.conditions.minimumSubtotal;
   const perCustomer = display.conditions.perCustomerLimit;
-  const heroTitle = display.title.trim() || display.code || "Coupon";
+  const heroTitle = display.title.trim() || display.code.trim() || "Coupon";
   const endsAt = display.conditions.endsAt;
   const startsAt = display.conditions.startsAt;
+
+  const tripTypeIds = display.conditions.tripTypes?.filter(Boolean) ?? [];
+  const tripTypeSummary = formatScopeCount(
+    tripTypeIds.length,
+    TRIP_TYPES.length,
+    "All trip types",
+    "Trip Types"
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -202,38 +200,35 @@ export function PromotionDetailSheet({
         </SheetHeader>
 
         <div className="space-y-6 px-4 pb-4">
-          <div className="inline-flex items-start gap-4">
+          <div className="flex items-start gap-4">
             <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
               <Ticket className="text-muted-foreground size-8" aria-hidden />
             </div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold">{heroTitle}</p>
-              {description ? (
-                <p className="text-muted-foreground text-sm">{description}</p>
-              ) : null}
-              <DetailSheetIconBadge icon={Power}>
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+              <div className="min-w-0 space-y-2">
+                <p className="text-lg font-semibold">{heroTitle}</p>
+                <DetailSheetIconBadge icon={BadgePercent}>
+                  {formatDiscount(display)}
+                </DetailSheetIconBadge>
+              </div>
+              <DetailSheetIconBadge icon={Power} className="shrink-0">
                 {display.isEnabled ? "Active" : "Inactive"}
               </DetailSheetIconBadge>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <SectionHeading>Offer</SectionHeading>
-            <ItemGroup className="grid gap-1 sm:grid-cols-2">
-              <OfferItem
-                icon={BadgePercent}
-                title="Discount"
-                description={formatDiscount(display)}
-              />
-              <OfferItem icon={MapPin} title="Locations" description={locationNames} />
-              <OfferItem
-                icon={Ticket}
-                title="Trip types"
-                description={formatTripTypes(display.conditions.tripTypes)}
-              />
-              <OfferItem icon={Users} title="Vehicle classes" description={classNames} />
-            </ItemGroup>
+          <div className="grid grid-cols-3 gap-4">
+            <SummaryField icon={MapPin} label="Locations" value={locationSummary} />
+            <SummaryField icon={Ticket} label="Trip Types" value={tripTypeSummary} />
+            <SummaryField icon={Users} label="Vehicle Classes" value={classSummary} />
           </div>
+
+          {description ? (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Description</h4>
+              <p className="text-muted-foreground text-sm">{description}</p>
+            </div>
+          ) : null}
 
           <div className="space-y-4">
             <SectionHeading>Metrics</SectionHeading>
