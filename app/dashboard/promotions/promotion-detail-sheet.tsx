@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
-import { MapPin, Power, Ticket, Users } from "lucide-react";
+import { Calendar, MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { ComplianceStat } from "@/components/compliance";
@@ -16,9 +17,19 @@ import { formatDate } from "@/lib/format";
 import { TRIP_TYPES, type Branch, type Promotion } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
+const DEFAULT_COUPON_BANNER = "/images/promotions/coupon-default-banner.png";
+
 const usageChartConfig = {
   used: { label: "Used" }
 } satisfies ChartConfig;
+
+function formatDiscountOffer(promo: Promotion): string {
+  if (promo.type === "percent") {
+    const pct = Math.round(promo.value * 10000) / 100;
+    return `${pct}% OFF`;
+  }
+  return `${promo.value.toFixed(2)} OFF`;
+}
 
 function formatScopeCount(selected: number, total: number, allLabel: string, noun: string): string {
   if (selected === 0 || (total > 0 && selected >= total)) {
@@ -174,21 +185,36 @@ export function PromotionDetailSheet({
         </SheetHeader>
 
         <div className="space-y-6 px-4 pb-4">
-          <div className="flex items-start gap-4">
-            <div className="border-background bg-muted relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 shadow-xs shadow-black/10">
-              <Ticket className="text-muted-foreground size-8" aria-hidden />
-            </div>
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1">
-                <p className="text-lg font-semibold">{heroTitle}</p>
-                {description ? (
-                  <p className="text-muted-foreground text-sm">{description}</p>
-                ) : null}
-              </div>
-              <DetailSheetIconBadge icon={Power} className="shrink-0">
+          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl">
+            <Image
+              src={DEFAULT_COUPON_BANNER}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 512px) 100vw, 512px"
+              priority
+            />
+            <div className="absolute end-3 top-3">
+              <DetailSheetIconBadge icon={Power}>
                 {display.isEnabled ? "Active" : "Inactive"}
               </DetailSheetIconBadge>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-lg font-semibold">{heroTitle}</p>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums">
+              {formatDiscountOffer(display)}
+            </p>
+            {description ? (
+              <p className="text-muted-foreground text-sm">{description}</p>
+            ) : null}
+            {endsAt ? (
+              <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                <Calendar className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                Valid till {formatDate(endsAt)}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
