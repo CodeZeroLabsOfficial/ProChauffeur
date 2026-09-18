@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -82,7 +83,7 @@ export function DriverAccreditationEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>
             {complianceSheetTitle(isNew, {
@@ -90,71 +91,80 @@ export function DriverAccreditationEditSheet({
               edit: "Edit operator accreditation"
             })}
           </SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new operator accreditation."
+              : `Update the accreditation for “${user.profile.displayName?.trim() || user.email || "this driver"}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
-          <div className="space-y-2">
-            <Label htmlFor="accreditation-number">Accreditation no.</Label>
-            <Input
-              id="accreditation-number"
-              name="operatorAccreditationNumber"
-              defaultValue={profile.operatorAccreditation?.number ?? ""}
-            />
-          </div>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={user.id}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+            <div className="space-y-2">
+              <Label htmlFor="accreditation-number">Accreditation no.</Label>
+              <Input
+                id="accreditation-number"
+                name="operatorAccreditationNumber"
+                defaultValue={profile.operatorAccreditation?.number ?? ""}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="accreditation-authority">Issuing authority</Label>
-            <Input
-              id="accreditation-authority"
-              name="operatorAccreditationIssuingAuthority"
-              defaultValue={profile.operatorAccreditation?.issuingAuthority ?? ""}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="accreditation-authority">Issuing authority</Label>
+              <Input
+                id="accreditation-authority"
+                name="operatorAccreditationIssuingAuthority"
+                defaultValue={profile.operatorAccreditation?.issuingAuthority ?? ""}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Expiry</Label>
-            <Popover modal>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
+            <div className="space-y-2">
+              <Label>Expiry</Label>
+              <Popover modal>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !accreditationExpiry && "text-muted-foreground"
+                    )}>
+                    {accreditationExpiry ? (
+                      format(accreditationExpiry, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
                   className={cn(
-                    "w-full pl-3 text-left font-normal",
-                    !accreditationExpiry && "text-muted-foreground"
-                  )}>
-                  {accreditationExpiry ? (
-                    format(accreditationExpiry, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
+                    "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
+                    nested && "z-[110]"
                   )}
-                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className={cn(
-                  "z-[100] max-h-[--radix-popover-content-available-height] w-[--radix-popover-trigger-width] p-0",
-                  nested && "z-[110]"
-                )}
-                align="start">
-                <Calendar
-                  mode="single"
-                  captionLayout="dropdown"
-                  fromYear={new Date().getFullYear() - 10}
-                  toYear={new Date().getFullYear() + 20}
-                  selected={accreditationExpiry}
-                  onSelect={setAccreditationExpiry}
-                  defaultMonth={accreditationExpiry}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                  align="start">
+                  <Calendar
+                    mode="single"
+                    captionLayout="dropdown"
+                    fromYear={new Date().getFullYear() - 10}
+                    toYear={new Date().getFullYear() + 20}
+                    selected={accreditationExpiry}
+                    onSelect={setAccreditationExpiry}
+                    defaultMonth={accreditationExpiry}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

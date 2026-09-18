@@ -101,7 +101,7 @@ function DriverOverviewFields({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <SectionHeading>Contact Details</SectionHeading>
+        <SectionHeading>Contact details</SectionHeading>
         <dl className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <DetailLabel icon={UserIcon}>Name</DetailLabel>

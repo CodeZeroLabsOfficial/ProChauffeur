@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type FieldErrors = Partial<
   Record<
@@ -169,16 +169,22 @@ export function VehicleInsuranceEditSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{isNew ? "Add insurance policy" : "Edit insurance policy"}</SheetTitle>
+            <SheetDescription>
+              {isNew
+                ? "Create a new insurance policy."
+                : `Update the details of “${policy?.policyReferenceNumber?.trim() || policy?.insurerName?.trim() || "this policy"}”.`}
+            </SheetDescription>
           </SheetHeader>
           <form
             onSubmit={onSubmit}
             noValidate
-            className="flex flex-1 flex-col space-y-4 px-4"
+            className="flex min-h-0 flex-1 flex-col"
             key={policy?.id ?? "new"}>
-            <div className="*:not-first:mt-2">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+            <div className="space-y-2">
               <Label>Cover type</Label>
               <Select
                 value={coverType || undefined}
@@ -209,7 +215,7 @@ export function VehicleInsuranceEditSheet({
               ) : null}
             </div>
 
-            <div className="*:not-first:mt-2">
+            <div className="space-y-2">
               <Label htmlFor="insurerName">Insurer</Label>
               <Input
                 id="insurerName"
@@ -230,7 +236,7 @@ export function VehicleInsuranceEditSheet({
               ) : null}
             </div>
 
-            <div className="*:not-first:mt-2">
+            <div className="space-y-2">
               <Label htmlFor="policyReferenceNumber">Policy reference</Label>
               <Input
                 id="policyReferenceNumber"
@@ -283,24 +289,27 @@ export function VehicleInsuranceEditSheet({
                 error={fieldErrors.policyExpiry ? "Policy expiry is required" : undefined}
               />
             </div>
+            </div>
 
-            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-              {!isNew ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={saving || deleting}
-                  onClick={() => setConfirmDeleteOpen(true)}>
-                  Delete
+            <div className="shrink-0 border-t px-4 pt-4 pb-4">
+              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+                {!isNew ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={saving || deleting}
+                    onClick={() => setConfirmDeleteOpen(true)}>
+                    Delete
+                  </Button>
+                ) : (
+                  <span />
+                )}
+                <Button type="submit" disabled={saving || deleting}>
+                  {saving ? "Saving…" : isNew ? "Add policy" : "Save"}
                 </Button>
-              ) : (
-                <span />
-              )}
-              <Button type="submit" disabled={saving || deleting}>
-                {saving ? "Saving…" : isNew ? "Add policy" : "Save"}
-              </Button>
-            </SheetFooter>
+              </SheetFooter>
+            </div>
           </form>
         </SheetContent>
       </Sheet>

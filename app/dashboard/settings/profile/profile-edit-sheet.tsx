@@ -174,13 +174,16 @@ export function ProfileEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Edit profile</SheetTitle>
-          <SheetDescription>Update your personal details and profile photo.</SheetDescription>
+          <SheetDescription>
+            {`Update the details of “${user.profile.displayName?.trim() || user.email || "your profile"}”.`}
+          </SheetDescription>
         </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
             <div className="flex flex-col gap-2">
               <div className="inline-flex items-center gap-2 align-top">
                 <Avatar className="h-20 w-20">
@@ -315,13 +318,16 @@ export function ProfileEditSheet({
                 </FormItem>
               )}
             />
+            </div>
 
-            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-              <span />
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-            </SheetFooter>
+            <div className="shrink-0 border-t px-4 pt-4 pb-4">
+              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+                <span />
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </SheetFooter>
+            </div>
           </form>
         </Form>
       </SheetContent>

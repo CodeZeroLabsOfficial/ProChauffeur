@@ -84,6 +84,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -1270,6 +1271,13 @@ export function NewBookingSheet({
       <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isEdit ? "Edit booking" : isRebook ? "Rebook" : "New booking"}</SheetTitle>
+          <SheetDescription>
+            {isEdit
+              ? `Update the details of “${editTrip?.customer.displayName?.trim() || "this booking"}”.`
+              : isRebook
+                ? "Create a new booking from this trip."
+                : "Create a new booking."}
+          </SheetDescription>
         </SheetHeader>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">

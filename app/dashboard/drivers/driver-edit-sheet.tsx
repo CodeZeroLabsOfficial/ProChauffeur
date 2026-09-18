@@ -48,6 +48,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -214,13 +215,22 @@ export function DriverEditSheet({
     onOpenChange(next);
   }
 
+  const editDriverLabel =
+    activeUser?.profile.displayName?.trim() || activeUser?.email || "this driver";
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add driver" : "Edit driver"}</SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new driver profile."
+              : `Update the details of “${editDriverLabel}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={currentKey}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           {isNew && (
             <div className="space-y-2">
               <Label>Account</Label>
@@ -388,15 +398,18 @@ export function DriverEditSheet({
               disabled={saving}
             />
           </div>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button
-              type="submit"
-              disabled={saving || (isNew && (candidates.length === 0 || !canAdd))}>
-              {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button
+                type="submit"
+                disabled={saving || (isNew && (candidates.length === 0 || !canAdd))}>
+                {saving ? "Saving…" : isNew ? "Add driver" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -206,11 +207,17 @@ export function ScheduleEditSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{isNew ? "Add schedule" : "Edit schedule"}</SheetTitle>
+            <SheetDescription>
+              {isNew
+                ? "Create a new operating schedule."
+                : `Update the details of “${scheduleLabel}”.`}
+            </SheetDescription>
           </SheetHeader>
-          <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-6 px-4" key={formKey}>
+          <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={formKey}>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
             <div className="space-y-2">
               <Label htmlFor="name">Schedule name</Label>
               <Input
@@ -279,24 +286,27 @@ export function ScheduleEditSheet({
                 disabled={busy}
               />
             </div>
+            </div>
 
-            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-              {!isNew && allowDelete ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={busy}
-                  onClick={() => setConfirmDeleteOpen(true)}>
-                  Delete
+            <div className="shrink-0 border-t px-4 pt-4 pb-4">
+              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+                {!isNew && allowDelete ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={busy}
+                    onClick={() => setConfirmDeleteOpen(true)}>
+                    Delete
+                  </Button>
+                ) : (
+                  <span />
+                )}
+                <Button type="submit" disabled={busy || selectedDays.length === 0}>
+                  {saving ? "Saving…" : isNew ? "Add schedule" : "Save"}
                 </Button>
-              ) : (
-                <span />
-              )}
-              <Button type="submit" disabled={busy || selectedDays.length === 0}>
-                {saving ? "Saving…" : isNew ? "Add schedule" : "Save"}
-              </Button>
-            </SheetFooter>
+              </SheetFooter>
+            </div>
           </form>
         </SheetContent>
       </Sheet>

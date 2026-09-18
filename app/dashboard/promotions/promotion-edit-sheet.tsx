@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { SectionHeading } from "@/components/detail-sheet-fields";
 import {
   buildNewPromotion,
   normalizePromoCode,
@@ -62,10 +63,6 @@ type FieldErrors = {
 };
 
 const ALL_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
-
-function SectionHeading({ children }: { children: string }) {
-  return <h4 className="text-sm font-medium">{children}</h4>;
-}
 
 /** Empty/null means unrestricted in storage; for editing expand to every option. New promos stay empty. */
 function resolveConditionIds(
@@ -356,7 +353,7 @@ export function PromotionEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add coupon" : "Edit coupon"}</SheetTitle>
           <SheetDescription>
@@ -366,303 +363,318 @@ export function PromotionEditSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
-          <SectionHeading>Coupon Details</SectionHeading>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
+            <div className="space-y-4">
+              <SectionHeading>Coupon details</SectionHeading>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="*:not-first:mt-2">
-              <Label htmlFor="promo-code">Coupon Code</Label>
-              <Input
-                id="promo-code"
-                value={draft.code}
-                onChange={(e) => {
-                  setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }));
-                  clearFieldError("code");
-                }}
-                placeholder="WELCOME25"
-                className="peer font-mono uppercase"
-                aria-invalid={fieldErrors.code || undefined}
-              />
-              {fieldErrors.code ? (
-                <p
-                  aria-live="polite"
-                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                  role="alert">
-                  Code is required
-                </p>
-              ) : null}
-            </div>
-            <div className="*:not-first:mt-2">
-              <Label htmlFor="promo-title">Title</Label>
-              <Input
-                id="promo-title"
-                value={draft.title}
-                onChange={(e) => {
-                  setDraft((c) => ({ ...c, title: e.target.value }));
-                  clearFieldError("title");
-                }}
-                placeholder="First booking 25% off"
-                aria-invalid={fieldErrors.title || undefined}
-                className="peer"
-              />
-              {fieldErrors.title ? (
-                <p
-                  aria-live="polite"
-                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                  role="alert">
-                  Title is required
-                </p>
-              ) : null}
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="promo-code">Coupon code</Label>
+                  <Input
+                    id="promo-code"
+                    value={draft.code}
+                    onChange={(e) => {
+                      setDraft((c) => ({ ...c, code: e.target.value.toUpperCase() }));
+                      clearFieldError("code");
+                    }}
+                    placeholder="WELCOME25"
+                    className="peer font-mono uppercase"
+                    aria-invalid={fieldErrors.code || undefined}
+                  />
+                  {fieldErrors.code ? (
+                    <p
+                      aria-live="polite"
+                      className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                      role="alert">
+                      Code is required
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="promo-title">Title</Label>
+                  <Input
+                    id="promo-title"
+                    value={draft.title}
+                    onChange={(e) => {
+                      setDraft((c) => ({ ...c, title: e.target.value }));
+                      clearFieldError("title");
+                    }}
+                    placeholder="First booking 25% off"
+                    aria-invalid={fieldErrors.title || undefined}
+                    className="peer"
+                  />
+                  {fieldErrors.title ? (
+                    <p
+                      aria-live="polite"
+                      className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                      role="alert">
+                      Title is required
+                    </p>
+                  ) : null}
+                </div>
+              </div>
 
-          <div className="*:not-first:mt-2">
-            <Label htmlFor="promo-description">Description</Label>
-            <Textarea
-              id="promo-description"
-              value={draft.description ?? ""}
-              onChange={(e) => setDraft((c) => ({ ...c, description: e.target.value }))}
-              placeholder="Seasonal discount for returning guests."
-              rows={3}
-            />
-            <p className="text-muted-foreground text-xs">Optional — shown to admins only.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Banner Image</Label>
-            <div
-              className="border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center"
-              aria-hidden>
-              <UploadIcon className="size-5 opacity-70" />
-              <span className="text-sm">Click or drag to upload</span>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Used for the iPhone app. Falls back to a stock photo when left empty.
-            </p>
-          </div>
-
-          <Separator />
-          <SectionHeading>Discount</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="promo-type">Discount type</Label>
-              <Select
-                value={draft.type}
-                onValueChange={(value) => {
-                  const nextType = value === "fixed" ? "fixed" : "percent";
-                  setDraft((c) => ({ ...c, type: nextType }));
-                  clearFieldError("value");
-                }}>
-                <SelectTrigger id="promo-type" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percent">Percent</SelectItem>
-                  <SelectItem value="fixed">Fixed amount</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="*:not-first:mt-2">
-              {draft.type === "percent" ? (
-                <NumberStepper
-                  id="promo-value"
-                  label="Discount value"
-                  value={percentPoints}
-                  onChange={(value) => {
-                    setPercentPoints(value);
-                    clearFieldError("value");
-                  }}
-                  min={0}
-                  max={100}
+              <div className="space-y-2">
+                <Label htmlFor="promo-description">Description</Label>
+                <Textarea
+                  id="promo-description"
+                  value={draft.description ?? ""}
+                  onChange={(e) => setDraft((c) => ({ ...c, description: e.target.value }))}
+                  placeholder="Seasonal discount for returning guests."
+                  rows={3}
                 />
-              ) : (
-                <NumberStepper
-                  id="promo-value"
-                  label={currency ? `Discount value (${currency})` : "Discount value"}
-                  value={fixedAmount}
-                  onChange={(value) => {
-                    setFixedAmount(value);
-                    clearFieldError("value");
+                <p className="text-muted-foreground text-xs">Optional — shown to admins only.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Banner image</Label>
+                <div
+                  className="border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center"
+                  aria-hidden>
+                  <UploadIcon className="size-5 opacity-70" />
+                  <span className="text-sm">Click or drag to upload</span>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Used for the iPhone app. Falls back to a stock photo when left empty.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <SectionHeading>Discount</SectionHeading>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="promo-type">Discount type</Label>
+                  <Select
+                    value={draft.type}
+                    onValueChange={(value) => {
+                      const nextType = value === "fixed" ? "fixed" : "percent";
+                      setDraft((c) => ({ ...c, type: nextType }));
+                      clearFieldError("value");
+                    }}>
+                    <SelectTrigger id="promo-type" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Percent</SelectItem>
+                      <SelectItem value="fixed">Fixed amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  {draft.type === "percent" ? (
+                    <NumberStepper
+                      id="promo-value"
+                      label="Discount value"
+                      value={percentPoints}
+                      onChange={(value) => {
+                        setPercentPoints(value);
+                        clearFieldError("value");
+                      }}
+                      min={0}
+                      max={100}
+                    />
+                  ) : (
+                    <NumberStepper
+                      id="promo-value"
+                      label={currency ? `Discount value (${currency})` : "Discount value"}
+                      value={fixedAmount}
+                      onChange={(value) => {
+                        setFixedAmount(value);
+                        clearFieldError("value");
+                      }}
+                      min={0}
+                      max={FARE_STEPPER_MAX}
+                      step={0.01}
+                      decimals={2}
+                    />
+                  )}
+                  {fieldErrors.value ? (
+                    <p aria-live="polite" className="text-destructive text-xs" role="alert">
+                      {draft.type === "percent"
+                        ? "Percent must be greater than 0"
+                        : "Amount must be greater than 0"}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <SectionHeading>Applies to</SectionHeading>
+
+              <div className="space-y-2">
+                <Label>Locations</Label>
+                <MultiSelectField
+                  id="promo-branches"
+                  options={branchOptions}
+                  selected={draft.conditions.branchIds ?? []}
+                  onSelectedChange={(ids) => {
+                    patchConditions({ branchIds: ids });
+                    clearFieldError("branchIds");
                   }}
+                  placeholder="Select locations"
+                  emptyMessage="No Locations."
+                  invalid={fieldErrors.branchIds}
+                />
+                {fieldErrors.branchIds ? (
+                  <p
+                    aria-live="polite"
+                    className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                    role="alert">
+                    Locations are required
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Trip types</Label>
+                  <MultiSelectField
+                    id="promo-trip-types"
+                    options={TRIP_TYPE_OPTIONS}
+                    selected={(draft.conditions.tripTypes as string[]) ?? []}
+                    onSelectedChange={(ids) => {
+                      patchConditions({ tripTypes: ids as TripType[] });
+                      clearFieldError("tripTypes");
+                    }}
+                    placeholder="Select trip types"
+                    emptyMessage="No trip types."
+                    invalid={fieldErrors.tripTypes}
+                  />
+                  {fieldErrors.tripTypes ? (
+                    <p
+                      aria-live="polite"
+                      className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                      role="alert">
+                      Trip types are required
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label>Vehicle classes</Label>
+                  <MultiSelectField
+                    id="promo-classes"
+                    options={vehicleClassOptions}
+                    selected={draft.conditions.vehicleClassIds ?? []}
+                    onSelectedChange={(ids) => {
+                      patchConditions({ vehicleClassIds: ids });
+                      clearFieldError("vehicleClassIds");
+                    }}
+                    placeholder="Select vehicle classes"
+                    emptyMessage="No vehicle classes."
+                    invalid={fieldErrors.vehicleClassIds}
+                  />
+                  {fieldErrors.vehicleClassIds ? (
+                    <p
+                      aria-live="polite"
+                      className="peer-aria-invalid:text-destructive text-destructive text-xs"
+                      role="alert">
+                      Vehicle classes are required
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <SectionHeading>Validity</SectionHeading>
+
+              <div className="grid grid-cols-2 gap-3">
+                <DatePickerField
+                  label="Valid from"
+                  value={draft.conditions.startsAt}
+                  onChange={(date) => patchConditions({ startsAt: date })}
+                />
+                <DatePickerField
+                  label="Valid to"
+                  value={draft.conditions.endsAt}
+                  onChange={(date) => patchConditions({ endsAt: date })}
+                  endOfDaySelect
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <NumberStepper
+                  id="promo-max"
+                  label="Max redemptions"
+                  value={limitStepperValue(draft.conditions.maxRedemptions)}
+                  onChange={(value) => patchConditions({ maxRedemptions: limitFromStepper(value) })}
+                  min={0}
+                  max={LIMIT_STEPPER_MAX}
+                  formatValue={formatLimitStepper}
+                />
+                <NumberStepper
+                  id="promo-min-fare"
+                  label="Minimum fare"
+                  value={minFareStepperValue(draft.conditions.minimumSubtotal)}
+                  onChange={(value) =>
+                    patchConditions({ minimumSubtotal: minFareFromStepper(value) })
+                  }
                   min={0}
                   max={FARE_STEPPER_MAX}
-                  step={0.01}
-                  decimals={2}
+                  step={1}
+                  formatValue={formatMinFareStepper}
                 />
-              )}
-              {fieldErrors.value ? (
-                <p aria-live="polite" className="text-destructive text-xs" role="alert">
-                  {draft.type === "percent"
-                    ? "Percent must be greater than 0"
-                    : "Amount must be greater than 0"}
-                </p>
-              ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <NumberStepper
+                  id="promo-per-customer"
+                  label="Per customer"
+                  value={limitStepperValue(draft.conditions.perCustomerLimit)}
+                  onChange={(value) =>
+                    patchConditions({ perCustomerLimit: limitFromStepper(value) })
+                  }
+                  min={0}
+                  max={LIMIT_STEPPER_MAX}
+                  formatValue={formatLimitStepper}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <SectionHeading>Status</SectionHeading>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="promo-active">Active</Label>
+                  <p className="text-muted-foreground text-xs">
+                    Inactive coupons cannot be applied to bookings.
+                  </p>
+                </div>
+                <Switch
+                  id="promo-active"
+                  checked={draft.isEnabled}
+                  onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
+                  disabled={saving}
+                />
+              </div>
             </div>
           </div>
 
-          <Separator />
-          <SectionHeading>Applies to</SectionHeading>
-
-          <div className="*:not-first:mt-2">
-            <Label>Locations</Label>
-            <MultiSelectField
-              id="promo-branches"
-              options={branchOptions}
-              selected={draft.conditions.branchIds ?? []}
-              onSelectedChange={(ids) => {
-                patchConditions({ branchIds: ids });
-                clearFieldError("branchIds");
-              }}
-              placeholder="Select locations"
-              emptyMessage="No Locations."
-              invalid={fieldErrors.branchIds}
-            />
-            {fieldErrors.branchIds ? (
-              <p
-                aria-live="polite"
-                className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                role="alert">
-                Locations are required
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="*:not-first:mt-2">
-              <Label>Trip types</Label>
-              <MultiSelectField
-                id="promo-trip-types"
-                options={TRIP_TYPE_OPTIONS}
-                selected={(draft.conditions.tripTypes as string[]) ?? []}
-                onSelectedChange={(ids) => {
-                  patchConditions({ tripTypes: ids as TripType[] });
-                  clearFieldError("tripTypes");
-                }}
-                placeholder="Select trip types"
-                emptyMessage="No trip types."
-                invalid={fieldErrors.tripTypes}
-              />
-              {fieldErrors.tripTypes ? (
-                <p
-                  aria-live="polite"
-                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                  role="alert">
-                  Trip types are required
-                </p>
-              ) : null}
-            </div>
-            <div className="*:not-first:mt-2">
-              <Label>Vehicle classes</Label>
-              <MultiSelectField
-                id="promo-classes"
-                options={vehicleClassOptions}
-                selected={draft.conditions.vehicleClassIds ?? []}
-                onSelectedChange={(ids) => {
-                  patchConditions({ vehicleClassIds: ids });
-                  clearFieldError("vehicleClassIds");
-                }}
-                placeholder="Select vehicle classes"
-                emptyMessage="No vehicle classes."
-                invalid={fieldErrors.vehicleClassIds}
-              />
-              {fieldErrors.vehicleClassIds ? (
-                <p
-                  aria-live="polite"
-                  className="peer-aria-invalid:text-destructive text-destructive text-xs"
-                  role="alert">
-                  Vehicle classes are required
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <Separator />
-          <SectionHeading>Validity</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-3">
-            <DatePickerField
-              label="Valid from"
-              value={draft.conditions.startsAt}
-              onChange={(date) => patchConditions({ startsAt: date })}
-            />
-            <DatePickerField
-              label="Valid to"
-              value={draft.conditions.endsAt}
-              onChange={(date) => patchConditions({ endsAt: date })}
-              endOfDaySelect
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <NumberStepper
-              id="promo-max"
-              label="Max redemptions"
-              value={limitStepperValue(draft.conditions.maxRedemptions)}
-              onChange={(value) => patchConditions({ maxRedemptions: limitFromStepper(value) })}
-              min={0}
-              max={LIMIT_STEPPER_MAX}
-              formatValue={formatLimitStepper}
-            />
-            <NumberStepper
-              id="promo-min-fare"
-              label="Minimum fare"
-              value={minFareStepperValue(draft.conditions.minimumSubtotal)}
-              onChange={(value) => patchConditions({ minimumSubtotal: minFareFromStepper(value) })}
-              min={0}
-              max={FARE_STEPPER_MAX}
-              step={1}
-              formatValue={formatMinFareStepper}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <NumberStepper
-              id="promo-per-customer"
-              label="Per customer"
-              value={limitStepperValue(draft.conditions.perCustomerLimit)}
-              onChange={(value) => patchConditions({ perCustomerLimit: limitFromStepper(value) })}
-              min={0}
-              max={LIMIT_STEPPER_MAX}
-              formatValue={formatLimitStepper}
-            />
-          </div>
-
-          <Separator />
-          <SectionHeading>Status</SectionHeading>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="promo-active">Active</Label>
-              <p className="text-muted-foreground text-xs">
-                Inactive coupons cannot be applied to bookings.
-              </p>
-            </div>
-            <Switch
-              id="promo-active"
-              checked={draft.isEnabled}
-              onCheckedChange={(checked) => setDraft((c) => ({ ...c, isEnabled: checked }))}
-              disabled={saving}
-            />
-          </div>
-
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            {!isNew ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                disabled={saving}
-                onClick={handleDelete}>
-                Delete
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
               {!isNew ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={saving}
+                  onClick={handleDelete}>
+                  Delete
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   variant="outline"
@@ -670,12 +682,23 @@ export function PromotionEditSheet({
                   onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-              ) : null}
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : isNew ? "Create coupon" : "Save"}
-              </Button>
-            </div>
-          </SheetFooter>
+              )}
+              <div className="flex items-center gap-2">
+                {!isNew ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving}
+                    onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                ) : null}
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : isNew ? "Create coupon" : "Save"}
+                </Button>
+              </div>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

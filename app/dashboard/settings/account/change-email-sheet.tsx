@@ -89,7 +89,7 @@ export function ChangeEmailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Change email</SheetTitle>
           <SheetDescription>
@@ -97,39 +97,43 @@ export function ChangeEmailSheet({
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-4">
-            <FormField
-              control={form.control}
-              name="newEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New email</FormLabel>
-                  <FormControl>
-                    <Input type="email" autoComplete="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="currentPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current password</FormLabel>
-                  <FormControl>
-                    <Input type="password" autoComplete="current-password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-              <span />
-              <Button type="submit" disabled={saving}>
-                {saving ? "Updating…" : "Update email"}
-              </Button>
-            </SheetFooter>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+              <FormField
+                control={form.control}
+                name="newEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New email</FormLabel>
+                    <FormControl>
+                      <Input type="email" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current password</FormLabel>
+                    <FormControl>
+                      <Input type="password" autoComplete="current-password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="shrink-0 border-t px-4 pt-4 pb-4">
+              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+                <span />
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Updating…" : "Update email"}
+                </Button>
+              </SheetFooter>
+            </div>
           </form>
         </Form>
       </SheetContent>

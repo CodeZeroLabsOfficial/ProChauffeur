@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -387,12 +388,18 @@ export function AccountEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "New account" : "Edit account"}</SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new corporate account."
+              : `Update the details of “${draft.name.trim() || "this account"}”.`}
+          </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pb-4" noValidate>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           <div className="inline-flex items-center gap-4 align-top">
             {!isNew ? (
               <AccountLogoUpload account={draft} onSaved={handleLogoSaved} />
@@ -439,7 +446,7 @@ export function AccountEditSheet({
                 </Select>
               </div>
 
-              <div className="*:not-first:mt-2">
+              <div className="space-y-2">
                 <Label htmlFor="account-name">Company name</Label>
                 <Input
                   id="account-name"
@@ -476,7 +483,7 @@ export function AccountEditSheet({
               />
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="*:not-first:mt-2">
+                <div className="space-y-2">
                   <Label htmlFor="account-phone">Phone</Label>
                   <Input
                     id="account-phone"
@@ -485,7 +492,7 @@ export function AccountEditSheet({
                     onChange={(e) => setDraft((c) => ({ ...c, phone: e.target.value }))}
                   />
                 </div>
-                <div className="*:not-first:mt-2">
+                <div className="space-y-2">
                   <Label htmlFor="account-email">Email</Label>
                   <Input
                     id="account-email"
@@ -496,7 +503,7 @@ export function AccountEditSheet({
                 </div>
               </div>
 
-              <div className="*:not-first:mt-2">
+              <div className="space-y-2">
                 <Label htmlFor="account-taxId">{taxIdLabelForCountry(address.country)}</Label>
                 <Input
                   id="account-taxId"
@@ -505,7 +512,7 @@ export function AccountEditSheet({
                 />
               </div>
 
-              <div className="*:not-first:mt-2">
+              <div className="space-y-2">
                 <Label htmlFor="account-industry">Industry</Label>
                 <Input
                   id="account-industry"
@@ -539,7 +546,7 @@ export function AccountEditSheet({
                 </div>
               ) : (
                 <>
-                  <div className="*:not-first:mt-2">
+                  <div className="space-y-2">
                     <Label htmlFor="account-join-code">Join code</Label>
                     <Input
                       id="account-join-code"
@@ -555,7 +562,7 @@ export function AccountEditSheet({
                     />
                   </div>
 
-                  <div className="*:not-first:mt-2">
+                  <div className="space-y-2">
                     <Label htmlFor="account-notes">Notes</Label>
                     <Textarea
                       id="account-notes"
@@ -631,7 +638,7 @@ export function AccountEditSheet({
                 </div>
               ) : null}
 
-              <div className="*:not-first:mt-2">
+              <div className="space-y-2">
                 <Label htmlFor="account-billing-email">Accounts email</Label>
                 <Input
                   id="account-billing-email"
@@ -667,24 +674,27 @@ export function AccountEditSheet({
               </div>
             </TabsContent>
           </Tabs>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            {!isNew ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                disabled={saving}
-                onClick={() => void handleDelete()}>
-                Delete
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              {!isNew ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={saving}
+                  onClick={() => void handleDelete()}>
+                  Delete
+                </Button>
+              ) : (
+                <span />
+              )}
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : isNew ? "Create account" : "Save"}
               </Button>
-            ) : (
-              <span />
-            )}
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Create account" : "Save"}
-            </Button>
-          </SheetFooter>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

@@ -9,6 +9,7 @@ import {
   effectiveChauffeurUserId,
   emptyVehicleDetails,
   emptyVehicleSpecifications,
+  vehicleDisplayName,
   type Vehicle
 } from "@/lib/models";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/lib/vehicle-specifications";
 import { NumberStepper } from "@/components/number-stepper";
 import { VehicleMakeSelect } from "@/components/vehicle-make-select";
+import { SectionHeading } from "@/components/detail-sheet-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +37,14 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
 
 const UNASSIGNED = "__unassigned__";
 const NONE = "__none__";
@@ -52,10 +61,6 @@ const EMPTY_VEHICLE = (driverID: string): Vehicle => ({
   insurancePolicies: [],
   roadworthy: null
 });
-
-function SectionHeading({ children }: { children: string }) {
-  return <h4 className="text-sm font-medium">{children}</h4>;
-}
 
 export function VehicleEditSheet({
   vehicle,
@@ -183,11 +188,17 @@ export function VehicleEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={isNew}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add vehicle" : "Edit vehicle"}</SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new vehicle."
+              : `Update the details of “${vehicleDisplayName(vehicle) || "this vehicle"}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-6 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={currentKey}>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
           <div className="space-y-4">
             <SectionHeading>Vehicle details</SectionHeading>
             <div className="grid grid-cols-2 gap-3">
@@ -303,13 +314,16 @@ export function VehicleEditSheet({
               </Select>
             </div>
           </div>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Add vehicle" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : isNew ? "Add vehicle" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

@@ -117,7 +117,7 @@ export function ChangePasswordSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Change password</SheetTitle>
           <SheetDescription>
@@ -129,61 +129,67 @@ export function ChangePasswordSheet({
 
         {passwordLoginAvailable ? (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-4">
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current password</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="current-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <PasswordStrengthField
-                password={newPassword}
-                onPasswordChange={(value) =>
-                  form.setValue("newPassword", value, { shouldValidate: true, shouldDirty: true })
-                }
-                confirm={confirmPassword}
-                onConfirmChange={(value) =>
-                  form.setValue("confirmPassword", value, {
-                    shouldValidate: true,
-                    shouldDirty: true
-                  })
-                }
-                disabled={saving}
-                passwordLabel="New password"
-                confirmLabel="Confirm new password"
-                passwordPlaceholder="New password"
-                confirmPlaceholder="Confirm new password"
-              />
-              <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-                <span />
-                <Button
-                  type="submit"
-                  disabled={
-                    saving ||
-                    resetting ||
-                    !isPasswordStrong(newPassword) ||
-                    newPassword !== confirmPassword
-                  }>
-                  {saving ? "Updating…" : "Update password"}
-                </Button>
-              </SheetFooter>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+                <FormField
+                  control={form.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current password</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete="current-password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <PasswordStrengthField
+                  password={newPassword}
+                  onPasswordChange={(value) =>
+                    form.setValue("newPassword", value, { shouldValidate: true, shouldDirty: true })
+                  }
+                  confirm={confirmPassword}
+                  onConfirmChange={(value) =>
+                    form.setValue("confirmPassword", value, {
+                      shouldValidate: true,
+                      shouldDirty: true
+                    })
+                  }
+                  disabled={saving}
+                  passwordLabel="New password"
+                  confirmLabel="Confirm new password"
+                  passwordPlaceholder="New password"
+                  confirmPlaceholder="Confirm new password"
+                />
+              </div>
+              <div className="shrink-0 border-t px-4 pt-4 pb-4">
+                <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+                  <span />
+                  <Button
+                    type="submit"
+                    disabled={
+                      saving ||
+                      resetting ||
+                      !isPasswordStrong(newPassword) ||
+                      newPassword !== confirmPassword
+                    }>
+                    {saving ? "Updating…" : "Update password"}
+                  </Button>
+                </SheetFooter>
+              </div>
             </form>
           </Form>
         ) : (
-          <div className="space-y-4 px-4">
-            <p className="text-muted-foreground text-sm">
-              Use a password reset email to set or update your password, then sign in again.
-            </p>
-            <Button type="button" onClick={onSendResetEmail} disabled={resetting || saving}>
-              {resetting ? "Sending…" : "Send password reset email"}
-            </Button>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+              <p className="text-muted-foreground text-sm">
+                Use a password reset email to set or update your password, then sign in again.
+              </p>
+              <Button type="button" onClick={onSendResetEmail} disabled={resetting || saving}>
+                {resetting ? "Sending…" : "Send password reset email"}
+              </Button>
+            </div>
           </div>
         )}
       </SheetContent>

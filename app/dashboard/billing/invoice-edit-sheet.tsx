@@ -123,14 +123,17 @@ export function InvoiceEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="flex w-full flex-col overflow-hidden sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>New invoice</SheetTitle>
           <SheetDescription>
-            {currencyCode ? `Amounts are in ${currencyCode}.` : "Load location locale to set currency."}
+            {currencyCode
+              ? `Create a new invoice. Amounts are in ${currencyCode}.`
+              : "Create a new invoice."}
           </SheetDescription>
         </SheetHeader>
-        <form key={formKey} onSubmit={onSubmit} className="space-y-4 px-4">
+        <form key={formKey} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="invoiceNumber">Invoice no.</Label>
@@ -256,13 +259,16 @@ export function InvoiceEditSheet({
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" name="notes" rows={2} />
           </div>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving || !localeReady || !currencyCode}>
-              {saving ? "Saving…" : "Create invoice"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving || !localeReady || !currencyCode}>
+                {saving ? "Saving…" : "Create invoice"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

@@ -25,7 +25,7 @@ export function FleetDateField({
   error?: string;
 }) {
   return (
-    <div className="*:not-first:mt-2">
+    <div className="space-y-2">
       <Label>{label}</Label>
       <Popover modal>
         <PopoverTrigger asChild>

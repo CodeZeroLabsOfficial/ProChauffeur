@@ -47,7 +47,15 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
+import { SectionHeading } from "@/components/detail-sheet-fields";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,10 +75,6 @@ import {
 } from "@/components/ui/item";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-function SectionHeading({ children }: { children: string }) {
-  return <h4 className="text-sm font-medium">{children}</h4>;
-}
 
 function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
   return (
@@ -496,13 +500,23 @@ export function VehicleClassEditSheet({
     }
   }
 
+  const editClassLabel = draft.displayName.trim() || vehicleClass?.displayName || "this class";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{sheetTitle}</SheetTitle>
+          <SheetDescription>
+            {sheetMode === "clone"
+              ? `Create a copy of “${editClassLabel}”.`
+              : isNew
+                ? "Create a new vehicle class."
+                : `Update the details of “${editClassLabel}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form className="space-y-4 px-4" onSubmit={onSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
           <TooltipProvider>
             <Tabs key={sheetKey} defaultValue="overview" className="gap-4">
               <TabsList className={`${profileV2TabsListClassName} w-full justify-start`}>
@@ -511,7 +525,7 @@ export function VehicleClassEditSheet({
                 <ProfileV2TabTrigger value="pricing">Pricing</ProfileV2TabTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="mt-0 space-y-4">
+              <TabsContent value="overview" className="mt-0 space-y-6">
                 <div className="space-y-4">
                   {sheetMode === "create" && offerable.length > 0 ? (
                     <div className="space-y-2">
@@ -818,7 +832,7 @@ export function VehicleClassEditSheet({
                 </div>
               </TabsContent>
 
-              <TabsContent value="pricing" className="mt-0 space-y-4">
+              <TabsContent value="pricing" className="mt-0 space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-1">
                     <SectionHeading>Point-to-point rates</SectionHeading>
@@ -883,13 +897,16 @@ export function VehicleClassEditSheet({
               </TabsContent>
             </Tabs>
           </TooltipProvider>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

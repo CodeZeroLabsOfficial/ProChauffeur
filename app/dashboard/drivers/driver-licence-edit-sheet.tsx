@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -159,7 +160,7 @@ export function DriverLicenceEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>
             {complianceSheetTitle(isNew, {
@@ -167,8 +168,14 @@ export function DriverLicenceEditSheet({
               edit: "Edit driver licence"
             })}
           </SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new driver licence record."
+              : `Update the licence for “${user.profile.displayName?.trim() || user.email || "this driver"}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={user.id}>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={user.id}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="licence-driversLicenseNumber">Licence no.</Label>
@@ -311,13 +318,16 @@ export function DriverLicenceEditSheet({
               defaultValue={profile.driversLicense?.summary ?? ""}
             />
           </div>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

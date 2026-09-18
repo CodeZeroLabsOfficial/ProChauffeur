@@ -13,10 +13,10 @@ import { MultiSelectField } from "@/components/multi-select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle
@@ -93,89 +93,97 @@ export function AddonEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{isNew ? "New add-on" : "Add-on details"}</SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new booking add-on."
+              : `Update the details of “${draft.title.trim() || "this add-on"}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <Separator />
-        <form className="space-y-4 px-4" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="addon-title">Title</Label>
-            <Input
-              id="addon-title"
-              value={draft.title}
-              onChange={(e) => setDraft((current) => ({ ...current, title: e.target.value }))}
-              required
-            />
-          </div>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+            <div className="space-y-2">
+              <Label htmlFor="addon-title">Title</Label>
+              <Input
+                id="addon-title"
+                value={draft.title}
+                onChange={(e) => setDraft((current) => ({ ...current, title: e.target.value }))}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="addon-price">Price</Label>
-            <Input
-              id="addon-price"
-              type="number"
-              min={0}
-              step="0.01"
-              value={draft.price}
-              onChange={(e) =>
-                setDraft((current) => ({
-                  ...current,
-                  price: parseFloat(e.target.value) || 0
-                }))
-              }
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="addon-price">Price</Label>
+              <Input
+                id="addon-price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={draft.price}
+                onChange={(e) =>
+                  setDraft((current) => ({
+                    ...current,
+                    price: parseFloat(e.target.value) || 0
+                  }))
+                }
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="addon-trip-types">Trip types</Label>
-            <MultiSelectField
-              id="addon-trip-types"
-              options={TRIP_TYPE_OPTIONS}
-              selected={draft.tripTypes}
-              onSelectedChange={(selected) =>
-                setDraft((current) => ({ ...current, tripTypes: selected as TripType[] }))
-              }
-              placeholder="Select trip types"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="addon-trip-types">Trip types</Label>
+              <MultiSelectField
+                id="addon-trip-types"
+                options={TRIP_TYPE_OPTIONS}
+                selected={draft.tripTypes}
+                onSelectedChange={(selected) =>
+                  setDraft((current) => ({ ...current, tripTypes: selected as TripType[] }))
+                }
+                placeholder="Select trip types"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="addon-vehicle-classes">Vehicle classes</Label>
-            <MultiSelectField
-              id="addon-vehicle-classes"
-              options={vehicleClassOptions}
-              selected={draft.vehicleClassIds}
-              onSelectedChange={(selected) =>
-                setDraft((current) => ({ ...current, vehicleClassIds: selected }))
-              }
-              placeholder="All classes"
-              emptyMessage="No vehicle classes configured."
-            />
-            <p className="text-muted-foreground text-xs">
-              Leave empty to offer this add-on for all vehicle classes.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="addon-enabled">Enabled</Label>
+            <div className="space-y-2">
+              <Label htmlFor="addon-vehicle-classes">Vehicle classes</Label>
+              <MultiSelectField
+                id="addon-vehicle-classes"
+                options={vehicleClassOptions}
+                selected={draft.vehicleClassIds}
+                onSelectedChange={(selected) =>
+                  setDraft((current) => ({ ...current, vehicleClassIds: selected }))
+                }
+                placeholder="All classes"
+                emptyMessage="No vehicle classes configured."
+              />
               <p className="text-muted-foreground text-xs">
-                Disabled add-ons are hidden from booking and quotes.
+                Leave empty to offer this add-on for all vehicle classes.
               </p>
             </div>
-            <Switch
-              id="addon-enabled"
-              checked={draft.isEnabled}
-              onCheckedChange={(checked) =>
-                setDraft((current) => ({ ...current, isEnabled: checked }))
-              }
-            />
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="addon-enabled">Enabled</Label>
+                <p className="text-muted-foreground text-xs">
+                  Disabled add-ons are hidden from booking and quotes.
+                </p>
+              </div>
+              <Switch
+                id="addon-enabled"
+                checked={draft.isEnabled}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({ ...current, isEnabled: checked }))
+                }
+              />
+            </div>
           </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit">Save</Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit">Save</Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

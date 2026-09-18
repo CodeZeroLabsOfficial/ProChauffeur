@@ -12,7 +12,7 @@ import { FleetDateField } from "@/app/dashboard/fleet/components/fleet-date-fiel
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type FieldErrors = Partial<
   Record<
@@ -115,7 +115,7 @@ export function VehicleRegistrationEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>
             {complianceSheetTitle(isNew, {
@@ -123,13 +123,19 @@ export function VehicleRegistrationEditSheet({
               edit: "Edit registration"
             })}
           </SheetTitle>
+          <SheetDescription>
+            {isNew
+              ? "Create a new vehicle registration."
+              : `Update the details of “${vehicle.registration?.registrationNumber?.trim() || "this registration"}”.`}
+          </SheetDescription>
         </SheetHeader>
         <form
           key={seedKey}
           onSubmit={onSubmit}
           noValidate
-          className="flex flex-1 flex-col space-y-4 px-4">
-          <div className="*:not-first:mt-2">
+          className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+          <div className="space-y-2">
             <Label htmlFor="issuingAuthority">Issuing Authority</Label>
             <Input
               id="issuingAuthority"
@@ -151,7 +157,7 @@ export function VehicleRegistrationEditSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="*:not-first:mt-2">
+            <div className="space-y-2">
               <Label htmlFor="jurisdictionCode">Jurisdiction</Label>
               <Input
                 id="jurisdictionCode"
@@ -171,7 +177,7 @@ export function VehicleRegistrationEditSheet({
                 </p>
               ) : null}
             </div>
-            <div className="*:not-first:mt-2">
+            <div className="space-y-2">
               <Label htmlFor="registrationNumber">Registration Number</Label>
               <Input
                 id="registrationNumber"
@@ -225,13 +231,16 @@ export function VehicleRegistrationEditSheet({
               error={fieldErrors.registrationExpiry ? "Registration expiry is required" : undefined}
             />
           </div>
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

@@ -209,16 +209,17 @@ export function CustomerEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent nested={nested} className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent nested={nested} className="flex w-full flex-col overflow-hidden sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{isNew ? "Add customer" : "Edit customer"}</SheetTitle>
-          {isNew ? (
-            <SheetDescription>
-              Create a new customer account with email and password.
-            </SheetDescription>
-          ) : null}
+          <SheetDescription>
+            {isNew
+              ? "Create a new customer account with email and password."
+              : `Update the details of “${user.profile.displayName?.trim() || user.email || "this customer"}”.`}
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex flex-1 flex-col space-y-4 px-4" key={currentKey}>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" key={currentKey}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
           {corporateAccountsEnabled ? (
             <div className="space-y-2">
               <Label>Customer type</Label>
@@ -334,13 +335,16 @@ export function CustomerEditSheet({
             invalid={addressInvalid}
             disabled={saving}
           />
+          </div>
 
-          <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 px-0 sm:justify-between">
-            <span />
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : isNew ? "Add customer" : "Save"}
-            </Button>
-          </SheetFooter>
+          <div className="shrink-0 border-t px-4 pt-4 pb-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 p-0 sm:justify-between">
+              <span />
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : isNew ? "Add customer" : "Save"}
+              </Button>
+            </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>
