@@ -20,8 +20,6 @@ import { useCompanyTrips } from "@/hooks/use-company-collections";
 import { useUsers } from "@/hooks/use-collections";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import type { CorporateAccount, User } from "@/lib/models";
-import { formatPostalAddress } from "@/lib/models/postal-address";
-import { formatDate } from "@/lib/format";
 import { customerDisplayName } from "@/lib/users/customer-display";
 import {
   lastBookingAtForCustomer,
@@ -70,10 +68,9 @@ function multiSelectFilter(row: { getValue: (id: string) => unknown }, columnId:
   return values.includes(String(row.getValue(columnId) ?? ""));
 }
 
-function truncateAddress(value: string | null | undefined, max = 40): string {
-  const trimmed = value?.trim();
-  if (!trimmed) return "—";
-  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+function formatCustomerLocation(user: User): string {
+  const address = user.profile.address;
+  return [address?.state?.trim(), address?.country?.trim()].filter(Boolean).join(", ");
 }
 
 export function CustomersDataTable({
@@ -204,7 +201,7 @@ export function CustomersDataTable({
       {
         id: "customer",
         accessorFn: (row) => customerDisplayName(row),
-        header: "Customer",
+        header: "Name",
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <Avatar className="size-9">
@@ -217,12 +214,9 @@ export function CustomersDataTable({
             </Avatar>
             <div className="min-w-0">
               <div className="font-medium">{customerDisplayName(row.original)}</div>
-              {row.original.customerType === "corporate" &&
-              row.original.corporateAccountName ? (
-                <div className="text-muted-foreground truncate text-xs">
-                  {row.original.corporateAccountName}
-                </div>
-              ) : null}
+              <div className="text-muted-foreground truncate text-xs">
+                {row.original.email || "—"}
+              </div>
             </div>
           </div>
         ),
@@ -256,39 +250,23 @@ export function CustomersDataTable({
         filterFn: multiSelectFilter
       },
       {
-        id: "email",
-        accessorFn: (row) => row.email,
-        header: "Email",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.original.email || "—"}</span>
-        )
-      },
-      {
-        id: "phone",
-        accessorFn: (row) => row.profile.phoneNumber ?? "",
-        header: "Phone",
+        id: "company",
+        accessorFn: (row) => row.corporateAccountName ?? "",
+        header: "Company",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {row.original.profile.phoneNumber?.trim() || "—"}
+            {row.original.corporateAccountName?.trim() || "—"}
           </span>
         )
       },
       {
-        id: "address",
-        accessorFn: (row) => formatPostalAddress(row.profile.address) ?? "",
-        header: "Address",
+        id: "location",
+        accessorFn: (row) => formatCustomerLocation(row),
+        header: "Location",
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {truncateAddress(formatPostalAddress(row.original.profile.address))}
+            {formatCustomerLocation(row.original) || "—"}
           </span>
-        )
-      },
-      {
-        id: "memberSince",
-        accessorFn: (row) => row.createdAt.getTime(),
-        header: "Member since",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span>
         )
       },
       {
@@ -352,7 +330,9 @@ export function CustomersDataTable({
       columnVisibility: {
         ...columnVisibility,
         activity: false,
-        ...(corporateAccountsEnabled ? {} : { customerType: false })
+        ...(corporateAccountsEnabled
+          ? {}
+          : { customerType: false, company: false })
       },
       rowSelection
     }
