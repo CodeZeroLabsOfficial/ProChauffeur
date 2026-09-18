@@ -60,7 +60,7 @@ function formatUsageLimit(max: number | null | undefined): string {
 function formatValidity(startsAt: Date | null | undefined, endsAt: Date | null | undefined): string {
   if (!startsAt && !endsAt) return "Always";
   if (startsAt && endsAt) {
-    return `${format(startsAt, "MMM d, yyyy")} ù ${format(endsAt, "MMM d, yyyy")}`;
+    return `${format(startsAt, "MMM d, yyyy")} ‚Äì ${format(endsAt, "MMM d, yyyy")}`;
   }
   if (startsAt) return `From ${format(startsAt, "MMM d, yyyy")}`;
   return `Until ${format(endsAt!, "MMM d, yyyy")}`;
@@ -326,7 +326,7 @@ export function PromotionsDataTable({
       <div className="w-full">
         <ListTableToolbar
           table={table}
-          searchPlaceholder="Search promotionsù"
+          searchPlaceholder="Search promotions‚Ä¶"
           searchColumnId="title"
           nowrap
           filters={
@@ -365,7 +365,7 @@ export function PromotionsDataTable({
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    Loading promotionsù
+                    Loading promotions‚Ä¶
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
