@@ -36,6 +36,7 @@ import { SectionHeading } from "@/components/detail-sheet-fields";
 import {
   buildNewPromotion,
   normalizePromoCode,
+  PROMOTION_TRIP_TYPES,
   tripTypeTitle,
   type Branch,
   type Promotion,
@@ -46,10 +47,10 @@ import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
 
-const TRIP_TYPE_OPTIONS = [
-  { value: "transfer", label: tripTypeTitle.transfer },
-  { value: "hourly", label: tripTypeTitle.hourly }
-];
+const TRIP_TYPE_OPTIONS = PROMOTION_TRIP_TYPES.map((value) => ({
+  value,
+  label: tripTypeTitle[value]
+}));
 
 const LIMIT_STEPPER_MAX = 9999;
 const FARE_STEPPER_MAX = 100_000;
@@ -63,7 +64,7 @@ type FieldErrors = {
   vehicleClassIds?: boolean;
 };
 
-const ALL_TRIP_TYPES = TRIP_TYPE_OPTIONS.map((option) => option.value as TripType);
+const ALL_TRIP_TYPES: TripType[] = [...PROMOTION_TRIP_TYPES];
 
 function FieldInfoTooltip({ label, children }: { label: string; children: string }) {
   return (

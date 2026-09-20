@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { formatDate } from "@/lib/format";
 import {
+  PROMOTION_TRIP_TYPES,
   TRIP_TYPES,
   tripTypeTitle,
   type Branch,
@@ -382,7 +383,7 @@ export function PromotionDetailSheet({
   const tripTypeIds = display.conditions.tripTypes?.filter(Boolean) ?? [];
   const tripTypeSummary = formatScopeCount(
     tripTypeIds.length,
-    TRIP_TYPES.length,
+    PROMOTION_TRIP_TYPES.length,
     "All trips",
     "Trips"
   );

@@ -3,6 +3,13 @@ import type { TripType } from "@/lib/models/enums";
 export const PROMOTION_DISCOUNT_TYPES = ["percent", "fixed"] as const;
 export type PromotionDiscountType = (typeof PROMOTION_DISCOUNT_TYPES)[number];
 
+/**
+ * Trip types selectable on promo conditions.
+ * Round trips book as transfer legs, so they are not a separate promo axis.
+ */
+export const PROMOTION_TRIP_TYPES = ["transfer", "hourly"] as const satisfies readonly TripType[];
+export type PromotionTripType = (typeof PROMOTION_TRIP_TYPES)[number];
+
 /** Optional axes — empty/null means no restriction on that axis. */
 export interface PromotionConditions {
   /** Limit to these Locations; null/empty = all. */
