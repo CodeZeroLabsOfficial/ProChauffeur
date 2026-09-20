@@ -90,7 +90,9 @@ export function ComplianceStat({
 
       <div className="min-w-0 space-y-0.5">
         <p className="truncate text-sm font-medium">{label.trim() || "—"}</p>
-        <p className="text-muted-foreground truncate text-xs">{secondary?.trim() || "—"}</p>
+        {secondary?.trim() ? (
+          <p className="text-muted-foreground truncate text-xs">{secondary.trim()}</p>
+        ) : null}
         <p
           className={cn(
             "text-xs",

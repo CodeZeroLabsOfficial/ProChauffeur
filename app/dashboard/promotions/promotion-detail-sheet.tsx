@@ -3,17 +3,15 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
-import { Calendar, MapPin, Power, Ticket, Users } from "lucide-react";
+import { MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { ComplianceStat } from "@/components/compliance";
-import { DetailLabel, SectionHeading } from "@/components/detail-sheet-fields";
 import { Card, CardContent } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
-import { formatDate } from "@/lib/format";
 import { TRIP_TYPES, type Branch, type Promotion } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +24,9 @@ const usageChartConfig = {
 function formatDiscountOffer(promo: Promotion): string {
   if (promo.type === "percent") {
     const pct = Math.round(promo.value * 10000) / 100;
-    return `${pct}% OFF`;
+    return `${pct}% off`;
   }
-  return `${promo.value.toFixed(2)} OFF`;
+  return `$${promo.value.toFixed(2)} off`;
 }
 
 function formatScopeCount(selected: number, total: number, allLabel: string, noun: string): string {
@@ -38,8 +36,8 @@ function formatScopeCount(selected: number, total: number, allLabel: string, nou
   return `${selected}/${total} ${noun}`;
 }
 
-function SummaryField({
-  icon,
+function ScopeStat({
+  icon: Icon,
   label,
   value
 }: {
@@ -48,9 +46,12 @@ function SummaryField({
   value: string;
 }) {
   return (
-    <div className="space-y-1">
-      <DetailLabel icon={icon}>{label}</DetailLabel>
-      <p className="text-foreground text-sm tabular-nums">{value}</p>
+    <div className="flex items-start gap-3">
+      <Icon className="text-muted-foreground mt-0.5 size-8 shrink-0" aria-hidden />
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-muted-foreground text-xs font-medium">{label}</p>
+        <p className="text-sm font-medium tabular-nums">{value}</p>
+      </div>
     </div>
   );
 }
@@ -113,9 +114,6 @@ function PromoUsageStat({
 
       <div className="min-w-0 space-y-0.5">
         <p className="truncate text-sm font-medium">Usage</p>
-        <p className="text-muted-foreground truncate text-xs tabular-nums">
-          {hasLimit ? `${used} / ${max}` : `${used} redemptions`}
-        </p>
         <p className="text-muted-foreground text-xs">
           {hasLimit ? `Limit ${max}` : "No redemption cap"}
         </p>
@@ -179,12 +177,12 @@ export function PromotionDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Coupon details</SheetTitle>
-        </SheetHeader>
+      <SheetContent
+        showCloseButton={false}
+        className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
+        <SheetTitle className="sr-only">{heroTitle}</SheetTitle>
 
-        <div className="relative aspect-[16/9] w-full overflow-hidden">
+        <div className="relative aspect-video w-full overflow-hidden">
           <Image
             src={DEFAULT_COUPON_BANNER}
             alt=""
@@ -193,66 +191,43 @@ export function PromotionDetailSheet({
             sizes="(max-width: 512px) 100vw, 512px"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-black/55 via-black/20 to-transparent" />
-          <div className="absolute start-4 top-4 flex items-center gap-2">
-            <Ticket className="size-10 shrink-0 text-white/30" aria-hidden />
-            <p className="text-3xl font-semibold tracking-tight text-white tabular-nums drop-shadow-sm">
-              {formatDiscountOffer(display)}
-            </p>
-          </div>
-          <div className="absolute end-3 top-3">
-            <DetailSheetIconBadge icon={Power}>
+        </div>
+
+        <div className="p-4">
+          <div className="mb-4 flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-lg font-bold sm:text-xl">{heroTitle}</h4>
+              {description ? (
+                <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+              ) : null}
+            </div>
+            <DetailSheetIconBadge icon={Power} className="shrink-0">
               {display.isEnabled ? "Active" : "Inactive"}
             </DetailSheetIconBadge>
           </div>
-        </div>
 
-        <div className="space-y-6 px-4 pt-6 pb-4">
-          <div className="space-y-2">
-            <p className="text-lg font-semibold">{heroTitle}</p>
-            {description ? (
-              <p className="text-muted-foreground text-sm">{description}</p>
-            ) : null}
-            {endsAt ? (
-              <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
-                <Calendar className="size-3.5 shrink-0 opacity-80" aria-hidden />
-                Valid till {formatDate(endsAt)}
-              </p>
-            ) : null}
+          <div className="mb-10">
+            <p className="text-primary text-xl font-bold tabular-nums sm:text-2xl">
+              {formatDiscountOffer(display)}
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <SummaryField icon={MapPin} label="Locations" value={locationSummary} />
-            <SummaryField icon={Ticket} label="Trip Types" value={tripTypeSummary} />
-            <SummaryField icon={Users} label="Vehicle Classes" value={classSummary} />
+          <div className="mb-6 grid grid-cols-3 gap-3">
+            <ScopeStat icon={MapPin} label="Locations" value={locationSummary} />
+            <ScopeStat icon={Ticket} label="Trip Types" value={tripTypeSummary} />
+            <ScopeStat icon={Users} label="Vehicle Classes" value={classSummary} />
           </div>
 
-          <div className="space-y-4">
-            <SectionHeading>Metrics</SectionHeading>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <PromoMetricCard>
-                <PromoUsageStat
-                  used={display.redemptionCount}
-                  max={display.conditions.maxRedemptions}
-                />
-              </PromoMetricCard>
-              <PromoMetricCard>
-                <ComplianceStat
-                  label="Validity"
-                  secondary={
-                    startsAt && endsAt
-                      ? `${formatDate(startsAt)} – ${formatDate(endsAt)}`
-                      : startsAt
-                        ? `From ${formatDate(startsAt)}`
-                        : endsAt
-                          ? `Until ${formatDate(endsAt)}`
-                          : "Always valid"
-                  }
-                  start={startsAt}
-                  expiry={endsAt}
-                />
-              </PromoMetricCard>
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <PromoMetricCard>
+              <PromoUsageStat
+                used={display.redemptionCount}
+                max={display.conditions.maxRedemptions}
+              />
+            </PromoMetricCard>
+            <PromoMetricCard>
+              <ComplianceStat label="Validity" start={startsAt} expiry={endsAt} />
+            </PromoMetricCard>
           </div>
         </div>
       </SheetContent>
