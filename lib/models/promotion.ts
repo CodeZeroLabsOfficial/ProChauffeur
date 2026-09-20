@@ -40,6 +40,8 @@ export interface Promotion {
   type: PromotionDiscountType;
   /** Percent as fraction (0.25 = 25%) or fixed currency amount. */
   value: number;
+  /** Optional hero banner download URL (`promotions/{id}/banner.*` in Storage). */
+  bannerUrl?: string | null;
   conditions: PromotionConditions;
   redemptionCount: number;
   /** Booking counts keyed by Location id — updated on redeem. */
@@ -79,6 +81,7 @@ export function buildNewPromotion(): Promotion {
     isEnabled: true,
     type: "percent",
     value: 0.1,
+    bannerUrl: null,
     conditions: emptyPromotionConditions(),
     redemptionCount: 0,
     redemptionsByBranchId: {},

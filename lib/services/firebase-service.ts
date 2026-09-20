@@ -810,6 +810,7 @@ export async function savePromotion(promo: Promotion): Promise<void> {
       isEnabled: promo.isEnabled,
       type: promo.type,
       value: promo.value,
+      bannerUrl: promo.bannerUrl?.trim() ? promo.bannerUrl.trim() : null,
       conditions: {
         branchIds: promo.conditions.branchIds?.length ? promo.conditions.branchIds : null,
         startsAt: promo.conditions.startsAt ?? null,
@@ -1260,6 +1261,23 @@ export async function uploadBranchImage(branchId: string, file: File): Promise<s
     throw new Error("Could not upload location image.");
   }
   return body.imageUrl;
+}
+
+export async function uploadPromotionBanner(promoId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/promotions/${encodeURIComponent(promoId)}/banner`, {
+    method: "POST",
+    body: formData
+  });
+  const body = (await res.json().catch(() => ({}))) as { bannerUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Could not upload promotion banner.");
+  }
+  if (!body.bannerUrl) {
+    throw new Error("Could not upload promotion banner.");
+  }
+  return body.bannerUrl;
 }
 
 export async function uploadCorporateAccountLogo(accountId: string, file: File): Promise<string> {

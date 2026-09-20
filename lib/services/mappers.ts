@@ -723,6 +723,7 @@ export function mapPromotion(id: string, d: DocumentData): Promotion {
     isEnabled: d.isEnabled !== false,
     type: d.type === "fixed" ? "fixed" : "percent",
     value: typeof d.value === "number" ? d.value : 0,
+    bannerUrl: typeof d.bannerUrl === "string" ? d.bannerUrl : null,
     conditions: mapPromotionConditions(conditionsRaw),
     redemptionCount: typeof d.redemptionCount === "number" ? d.redemptionCount : 0,
     redemptionsByBranchId: mapCountRecord(d.redemptionsByBranchId),

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { CalendarIcon } from "@radix-ui/react-icons";
-import { InfoIcon, UploadIcon } from "lucide-react";
+import { InfoIcon, UploadIcon, XIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SectionHeading } from "@/components/detail-sheet-fields";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import {
   buildNewPromotion,
   normalizePromoCode,
@@ -42,7 +44,11 @@ import {
   type Promotion,
   type TripType
 } from "@/lib/models";
-import { deletePromotion, savePromotion } from "@/lib/services/firebase-service";
+import {
+  deletePromotion,
+  savePromotion,
+  uploadPromotionBanner
+} from "@/lib/services/firebase-service";
 import { useActiveBranch } from "@/components/providers/active-branch-provider";
 import { getCachedOperatorLocale } from "@/lib/services/operator-config-cache";
 import { cn } from "@/lib/utils";
@@ -54,6 +60,7 @@ const TRIP_TYPE_OPTIONS = PROMOTION_TRIP_TYPES.map((value) => ({
 
 const LIMIT_STEPPER_MAX = 9999;
 const FARE_STEPPER_MAX = 100_000;
+const MAX_BANNER_BYTES = 5 * 1024 * 1024;
 
 type FieldErrors = {
   title?: boolean;
@@ -269,6 +276,22 @@ export function PromotionEditSheet({
   const [saving, setSaving] = useState(false);
   const [currency, setCurrency] = useState("");
   const [seedKey, setSeedKey] = useState("");
+  const [
+    { files: bannerFiles, errors: bannerErrors, isDragging },
+    {
+      openFileDialog: openBannerDialog,
+      getInputProps: getBannerInputProps,
+      clearFiles: clearBannerFiles,
+      handleDragEnter,
+      handleDragLeave,
+      handleDragOver,
+      handleDrop
+    }
+  ] = useFileUpload({
+    accept: "image/png,image/jpeg,image/webp",
+    maxSize: MAX_BANNER_BYTES,
+    maxFiles: 1
+  });
 
   const sheetKey = promotion?.id ?? "__new__";
   if (sheetKey !== seedKey) {
@@ -305,11 +328,22 @@ export function PromotionEditSheet({
   }
 
   useEffect(() => {
+    clearBannerFiles();
+  }, [sheetKey, clearBannerFiles]);
+
+  useEffect(() => {
     if (!open) return;
     getCachedOperatorLocale(branchId)
       .then((locale) => setCurrency(locale.currency))
       .catch(() => setCurrency(""));
   }, [open, branchId]);
+
+  const bannerPreviewUrl = bannerFiles[0]?.preview ?? draft.bannerUrl ?? null;
+
+  function removeBanner() {
+    clearBannerFiles();
+    setDraft((current) => ({ ...current, bannerUrl: null }));
+  }
 
   const branchOptions = branches.map((branch) => ({
     value: branch.id,
@@ -366,12 +400,19 @@ export function PromotionEditSheet({
 
     setSaving(true);
     try {
+      let nextBannerUrl = draft.bannerUrl ?? null;
+      const pendingBanner = bannerFiles[0]?.file;
+      if (pendingBanner instanceof File) {
+        nextBannerUrl = await uploadPromotionBanner(draft.id, pendingBanner);
+      }
+
       await savePromotion({
         ...draft,
         title,
         description,
         code,
         value,
+        bannerUrl: nextBannerUrl,
         conditions: {
           ...draft.conditions,
           branchIds: persistConditionIds(branchIds, branchIdsAll),
@@ -497,15 +538,65 @@ export function PromotionEditSheet({
               </div>
 
               <div className="space-y-2">
-                <FieldLabel tip="Used for the iPhone app. Falls back to a stock photo when left empty.">
+                <FieldLabel tip="Shown on the coupon details sheet and the customer app. Falls back to a stock photo when empty.">
                   Banner image
                 </FieldLabel>
-                <div
-                  className="border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center"
-                  aria-hidden>
-                  <UploadIcon className="size-5 opacity-70" />
-                  <span className="text-sm">Click or drag to upload</span>
-                </div>
+                <input {...getBannerInputProps()} className="sr-only" aria-label="Banner image" />
+                {bannerPreviewUrl ? (
+                  <div className="relative overflow-hidden rounded-lg border">
+                    <button
+                      type="button"
+                      className="block w-full cursor-pointer"
+                      onClick={openBannerDialog}
+                      disabled={saving}>
+                      <div className="relative aspect-video w-full">
+                        <Image
+                          src={bannerPreviewUrl}
+                          alt="Banner preview"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 512px) 100vw, 512px"
+                          unoptimized={bannerPreviewUrl.startsWith("blob:")}
+                        />
+                      </div>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="absolute end-2 top-2 size-8 rounded-full shadow-sm"
+                      onClick={removeBanner}
+                      disabled={saving}
+                      aria-label="Remove banner image">
+                      <XIcon className="size-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openBannerDialog}
+                    disabled={saving}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    className={cn(
+                      "border-muted-foreground/25 bg-muted/30 text-muted-foreground flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+                      isDragging && "border-primary bg-primary/5",
+                      saving && "pointer-events-none opacity-60"
+                    )}>
+                    <UploadIcon className="size-5 opacity-70" />
+                    <span className="text-sm">Click or drag to upload</span>
+                  </button>
+                )}
+                {bannerErrors.length > 0 ? (
+                  <p className="text-destructive text-sm">{bannerErrors[0]}</p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Shown on the coupon details sheet and the customer app. Falls back to a stock
+                    photo when empty.
+                  </p>
+                )}
               </div>
             </div>
 

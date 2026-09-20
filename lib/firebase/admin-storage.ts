@@ -134,6 +134,30 @@ export async function uploadCorporateAccountLogo(
   return saveStorageImage(path, buffer, contentType);
 }
 
+/**
+ * Upload a promotion banner image via the Admin SDK.
+ * Returns a Firebase download URL with a storage token.
+ */
+export async function uploadPromotionBanner(
+  promoId: string,
+  buffer: Buffer,
+  contentType: string,
+  originalName: string
+): Promise<string> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  const trimmedId = promoId.trim();
+  if (!trimmedId) {
+    throw new Error("Promotion id is required.");
+  }
+
+  const ext = originalName.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `promotions/${trimmedId}/banner.${ext}`;
+  return saveStorageImage(path, buffer, contentType);
+}
+
 async function saveStorageImage(
   path: string,
   buffer: Buffer,

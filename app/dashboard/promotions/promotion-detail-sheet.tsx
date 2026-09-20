@@ -417,12 +417,13 @@ export function PromotionDetailSheet({
 
         <div className="relative aspect-video w-full shrink-0 overflow-hidden">
           <Image
-            src={DEFAULT_COUPON_BANNER}
+            src={display.bannerUrl?.trim() || DEFAULT_COUPON_BANNER}
             alt=""
             fill
             className="object-cover"
             sizes="(max-width: 512px) 100vw, 512px"
             priority
+            unoptimized={Boolean(display.bannerUrl?.startsWith("blob:"))}
           />
           <DiscountRibbon label={formatDiscountOffer(display)} />
         </div>
