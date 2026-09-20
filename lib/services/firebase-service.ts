@@ -706,7 +706,11 @@ export async function createTrip(trip: Trip): Promise<void> {
   const branchId = requireBranchId(trip.branchId);
   await setDoc(branchDocRef(db(), "trips", trip.id, branchId), tripFirestorePayload(trip));
   if (trip.quote.appliedPromoId) {
-    void incrementPromoRedemption(trip.quote.appliedPromoId);
+    void incrementPromoRedemption(trip.quote.appliedPromoId, {
+      branchId,
+      tripType: trip.journey.tripType ?? null,
+      vehicleClassId: trip.quote.vehicleClassId ?? null
+    });
   }
 }
 
@@ -725,7 +729,12 @@ export async function createRoundTripBookings(outbound: Trip, returnLeg: Trip): 
   await batch.commit();
   const promoId = outbound.quote.appliedPromoId || returnLeg.quote.appliedPromoId;
   if (promoId) {
-    void incrementPromoRedemption(promoId);
+    const source = outbound.quote.appliedPromoId ? outbound : returnLeg;
+    void incrementPromoRedemption(promoId, {
+      branchId: requireBranchId(source.branchId),
+      tripType: source.journey.tripType ?? null,
+      vehicleClassId: source.quote.vehicleClassId ?? null
+    });
   }
 }
 
@@ -1012,12 +1021,34 @@ export async function updateUserPreferredPaymentMethod(
   });
 }
 
-async function incrementPromoRedemption(promoId: string): Promise<void> {
+type PromoRedemptionContext = {
+  branchId?: string | null;
+  tripType?: string | null;
+  vehicleClassId?: string | null;
+};
+
+async function incrementPromoRedemption(
+  promoId: string,
+  ctx: PromoRedemptionContext = {}
+): Promise<void> {
   try {
-    await updateDoc(doc(db(), Collections.promotions, promoId), {
+    const patch: Record<string, unknown> = {
       redemptionCount: increment(1),
       updatedAt: serverTimestamp()
-    });
+    };
+    const branchId = ctx.branchId?.trim();
+    if (branchId) {
+      patch[`redemptionsByBranchId.${branchId}`] = increment(1);
+    }
+    const tripType = ctx.tripType?.trim();
+    if (tripType) {
+      patch[`redemptionsByTripType.${tripType}`] = increment(1);
+    }
+    const vehicleClassId = ctx.vehicleClassId?.trim();
+    if (vehicleClassId) {
+      patch[`redemptionsByVehicleClassId.${vehicleClassId}`] = increment(1);
+    }
+    await updateDoc(doc(db(), Collections.promotions, promoId), patch);
   } catch (err) {
     console.error("Failed to increment promo redemption:", err);
   }

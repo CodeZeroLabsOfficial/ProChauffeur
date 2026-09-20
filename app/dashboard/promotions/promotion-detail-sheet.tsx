@@ -5,21 +5,45 @@ import type { LucideIcon } from "lucide-react";
 import { MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { complianceDaysRemaining } from "@/components/compliance";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
+import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { formatDate } from "@/lib/format";
-import { TRIP_TYPES, type Branch, type Promotion } from "@/lib/models";
+import {
+  TRIP_TYPES,
+  tripTypeTitle,
+  type Branch,
+  type Promotion,
+  type TripType
+} from "@/lib/models";
 import { cn } from "@/lib/utils";
 import { validityProgress } from "@/lib/vehicle-insurance";
 
 const DEFAULT_COUPON_BANNER = "/images/promotions/coupon-default-banner.png";
 
+const CHART_COLORS = [
+  "bg-[var(--chart-1)]",
+  "bg-[var(--chart-2)]",
+  "bg-[var(--chart-3)]",
+  "bg-[var(--chart-4)]",
+  "bg-[var(--chart-5)]"
+] as const;
+
 const radialChartConfig = {
   capacity: { label: "Capacity", color: "hsl(var(--primary))" }
 } satisfies ChartConfig;
+
+type BreakdownRow = {
+  id: string;
+  name: string;
+  count: number;
+  color: string;
+};
 
 function formatDiscountOffer(promo: Promotion): string {
   if (promo.type === "percent") {
@@ -34,6 +58,21 @@ function formatScopeCount(selected: number, total: number, allLabel: string, nou
     return allLabel;
   }
   return `${selected}/${total} ${noun}`;
+}
+
+function countRecordRows(
+  counts: Record<string, number>,
+  labelFor: (id: string) => string
+): BreakdownRow[] {
+  return Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([id, count], index) => ({
+      id,
+      name: labelFor(id),
+      count,
+      color: CHART_COLORS[index % CHART_COLORS.length]
+    }));
 }
 
 function ScopeStat({
@@ -71,12 +110,15 @@ function DiscountRibbon({ label }: { label: string }) {
 function PromoRadialStat({
   name,
   capacity,
+  valueLabel,
   detail,
   fill = "var(--primary)",
   destructive
 }: {
   name: string;
   capacity: number;
+  /** Center label — e.g. `42%` or uncapped use count `12`. */
+  valueLabel: string;
   detail: string;
   fill?: string;
   destructive?: boolean;
@@ -115,7 +157,7 @@ function PromoRadialStat({
                 "text-foreground text-base font-medium tabular-nums",
                 destructive && "text-destructive"
               )}>
-              {capacity}%
+              {valueLabel}
             </span>
           </div>
         </div>
@@ -128,37 +170,146 @@ function PromoRadialStat({
   );
 }
 
+function RedemptionBreakdownCard({
+  title,
+  rows
+}: {
+  title: string;
+  rows: BreakdownRow[];
+}) {
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+
+  return (
+    <Card className="shadow-none">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardDescription>
+          {total > 0
+            ? `${total} booking${total === 1 ? "" : "s"}`
+            : "No redemptions yet"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {total > 0 ? (
+          <>
+            <TooltipProvider>
+              <div className="flex h-3 w-full overflow-hidden rounded-full">
+                {rows.map((row) => (
+                  <Tooltip key={row.id}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={`${row.color} h-full`}
+                        style={{ width: `${(row.count / total) * 100}%` }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-sm">
+                        <p className="font-medium">{row.name}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {row.count} booking{row.count === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
+
+            <div className="space-y-3">
+              {rows.map((row) => {
+                const pct = Math.round((row.count / total) * 100);
+                return (
+                  <div key={row.id} className="flex items-center gap-3">
+                    <div className={`size-2.5 shrink-0 rounded-full ${row.color}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{row.name}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {row.count} booking{row.count === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="flex w-24 shrink-0 items-center gap-2">
+                      <Progress value={pct} className="h-2" indicatorColor={row.color} />
+                      <span className="text-muted-foreground w-8 text-right text-xs tabular-nums">
+                        {pct}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function usageStat(used: number, max: number | null | undefined) {
   const hasLimit = max != null && max > 0;
   const capacity = hasLimit ? Math.min(100, Math.round((used / max) * 100)) : 0;
-  const detail = hasLimit ? `${used} of ${max} used` : used > 0 ? `${used} used` : "Uncapped";
+  const valueLabel = hasLimit ? `${capacity}%` : String(used);
+  const detail = hasLimit ? `${used} of ${max} used` : "Uncapped";
   const fill =
     hasLimit && capacity >= 100
       ? "var(--destructive)"
       : hasLimit && capacity >= 80
         ? "var(--warning)"
         : "var(--primary)";
-  return { capacity, detail, fill, destructive: hasLimit && capacity >= 100 };
+  return { capacity, valueLabel, detail, fill, destructive: hasLimit && capacity >= 100 };
 }
 
 function validityStat(startsAt: Date | null | undefined, endsAt: Date | null | undefined) {
   const now = new Date();
   const expired = endsAt != null && endsAt < now;
-  const elapsed = validityProgress(startsAt, endsAt);
-  const capacity = elapsed != null ? Math.max(0, 100 - elapsed) : 100;
-
-  let detail = "Always valid";
-  if (startsAt && endsAt) {
-    detail = `Valid ${formatDate(startsAt)} to ${formatDate(endsAt)}`;
-  } else if (endsAt) {
-    detail = `Expires ${formatDate(endsAt)}`;
-  } else if (startsAt) {
-    detail = `From ${formatDate(startsAt)}`;
-  }
-
   const fill = expired ? "var(--destructive)" : "var(--primary)";
 
-  return { capacity, detail, fill, destructive: expired };
+  if (startsAt && endsAt) {
+    const elapsed = validityProgress(startsAt, endsAt, now);
+    const capacity = elapsed != null ? Math.max(0, 100 - elapsed) : 0;
+    return {
+      capacity,
+      valueLabel: `${capacity}%`,
+      detail: `Expires ${formatDate(endsAt)}`,
+      fill,
+      destructive: expired
+    };
+  }
+
+  if (endsAt) {
+    const days = complianceDaysRemaining(endsAt, now) ?? 0;
+    return {
+      capacity: 0,
+      valueLabel: String(days),
+      detail: `Expires ${formatDate(endsAt)}`,
+      fill,
+      destructive: expired
+    };
+  }
+
+  if (startsAt) {
+    return {
+      capacity: 0,
+      valueLabel: "—",
+      detail: `From ${formatDate(startsAt)}`,
+      fill: "var(--primary)",
+      destructive: false
+    };
+  }
+
+  return {
+    capacity: 0,
+    valueLabel: "—",
+    detail: "Always valid",
+    fill: "var(--primary)",
+    destructive: false
+  };
+}
+
+function tripTypeLabel(id: string): string {
+  if ((TRIP_TYPES as readonly string[]).includes(id)) {
+    return tripTypeTitle[id as TripType];
+  }
+  return id;
 }
 
 export function PromotionDetailSheet({
@@ -208,6 +359,19 @@ export function PromotionDetailSheet({
   const usage = usageStat(display.redemptionCount, display.conditions.maxRedemptions);
   const validity = validityStat(startsAt, endsAt);
 
+  const branchNameById = new Map(branches.map((b) => [b.id, b.name]));
+  const classNameById = new Map(vehicleClasses.map((c) => [c.id, c.displayName]));
+
+  const byLocation = countRecordRows(
+    display.redemptionsByBranchId,
+    (id) => branchNameById.get(id) ?? id
+  );
+  const byTripType = countRecordRows(display.redemptionsByTripType, tripTypeLabel);
+  const byVehicleClass = countRecordRows(
+    display.redemptionsByVehicleClassId,
+    (id) => classNameById.get(id) ?? id
+  );
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -246,10 +410,11 @@ export function PromotionDetailSheet({
             <ScopeStat icon={Users} label="Vehicle Classes" value={classSummary} />
           </div>
 
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <dl className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <PromoRadialStat
               name="Usage"
               capacity={usage.capacity}
+              valueLabel={usage.valueLabel}
               detail={usage.detail}
               fill={usage.fill}
               destructive={usage.destructive}
@@ -257,11 +422,18 @@ export function PromotionDetailSheet({
             <PromoRadialStat
               name="Validity"
               capacity={validity.capacity}
+              valueLabel={validity.valueLabel}
               detail={validity.detail}
               fill={validity.fill}
               destructive={validity.destructive}
             />
           </dl>
+
+          <div className="space-y-4">
+            <RedemptionBreakdownCard title="By Location" rows={byLocation} />
+            <RedemptionBreakdownCard title="By trip type" rows={byTripType} />
+            <RedemptionBreakdownCard title="By vehicle class" rows={byVehicleClass} />
+          </div>
         </div>
       </SheetContent>
     </Sheet>

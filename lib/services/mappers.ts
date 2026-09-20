@@ -687,6 +687,16 @@ export function mapInvoice(id: string, d: DocumentData, pathBranchId?: string): 
   };
 }
 
+function mapCountRecord(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!key || typeof value !== "number" || !Number.isFinite(value)) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
 function mapPromotionConditions(d: DocumentData): PromotionConditions {
   return {
     branchIds: Array.isArray(d.branchIds) ? (d.branchIds as string[]) : null,
@@ -715,6 +725,9 @@ export function mapPromotion(id: string, d: DocumentData): Promotion {
     value: typeof d.value === "number" ? d.value : 0,
     conditions: mapPromotionConditions(conditionsRaw),
     redemptionCount: typeof d.redemptionCount === "number" ? d.redemptionCount : 0,
+    redemptionsByBranchId: mapCountRecord(d.redemptionsByBranchId),
+    redemptionsByTripType: mapCountRecord(d.redemptionsByTripType),
+    redemptionsByVehicleClassId: mapCountRecord(d.redemptionsByVehicleClassId),
     createdAt: toDate(d.createdAt) ?? new Date(),
     updatedAt: toDate(d.updatedAt) ?? new Date()
   };

@@ -24,9 +24,9 @@ export interface PromotionConditions {
 /** Company-global promo — `promotions/{id}`. */
 export interface Promotion {
   id: string;
-  title: string;
   /** Optional admin-only notes. */
   description?: string | null;
+  title: string;
   /** Unique normalized code customers enter. */
   code: string;
   isEnabled: boolean;
@@ -35,6 +35,12 @@ export interface Promotion {
   value: number;
   conditions: PromotionConditions;
   redemptionCount: number;
+  /** Booking counts keyed by Location id — updated on redeem. */
+  redemptionsByBranchId: Record<string, number>;
+  /** Booking counts keyed by trip type — updated on redeem. */
+  redemptionsByTripType: Record<string, number>;
+  /** Booking counts keyed by vehicle class id — updated on redeem. */
+  redemptionsByVehicleClassId: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +74,9 @@ export function buildNewPromotion(): Promotion {
     value: 0.1,
     conditions: emptyPromotionConditions(),
     redemptionCount: 0,
+    redemptionsByBranchId: {},
+    redemptionsByTripType: {},
+    redemptionsByVehicleClassId: {},
     createdAt: now,
     updatedAt: now
   };
