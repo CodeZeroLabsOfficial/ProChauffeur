@@ -50,7 +50,19 @@ function ScopeStat({
       <Icon className="text-muted-foreground mt-0.5 size-8 shrink-0" aria-hidden />
       <div className="min-w-0 space-y-0.5">
         <p className="text-muted-foreground text-xs font-medium">{label}</p>
-        <p className="text-sm font-medium tabular-nums">{value}</p>
+        <p className="whitespace-nowrap text-sm font-medium tabular-nums">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function DiscountRibbon({ label }: { label: string }) {
+  return (
+    <div className="pointer-events-none absolute end-0 top-0 z-10 size-28 overflow-hidden">
+      <div className="bg-black/45 absolute top-5 -right-10 flex w-40 rotate-45 items-center justify-center py-1.5 shadow-sm backdrop-blur-[2px]">
+        <span className="text-[11px] font-semibold tracking-wide text-white/95 tabular-nums">
+          {label}
+        </span>
       </div>
     </div>
   );
@@ -158,16 +170,16 @@ export function PromotionDetailSheet({
   const classSummary = formatScopeCount(
     classIds.length,
     vehicleClasses.length,
-    "All vehicle classes",
-    "Vehicle Classes"
+    "All classes",
+    "Classes"
   );
 
   const tripTypeIds = display.conditions.tripTypes?.filter(Boolean) ?? [];
   const tripTypeSummary = formatScopeCount(
     tripTypeIds.length,
     TRIP_TYPES.length,
-    "All trip types",
-    "Trip Types"
+    "All trips",
+    "Trips"
   );
 
   const description = display.description?.trim() || null;
@@ -191,10 +203,11 @@ export function PromotionDetailSheet({
             sizes="(max-width: 512px) 100vw, 512px"
             priority
           />
+          <DiscountRibbon label={formatDiscountOffer(display)} />
         </div>
 
         <div className="p-4">
-          <div className="mb-4 flex items-start justify-between gap-2">
+          <div className="mb-10 flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <h4 className="text-lg font-bold sm:text-xl">{heroTitle}</h4>
               {description ? (
@@ -204,12 +217,6 @@ export function PromotionDetailSheet({
             <DetailSheetIconBadge icon={Power} className="shrink-0">
               {display.isEnabled ? "Active" : "Inactive"}
             </DetailSheetIconBadge>
-          </div>
-
-          <div className="mb-10">
-            <p className="text-primary text-xl font-bold tabular-nums sm:text-2xl">
-              {formatDiscountOffer(display)}
-            </p>
           </div>
 
           <div className="mb-6 grid grid-cols-3 gap-3">
