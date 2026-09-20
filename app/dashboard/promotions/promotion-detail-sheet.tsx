@@ -1,16 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
 import { MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
 import { complianceDaysRemaining } from "@/components/compliance";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
 import { formatDate } from "@/lib/format";
@@ -33,6 +41,14 @@ const CHART_COLORS = [
   "bg-[var(--chart-4)]",
   "bg-[var(--chart-5)]"
 ] as const;
+
+const BREAKDOWN_AXES = [
+  { value: "location", label: "Location" },
+  { value: "trip", label: "Trip" },
+  { value: "class", label: "Class" }
+] as const;
+
+type BreakdownAxis = (typeof BREAKDOWN_AXES)[number]["value"];
 
 const radialChartConfig = {
   capacity: { label: "Capacity", color: "hsl(var(--primary))" }
@@ -171,29 +187,45 @@ function PromoRadialStat({
 }
 
 function RedemptionBreakdownCard({
-  title,
-  rows
+  byLocation,
+  byTrip,
+  byClass
 }: {
-  title: string;
-  rows: BreakdownRow[];
+  byLocation: BreakdownRow[];
+  byTrip: BreakdownRow[];
+  byClass: BreakdownRow[];
 }) {
+  const [axis, setAxis] = useState<BreakdownAxis>("location");
+  const rows =
+    axis === "location" ? byLocation : axis === "trip" ? byTrip : byClass;
   const total = rows.reduce((sum, row) => sum + row.count, 0);
 
   return (
-    <Card className="shadow-none">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <CardDescription>
-          {total > 0
-            ? `${total} booking${total === 1 ? "" : "s"}`
-            : "No redemptions yet"}
-        </CardDescription>
+    <Card className="gap-3 py-4 shadow-none">
+      <CardHeader className="px-4">
+        <CardTitle className="text-sm font-medium">Redemptions</CardTitle>
+        <CardAction>
+          <Tabs
+            value={axis}
+            onValueChange={(value) => setAxis(value as BreakdownAxis)}>
+            <TabsList className="h-8">
+              {BREAKDOWN_AXES.map((option) => (
+                <TabsTrigger key={option.value} value={option.value} className="px-2 text-xs">
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </CardAction>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-4">
         {total > 0 ? (
           <>
+            <p className="text-muted-foreground text-xs">
+              {total} booking{total === 1 ? "" : "s"}
+            </p>
             <TooltipProvider>
-              <div className="flex h-3 w-full overflow-hidden rounded-full">
+              <div className="flex h-2 w-full overflow-hidden rounded-full">
                 {rows.map((row) => (
                   <Tooltip key={row.id}>
                     <TooltipTrigger asChild>
@@ -215,20 +247,21 @@ function RedemptionBreakdownCard({
               </div>
             </TooltipProvider>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {rows.map((row) => {
                 const pct = Math.round((row.count / total) * 100);
                 return (
                   <div key={row.id} className="flex items-center gap-3">
-                    <div className={`size-2.5 shrink-0 rounded-full ${row.color}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{row.name}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {row.count} booking{row.count === 1 ? "" : "s"}
-                      </p>
-                    </div>
+                    <div className={`size-2 shrink-0 rounded-full ${row.color}`} />
+                    <p className="min-w-0 flex-1 truncate text-sm">
+                      <span className="font-medium">{row.name}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {row.count}
+                      </span>
+                    </p>
                     <div className="flex w-24 shrink-0 items-center gap-2">
-                      <Progress value={pct} className="h-2" indicatorColor={row.color} />
+                      <Progress value={pct} className="h-1.5" indicatorColor={row.color} />
                       <span className="text-muted-foreground w-8 text-right text-xs tabular-nums">
                         {pct}%
                       </span>
@@ -238,7 +271,9 @@ function RedemptionBreakdownCard({
               })}
             </div>
           </>
-        ) : null}
+        ) : (
+          <p className="text-muted-foreground text-sm">No redemptions yet</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -379,7 +414,7 @@ export function PromotionDetailSheet({
         className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
         <SheetTitle className="sr-only">{heroTitle}</SheetTitle>
 
-        <div className="relative aspect-video w-full overflow-hidden">
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden">
           <Image
             src={DEFAULT_COUPON_BANNER}
             alt=""
@@ -429,11 +464,11 @@ export function PromotionDetailSheet({
             />
           </dl>
 
-          <div className="space-y-4">
-            <RedemptionBreakdownCard title="By Location" rows={byLocation} />
-            <RedemptionBreakdownCard title="By trip type" rows={byTripType} />
-            <RedemptionBreakdownCard title="By vehicle class" rows={byVehicleClass} />
-          </div>
+          <RedemptionBreakdownCard
+            byLocation={byLocation}
+            byTrip={byTripType}
+            byClass={byVehicleClass}
+          />
         </div>
       </SheetContent>
     </Sheet>
