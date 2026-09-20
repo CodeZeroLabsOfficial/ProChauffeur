@@ -224,6 +224,18 @@ function DatePickerField({
             defaultMonth={selected}
             initialFocus
           />
+          {selected ? (
+            <div className="border-t p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => onChange(null)}>
+                Clear
+              </Button>
+            </div>
+          ) : null}
         </PopoverContent>
       </Popover>
     </div>

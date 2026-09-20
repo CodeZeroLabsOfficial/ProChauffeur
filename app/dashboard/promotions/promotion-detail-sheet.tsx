@@ -1,24 +1,24 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
 import { MapPin, Power, Ticket, Users } from "lucide-react";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 
-import { ComplianceStat } from "@/components/compliance";
 import { Card, CardContent } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { DetailSheetIconBadge } from "@/components/ui/icon-badge";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useSheetDisplayItem } from "@/hooks/use-sheet-display-item";
+import { formatDate } from "@/lib/format";
 import { TRIP_TYPES, type Branch, type Promotion } from "@/lib/models";
 import { cn } from "@/lib/utils";
+import { validityProgress } from "@/lib/vehicle-insurance";
 
 const DEFAULT_COUPON_BANNER = "/images/promotions/coupon-default-banner.png";
 
-const usageChartConfig = {
-  used: { label: "Used" }
+const radialChartConfig = {
+  capacity: { label: "Capacity", color: "hsl(var(--primary))" }
 } satisfies ChartConfig;
 
 function formatDiscountOffer(promo: Promotion): string {
@@ -58,9 +58,9 @@ function ScopeStat({
 
 function DiscountRibbon({ label }: { label: string }) {
   return (
-    <div className="pointer-events-none absolute end-0 top-0 z-10 size-28 overflow-hidden">
-      <div className="bg-black/45 absolute top-5 -right-10 flex w-40 rotate-45 items-center justify-center py-1.5 shadow-sm backdrop-blur-[2px]">
-        <span className="text-[11px] font-semibold tracking-wide text-white/95 tabular-nums">
+    <div className="pointer-events-none absolute end-0 top-0 z-10 size-36 overflow-hidden">
+      <div className="bg-black/45 absolute top-6 -right-12 flex w-48 rotate-45 items-center justify-center py-2 shadow-sm backdrop-blur-[2px]">
+        <span className="text-sm font-semibold tracking-wide text-white/95 tabular-nums">
           {label}
         </span>
       </div>
@@ -68,78 +68,97 @@ function DiscountRibbon({ label }: { label: string }) {
   );
 }
 
-function PromoUsageStat({
-  used,
-  max
+function PromoRadialStat({
+  name,
+  capacity,
+  detail,
+  fill = "var(--primary)",
+  destructive
 }: {
-  used: number;
-  max: number | null | undefined;
+  name: string;
+  capacity: number;
+  detail: string;
+  fill?: string;
+  destructive?: boolean;
 }) {
-  const hasLimit = max != null && max > 0;
-  const pct = hasLimit ? Math.min(100, Math.round((used / max) * 100)) : 0;
-  const fill =
-    hasLimit && pct >= 100
-      ? "var(--destructive)"
-      : hasLimit && pct >= 80
-        ? "var(--warning)"
-        : "var(--primary)";
-
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative flex shrink-0 items-center justify-center">
-        <ChartContainer config={usageChartConfig} className="aspect-square size-[100px]">
-          <RadialBarChart
-            data={[{ used: hasLimit ? pct : Math.min(100, used > 0 ? 12 : 0) }]}
-            innerRadius="82%"
-            outerRadius="97%"
-            startAngle={90}
-            endAngle={-270}>
-            <PolarAngleAxis
-              type="number"
-              domain={[0, 100]}
-              angleAxisId={0}
-              tick={false}
-              axisLine={false}
-            />
-            <RadialBar
-              dataKey="used"
-              background
-              cornerRadius={pct > 0 || used > 0 ? 6 : 0}
-              fill={fill}
-              angleAxisId={0}
-            />
-          </RadialBarChart>
-        </ChartContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-          <span
-            className={cn(
-              "text-base font-semibold tabular-nums",
-              hasLimit && pct >= 100 && "text-destructive"
-            )}>
-            {hasLimit ? `${pct}%` : used}
-          </span>
-          <span className="text-muted-foreground mt-0.5 text-xs">
-            {hasLimit ? "used" : "uses"}
-          </span>
+    <Card className="p-4 shadow-none">
+      <CardContent className="flex items-center space-x-4 p-0">
+        <div className="relative flex items-center justify-center">
+          <ChartContainer config={radialChartConfig} className="h-[80px] w-[80px]">
+            <RadialBarChart
+              data={[{ capacity }]}
+              innerRadius={29}
+              outerRadius={35}
+              barSize={6}
+              startAngle={90}
+              endAngle={-270}>
+              <PolarAngleAxis
+                type="number"
+                domain={[0, 100]}
+                angleAxisId={0}
+                tick={false}
+                axisLine={false}
+              />
+              <RadialBar
+                dataKey="capacity"
+                background
+                cornerRadius={10}
+                fill={fill}
+                angleAxisId={0}
+              />
+            </RadialBarChart>
+          </ChartContainer>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span
+              className={cn(
+                "text-foreground text-base font-medium tabular-nums",
+                destructive && "text-destructive"
+              )}>
+              {capacity}%
+            </span>
+          </div>
         </div>
-      </div>
-
-      <div className="min-w-0 space-y-0.5">
-        <p className="truncate text-sm font-medium">Usage</p>
-        <p className="text-muted-foreground text-xs">
-          {hasLimit ? `Limit ${max}` : "No redemption cap"}
-        </p>
-      </div>
-    </div>
+        <div className="min-w-0">
+          <dt className="text-foreground text-sm font-medium">{name}</dt>
+          <dd className="text-muted-foreground text-sm">{detail}</dd>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function PromoMetricCard({ children }: { children: ReactNode }) {
-  return (
-    <Card className="gap-3 py-3 shadow-none">
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
+function usageStat(used: number, max: number | null | undefined) {
+  const hasLimit = max != null && max > 0;
+  const capacity = hasLimit ? Math.min(100, Math.round((used / max) * 100)) : 0;
+  const detail = hasLimit ? `${used} of ${max} used` : used > 0 ? `${used} used` : "Uncapped";
+  const fill =
+    hasLimit && capacity >= 100
+      ? "var(--destructive)"
+      : hasLimit && capacity >= 80
+        ? "var(--warning)"
+        : "var(--primary)";
+  return { capacity, detail, fill, destructive: hasLimit && capacity >= 100 };
+}
+
+function validityStat(startsAt: Date | null | undefined, endsAt: Date | null | undefined) {
+  const now = new Date();
+  const expired = endsAt != null && endsAt < now;
+  const elapsed = validityProgress(startsAt, endsAt);
+  const capacity = elapsed != null ? Math.max(0, 100 - elapsed) : 100;
+
+  let detail = "Always valid";
+  if (startsAt && endsAt) {
+    detail = `Valid ${formatDate(startsAt)} to ${formatDate(endsAt)}`;
+  } else if (endsAt) {
+    detail = `Expires ${formatDate(endsAt)}`;
+  } else if (startsAt) {
+    detail = `From ${formatDate(startsAt)}`;
+  }
+
+  const fill = expired ? "var(--destructive)" : "var(--primary)";
+
+  return { capacity, detail, fill, destructive: expired };
 }
 
 export function PromotionDetailSheet({
@@ -186,6 +205,8 @@ export function PromotionDetailSheet({
   const heroTitle = display.title.trim() || display.code.trim() || "Coupon";
   const endsAt = display.conditions.endsAt;
   const startsAt = display.conditions.startsAt;
+  const usage = usageStat(display.redemptionCount, display.conditions.maxRedemptions);
+  const validity = validityStat(startsAt, endsAt);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -225,17 +246,22 @@ export function PromotionDetailSheet({
             <ScopeStat icon={Users} label="Vehicle Classes" value={classSummary} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <PromoMetricCard>
-              <PromoUsageStat
-                used={display.redemptionCount}
-                max={display.conditions.maxRedemptions}
-              />
-            </PromoMetricCard>
-            <PromoMetricCard>
-              <ComplianceStat label="Validity" start={startsAt} expiry={endsAt} />
-            </PromoMetricCard>
-          </div>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <PromoRadialStat
+              name="Usage"
+              capacity={usage.capacity}
+              detail={usage.detail}
+              fill={usage.fill}
+              destructive={usage.destructive}
+            />
+            <PromoRadialStat
+              name="Validity"
+              capacity={validity.capacity}
+              detail={validity.detail}
+              fill={validity.fill}
+              destructive={validity.destructive}
+            />
+          </dl>
         </div>
       </SheetContent>
     </Sheet>
